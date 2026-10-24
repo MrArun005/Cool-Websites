@@ -119,7 +119,8 @@
     <div style="display:grid;gap:6px">
       <span class="label">Next</span>
       <ol>
-        <li><strong>Now training (run 11): running.</strong> The walk gets a speed command from a slow walk (0.2 m/s) to a run (1.2 m/s), so Bolt can keep up with a person who runs. With no brain the gait already reaches 1.17 m/s with upright lower legs.</li>
+        <li><strong>Now training (run 11b): running.</strong> The walk gets a speed command from a slow walk (0.2 m/s) to a run (1.2 m/s), so Bolt can keep up with a person who runs. Run 11 kept walking at 0.4 m/s whatever it was asked, so now the brain feels its speed compared to the asked speed. Practice speeds go up step by step to a full run.</li>
+        <li><strong>Then: follow a person.</strong> A steering layer points Bolt at the person, walks faster when they pull away and stands when they stop. You'll see a replay with the person here.</li>
         <li>Follow a person: a steering layer turns toward them and sets the speed from their distance, using the walk-and-run brain. Then a simulator test with a person who walks, turns and runs.</li>
         <li>Try both brains on the hand-size Bolt.</li>
         <li>Connect the brains to voice commands ("sit", "come here").</li>
@@ -185,7 +186,8 @@
         <tr><td>8b</td><td>Walk practises starting from the tall stand</td><td><strong>Walk 100%, hand-over 10/10 at 5M.</strong> Saved (5.5M was worse after real hand-overs).</td></tr>
         <tr><td>10</td><td>Turning: a turn command, longer strides on the outside of the turn</td><td>Turn left/right 100% at 6M. But hand-overs from the real standing brain fell 4 in 10.</td></tr>
         <tr><td>10b</td><td>Practise and test hand-overs from the real standing brain</td><td><strong>Walk, turn left, turn right 100%; 40/40 clean hand-overs at 7M.</strong> Saved.</td></tr>
-        <tr class="now"><td>11</td><td>Speed command: slow walk to a run (0.2–1.2 m/s)</td><td>Training now.</td></tr>
+        <tr><td>11</td><td>Speed command: slow walk to a run (0.2–1.2 m/s)</td><td>Stopped at 8M: walked at 0.4 m/s whatever speed it was asked.</td></tr>
+        <tr class="now"><td>11b</td><td>Same, but speed is felt relative to the asked speed; practice speeds ramp up to 1.2 m/s</td><td>Training now.</td></tr>
       </tbody>
     </table></div>
   </section>
