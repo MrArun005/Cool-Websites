@@ -162,10 +162,11 @@ export class Bolt {
 // slowly for half a second. Checked headless with live_follow_test.mjs.
 export class Follow {
   // maxTurn(v): the fastest turn the walk brain practised at speed v (Bolt.maxTurn). Sharp-turn brains
-  // turn harder toward the person (gain 2.5 instead of 1.5).
+  // turn harder toward the person (gain 2.5 instead of 1.5), but at most 1.5 rad/s: spinning round at
+  // 2 rad/s tipped run 12's first brain over 3 times in 80 simulated minutes, 1.5 rad/s none.
   constructor(maxTurn = () => 0.6, sharp = false) {
     this.KEEP = 1.0; this.TOP = 1.0; this.UP = 0.6; this.DOWN = 1.0;  // m, m/s, m/s per s
-    this.GAIN = sharp ? 2.5 : 1.5; this.maxTurn = maxTurn;
+    this.GAIN = sharp ? 2.5 : 1.5; this.CAP = sharp ? 1.5 : Infinity; this.maxTurn = maxTurn;
     this.standing = true; this.speed = 0.2; this.slowSteps = 0;
   }
   decide(dist, bearing, dt) {
@@ -179,7 +180,7 @@ export class Follow {
     this.speed = want > this.speed ? Math.min(want, this.speed + this.UP * dt) : Math.max(want, this.speed - this.DOWN * dt);
     this.slowSteps = stopping && this.speed <= 0.2 ? this.slowSteps + 1 : 0;
     if (this.slowSteps >= 25) { this.standing = true; return { command: "stand", turn: 0, speed: this.speed }; }
-    const top = this.maxTurn(this.speed);
+    const top = Math.min(this.CAP, this.maxTurn(this.speed));
     return { command: "walk", turn: clamp(this.GAIN * bearing, -top, top), speed: this.speed };
   }
 }
