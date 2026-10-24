@@ -2,6 +2,7 @@
 
     python train.py --steps 8000000          # ~1 hour on 4 CPU cores
     python train.py --steps 200000 --quick   # smoke test
+    python train.py --resume runs/bolt/checkpoints/policy_1500000_steps.zip   # continue after a crash
 
 Saves the policy to runs/<name>/policy.zip and the observation statistics to
 runs/<name>/vecnormalize.pkl. Watch progress with:
@@ -27,6 +28,7 @@ def main():
     ap.add_argument("--name", default="bolt")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--quick", action="store_true", help="tiny run to check everything works")
+    ap.add_argument("--resume", help="checkpoint .zip to continue from; its vecnormalize .pkl must sit next to it")
     args = ap.parse_args()
 
     out = Path(__file__).with_name("runs") / args.name
@@ -34,22 +36,30 @@ def main():
     torch.set_num_threads(2)
 
     venv = make_vec_env(BoltEnv, n_envs=args.envs, seed=args.seed, vec_env_cls=SubprocVecEnv)
-    venv = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
-
-    model = PPO(
-        "MlpPolicy", venv,
-        n_steps=512, batch_size=4096, n_epochs=5,
-        learning_rate=3e-4, gamma=0.99, gae_lambda=0.95, clip_range=0.2,
-        ent_coef=0.0, max_grad_norm=1.0, target_kl=0.03,
-        policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]),
-                           activation_fn=torch.nn.ELU, log_std_init=-1.0),
-        tensorboard_log=str(out.parent), seed=args.seed, device="cpu", verbose=1,
-    )
+    if args.resume:
+        ckpt_zip = Path(args.resume)
+        stats = ckpt_zip.with_name(ckpt_zip.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")
+        venv = VecNormalize.load(str(stats), venv)
+        model = PPO.load(ckpt_zip, env=venv, device="cpu", tensorboard_log=str(out.parent))
+        print(f"resuming from {ckpt_zip} at {model.num_timesteps:,} steps")
+    else:
+        venv = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
+        model = PPO(
+            "MlpPolicy", venv,
+            n_steps=512, batch_size=4096, n_epochs=5,
+            learning_rate=3e-4, gamma=0.99, gae_lambda=0.95, clip_range=0.2,
+            ent_coef=0.0, max_grad_norm=1.0, target_kl=0.03,
+            policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]),
+                               activation_fn=torch.nn.ELU, log_std_init=-1.0),
+            tensorboard_log=str(out.parent), seed=args.seed, device="cpu", verbose=1,
+        )
     every = max(500_000 // args.envs, 1)
     ckpt = CheckpointCallback(every, str(out / "checkpoints"), name_prefix="policy", save_vecnormalize=True)
 
     start = time.time()
-    model.learn(total_timesteps=args.steps, callback=ckpt, tb_log_name=args.name, progress_bar=False)
+    remaining = args.steps - model.num_timesteps
+    model.learn(total_timesteps=remaining, callback=ckpt, tb_log_name=args.name,
+                reset_num_timesteps=not args.resume, progress_bar=False)
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))
     print(f"done: {args.steps:,} steps in {(time.time() - start) / 60:.1f} min -> {out}")
