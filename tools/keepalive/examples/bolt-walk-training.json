@@ -1,0 +1,26 @@
+{
+  "name": "bolt-walk-run8",
+  "workdir": "../../../train",
+  "env": {"MUJOCO_GL": "osmesa"},
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": ["python", "-u", "train.py", "--name", "bolt8", "--steps", "20000000", "--envs", "8",
+              "--skills", "walk", "--gait-generator", "tall"],
+      "resume_cmd": ["python", "-u", "train.py", "--name", "bolt8", "--steps", "20000000", "--envs", "8",
+                     "--skills", "walk", "--gait-generator", "tall", "--resume", "{latest}"],
+      "latest": "runs/bolt8/checkpoints/policy_*_steps.zip",
+      "log": "runs/bolt8/train.log",
+      "done_when": {"exit_code": 0, "file": "runs/bolt8/policy.zip", "log_contains": "^done:"}
+    },
+    {
+      "name": "watch",
+      "cmd": ["python", "-u", "watch.py", "runs/bolt8", "--log", "runs/bolt8/train.log", "--out", "runs/bolt8/watch",
+              "--target", "20000000", "--patience", "0", "--skills", "walk", "--gait-generator", "tall",
+              "--label", "Run 8"],
+      "log": "runs/bolt8/watch.log",
+      "done_when": {"log_contains": "^finished"}
+    }
+  ]
+}

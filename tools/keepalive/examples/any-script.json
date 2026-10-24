@@ -1,0 +1,7 @@
+{
+  "name": "my-long-job",
+  "workdir": ".",
+  "jobs": [
+    {"name": "job", "cmd": ["python", "-u", "my_script.py"], "done_when": {"exit_code": 0}}
+  ]
+}
