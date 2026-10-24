@@ -24,7 +24,7 @@ BODY = "hybrid_noantenna"
 
 
 def mesh(m, out, max_faces=1500):
-    """Visible geoms per body in body coordinates (ints, x1e4), meshes thinned to <= max_faces triangles."""
+    """Visible geoms per body in body coordinates (ints, x1e4), meshes simplified to about max_faces triangles."""
     parts = {}
     for g in range(m.ngeom):
         b = m.geom_bodyid[g]
@@ -39,8 +39,9 @@ def mesh(m, out, max_faces=1500):
         mid = m.geom_dataid[g]
         v = m.mesh_vert[m.mesh_vertadr[mid]: m.mesh_vertadr[mid] + m.mesh_vertnum[mid]]
         f = m.mesh_face[m.mesh_faceadr[mid]: m.mesh_faceadr[mid] + m.mesh_facenum[mid]]
-        if len(f) > max_faces:
-            f = f[np.linspace(0, len(f) - 1, max_faces).astype(int)]
+        if len(f) > max_faces:                                       # proper decimation (quadric), not dropped faces
+            import fast_simplification
+            v, f = fast_simplification.simplify(np.asarray(v, np.float32), np.asarray(f, np.int64), 1 - max_faces / len(f))
         R = np.zeros(9)
         mujoco.mju_quat2Mat(R, m.geom_quat[g])
         v = v @ R.reshape(3, 3).T + m.geom_pos[g]
