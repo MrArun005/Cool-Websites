@@ -158,11 +158,15 @@ class SkillEnv(DuckEnv):
         up_at = lambda lim: 1.0 if p["up"] >= lim else float(np.exp(-((p["up"] - lim) / 0.15) ** 2))
         if cmd in ("walk", "run"):
             v = self.vel_cmd
-            tol = 0.1 * L if cmd == "walk" else 0.15 * L
-            r_move = np.exp(-((p["vx"] - v[0]) ** 2 + (p["vy"] - v[1]) ** 2) / tol ** 2) * np.exp(-((p["yaw_rate"] - v[2]) / 0.4) ** 2)
+            # Wide tracking term (a narrow one made standing still score ~0, so nothing paid for
+            # starting to move: lesson from the Bolt dog), plus a linear progress term along the command.
+            speed = np.hypot(v[0], v[1])
+            tol = 0.12 * L + 0.5 * speed
+            r_track = np.exp(-((p["vx"] - v[0]) ** 2 + (p["vy"] - v[1]) ** 2) / tol ** 2) * np.exp(-((p["yaw_rate"] - v[2]) / 0.6) ** 2)
+            progress = float(np.clip((p["vx"] * v[0] + p["vy"] * v[1]) / speed ** 2, 0, 1)) if speed > 0.01 * L else r_track
             h_ref = self.stand_height
-            r_h = np.exp(-((p["height"] - h_ref) / (sh if cmd == "walk" else 2 * sh)) ** 2)
-            reward = up_at(0.9) * r_h * r_move
+            r_h = np.exp(-((p["height"] - h_ref) / (2 * sh if cmd == "walk" else 3 * sh)) ** 2)
+            reward = up_at(0.85) * r_h * (0.6 * r_track + 0.4 * progress)
         elif cmd == "sit":
             h_ref = max(self.sit_height, self.start_height - 0.10 * L * s)
             r_h = np.exp(-((p["height"] - h_ref) / sh) ** 2)

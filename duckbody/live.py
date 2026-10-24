@@ -254,9 +254,20 @@ def test_all(out, episodes=5, only=None):
                                  steps=steps, checkpoint=ckpt.name if ckpt else None, frames=frames,
                                  bodies=[m.body(b).name for b in range(1, m.nbody)])
         (out / f"rollout_{task}.json").write_text(json.dumps(frames_ep, separators=(",", ":")))
+        prev = results.get(task, {})
         results[task] = dict(success=wins / episodes, episodes=episodes, mean_reward=round(float(np.mean(rewards)), 1),
                              brain=(f"{steps:,} steps" if isinstance(steps, int) and steps else ("final" if ckpt else "none yet")),
-                             layout=layout)
+                             layout=layout, best=prev.get("best") if prev.get("layout") == layout else None)
+        # Keep the best checkpoint, not just the last: skills can appear and vanish between checkpoints.
+        best = results[task]["best"]
+        score = (results[task]["success"], results[task]["mean_reward"])
+        if ckpt and layout == "skills layout" and (best is None or score > (best["success"], best["mean_reward"])):
+            import shutil
+            dst = run / "best"
+            dst.mkdir(parents=True, exist_ok=True)
+            shutil.copy(ckpt, dst / "policy.zip")
+            shutil.copy(stats, dst / "vecnormalize.pkl")
+            results[task]["best"] = dict(success=score[0], mean_reward=score[1], brain=results[task]["brain"])
         print(f"{task:13s} {wins}/{episodes} succeeded, reward {np.mean(rewards):6.1f}, brain {results[task]['brain']}")
     (out / "tests.json").write_text(json.dumps(results))
     return results
