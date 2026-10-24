@@ -44,13 +44,15 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--quick", action="store_true", help="tiny run to check everything works")
     ap.add_argument("--resume", help="checkpoint .zip to continue from; its vecnormalize .pkl must sit next to it")
+    ap.add_argument("--skills", nargs="+", help="train a brain for only these commands, e.g. --skills walk")
     args = ap.parse_args()
 
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
 
-    venv = make_vec_env(BoltEnv, n_envs=args.envs, seed=args.seed, vec_env_cls=SubprocVecEnv)
+    venv = make_vec_env(BoltEnv, n_envs=args.envs, seed=args.seed, vec_env_cls=SubprocVecEnv,
+                        env_kwargs=dict(skills=args.skills))
     if args.resume:
         ckpt_zip = Path(args.resume)
         stats = ckpt_zip.with_name("vecnormalize.pkl")  # packaged model folder (models/<name>/)

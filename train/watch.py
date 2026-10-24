@@ -57,7 +57,7 @@ def read_curve(log_path):
     return points
 
 
-def film(policy, path, steps_label, noise=False):
+def film(policy, path, steps_label, noise=False, script=SCRIPT):
     import imageio.v2 as imageio
     from PIL import Image, ImageDraw, ImageFont
 
@@ -71,7 +71,7 @@ def film(policy, path, steps_label, noise=False):
     obs, _ = env.reset(seed=7)
     falls, fallen_for = 0, 0
     with imageio.get_writer(path, fps=25, codec="libx264", quality=6, macro_block_size=8) as video:
-        for command, steps in SCRIPT:
+        for command, steps in script:
             env.set_command(command)
             for k in range(steps):
                 obs, _, fell, _, _ = env.step(policy.act(obs, deterministic=not noise))
@@ -111,6 +111,7 @@ def main():
     ap.add_argument("--episodes", type=int, default=10, help="exam episodes per command")
     ap.add_argument("--label", default="", help="name of this run, shown on the progress page")
     ap.add_argument("--noise", action="store_true", help="film with exploration noise, as while practising")
+    ap.add_argument("--skills", nargs="+", help="the commands this brain was trained for (exam and score only these)")
     ap.add_argument("--patience", type=int, default=4,
                     help="stop training after this many checkpoints in a row without a new best (0 = never)")
     args = ap.parse_args()
@@ -129,7 +130,7 @@ def main():
         write_json(data_path, data)
 
     def score(exam):
-        return float(np.mean([exam[c] for c in COMMANDS]))
+        return float(np.mean([exam[c] for c in (args.skills or COMMANDS)]))
 
     def keep_best(steps, exam, zip_path=None, stats=None):
         """Remember the best checkpoint; ask training to stop when it stops improving."""
@@ -156,8 +157,9 @@ def main():
     def process(steps, policy, zip_path=None, stats=None):
         label = "untrained" if steps == 0 else f"after {steps:,} practice steps"
         clip = f"clips/{steps:010d}.mp4"
-        falls = film(policy, out / clip, label, noise=args.noise)
-        exam = evaluate(policy, args.episodes, seed=1000)
+        script = [(c, 250) for c in args.skills] if args.skills else SCRIPT
+        falls = film(policy, out / clip, label, noise=args.noise, script=script)
+        exam = evaluate(policy, args.episodes, seed=1000, skills=args.skills)
         data["checkpoints"].append(dict(steps=steps, exam={k: round(v, 2) for k, v in exam.items()},
                                         clip=clip, falls_in_clip=falls))
         data["checkpoints"].sort(key=lambda c: c["steps"])

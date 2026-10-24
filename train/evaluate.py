@@ -63,10 +63,10 @@ def run_segment(env, policy, obs, command, steps):
     return obs, passed(command, window[-steps // 3:]), False
 
 
-def evaluate(policy, episodes, seed=0):
+def evaluate(policy, episodes, seed=0, skills=None):
     env = BoltEnv(randomize=True, max_steps=10_000)
     results = {}
-    for command in COMMANDS:
+    for command in (skills or COMMANDS):
         wins = 0
         for k in range(episodes):
             env.forced_command = command
@@ -76,6 +76,8 @@ def evaluate(policy, episodes, seed=0):
         results[command] = wins / episodes
 
     # Obeying a sequence of commands in a row, the way you'd actually use it.
+    if skills and set(skills) != set(COMMANDS):
+        return results  # a single-skill brain isn't asked to do the whole sequence
     sequence = ["stand", "sit", "stand", "lie", "stand", "walk", "stand"]
     seq_wins, falls = 0, 0
     for k in range(episodes):

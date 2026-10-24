@@ -54,7 +54,11 @@ FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 class BoltEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
 
-    def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0):
+    def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
+                 skills=None):
+        # skills: which commands this brain practises, e.g. ["walk"] for a walk-only brain. The
+        # observation layout always keeps all commands, so every brain can be swapped in instantly.
+        self.skills = [COMMANDS.index(c) for c in (skills or COMMANDS)]
         # scale < 1 builds a smaller, dynamically similar Bolt (see scale_robot.py). Everything the
         # policy observes and is scored on is converted back to full-size units, so the same brain
         # can drive any size.
@@ -155,7 +159,7 @@ class BoltEnv(gym.Env):
 
         self.t = 0
         self.last_action = np.zeros(12)
-        self.command = COMMANDS.index(self.forced_command) if self.forced_command else self.rng.integers(len(COMMANDS))
+        self.command = COMMANDS.index(self.forced_command) if self.forced_command else self.rng.choice(self.skills)
         return self._obs(), {}
 
     def step(self, action):
@@ -171,7 +175,7 @@ class BoltEnv(gym.Env):
         if fell:
             reward -= 20.0
         if self.forced_command is None and self.t % self.command_period == 0:
-            self.command = self.rng.integers(len(COMMANDS))  # new command, like a real owner would give
+            self.command = self.rng.choice(self.skills)  # new command, like a real owner would give
         truncated = self.t >= self.max_steps
         return self._obs(), float(reward), bool(fell), bool(truncated), info
 
