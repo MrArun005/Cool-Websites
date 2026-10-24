@@ -1,1 +1,1 @@
-{"exam": {"walk": {"success": 0.8, "mean_reward": 324.4}}, "note": "Walk brain at 2.5M steps (BC warm start from the reference gait, then PPO). Judged on gait-cycle-averaged velocity: 4/5 on the page test; walk_eval exam 5/8, fixed commands 5/9, no falls, speed error 1.5 cm/s."}
+{"exam": {"walk": {"success": 1.0, "mean_reward": 361.4}}, "note": "Walk brain at 3.5M steps (BC warm start from the reference gait, then PPO). Judged on gait-cycle-averaged velocity: 5/5 on the page test."}

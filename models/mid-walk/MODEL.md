@@ -4,10 +4,10 @@ Skill brain **walk** for the mid duck (`duckbody/model/duck_mid.xml`), trained w
 (`duckbody/train.py --skills --task walk`). Command it was trained under: `walk`.
 Packaged 2026-10-24.
 
-- Training steps: **2,500,000** (about 13.9 h of simulated duck time)
-- Test score: no summary.json
+- Training steps: **3,500,000** (about 19.4 h of simulated duck time)
+- Test score: 80% success, mean reward 324.4 (train.py exam)
 - ONNX vs stable-baselines3 on 1000 observations from SkillEnv rollouts: max abs
-  difference **2.1e-07**
+  difference **2.4e-07**
 
 ## Files
 

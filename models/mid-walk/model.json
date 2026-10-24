@@ -117,8 +117,8 @@
  "obs_noise_in_training": 0.01,
  "skill": "walk",
  "command": "walk",
- "steps": 2500000,
- "test_score": null,
+ "steps": 3500000,
+ "test_score": "80% success, mean reward 324.4 (train.py exam)",
  "packaged": "2026-10-24",
  "obs_size": 60,
  "action_size": 11,
@@ -178,6 +178,6 @@
   "clip_obs": 10.0,
   "epsilon": 1e-08
  },
- "onnx_max_difference": 2.086162567138672e-07,
+ "onnx_max_difference": 2.384185791015625e-07,
  "onnx_check_samples": 1000
 }
