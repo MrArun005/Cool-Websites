@@ -78,6 +78,13 @@ def rollout(x, seed=0, roll=0.0, randomize=False):
     return float(np.mean(tail))
 
 
+def robust(x):
+    """Mean score over 4 back starts (partial roll +-0.5 rad, randomized bodies): a lucky roll from one
+    exact start is not a roll (v1 found one at iteration 0 that worked 0/20 elsewhere)."""
+    r = np.random.default_rng(int(abs(x[0]) * 1e6) % 1000)
+    return float(np.mean([rollout(x, seed=1000 + i, roll=float(r.uniform(-0.5, 0.5)), randomize=True) for i in range(4)]))
+
+
 def main():
     global K
     ap = argparse.ArgumentParser()
@@ -98,7 +105,7 @@ def main():
     with Pool(a.workers, initializer=_set_k, initargs=(K,)) as pool:
         for it in range(a.iters):
             X = mu + sd * rng.standard_normal((a.pop, mu.size))
-            S = np.array(pool.map(rollout, list(X)))
+            S = np.array(pool.map(robust, list(X)))
             idx = np.argsort(-S)[:8]
             if S[idx[0]] > best[0]:
                 best = (float(S[idx[0]]), X[idx[0]].copy())
