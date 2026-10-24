@@ -49,10 +49,15 @@ PLANS = {
     "wake": [("sit_to_stand", 3.0), ("stand", None)],
     "lie": [("lie", None)],
     "get up": [("get_up", 6.0), ("stand", None)],
-    "jump": [("jump", None)],
+    # Paced hops (the jump brain alone bounces at ~4 Hz): the jump brain for one hop, until 3 ticks
+    # after the foot switches report the landing, then the stand brain settles for 0.8 s, again.
+    # "hop" is a single hop on command. ("again" restarts the plan; LANDED ends a step on touchdown.)
+    "jump": [("jump", "landed"), ("stand", 0.8), ("again", None)],
+    "hop": [("jump", "landed"), ("stand", None)],
     "roll": [("roll", 4.0), ("sit_to_stand", 3.0), ("stand", None)],
 }
-ALIASES = {"get_up": "get up", "getup": "get up", "wake up": "wake", "lie down": "lie", "sit down": "sit"}
+LANDED_TICKS, LANDED_TIMEOUT = 3, 2.0   # a "landed" step: ticks after touchdown; give up after s without a hop
+ALIASES = {"hop once": "hop", "one hop": "hop", "single hop": "hop", "get_up": "get up", "getup": "get up", "wake up": "wake", "lie down": "lie", "sit down": "sit"}
 # The command one-hot each skill brain was trained with (skills_env.TASK_COMMAND).
 POSES = HERE / "model" / "poses_mid.json"
 
@@ -248,6 +253,8 @@ class DuckRuntime:
         self.vel_cmd = np.zeros(3)
         self.gait_t = 0                     # ticks since the current gait started (gait clock)
         self.plan, self.plan_t = [], 0
+        self.plan_all = []                  # the whole plan of the current mode (for "again")
+        self.air_ticks, self.landed_at = 0, None
         self.skill = self.obs_command = None
         self.fallbacks = []                 # skills asked for that have no brain yet
         self.todo = []                      # (due tick, callable): queued personality steps
@@ -278,6 +285,7 @@ class DuckRuntime:
         self.mode = name
         self.vel_cmd = self._velocity(PLANS[name][0][0], vx, vy, yaw)
         self.plan = list(PLANS[name])
+        self.plan_all = list(PLANS[name])
         return self._next_in_plan()
 
     def look(self, yaw):
@@ -328,11 +336,28 @@ class DuckRuntime:
         self.plan_t += 1
         if self.obs_command in self.gait_hz:
             self.gait_t += 1
-        if self.plan and self.plan[0][1] is not None and self.plan_t * self.dt >= self.plan[0][1]:
+        feet = obs[-2:]
+        if feet.sum() == 0:
+            self.air_ticks += 1
+        else:
+            if self.air_ticks >= 2 and self.landed_at is None:
+                self.landed_at = self.plan_t          # first touchdown after a real flight in this step
+            self.air_ticks = 0
+        if self.plan and self._step_done(self.plan[0][1]):
             self.plan.pop(0)
+            if self.plan and self.plan[0][0] == "again":
+                self.plan = list(self.plan_all)
             if self.plan:
                 self._next_in_plan()
         return obs, action
+
+    def _step_done(self, secs):
+        if secs is None:
+            return False
+        if secs == "landed":
+            return ((self.landed_at is not None and self.plan_t >= self.landed_at + LANDED_TICKS)
+                    or self.plan_t * self.dt >= LANDED_TIMEOUT)
+        return self.plan_t * self.dt >= secs
 
     def run(self, seconds, every=None):
         for _ in range(int(round(seconds * self.hz))):
@@ -368,7 +393,8 @@ class DuckRuntime:
     def _next_in_plan(self):
         skill, secs = self.plan[0]
         msg = self._start(skill)
-        return self._say_log(f"{self.mode}: {msg}" + (f" for {secs:g} s" if secs and self.skill == skill else ""))
+        timing = f" until landed" if secs == "landed" else f" for {secs:g} s" if secs else ""
+        return self._say_log(f"{self.mode}: {msg}" + (timing if self.skill == skill else ""))
 
     def _start(self, skill):
         msg = f"brain {skill}"
@@ -385,6 +411,7 @@ class DuckRuntime:
         if new_cmd not in self.gait_hz:
             self.vel_cmd = np.zeros(3)
         self.skill, self.obs_command, self.plan_t = skill, new_cmd, 0
+        self.landed_at = None
         return msg
 
     def _say_log(self, msg):
@@ -477,7 +504,8 @@ def parse(clause, L=1.0):
     if re.search(r"\b(lie|lay|lying|play dead)\b|^down$|\bget down\b", t):
         return "lie", {}
     if re.search(r"\b(jump|hop|leap)\b", t):
-        return "jump", {}
+        once = re.search(r"\b(once|one|single|a (?:little |small )?(?:hop|jump))\b", t) and not re.search(r"\b(jumping|hopping|keep)\b", t)
+        return ("hop" if once else "jump"), {}
     if re.search(r"\b(roll|somersault|tumble)\b", t):
         return "roll", {}
     turn = 0.5 if "left" in t else -0.5 if "right" in t else 0.0
