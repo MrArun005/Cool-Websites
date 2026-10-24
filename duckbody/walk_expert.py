@@ -23,6 +23,13 @@ DEFAULT = dict(dx0=0.0, kx=0.0, kxd=0.0, kv=0.0, ky=0.0, kyd=0.0, kw=0.0, lead=1
 # Gains found by random search (scratch tune.py: survival and command tracking on randomized bodies).
 GAINS = {"walk": dict()}   # hand-tuned feedback did not beat the plain reference on fresh seeds
 GAINS["run"] = dict(GAINS["walk"])
+# walk_tune.py writes runs/walk_gains.json; use it when it exists (run falls back to the walk gains).
+_GAINS_FILE = __import__("pathlib").Path(__file__).resolve().parent / "runs" / "walk_gains.json"
+if _GAINS_FILE.exists():
+    import json as _json
+    _g = _json.loads(_GAINS_FILE.read_text())
+    GAINS["walk"] = dict(_g.get("walk", {}).get("gains", {}))
+    GAINS["run"] = dict(_g.get("run", _g.get("walk", {})).get("gains", {}))
 
 
 class Expert:
@@ -147,7 +154,8 @@ def rollout(gains, task="walk", seed=0, seconds=6.0, cmd=None, randomize=True, r
 if __name__ == "__main__":
     import sys
     import json
-    gains = json.loads(sys.argv[1]) if len(sys.argv) > 1 else {}
+    gains = json.loads(sys.argv[1]) if len(sys.argv) > 1 else GAINS["walk"]   # tuned gains by default
+    print("gains:", gains)
     for s in range(6):
         r = rollout(gains, seed=s, seconds=6.0)
         print({k: (round(v, 3) if isinstance(v, float) else v) for k, v in r.items()})
