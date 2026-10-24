@@ -42,6 +42,7 @@ GAIT_HZ = {"walk": 1.8, "run": 2.6}
 # how fast the body may go down, and a penalty on vertical shocks, both always on.
 GENTLE = ("sit", "sit_to_stand", "lie", "get_up")
 MAX_DESCENT = 0.05          # m/s
+RISE_FALL = 20.0          # sit to stand: falling over ends the episode with this penalty
 DESCENT_W, SHOCK_W = 4.0, 0.007   # descent 1.5 -> 4 after 2.5M: touch-downs were still 26-41 cm/s
 IMPACT_W, IMPACT_FREE = 0.3, 2.0  # belly contact force beyond 2x body weight, per extra body weight
 QUIET = ("squat", "sit", "lie", "jump", "roll")   # no head turning or talking during these (calm head)
@@ -215,7 +216,7 @@ class SkillEnv(DuckEnv):
                           # rising from the seat: tipping past ~65° is a fall (the first try flipped over)
                           or (info["up"] < 0.4 and self.task == "sit_to_stand" and self.sit_q is not None))
         if terminated:
-            reward = 0.0
+            reward = -RISE_FALL if self.task == "sit_to_stand" else 0.0   # tipping over must cost, not end the bill
         truncated = self.t >= self.max_steps
         info["task"] = self.task
         info["success"] = self.success(info)
@@ -247,8 +248,11 @@ class SkillEnv(DuckEnv):
         still = np.exp(-(p["vx"] ** 2 + p["vy"] ** 2) / (0.15 * L) ** 2)
         reward = r_h * r_up * still * (0.4 + 0.6 * r_pose)
         # Push harder: every bit of rise above the seat pays while staying fairly upright.
+        # (v4: gated on a hard up > 0.75 it lunged and tipped onto its side every episode, ~0.7 s; now it
+        # pays fully only when nearly upright and not drifting.)
         rise = float(np.clip((p["height"] - self.seat_q[2]) / (self.crouch_height - self.seat_q[2]), 0, 1))
-        reward += 0.5 * rise * (1.0 if p["up"] > 0.75 else 0.0)
+        upright = float(np.exp(-(max(0.0, 0.95 - p["up"]) / 0.1) ** 2))
+        reward += 0.5 * rise * upright * still
         vz, az = self.data.qvel[2], self.data.qacc[2]
         reward -= DESCENT_W * max(0.0, -vz - MAX_DESCENT) + SHOCK_W * abs(az)
         reward -= IMPACT_W * max(0.0, self._belly_force() / self.weight - IMPACT_FREE)
