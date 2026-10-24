@@ -103,17 +103,18 @@
 
   <section class="panel" aria-labelledby="where">
     <h2 id="where">Where we are</h2>
+    <p style="margin:0"><a href="https://claude.ai/artifact/Qmgw6JkPzALegcTj537aT7" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Play Bolt's Castle →</a> <span class="muted">A Takeshi's Castle-style course that Bolt runs with these brains, live in your browser.</span></p>
     <p>Bolt has two trained brains that work together: one for standing, sitting and lying, one for walking, turning and running at any asked speed. Both stand and walk tall like a real dog, with lower legs close to upright and no knees on the floor. Saved in <span class="mono">models/</span>.</p>
     <div class="two">
       <div class="brain">
         <h3>Stand, sit, lie</h3>
-        <span class="muted mono" style="font-size:.82rem">run 9c · 2.5M steps · models/bolt-dog-posture-dog-2.5M</span>
-        <div class="cells"><span class="c2">Stand 100%</span><span class="c2">Sit 100%</span><span class="c2">Lie 100%</span></div>
-        <p class="muted" style="font-size:.9rem">Stands 43 cm tall on four paws. Sits 30° nose-up on all four paws, both sides alike (the old brain sat lopsided with a paw in the air).</p>
+        <span class="muted mono" style="font-size:.82rem">run 13 · 3M steps · models/bolt-dog-posture-getup-3M</span>
+        <div class="cells"><span class="c2">Stand 100%</span><span class="c2">Sit 100%</span><span class="c2">Lie 100%</span><span class="c2">Get up 100%</span></div>
+        <p class="muted" style="font-size:.9rem">Stands 43 cm tall on four paws. Sits 30° nose-up on all four paws, both sides alike (the old brain sat lopsided with a paw in the air). Gets up from a sit or lying down without wobbling: 0 falls in 48 tries (run 9c's brain fell 1 in 3 standing straight up from a sit, spinning on the way up).</p>
       </div>
       <div class="brain">
         <h3>Walk, run and turn sharply</h3>
-        <span class="muted mono" style="font-size:.82rem">run 12 · 11.5M steps · models/bolt-dog-walk-sharp-11.5M</span>
+        <span class="muted mono" style="font-size:.82rem">run 12 · 12M steps · models/bolt-dog-walk-sharp-12M</span>
         <div class="cells"><span class="c2">Walk 100%</span><span class="c2">Turn left 100%</span><span class="c2">Turn right 100%</span><span class="c2">Sharp turns 100%</span><span class="c2">Run 1.0 m/s 100%</span><span class="c2">Slow 0.2 m/s 100%</span></div>
         <p class="muted" style="font-size:.9rem">Goes the speed it is asked, from a slow walk to a run: 0.2, 0.4, 0.7, 1.0 and 1.2 m/s asked give 0.22, 0.41, 0.70, 0.99 and 1.18 m/s on bumpy, randomised physics, with no knees on the floor. Turns on command and takes over from the standing brain. Following a person, it ran at up to 1.19 m/s and never fell behind more than 1.9 m (the old walk brain fell 6 m behind).</p>
       </div>
@@ -123,7 +124,9 @@
       <ol>
         <li><strong>New: live follow.</strong> Pick "Live" below. Bolt runs in your browser with the same physics and brains as in training, and follows whichever of five wandering people you pick. Switch at any moment. Testing it found two ways to fall, both now fixed: stopping dead from a run (it now slows down first) and speeding up while turning round (it now turns first). After the fixes, 0 falls in 80 simulated minutes.</li>
         <li><strong>Done: follow a person.</strong> A steering layer turns Bolt toward the person, speeds up when they pull away and stands when they stop. In the simulator it followed someone who walks, turns, jogs at 1.1 m/s and stops: no falls, on average 1.4 m behind, never more than 1.9 m. Watch "Follow a person" below.</li>
-        <li><strong>Sharp turns (run 12), on the live page now.</strong> Bolt turned at most 34°/s, so turning round to follow someone took over 5 s. Real dogs turn sharply by stepping sideways: front paws one way, rear paws the other. The trot now does that too. The 11.5M brain turns at the rate it is asked: up to 111°/s at a slow walk, 86°/s at 0.7 m/s, and 58°/s while running at 1.0 m/s, with no falls on bumpy, randomised physics, except 1 in 6 at the very sharpest (115°/s at 0.4 m/s). Running holds 0.96 and 1.15 m/s when asked 1.0 and 1.2, 0 falls in 8. Following people it stays 1.7 m behind (was 2.6 m), 0 falls in 80 simulated minutes.</li>
+        <li><strong>Sharp turns (run 12), done.</strong> Real dogs turn sharply by stepping sideways: front paws one way, rear paws the other. The trot now does that too. The 12M brain turns as asked up to 111°/s at a walk and 56°/s while running at 1.2 m/s, with no falls in any speed or turn test. Following people it stays 1.7 m behind (was 2.6 m).</li>
+        <li><strong>Getting up (run 13), done.</strong> Bolt's Castle showed that standing straight up from a sit fell 1 time in 3. Run 13 practised getting up without spinning: 0 falls in 48 tries, and 40 of 40 castle games finished.</li>
+        <li><strong>Next: athletic skills.</strong> Jumping over hurdles first: the motors can lift the paws 42 cm with no brain, but a fixed jump from a trot falls on landing 2–4 times in 4, so a brain has to learn to land. Then getting up after a fall, then galloping faster than 1.2 m/s.</li>
                 <li>Try both brains on the hand-size Bolt.</li>
         <li>Connect the brains to voice commands ("sit", "come here").</li>
       </ol>
@@ -196,7 +199,8 @@
         <tr><td>10b</td><td>Practise and test hand-overs from the real standing brain</td><td><strong>Walk, turn left, turn right 100%; 40/40 clean hand-overs at 7M.</strong> Saved.</td></tr>
         <tr><td>11</td><td>Speed command: slow walk to a run (0.2–1.2 m/s)</td><td>Stopped at 8M: walked at 0.4 m/s whatever speed it was asked.</td></tr>
         <tr><td>11b</td><td>Same, but speed is felt relative to the asked speed; practice speeds ramp up to 1.2 m/s</td><td><strong>Walk, turns, run 1.0 m/s, slow 0.2 m/s: all 100%.</strong> 10M saved: holds 0.2–1.2 m/s as asked.</td></tr>
-        <tr class="now"><td>12</td><td>Sharp turns: step sideways like a dog, practise up to 115°/s</td><td><strong>All tests 100% incl. sharp turns at 11.5M.</strong> Saved, on the live page. Training to 12.5M.</td></tr>
+        <tr><td>12</td><td>Sharp turns: step sideways like a dog, practise up to 115°/s</td><td><strong>All tests 100% incl. sharp turns.</strong> 12M saved: no falls in any speed or turn test.</td></tr>
+        <tr class="now"><td>13</td><td>Posture brain practises getting up from sit and lie, without spinning</td><td><strong>Stand, sit, lie, get up: all 100% at 3M.</strong> Saved, on the live pages. Training to 4.5M.</td></tr>
       </tbody>
     </table></div>
   </section>

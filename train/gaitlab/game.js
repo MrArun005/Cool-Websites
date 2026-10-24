@@ -30,10 +30,11 @@ export const STATIONS = {
 };
 export const SHOUTS = { sit: "SIT!", lie: "LIE DOWN!", still: "FREEZE!" };
 
-// Getting up. Straight from a sit to standing, the posture brain falls 4 times in 12 (also in Python);
-// from lying down, never. So from a sit Bolt lies down for a moment first, then stands.
-const rise = (from, t) => (from === "sit" && t < 0.8 ? "lie" : "stand");
-const riseTime = (from) => (from === "sit" ? 1.8 : 1.0);
+// Getting up: stand for 1 s before walking on. (The 2.5M posture brain fell 4 times in 12 standing
+// straight up from a sit; run 13's brain practised getting up and fell in none of 48 tries, and
+// finished 40 of 40 headless games.)
+const rise = () => "stand";
+const riseTime = () => 1.0;
 
 // A seeded random number generator, so a castle can be replayed.
 function rng(seed) {
