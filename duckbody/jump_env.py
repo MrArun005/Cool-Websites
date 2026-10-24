@@ -51,12 +51,23 @@ CLEAR_FULL = 0.006        # m of sole clearance for full flight credit
 PUSH_V = 0.4              # m/s upward CoM speed for full push-off credit
 READY = 0.1
 REST_S = 0.8              # s on the floor between a landing and the next takeoff (owner: ~1 hop/s, deliberate)
+REST_RAMP = (0.2, 250_000)   # training: the rest grows from 0.2 s to REST_S over this many steps per env
+                             # (a full 0.8 s at once made the fast-bouncing brain give up hopping: 0 hops at 3.5M)
+FLIGHT_W = 2.0            # flight credit per airborne step × (1 … 2): a deliberate hop must clearly beat standing
+PUSH_W = 0.3              # push-off shaping once rested
 EARLY = 0.5               # per airborne step of a hop taken before the rest is over (no bouncing)
 STILL_V = 0.05            # m/s CoM speed scale for the 'standing still' credit on the floor
 
 
 class JumpEnv(SkillEnv):
     back_emf = True
+    env_steps = 0             # this env instance's steps so far (training curriculum for the rest time)
+
+    def rest_steps(self):
+        if not self.practice:
+            return int(REST_S / self.dt)
+        f = min(1.0, self.env_steps / REST_RAMP[1])
+        return int((REST_RAMP[0] + f * (REST_S - REST_RAMP[0])) / self.dt)
 
     def _back_emf(self):
         """Servo torque–speed limit: a DC motor's available torque falls linearly with speed,
@@ -142,7 +153,8 @@ class JumpEnv(SkillEnv):
 
         rise = p["height"] - self.stand_height
         clear = min(self._sole_bottom(g) for g in self.sole_ids)        # lowest point of either sole
-        rested = self.ground_steps >= int(REST_S / self.dt)
+        self.env_steps += 1
+        rested = self.ground_steps >= self.rest_steps()
         if airborne:
             if self.air_steps == 0:                                    # takeoff: was the rest long enough?
                 self.hop_ok = rested
@@ -155,7 +167,7 @@ class JumpEnv(SkillEnv):
             if self.hop_ok:
                 self.best_hop = max(self.best_hop, rise)               # SkillEnv's exam measure
                 frac = 0.5 * np.clip(rise / (0.03 * L), 0, 1) + 0.5 * np.clip(clear / CLEAR_FULL, 0, 1)
-                phase = 1.0 + float(frac)
+                phase = FLIGHT_W * (1.0 + float(frac))
             else:
                 phase = -EARLY                                         # bouncing straight back up
         else:
@@ -167,7 +179,7 @@ class JumpEnv(SkillEnv):
             # Settle: standing still on both feet earns half as much again; push-off shaping only once rested.
             v_com = d.subtree_linvel[1]
             still = float(np.exp(-float(v_com @ v_com) / STILL_V ** 2)) if feet.sum() == 2 else 0.0
-            phase = ready * (1.0 + 0.5 * still) + (0.2 * float(np.clip(vz / PUSH_V, 0, 1)) if rested else 0.0)
+            phase = ready * (1.0 + 0.5 * still) + (PUSH_W * float(np.clip(vz / PUSH_V, 0, 1)) if rested else 0.0)
         up = 1.0 if p["up"] >= 0.9 else float(np.exp(-((p["up"] - 0.9) / 0.15) ** 2))
         # Drift of the whole body (CoM), not of the trunk origin: the trunk pitches during a push.
         v_xy = d.subtree_linvel[1][:2]
