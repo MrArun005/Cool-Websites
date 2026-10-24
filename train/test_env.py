@@ -271,6 +271,20 @@ class DogGaitTest(unittest.TestCase):
                 self.assertFalse(passed("stand", window[-80:]))  # the crouch is no longer a "stand" here
         self.assertGreater(pays["dog stance"], pays["old crouch"] * 1.3, pays)
 
+    def test_rising_toward_the_tall_stand_pays_gradually(self):
+        env = BoltEnv(randomize=False, gait_generator="dog")
+        env.forced_command = "stand"
+        env.reset(seed=0)
+        base = env.posture()
+        pay = {}
+        for h in (0.32, 0.346, 0.40, 0.436):
+            env.posture = lambda h=h: dict(base, height=h, pitch=0.0, roll=0.0, vx=0.0, vy=0.0)
+            pay[h] = env._reward(np.zeros(12))[0]
+        self.assertLess(pay[0.32], pay[0.346])
+        self.assertLess(pay[0.346], pay[0.40])
+        self.assertLess(pay[0.40], pay[0.436])
+        self.assertGreater(pay[0.40] - pay[0.346], 0.02)  # each step up is worth taking
+
     def test_other_stances_keep_the_old_stand(self):
         self.assertEqual(BoltEnv(gait_generator="tall").targets["stand"], TARGETS["stand"])
 

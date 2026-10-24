@@ -320,8 +320,12 @@ class BoltEnv(gym.Env):
         else:
             pose_err = np.mean((self.data.qpos[7:] - np.asarray(goal["pose"])) ** 2)
             speed = np.hypot(p["vx"], p["vy"])
+            # The dog-stance stand is 12 cm taller than the old crouch the posture brain knew. At
+            # width 0.06, standing 9 cm short paid ~10%, so run 9b rose only 3 cm in 500k steps.
+            # Width 0.12 pays ~57% there: a "warmer, warmer" signal. The exam still wants ±3 cm.
+            h_width = 0.12 if name == "stand" and self.stance == "dog" else 0.06
             terms = [
-                np.exp(-((p["height"] - goal["height"]) / 0.06) ** 2),
+                np.exp(-((p["height"] - goal["height"]) / h_width) ** 2),
                 np.exp(-((p["pitch"] - goal["pitch"]) / 0.25) ** 2) * upright,
                 np.exp(-pose_err / 0.4),
                 np.exp(-(speed / 0.15) ** 2),
