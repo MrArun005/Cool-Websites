@@ -73,6 +73,7 @@ def main():
     ap.add_argument("--smooth-after", type=int, default=None, help="step at which smoothness penalties start")
     ap.add_argument("--quick", action="store_true", help="smoke test: 4096 steps, 2 envs, tiny exam")
     ap.add_argument("--resume")
+    ap.add_argument("--log-std", type=float, default=-2.3, help="initial log std of the exploration noise: -2.3 is about 0.1 rad")
     ap.add_argument("--ckpt-every", type=int, default=1_000_000, help="save a checkpoint every N steps")
     ap.add_argument("--model", help="model XML (default model/duck.xml), e.g. model/duck_mid.xml")
     a = ap.parse_args()
@@ -100,7 +101,7 @@ def main():
                     n_epochs=5, learning_rate=3e-4, gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.0,
                     max_grad_norm=1.0, target_kl=0.03,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]), activation_fn=torch.nn.ELU,
-                                       log_std_init=-1.0),
+                                       log_std_init=a.log_std),
                     tensorboard_log=str(out.parent), seed=a.seed, device="cpu", verbose=1)
     cbs = [CheckpointCallback(max(a.ckpt_every // a.envs, 1), str(out / "checkpoints"), name_prefix="policy",
                               save_vecnormalize=True), SmoothCurriculum(a.smooth_after)]
