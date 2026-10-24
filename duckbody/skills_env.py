@@ -42,7 +42,8 @@ GAIT_HZ = {"walk": 1.8, "run": 2.6}
 # how fast the body may go down, and a penalty on vertical shocks, both always on.
 GENTLE = ("sit", "sit_to_stand", "lie", "get_up")
 MAX_DESCENT = 0.05          # m/s
-DESCENT_W, SHOCK_W = 1.5, 0.007
+DESCENT_W, SHOCK_W = 4.0, 0.007   # descent 1.5 -> 4 after 2.5M: touch-downs were still 26-41 cm/s
+IMPACT_W, IMPACT_FREE = 0.3, 2.0  # belly contact force beyond 2x body weight, per extra body weight
 QUIET = ("squat", "sit", "lie", "jump", "roll")   # no head turning or talking during these (calm head)
 
 
@@ -70,6 +71,7 @@ class SkillEnv(DuckEnv):
         self.lie_height = 1.0 - low + 0.002
         self.sit_height = self.crouch_height
         self.belly_geoms = self.trunk_geoms
+        self.weight = float(m.body_subtreemass[1]) * 9.81
         self.thigh_geoms = [g for g in range(m.ngeom) if m.body(m.geom_bodyid[g]).name in ("knee_and_ankle_assembly", "knee_and_ankle_assembly_3")
                             and m.geom_contype[g] + m.geom_conaffinity[g] > 0]
         self.sit_q = None
@@ -215,6 +217,15 @@ class SkillEnv(DuckEnv):
     def _trunk_on_floor(self):
         return self._touching(self.trunk_geoms)
 
+    def _belly_force(self):
+        d, f6, total = self.data, np.zeros(6), 0.0
+        for i in range(d.ncon):
+            g = d.contact.geom[i]
+            if self.floor in g and (g[0] in self.trunk_geoms or g[1] in self.trunk_geoms):
+                mujoco.mj_contactForce(self.model, d, i, f6)
+                total += abs(f6[0])
+        return total
+
     def _seated(self):
         return self._trunk_on_floor() and self._thighs_down()
 
@@ -300,6 +311,7 @@ class SkillEnv(DuckEnv):
             vz = self.data.qvel[2]
             az = self.data.qacc[2]
             reward -= DESCENT_W * max(0.0, -vz - MAX_DESCENT) + SHOCK_W * abs(az)
+            reward -= IMPACT_W * max(0.0, self._belly_force() / self.weight - IMPACT_FREE)
         if self.smooth_weight:
             torque = self.data.actuator_force
             pen = (0.5 * np.mean((action - self.last_action) ** 2)
