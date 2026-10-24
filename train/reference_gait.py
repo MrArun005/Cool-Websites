@@ -55,7 +55,7 @@ def leg_ik(x, z, front):
     return (beta + bend / 2, -bend) if front else (beta - bend / 2, bend)
 
 
-def paw_trot(phase, step=0.125, lift=0.06, height=0.385):
+def paw_trot(phase, step=0.125, lift=0.06, height=0.385, turn=0.0):
     """A trot planned the way animals move: by the paw's path, not by swinging joints.
 
     Real dogs and cats keep each paw under the body: in stance the paw stays on the ground and
@@ -63,17 +63,23 @@ def paw_trot(phase, step=0.125, lift=0.06, height=0.385):
     comes forward on a low arc, a few cm up. Here each paw follows that path relative to its
     hip (stance: flat line of length `step` at `height` below the hip; swing: smooth arc up to
     `lift`) and leg_ik turns it into joint angles. Same phase convention as trot().
+
+    turn (m): to turn left, the right paws take strides `turn` longer and the left paws `turn`
+    shorter, the way a dog curves its path (negative turns right). With step=0 the two sides
+    stride in opposite directions and it turns on the spot.
     """
     q, stance = np.zeros(12), np.zeros(4)
     for leg in range(4):
         u = ((phase + np.pi * PAIR[leg] + np.pi / 2) / (2 * np.pi)) % 1.0  # 0..0.5 stance, 0.5..1 swing
+        right = leg in (1, 3)                              # FR, RR
+        stride = step + (turn if right else -turn)
         if u < 0.5:
-            x, z = step / 2 - step * (u / 0.5), -height
+            x, z = stride / 2 - stride * (u / 0.5), -height
             stance[leg] = 1.0
         else:
             w = (u - 0.5) / 0.5
             smooth = w * w * (3 - 2 * w)
-            x, z = -step / 2 + step * smooth, -height + lift * np.sin(np.pi * w)
+            x, z = -stride / 2 + stride * smooth, -height + lift * np.sin(np.pi * w)
         hip, knee = leg_ik(x, z, front=leg < 2)
         q[3 * leg + 1], q[3 * leg + 2] = hip, knee  # joint targets, same as pose() produces
     return q, stance

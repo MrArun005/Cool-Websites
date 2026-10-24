@@ -4,7 +4,8 @@
                        --brain walk=../models/bolt-dog-walk-500k --gait-generator \
                        --script stand:2:posture sit:4:posture stand:2:posture walk:8:walk -o routine.json
 
-Each script step is command:seconds:brain. The brains share one input layout, so one can
+Each script step is command:seconds:brain[:turn], turn in rad/s (+ left) for brains that can turn.
+The brains share one input layout (the turn command is an extra last input), so one can
 hand over to another mid-clip, the way the robot will swap skills. For every control step
 (50 per second) it saves where each body part is and which parts touch the floor or each
 other, so a web page can redraw the dog from any angle and mark the moments a knee, shin
@@ -56,7 +57,8 @@ def describe(m):
 
 
 def record(brains, script, seed, gait_generator):
-    env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator)
+    turning = any(getattr(b, "turning", False) for b in brains.values())
+    env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator, turning=turning)
     env.forced_command = script[0][0]
     obs, _ = env.reset(seed=seed)
     m, d = env.model, env.data
@@ -65,9 +67,11 @@ def record(brains, script, seed, gait_generator):
     index = {g["id"]: i for i, g in enumerate(geoms)}
     frames = []
     quat = np.zeros(4)
-    for command, seconds, brain in script:
+    for command, seconds, brain, turn in script:
         env.forced_command = command
         env.set_command(command)
+        if turning:
+            env.set_turn(turn)
         for _ in range(int(seconds * 50)):
             obs, _, fell, _, _ = env.step(brains[brain].act(obs))
             pose = []
@@ -90,7 +94,7 @@ def record(brains, script, seed, gait_generator):
                 elif c.geom1 in index and c.geom2 in index:
                     rubbing.add(tuple(sorted((index[c.geom1], index[c.geom2]))))
             R = d.xmat[1].reshape(3, 3)
-            frames.append(dict(cmd=command, brain=brain, p=pose, floor=sorted(on_floor), scrape=sorted(scrape),
+            frames.append(dict(cmd=command, brain=brain, turn=turn, yawr=round(float(d.qvel[5]), 3), p=pose, floor=sorted(on_floor), scrape=sorted(scrape),
                                rub=[list(r) for r in sorted(rubbing)],
                                vx=round(float(d.qvel[:3] @ R[:, 0]), 3), h=round(float(d.qpos[2]), 3),
                                pitch=round(float(np.degrees(np.arcsin(R[2, 0]))), 1),  # nose up is positive
@@ -133,7 +137,7 @@ def main():
     ap.add_argument("-o", "--out", required=True)
     args = ap.parse_args()
     brains = {name: (NoBrain() if path == "none" else Policy(path)) for name, path in (b.split("=", 1) for b in args.brain)}
-    script = [(c, float(s), b) for c, s, b in (step.split(":") for step in args.script)]
+    script = [(f[0], float(f[1]), f[2], float(f[3]) if len(f) > 3 else 0.0) for f in (step.split(":") for step in args.script)]
     geoms, frames = record(brains, script, args.seed, args.gait_generator)
     rows = summary(geoms, frames)
     stand_env = BoltEnv(gait_generator=args.gait_generator)  # the dog stance stands taller than the default

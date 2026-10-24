@@ -322,6 +322,32 @@ class DogGaitTest(unittest.TestCase):
             heights.append(env.data.qpos[2])
         self.assertGreater(min(heights), 0.3)  # some of these seeds start lying without it
 
+    def test_turn_command_turns_the_dog_without_a_brain(self):
+        rates = {}
+        for rate in (0.4, -0.4, 0.0):
+            env = BoltEnv(randomize=False, max_steps=10_000, skills=["walk"], gait_generator="dog", turning=True)
+            env.forced_command = "walk"
+            obs, _ = env.reset(seed=1)
+            env.set_turn(rate)
+            self.assertEqual(env._obs().shape, (53,))
+            ys = []
+            for t in range(300):
+                _, _, fell, _, info = env.step(np.zeros(12))
+                self.assertFalse(fell)
+                if t > 100:
+                    ys.append(info["yaw_rate"])
+            rates[rate] = np.mean(ys)
+        self.assertGreater(rates[0.4], 0.25)
+        self.assertLess(rates[-0.4], -0.25)
+        self.assertLess(abs(rates[0.0]), 0.05)
+
+    def test_exam_checks_the_turn_only_for_turning_brains(self):
+        good = dict(height=0.435, walk_height=0.435, pitch=0.0, roll=0.0, vx=0.45, vy=0.0, up=1.0,
+                    feet=np.array([0.5] * 4), scrape=0, shin_tilt=22.0, yaw_rate=0.0, yaw_cmd=0.4, turning=True)
+        self.assertFalse(passed("walk", [good] * 80))                       # asked left, went straight
+        self.assertTrue(passed("walk", [dict(good, yaw_rate=0.35)] * 80))  # turned close to the asked rate
+        self.assertTrue(passed("walk", [dict(good, turning=False)] * 80))  # older brains aren't asked to turn
+
     def test_other_stances_keep_the_old_stand(self):
         self.assertEqual(BoltEnv(gait_generator="tall").targets["stand"], TARGETS["stand"])
 

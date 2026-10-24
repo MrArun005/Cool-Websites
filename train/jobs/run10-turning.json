@@ -1,0 +1,83 @@
+{
+  "name": "bolt-run10-turning",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt10",
+        "--steps",
+        "8000000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--turning",
+        "--resume",
+        "runs/turn_start/policy.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt10",
+        "--steps",
+        "8000000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--turning",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/bolt10/checkpoints/policy_*_steps.zip",
+      "log": "runs/bolt10/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/bolt10/policy.zip",
+        "log_contains": "^done:"
+      }
+    },
+    {
+      "name": "watch",
+      "cmd": [
+        "python",
+        "-u",
+        "watch.py",
+        "runs/bolt10",
+        "--log",
+        "runs/bolt10/train.log",
+        "--out",
+        "runs/bolt10/watch",
+        "--target",
+        "8000000",
+        "--patience",
+        "0",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--label",
+        "Run 10: walk and turn left/right on command"
+      ],
+      "log": "runs/bolt10/watch.log",
+      "done_when": {
+        "log_contains": "^finished"
+      }
+    }
+  ]
+}

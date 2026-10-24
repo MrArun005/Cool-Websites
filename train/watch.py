@@ -66,13 +66,15 @@ def film(policy, path, steps_label, noise=False, script=SCRIPT, gait_generator=F
         small = ImageFont.truetype("DejaVuSans.ttf", 18)
     except OSError:
         big = small = ImageFont.load_default()
-    env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator)
+    env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator, turning=getattr(policy, "turning", False))
     env.forced_command = "stand"
     obs, _ = env.reset(seed=7)
     falls, fallen_for = 0, 0
     with imageio.get_writer(path, fps=25, codec="libx264", quality=6, macro_block_size=8) as video:
-        for command, steps in script:
+        for command, steps, *turn in script:
             env.set_command(command)
+            if env.turning:
+                env.set_turn(turn[0] if turn else 0.0)
             for k in range(steps):
                 obs, _, fell, _, _ = env.step(policy.act(obs, deterministic=not noise))
                 if fell and fallen_for == 0:
@@ -131,7 +133,8 @@ def main():
         write_json(data_path, data)
 
     def score(exam):
-        return float(np.mean([exam[c] for c in (args.skills or COMMANDS)]))
+        keys = list(args.skills or COMMANDS) + [k for k in ("turn_left", "turn_right") if k in exam]
+        return float(np.mean([exam[c] for c in keys]))
 
     def keep_best(steps, exam, zip_path=None, stats=None):
         """Remember the best checkpoint; ask training to stop when it stops improving."""
@@ -159,6 +162,8 @@ def main():
         label = "untrained" if steps == 0 else f"after {steps:,} practice steps"
         clip = f"clips/{steps:010d}.mp4"
         script = [(c, 250) for c in args.skills] if args.skills else SCRIPT
+        if getattr(policy, "turning", False):
+            script = [("walk", 150, 0.0), ("walk", 150, 0.4), ("walk", 150, -0.4)]  # straight, left, right
         falls = film(policy, out / clip, label, noise=args.noise, script=script, gait_generator=args.gait_generator)
         exam = evaluate(policy, args.episodes, seed=1000, skills=args.skills, gait_generator=args.gait_generator)
         data["checkpoints"].append(dict(steps=steps, exam={k: round(v, 2) for k, v in exam.items()},

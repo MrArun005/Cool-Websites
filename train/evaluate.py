@@ -22,10 +22,14 @@ class Policy:
     def __init__(self, run_dir):
         run_dir = Path(run_dir)
         self.model = PPO.load(run_dir / "policy.zip", device="cpu")
-        self.norm = VecNormalize.load(str(run_dir / "vecnormalize.pkl"), DummyVecEnv([BoltEnv]))
+        # brains that can turn have a 53rd input (the turn command); build a matching env
+        self.turning = self.model.observation_space.shape[0] == 53
+        self.norm = VecNormalize.load(str(run_dir / "vecnormalize.pkl"), DummyVecEnv([lambda: BoltEnv(turning=self.turning)]))
         self.norm.training = False
 
     def act(self, obs, deterministic=True):
+        # The turn command is appended as the last input, so a brain that can't turn just ignores it.
+        obs = obs[..., : self.model.observation_space.shape[0]]
         action, _ = self.model.predict(self.norm.normalize_obs(obs), deterministic=deterministic)
         return action
 
@@ -45,12 +49,17 @@ def passed(command, window):
     feet = np.mean([p["feet"] for p in window], axis=0)
     upright = min(p["up"] for p in window) > 0.2
     if command == "walk":
+        # brains that can turn must turn as asked, within ~11°/s (0 = straight); older brains aren't asked
+        turned_right = True
+        if window[0].get("turning"):
+            yaw = np.mean([p["yaw_rate"] for p in window])
+            turned_right = abs(yaw - window[0]["yaw_cmd"]) < 0.2
         scraping = np.mean([p.get("scrape", 0) > 0 for p in window])
         tall_enough = abs(h - window[0].get("walk_height", goal["height"])) < 0.05
         # lower legs near upright, like a real dog's (a "dog" walk with no brain: ~20°)
         upright_legs = np.median([p.get("shin_tilt", 0) for p in window]) < 30
         return bool(upright and 0.3 <= vx <= 0.75 and abs(pitch) < 0.25 and roll < 0.25 and feet.min() >= 0.2
-                    and scraping < 0.02 and tall_enough and upright_legs)
+                    and scraping < 0.02 and tall_enough and upright_legs and turned_right)
     speed = np.mean([np.hypot(p["vx"], p["vy"]) for p in window])
     goal_h = window[0].get("goal_height", goal["height"])  # the env's own target (the dog stance stands taller)
     ok = upright and abs(h - goal_h) < 0.03 and abs(pitch - goal["pitch"]) < 0.12 and roll < 0.12 and speed < 0.15
@@ -79,8 +88,9 @@ def reset_standing(env, seed):
     return obs
 
 
-def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False):
-    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator)
+def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turning=None):
+    turning = getattr(policy, "turning", False) if turning is None else turning
+    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=turning)
     results = {}
     for command in (skills or COMMANDS):
         wins = 0
@@ -96,9 +106,26 @@ def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False):
                 env.forced_command = "walk"
             else:
                 obs, _ = env.reset(seed=seed + k)
+            if env.turning:
+                env.set_turn(0.0)  # this part of the exam walks straight; turning is tested below
+                obs = env._obs()
             _, ok, _ = run_segment(env, policy, obs, command, 250)
             wins += ok
         results[command] = wins / episodes
+
+    if env.turning and "walk" in (skills or COMMANDS):
+        # Turning: walk while asked to turn left or right at 0.4 rad/s (~23°/s).
+        for name, rate in (("turn_left", 0.4), ("turn_right", -0.4)):
+            wins = 0
+            for k in range(episodes):
+                env.forced_command = "walk"
+                obs, _ = env.reset(seed=seed + 500 + k)
+                env.set_turn(rate)
+                obs = env._obs()
+                _, ok, _ = run_segment(env, policy, obs, "walk", 250)
+                wins += ok
+            results[name] = wins / episodes
+        env.forced_turn_set = False
 
     # Obeying a sequence of commands in a row, the way you'd actually use it.
     if skills and set(skills) != set(COMMANDS):

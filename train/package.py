@@ -58,7 +58,7 @@ class OnnxPolicy(torch.nn.Module):
 
 def export_onnx(policy, path):
     net = OnnxPolicy(policy).eval()
-    dummy = torch.zeros(1, 52)
+    dummy = torch.zeros(1, policy.model.observation_space.shape[0])
     torch.onnx.export(net, (dummy,), str(path), input_names=["obs"], output_names=["action"],
                       dynamic_axes={"obs": {0: "batch"}, "action": {0: "batch"}}, dynamo=False)
 
@@ -67,7 +67,7 @@ def check_onnx(policy, path, samples=200, gait_generator=False):
     """Run the ONNX file next to the original policy on real observations; they must agree."""
     import onnxruntime as ort
     session = ort.InferenceSession(str(path))
-    env = BoltEnv(randomize=True, gait_generator=gait_generator)
+    env = BoltEnv(randomize=True, gait_generator=gait_generator, turning=policy.turning)
     obs, _ = env.reset(seed=5)
     worst = 0.0
     for _ in range(samples):
@@ -79,7 +79,7 @@ def check_onnx(policy, path, samples=200, gait_generator=False):
 
 
 def record_rollouts(policy, episodes_per_command, steps=250, seed=2000, commands=COMMANDS, gait_generator=False):
-    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator)
+    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=policy.turning)
     keys = ("obs", "action", "reward", "command", "height", "pitch", "roll", "vx", "fell", "episode")
     data = {k: [] for k in keys}
     episode = 0
