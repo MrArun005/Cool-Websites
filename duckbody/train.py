@@ -1,0 +1,115 @@
+"""Train the duck body with PPO (same recipe as train/train.py for Bolt).
+
+    python duckbody/train.py --quick                       # smoke test: a few thousand steps
+    python duckbody/train.py --task stand --steps 5000000  # one skill
+    python duckbody/train.py --steps 60000000 --smooth-after 20000000   # all four tasks
+    python duckbody/train.py --resume runs/duck/checkpoints/policy_5000000_steps.zip
+
+Saves runs/<name>/policy.zip + vecnormalize.pkl (bake the normalizer into the ONNX export:
+LESSONS.md §3). Watch: tensorboard --logdir duckbody/runs
+"""
+import argparse
+import json
+import time
+from pathlib import Path
+
+import numpy as np
+import torch
+from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
+
+from env import TASKS, DuckEnv
+
+HERE = Path(__file__).resolve().parent
+
+
+class SmoothCurriculum(BaseCallback):
+    """Turn smoothness penalties on only after the skill exists (LESSONS §4)."""
+
+    def __init__(self, after, ramp=5_000_000, weight=1.0):
+        super().__init__()
+        self.after, self.ramp, self.weight = after, ramp, weight
+
+    def _on_step(self):
+        if self.after is not None and self.num_timesteps >= self.after:
+            w = self.weight * min(1.0, (self.num_timesteps - self.after) / self.ramp)
+            self.training_env.set_attr("smooth_weight", w)
+        return True
+
+
+def exam(model, venv, tasks, episodes=4, seed=123):
+    """Deterministic rollouts per task: success rate at the end of the episode, mean reward."""
+    out = {}
+    for task in tasks:
+        env = DuckEnv(task=task, randomize=True, seed=seed)
+        wins, rewards = 0, []
+        for ep in range(episodes):
+            obs, _ = env.reset(seed=seed + ep)
+            total, done = 0.0, False
+            while not done:
+                o = venv.normalize_obs(obs[None]) if isinstance(venv, VecNormalize) else obs[None]
+                a, _ = model.predict(o, deterministic=True)
+                obs, r, term, trunc, info = env.step(a[0])
+                total += r
+                done = term or trunc
+            wins += info["success"]
+            rewards.append(total)
+        out[task] = dict(success=wins / episodes, mean_reward=float(np.mean(rewards)))
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--steps", type=int, default=60_000_000)
+    ap.add_argument("--envs", type=int, default=8)
+    ap.add_argument("--task", choices=TASKS, help="train one task only (default: all four, mixed)")
+    ap.add_argument("--name", default="duck")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--smooth-after", type=int, default=None, help="step at which smoothness penalties start")
+    ap.add_argument("--quick", action="store_true", help="smoke test: 4096 steps, 2 envs, tiny exam")
+    ap.add_argument("--resume")
+    a = ap.parse_args()
+    if a.quick:
+        a.steps, a.envs, a.name = 4096, 2, a.name + "_smoke"
+
+    out = HERE / "runs" / a.name
+    out.mkdir(parents=True, exist_ok=True)
+    torch.set_num_threads(2)
+    kw = dict(task=a.task)
+    vec_cls = DummyVecEnv if a.quick else SubprocVecEnv
+    venv = make_vec_env(DuckEnv, n_envs=a.envs, seed=a.seed, vec_env_cls=vec_cls, env_kwargs=kw)
+    if a.resume:
+        ckpt = Path(a.resume)
+        stats = ckpt.with_name("vecnormalize.pkl")
+        if not stats.exists():
+            stats = ckpt.with_name(ckpt.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")
+        venv = VecNormalize.load(str(stats), venv)
+        model = PPO.load(ckpt, env=venv, device="cpu", tensorboard_log=str(out.parent))
+    else:
+        venv = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
+        model = PPO("MlpPolicy", venv, n_steps=1024 if a.quick else 512, batch_size=1024 if a.quick else 4096,
+                    n_epochs=5, learning_rate=3e-4, gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.0,
+                    max_grad_norm=1.0, target_kl=0.03,
+                    policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]), activation_fn=torch.nn.ELU,
+                                       log_std_init=-1.0),
+                    tensorboard_log=str(out.parent), seed=a.seed, device="cpu", verbose=1)
+    cbs = [CheckpointCallback(max(1_000_000 // a.envs, 1), str(out / "checkpoints"), name_prefix="policy",
+                              save_vecnormalize=True), SmoothCurriculum(a.smooth_after)]
+    t0 = time.time()
+    model.learn(total_timesteps=a.steps - model.num_timesteps, callback=cbs, tb_log_name=a.name,
+                reset_num_timesteps=not a.resume, progress_bar=False)
+    secs = time.time() - t0
+    model.save(out / "policy.zip")
+    venv.save(str(out / "vecnormalize.pkl"))
+    venv.training = False
+    tasks = [a.task] if a.task else TASKS
+    res = dict(steps=int(model.num_timesteps), seconds=secs, steps_per_s=model.num_timesteps / secs,
+               exam=exam(model, venv, tasks, episodes=1 if a.quick else 8))
+    (out / "summary.json").write_text(json.dumps(res, indent=1))
+    print(json.dumps(res, indent=1))
+
+
+if __name__ == "__main__":
+    main()

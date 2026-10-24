@@ -210,10 +210,11 @@ class DuckEnv(gym.Env):
         self.max_steps = int((self.max_seconds or default_s) * CTRL_HZ)
         self.t = 0
         self.start_height = float(d.qpos[2])
-        self.start_up = float(self.gravity()[2] * -1)
+        self.start_up = self.posture()["up"]
         self.last_action = np.zeros(m.nu)
         self.pending = [self.home.copy()] * 2
         self.next_push = int(r.integers(100, 300))
+        self.vx_err = 1.0
         return self._obs(), {"task": self.task}
 
     def _lying_start(self):
@@ -249,6 +250,10 @@ class DuckEnv(gym.Env):
 
         reward, info = self._reward(action)
         self.last_action = action
+        if self.command == "walk":   # running average of the velocity tracking error, for the exam
+            v = self.vel_cmd
+            err = abs(info["vx"] - v[0]) + abs(info["vy"] - v[1]) + 0.2 * abs(info["yaw_rate"] - v[2])
+            self.vx_err = 0.98 * self.vx_err + 0.02 * err
         fallen = info["up"] < 0.3
         terminated = bool(fallen and self.task in ("stand", "walk"))
         if terminated:
@@ -303,7 +308,7 @@ class DuckEnv(gym.Env):
         """Exam check: upright and at standing height (stand tasks) or moving as asked (walk)."""
         ok = info["up"] > 0.9 and info["height"] > self.stand_height - 0.02
         if self.command == "walk":
-            ok = ok and abs(info["vx"] - self.vel_cmd[0]) < 0.08
+            ok = ok and self.vx_err < 0.06
         return bool(ok)
 
     def render(self):
