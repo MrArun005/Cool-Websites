@@ -124,3 +124,15 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   half its walks start as a hand-over from standing. `supervise.sh` keeps the run going
   (restarts from the latest checkpoint after any crash) with early stopping turned off at the
   owner's request; the best checkpoint is still kept in `runs/<name>/best/`.
+- Runs 8-9 (dog gait, tall stand): planning each paw's path (like real dogs and cats) kept the
+  lower legs ~20-25° from upright instead of 38-65°. Two hand-over lessons:
+  - **Ease into a new skill from the pose that skill practised**, not from the previous brain's
+    last motor commands (those push past the legs to hold the weight: 8/10 falls) nor from the
+    sagging actual joint angles (9/10). Easing from the dog stance: 0/10.
+  - **Test the hand-over with the real brains.** The walk exam handed over from a perfect
+    motor-held stand; the 5.5M walk passed it 100% yet sank into a knee-dragging crouch in 7 of 10
+    hand-overs from the real standing brain, while the 5M checkpoint did 10/10. Keep the best
+    checkpoint by the real test, not the latest. (Next: let the exam hand over from a given brain.)
+- Reuse what already works: the old posture brain already sat and lay 100%, so run 9c started
+  from it and only had to learn the new stand. Centre a new pose on its own resting point: with
+  the tall stand centred on the old crouch, the brain's outputs pinned at their limits and stalled.
