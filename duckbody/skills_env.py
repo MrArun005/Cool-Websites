@@ -223,6 +223,25 @@ class SkillEnv(DuckEnv):
     def _trunk_on_floor(self):
         return self._touching(self.trunk_geoms)
 
+    def _rise_reward(self, action):
+        """Sit to stand, first link of the chain: from the swag seat, rock forward into an upright
+        squat (the stand brain takes it from there). From seat to full standing in one go it never
+        left the seat (0/5 at 1M, max height 6.5 cm of 11.1)."""
+        p = self.posture()
+        L, s, sh = self.L, self.t * self.dt, 0.03 * self.L
+        h_ref = min(self.crouch_height, self.start_height + 0.05 * L * s)
+        r_h = np.exp(-((p["height"] - h_ref) / (2 * sh)) ** 2) if p["height"] < h_ref else 1.0
+        up_ref = min(1.0, self.start_up + 0.3 * s)
+        r_up = np.exp(-((p["up"] - up_ref) / 0.12) ** 2) if p["up"] < up_ref else 1.0
+        legs = self.qadr[self.legs]
+        r_pose = np.exp(-np.sum((self.data.qpos[legs] - self.crouch_q[legs]) ** 2) / 1.0)
+        still = np.exp(-(p["vx"] ** 2 + p["vy"] ** 2) / (0.15 * L) ** 2)
+        reward = r_h * r_up * still * (0.4 + 0.6 * r_pose)
+        vz, az = self.data.qvel[2], self.data.qacc[2]
+        reward -= DESCENT_W * max(0.0, -vz - MAX_DESCENT) + SHOCK_W * abs(az)
+        reward -= IMPACT_W * max(0.0, self._belly_force() / self.weight - IMPACT_FREE)
+        return float(reward), dict(h_ref=h_ref, up_ref=up_ref, **p)
+
     def _belly_force(self):
         d, f6, total = self.data, np.zeros(6), 0.0
         for i in range(d.ncon):
@@ -240,6 +259,8 @@ class SkillEnv(DuckEnv):
 
     def _reward(self, action):
         cmd = self.command
+        if self.task == "sit_to_stand" and self.sit_q is not None:
+            return self._rise_reward(action)
         if cmd == "stand":
             return super()._reward(action)
         p = self.posture()
@@ -329,6 +350,9 @@ class SkillEnv(DuckEnv):
 
     def success(self, info):
         L, cmd = self.L, self.command
+        if self.task == "sit_to_stand" and self.sit_q is not None:
+            return bool(info["up"] > 0.95 and abs(info["height"] - self.crouch_height) < 0.015 * L / 0.69
+                        and not self._trunk_on_floor())
         if cmd in ("stand",):
             return super().success(info)
         if cmd in GAIT_HZ:
