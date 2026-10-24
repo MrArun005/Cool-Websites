@@ -21,7 +21,7 @@ from skills_env import GAIT_HZ
 
 DEFAULT = dict(dx0=0.0, kx=0.0, kxd=0.0, kv=0.0, ky=0.0, kyd=0.0, kw=0.0, lead=1, dmax=0.03)
 # Gains found by random search (scratch tune.py: survival and command tracking on randomized bodies).
-GAINS = {"walk": dict(kx=0.055, kxd=0.0025, kv=0.0531, ky=0.0099, kyd=-0.0106, kw=1.7447)}
+GAINS = {"walk": dict()}   # hand-tuned feedback did not beat the plain reference on fresh seeds
 GAINS["run"] = dict(GAINS["walk"])
 
 

@@ -4,6 +4,7 @@
 
 Scripted through JumpEnv.step (the policy's own action interface, nominal body):
   stand        hold the home pose for 3 s
+  bounce-4Hz   crouch-push-home every 0.24 s (the v1/v2 brains' frantic bounce)
   hop-hard     crouch → push → tuck into the home pose and land on it
   hop-soft     same push and tuck, then legs reach long for the floor and yield into a crouch
   drop-hard    released 3 cm above the floor, legs held in the home pose
@@ -41,15 +42,21 @@ def episode(env, ctrl, seconds=3.0, drop=None):
         if term:
             break
     return dict(reward=round(total, 2), shock=round(shock, 2), peak_F_over_W=round(peak, 2), hops=env.hops,
-                best_rise_cm=round(env.best_hop * 100, 2), up=round(env.posture()["up"], 2), fell=bool(term))
+                best_rise_cm=round(env.best_hop * 100, 2), early=env.early_hops, up=round(env.posture()["up"], 2), fell=bool(term))
 
 
-def hopper(soft):
-    """One hop per second: crouch 0.3 s, push 0.14 s, tuck the legs 0.04 s (the feet leave the floor).
+def bouncer(env, t, landed):
+    """Fast bouncing, ~4 hops/s: crouch 0.06 s, push 0.1 s, home 0.08 s, again (v1/v2 brains did this)."""
+    k = t % 12
+    return leg_action(env, *(CROUCH if k < 3 else PUSH if k < 8 else HOME)), None
+
+
+def hopper(soft, period=60):
+    """One hop per 1.2 s: crouch 0.3 s, push 0.14 s, tuck the legs 0.04 s (the feet leave the floor).
     Hard: stay tucked in the home pose and land on it. Soft: reach long for the floor, then yield
     into a crouch over 0.2 s after touchdown and stand back up."""
     def ctrl(env, t, landed):
-        k = t % 50
+        k = t % period
         if k < 15:
             return leg_action(env, *CROUCH), None
         if k < 22:
@@ -92,6 +99,7 @@ def check(back_emf):
         "stand": episode(env, lambda e, t, l: (leg_action(e, *HOME), None)),
         "hop-hard": episode(env, hopper(False)),
         "hop-soft": episode(env, hopper(True)),
+        "bounce-4Hz": episode(env, bouncer),
         "drop-hard": episode(env, dropper(False), seconds=1.5, drop=0.03),
         "drop-soft": episode(env, dropper(True), seconds=1.5, drop=0.03),
         "drop2-hard": episode(env, dropper(False), seconds=1.5, drop=0.015),
@@ -109,6 +117,7 @@ def check(back_emf):
         soft, hard = (a, b) if a["peak_F_over_W"] < b["peak_F_over_W"] else (b, a)
         ok &= soft["reward"] > hard["reward"]
     print("the softer landing of each pair scores higher:", ok)
+    print("slow hops score higher than 4 Hz bouncing:", max(rows["hop-soft"]["reward"], rows["hop-hard"]["reward"]) > rows["bounce-4Hz"]["reward"])
     print("hopping scores higher than standing:", max(rows["hop-soft"]["reward"], rows["hop-hard"]["reward"]) > rows["stand"]["reward"])
 
 

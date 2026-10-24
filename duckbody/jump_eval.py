@@ -5,6 +5,7 @@
 
 Exam conditions (start standing, randomized body, practice starts off). Per episode:
   hops       flights with both soles off the floor for ≥ 2 control steps (40 ms)
+  early      of those, taken less than 0.8 s after the previous landing (bouncing; v3 reward: none)
   air        longest flight, ms (control-step resolution, 20 ms)
   clear      highest lowest-sole point in flight, mm
   rise       SkillEnv's hop measure: trunk height above standing while airborne, cm (exam: > 1.04 cm)
@@ -83,7 +84,7 @@ def evaluate(ckpt, episodes=5, seed=100, model=HERE / "model" / "duck_mid.xml", 
                 if landing_peak >= 5:
                     landing_peak = None
         peaks = np.array(peaks) if peaks else np.zeros(0)
-        rows.append(dict(hops=env.hops, air_ms=best_air * 20, clear_mm=1000 * clear, rise_cm=100 * env.best_hop,
+        rows.append(dict(hops=env.hops, early=env.early_hops, air_ms=best_air * 20, clear_mm=1000 * clear, rise_cm=100 * env.best_hop,
                          peak_fw=env.peak_fw, mean_land_fw=float(peaks.mean()) if len(peaks) else 0.0,
                          hard=float((peaks > HARD).mean()) if len(peaks) else 0.0,
                          very_hard=float((peaks > VERY_HARD).mean()) if len(peaks) else 0.0,
@@ -104,7 +105,7 @@ def main():
         rows = evaluate(c, a.episodes, back_emf=not a.no_back_emf, single=a.single)
         m = lambda k: np.mean([r[k] for r in rows])
         print(f"{Path(c).parent.name}/{Path(c).name}: success {sum(r['ok'] for r in rows)}/{len(rows)}, fell {sum(r['fell'] for r in rows)}, "
-              f"hops/ep {m('hops'):.1f}, air {m('air_ms'):.0f} ms, clear {m('clear_mm'):.1f} mm, rise {m('rise_cm'):.2f} cm, "
+              f"hops/ep {m('hops'):.1f} (early {m('early'):.1f}), air {m('air_ms'):.0f} ms, clear {m('clear_mm'):.1f} mm, rise {m('rise_cm'):.2f} cm, "
               f"landing F/W mean {m('mean_land_fw'):.2f} peak {max(r['peak_fw'] for r in rows):.2f}, "
               f">2.5W {100 * m('hard'):.0f}% >3.5W {100 * m('very_hard'):.0f}%, reward {m('reward'):.1f}")
         for r in rows:

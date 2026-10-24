@@ -50,6 +50,9 @@ OMEGA_RANGE = (9.0, 11.0) # drawn per episode in training (battery sag, servo sp
 CLEAR_FULL = 0.006        # m of sole clearance for full flight credit
 PUSH_V = 0.4              # m/s upward CoM speed for full push-off credit
 READY = 0.1
+REST_S = 0.8              # s on the floor between a landing and the next takeoff (owner: ~1 hop/s, deliberate)
+EARLY = 0.5               # per airborne step of a hop taken before the rest is over (no bouncing)
+STILL_V = 0.05            # m/s CoM speed scale for the 'standing still' credit on the floor
 
 
 class JumpEnv(SkillEnv):
@@ -100,6 +103,8 @@ class JumpEnv(SkillEnv):
         self.com_vz = float(d.subtree_linvel[1][2])
         self.start_xy = d.qpos[:2].copy()
         self.peak_fw, self.shock_sum, self.air_steps, self.hops = 1.0, 0.0, 0, 0
+        # Exams and standing / crouched starts may hop at once; an in-air start counts as a fair hop.
+        self.ground_steps, self.hop_ok, self.early_hops = int(REST_S / self.dt), True, 0
         return obs, info
 
     def _reward(self, action):
@@ -137,25 +142,38 @@ class JumpEnv(SkillEnv):
 
         rise = p["height"] - self.stand_height
         clear = min(self._sole_bottom(g) for g in self.sole_ids)        # lowest point of either sole
+        rested = self.ground_steps >= int(REST_S / self.dt)
         if airborne:
-            self.best_hop = max(self.best_hop, rise)                   # SkillEnv's exam measure
+            if self.air_steps == 0:                                    # takeoff: was the rest long enough?
+                self.hop_ok = rested
             self.air_steps += 1
+            if self.t > 3:                                             # (not the settling drop at reset)
+                self.ground_steps = 0                                  # any flight, even a 1-step blip, restarts the rest
             if self.air_steps == 2:
                 self.hops += 1
-            frac = 0.5 * np.clip(rise / (0.03 * L), 0, 1) + 0.5 * np.clip(clear / CLEAR_FULL, 0, 1)
-            phase = 1.0 + float(frac)
+                self.early_hops += not self.hop_ok
+            if self.hop_ok:
+                self.best_hop = max(self.best_hop, rise)               # SkillEnv's exam measure
+                frac = 0.5 * np.clip(rise / (0.03 * L), 0, 1) + 0.5 * np.clip(clear / CLEAR_FULL, 0, 1)
+                phase = 1.0 + float(frac)
+            else:
+                phase = -EARLY                                         # bouncing straight back up
         else:
             self.air_steps = 0
+            self.ground_steps += feet.sum() == 2
             ready = READY * (0.5 if feet.sum() == 1 else 1.0)
             if p["height"] < self.crouch_height - 0.03 * L:
                 ready = 0.05
-            phase = ready + 0.2 * float(np.clip(vz / PUSH_V, 0, 1))
+            # Settle: standing still on both feet earns half as much again; push-off shaping only once rested.
+            v_com = d.subtree_linvel[1]
+            still = float(np.exp(-float(v_com @ v_com) / STILL_V ** 2)) if feet.sum() == 2 else 0.0
+            phase = ready * (1.0 + 0.5 * still) + (0.2 * float(np.clip(vz / PUSH_V, 0, 1)) if rested else 0.0)
         up = 1.0 if p["up"] >= 0.9 else float(np.exp(-((p["up"] - 0.9) / 0.15) ** 2))
         # Drift of the whole body (CoM), not of the trunk origin: the trunk pitches during a push.
         v_xy = d.subtree_linvel[1][:2]
         spin = np.exp(-(p["yaw_rate"] / 0.8) ** 2) * np.exp(-float(v_xy @ v_xy) / (0.25 * L) ** 2)
         drift = np.linalg.norm(d.qpos[:2] - self.start_xy)
         near = 0.5 + 0.5 * np.exp(-(drift / (0.15 * L)) ** 2)
-        reward = up * spin * near * phase - shock
+        reward = (up * spin * near * phase if phase > 0 else phase) - shock
         info = dict(h_ref=self.stand_height, up_ref=1.0, fw=fw, shock=shock, clear=clear, airborne=bool(airborne), **p)
         return float(reward), info

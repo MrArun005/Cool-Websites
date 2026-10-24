@@ -1,19 +1,27 @@
-"""Walk and run for the mid duck: SkillEnv's walk reward times imitation of a reference gait.
+"""Walk and run for the mid duck: velocity tracking times imitation of a reference gait.
 
-    python train.py --skills --env walk_env:WalkEnv --model model/duck_mid.xml --task walk --name mid_walk
+    python walk_bc.py --out runs/mid_walk_bc          # brain that already steps like the reference
+    python train.py --skills --env walk_env:WalkEnv --model model/duck_mid.xml --task walk --name mid_walk \
+        --resume runs/mid_walk_bc/policy.zip
     python train.py --skills --env walk_env:WalkEnv --model model/duck_mid.xml --task run --name mid_run --resume ...
 
-Same observation / action layout as SkillEnv (the robot swaps brains); only the reward and the
-practice commands differ. The Bolt dog's lessons:
-  * a reference gait (walk_gait.py, verified open-loop first) gives the "warmer, warmer" signal that
-    plain velocity tracking lacks: joint angles and foot contacts are matched to it at the gait phase
-    the brain sees (same clock: 1.8 Hz walk, 2.6 Hz run);
-  * the speed term is wide (standing still still scores a little) plus a linear progress term;
-  * speed curriculum: practice commands start at a fraction of the full range and widen over the
-    first CURRICULUM steps (exams always use the full range).
+Same observation / action layout as SkillEnv (the robot swaps brains); only the reward, the exam and
+the practice commands differ.
+  * a reference gait (walk_gait.py) gives the "warmer, warmer" signal that plain velocity tracking
+    lacks: joint angles and foot contacts are matched to it at the gait phase the brain sees (same
+    clock: 1.8 Hz walk, 2.6 Hz run);
+  * the first run (runs/mid_walk_v1, from a blank brain) settled on standing and absorbing shoves:
+    every early attempt to step fell. The brain now starts as a behaviour-cloned copy of the
+    reference (walk_bc.py), so it steps from the first update;
+  * velocities are tracked averaged over about a gait cycle: within each step a walking body sways
+    and twists, and instantaneous tracking paid standing still more than walking;
+  * speed tracking is half wide (standing still keeps a little), half narrow (the exam's precision),
+    plus a linear progress term; turning has its own factor.
 
-reward = upright × height × (0.6·track + 0.4·progress) × (0.3 + 0.7·contact match) × (0.3 + 0.7·joint match)
-Standing still under a walk command scores a fraction of walking (checked in __main__).
+reward = upright × height × (0.6·track + 0.4·progress) × (0.2 + 0.8·turn)
+         × (0.3 + 0.7·contact match) × (0.3 + 0.7·joint match)
+Per step (python walk_env.py): standing still under a walk command scores 0.09-0.18, the open-loop
+reference 0.04-0.31 (it falls within a few seconds), the reference played kinematically ~0.88.
 """
 import os
 
@@ -23,7 +31,7 @@ from skills_env import GAIT_HZ, SkillEnv
 from walk_gait import Gait
 
 # Gait verified open-loop with walk_gait.py (see its __main__).
-GAIT = {"walk": dict(swing=0.35, lift=0.015, sway=0.015, lead=0.2, x_off=-0.012),
+GAIT = {"walk": dict(swing=0.35, lift=0.015, sway=0.008, lead=0.2, x_off=-0.006),
         "run": dict(swing=0.4, lift=0.015, sway=0.012, lead=0.2, x_off=-0.012)}
 CURRICULUM = int(os.environ.get("WALK_CURRICULUM", 4_000_000))   # total training steps to full commands
 CURRICULUM_START = int(os.environ.get("WALK_CURRICULUM_START", 0))  # steps already done (when resuming)
@@ -33,7 +41,8 @@ N_ENVS = int(os.environ.get("WALK_N_ENVS", 8))
 CURRICULUM_FROM = float(os.environ.get("WALK_CURRICULUM_FROM", 1.0))
 JOINT_W = 0.08     # rad² mean over leg joints: halfway to the reference (~0.2 rad off) earns ~0.6
 TRACK_NARROW = 0.04   # m/s
-TURN_W = 0.4          # rad/s
+TURN_W = 0.3          # rad/s
+AVG_ALPHA = 0.05      # velocity average for the tracking terms: time constant 0.4 s (gait cycle 0.56 s)
 
 
 class WalkEnv(SkillEnv):
@@ -66,6 +75,8 @@ class WalkEnv(SkillEnv):
                 self.vel_cmd = np.array([max(lo, 0.25 * self.L), 0.0, self.vel_cmd[2]])
             self.table = self.ref[self.command].fast_table(self.vel_cmd, GAIT_HZ[self.command])
             obs = self._obs()
+        self.v_avg = np.zeros(3)
+        self.avg_err = 1.0
         return obs, info
 
     def reference(self):
@@ -95,15 +106,21 @@ class WalkEnv(SkillEnv):
             return super()._reward(action)
         p = self.posture()
         L, v = self.L, self.vel_cmd
+        # Body velocity averaged over about a gait cycle: a walking body sways and twists within each
+        # step (yaw rate swings ±1 rad/s), so instantaneous tracking paid standing still more than
+        # walking at the command.
+        self.v_avg += AVG_ALPHA * (np.array([p["vx"], p["vy"], p["yaw_rate"]]) - self.v_avg)
+        vx, vy, wz = self.v_avg
+        self.avg_err = 0.98 * self.avg_err + 0.02 * (abs(vx - v[0]) + abs(vy - v[1]) + 0.2 * L * abs(wz - v[2]))
         up = 1.0 if p["up"] >= 0.85 else float(np.exp(-((p["up"] - 0.85) / 0.15) ** 2))
         sh = 0.03 * L
         r_h = np.exp(-((p["height"] - self.stand_height) / (2 * sh if self.command == "walk" else 3 * sh)) ** 2)
         speed = np.hypot(v[0], v[1])
         tol = 0.12 * L + 0.5 * speed
-        e2 = (p["vx"] - v[0]) ** 2 + (p["vy"] - v[1]) ** 2
+        e2 = (vx - v[0]) ** 2 + (vy - v[1]) ** 2
         track = 0.5 * np.exp(-e2 / tol ** 2) + 0.5 * np.exp(-e2 / TRACK_NARROW ** 2)
-        progress = float(np.clip((p["vx"] * v[0] + p["vy"] * v[1]) / speed ** 2, 0, 1)) if speed > 0.01 * L else track
-        turn = np.exp(-((p["yaw_rate"] - v[2]) / TURN_W) ** 2)
+        progress = float(np.clip((vx * v[0] + vy * v[1]) / speed ** 2, 0, 1)) if speed > 0.01 * L else track
+        turn = np.exp(-((wz - v[2]) / TURN_W) ** 2)
         core = up * r_h * (0.6 * track + 0.4 * progress) * (0.2 + 0.8 * turn)
         q_ref, stance = self.reference()
         err = np.mean((self.data.qpos[self.leg_q] - q_ref[self.legs]) ** 2)
@@ -117,6 +134,15 @@ class WalkEnv(SkillEnv):
                                             + 0.001 * np.mean(self.data.qvel[self.dadr] ** 2))
         return float(reward), dict(h_ref=self.stand_height, up_ref=1.0, joint_match=joint, contact_match=contact,
                                    track=float(track), turn=float(turn), **p)
+
+    def success(self, info):
+        """Exam: upright and going where it was told, judged on the gait-cycle-averaged velocity
+        (same error sum and threshold as SkillEnv's, which judges the instantaneous velocity and so
+        also fails a walk for its in-step sway and twist; that verdict is kept as info["success_inst"])."""
+        if self.command not in GAIT_HZ:
+            return super().success(info)
+        info["success_inst"] = super().success(info)
+        return bool(info["up"] > 0.9 and self.avg_err < (0.06 if self.command == "walk" else 0.1) * self.L)
 
 
 def check(task="walk", seconds=6.0, seeds=(0, 1, 2), cmds=None):
