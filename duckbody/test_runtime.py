@@ -331,3 +331,30 @@ class TestLieAndGetUp(unittest.TestCase):
         self.assertEqual(rt.skill, "stand")
         self.assertGreater(p["up"], 0.9)
         self.assertGreater(p["height"], 0.9 * cfg["stand_height"])
+
+
+@unittest.skipUnless((rtm.MODELS / "mid-get_up" / "policy.onnx").exists(), "run duckbody/package.py --skill get_up first")
+class TestGetUpFromBack(unittest.TestCase):
+    """On its back: "get up" rolls it onto the belly (trained brain), then the face-down get-up."""
+
+    def test_back_get_up(self):
+        import mujoco
+        from backkick import _qmul, _quat
+        brains, cfg = rtm.load_brains()
+        be = rtm.SimBackend(cfg["servo_names"])
+        m, d = be.model, be.data
+        rt = rtm.DuckRuntime(backend=be, brains=brains, config=cfg, log=None)
+        mujoco.mj_resetDataKeyframe(m, d, 0)
+        d.qpos[3:7] = _qmul(_quat([0, 0, 1], 0.4), _quat([0, 1, 0], -np.pi / 2))
+        d.qpos[2] = 0.12
+        mujoco.mj_forward(m, d)
+        mujoco.mj_step(m, d, nstep=int(0.8 / m.opt.timestep))
+        d.qvel[:] = 0
+        rt.targets = d.ctrl.copy()
+        self.assertTrue(rt.lying() and not rt.lying_face_down())
+        rt.command("get up")
+        self.assertEqual(rt.mode, "roll get up")
+        rt.run(14.0)
+        p = be.posture()
+        self.assertEqual(rt.skill, "stand")
+        self.assertGreater(p["up"], 0.9)

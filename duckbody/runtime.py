@@ -62,6 +62,9 @@ PLANS = {
     # get up from lying face down (owner's plan; facedown_rise.py: 20/20 on randomized bodies): tuck the legs
     # under, lift the body into the perch (MoveBrain), then the perch rise and the stand brain
     "get up": [("pose:fd_tuck", 1.0), ("pose:fd_lift", 3.5), ("pose:perch_rise", 2.3), ("stand", None)],
+    # on its back or side: the trained roll-over brain (rollover_env.py) rolls it onto the belly in 4 s, then
+    # the face-down get-up (back -> roll -> get up: 10/10 on randomized bodies)
+    "roll get up": [("get_up", 4.0), ("pose:fd_tuck", 1.0), ("pose:fd_lift", 3.5), ("pose:perch_rise", 2.3), ("stand", None)],
     # Paced hops (the jump brain alone bounces at ~4 Hz). The jump brain runs until 1 tick after its
     # 2nd touchdown (a 1-2 mm prep bounce, then the visible 4-14 mm hop: from a still stand its first
     # flight is tiny), then the stand brain settles for 0.8 s: ~1 hop per 1.15 s. "hop" = once, then stand.
@@ -344,6 +347,7 @@ class DuckRuntime:
                     self.brains["pose:perch_rise"] = MoveBrain(self.home, self, r.pop("lean"), r.pop("t1"), r.pop("t2"), **r)
                     self.quiet.add("pose:perch_rise")
         self.brains["pose:rise"] = PoseBrain(self.home, self, glide=1.0)
+        self.quiet.add("get_up")                            # roll over with the head still (as trained)
         self._start("stand")
 
     def lying(self):
@@ -363,8 +367,8 @@ class DuckRuntime:
         fallen = name in ("wake", "get up", "stand") and self.lying_face_down()
         if fallen:
             name = "get up"                                  # fallen on its front: tuck, lift into the perch, stand
-        elif name == "get up" and self.lying():
-            return self._say_log("get up: only from lying face down so far (not from the back or the side)")
+        elif name in ("wake", "get up", "stand") and self.lying() and "get_up" in self.brains:
+            name, fallen = "roll get up", True               # on its back or side: roll onto the belly first
         if name == "wake" and self.mode in ("sleep", "squat"):
             name = "rise"
         if name == "wake" and self.skill == "pose:perch" and "pose:perch_rise" in self.brains:
