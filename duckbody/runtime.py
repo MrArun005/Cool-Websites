@@ -44,6 +44,7 @@ PLANS = {
     "sit": [("squat", 2.0), ("sit", None)], "sleep": [("squat", 2.0), ("sit", None)], "squat": [("squat", None)],
     # saved poses: get down like sit, then glide into the pose and hold it (statically stable)
     "swag": [("squat", 2.0), ("sit", 3.0), ("pose:swag", None)],
+    "swag sit": [("squat", 2.0), ("swag_sit", None)],      # the trained brain that sits down into swag
     "wake": [("sit_to_stand", 3.0), ("stand", None)],
     "lie": [("lie", None)],
     "get up": [("get_up", 6.0), ("stand", None)],
@@ -72,7 +73,7 @@ class PoseBrain:
         return self.start + (self.goal - self.start) * f
 
 
-OBS_COMMAND = {"stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "squat": "sit", "sit_to_stand": "stand",
+OBS_COMMAND = {"swag_sit": "sit", "stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "squat": "sit", "sit_to_stand": "stand",
                "lie": "lie", "get_up": "stand", "jump": "jump", "roll": "roll"}
 
 
@@ -464,6 +465,8 @@ def parse(clause, L=1.0):
         return "get up", {}
     if re.search(r"\b(correct|that'?s right|right answer|you got it|nailed it|well done)\b", t):
         return "celebrate", {}
+    if re.search(r"\bswag sit\b|\bsit (?:with )?swag\b", t):
+        return "swag sit", {}
     if re.search(r"\bswag\b|\bchill\b|\brelax\b|\blean back\b", t):
         return "swag", {}
     if re.search(r"\bsquat\b|\bsquatting\b|\bcrouch\b|\bduck down\b", t):
