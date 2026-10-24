@@ -81,6 +81,11 @@ class SkillEnv(DuckEnv):
             # Sitting means resting on belly and thighs, not holding a crouch (measured pose, poses.py).
             sit = json.loads(poses.read_text())["sit"]
             self.sit_q = np.array(sit["qpos"])
+            sw = json.loads(poses.read_text()).get("swag")
+            # Swag is this body's natural stable sit (the leg out stops it rolling back); the robot
+            # sits with the swag sit brain, so standing up starts from there.
+            self.seat_q = np.array(sw["qpos"]) if sw else self.sit_q
+            self.seat_ctrl = np.array(sw["ctrl"]) if sw else None
             self.sit_height, self.sit_up = float(self.sit_q[2]), float(sit["up"])   # already settled when measured
             # Joint targets that produce it (settled angles sag under load; commanding those tips it over).
             self.sit_cmd = self.sit_q.copy()
@@ -105,15 +110,16 @@ class SkillEnv(DuckEnv):
         task = (options or {}).get("task") or self.forced_skill or SKILL_TASKS[r.integers(len(SKILL_TASKS))]
         super().reset(options={"task": {"seated": "sit_to_stand", "crouched": "sit_to_stand"}.get(START[task], START[task])})
         if START[task] == "seated" and self.sit_q is not None:
-            # Start seated on the thighs exactly as measured (DuckEnv would rest it on the soles).
+            # Start sitting exactly as measured, keeping the seat's lean-back tilt (a random heading
+            # only); DuckEnv would rest it on the soles.
             m, d = self.model, self.data
-            q = self.sit_q.copy()
+            q = self.seat_q.copy()
             q[self.qadr] = np.clip(q[self.qadr] + r.normal(0, 0.02, m.nu), self.lo, self.hi)
             yaw = r.uniform(-np.pi, np.pi)
-            q[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+            q[3:7] = base._quat_mul([np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)], q[3:7])
             mujoco.mj_resetData(m, d)
             d.qpos[:] = q
-            d.ctrl[:] = q[self.qadr]
+            d.ctrl[:] = self.seat_ctrl if self.seat_ctrl is not None else q[self.qadr]
             mujoco.mj_forward(m, d)
         if task == "sit" and self.sit_q is not None:
             # Sit is chained after squat (the robot runs the squat brain, then this one): episodes

@@ -81,7 +81,7 @@ class TestRuntime(unittest.TestCase):
         env.reset(seed=0)
         brains, cfg = rtm.load_brains()
         stub = Stub()
-        brains.update(sit=stub, sit_to_stand=stub, walk=stub)
+        brains.update(sit=stub, swag_sit=stub, sit_to_stand=stub, walk=stub)
         brains.pop("lie", None)
         rt = rtm.DuckRuntime(rtm.SimBackend(cfg["servo_names"], model=env.model, data=env.data),
                              brains=brains, config=cfg, log=None)
@@ -89,7 +89,7 @@ class TestRuntime(unittest.TestCase):
         rt.command("sleep")                                   # squat first, then sit back after 2 s
         self.assertEqual((rt.skill, rt.obs_command), ("squat", "sit"))
         rt.run(2.1)
-        self.assertEqual((rt.skill, rt.obs_command), ("sit", "sit"))
+        self.assertEqual((rt.skill, rt.obs_command), ("swag_sit", "sit"))
         rt.tick()
         rt.command("wake")                                    # sit_to_stand, then stand after 3 s
         self.assertEqual((rt.skill, rt.obs_command), ("sit_to_stand", "stand"))

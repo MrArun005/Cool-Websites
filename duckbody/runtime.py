@@ -41,9 +41,10 @@ PLANS = {
     "stand": [("stand", None)], "idle": [("stand", None)],
     "walk": [("walk", None)], "run": [("run", None)],
     # sit is chained: squat first, then settle back onto belly and thighs (how it was trained)
-    "sit": [("squat", 2.0), ("sit", None)], "sleep": [("squat", 2.0), ("sit", None)], "squat": [("squat", None)],
+    # this body sits stably as swag (one leg out); the symmetric sit rolled it onto its back
+    "sit": [("squat", 2.0), ("swag_sit", None)], "sleep": [("squat", 2.0), ("swag_sit", None)], "squat": [("squat", None)],
     # saved poses: get down like sit, then glide into the pose and hold it (statically stable)
-    "swag": [("squat", 2.0), ("sit", 3.0), ("pose:swag", None)],
+    "swag": [("squat", 2.0), ("swag_sit", 3.0), ("pose:swag", None)],
     "swag sit": [("squat", 2.0), ("swag_sit", None)],      # the trained brain that sits down into swag
     "wake": [("sit_to_stand", 3.0), ("stand", None)],
     "lie": [("lie", None)],
@@ -268,9 +269,9 @@ class DuckRuntime:
         name = ALIASES.get(name.lower().strip(), name.lower().strip())
         if name not in PLANS:
             return self._say_log(f"unknown command {name!r}")
-        if name == "wake" and self.skill not in ("sit", "squat", "sit_to_stand", "roll"):
+        if name == "wake" and self.skill not in ("sit", "swag_sit", "squat", "sit_to_stand", "roll") and not self.skill.startswith("pose:"):
             name = "stand" if self.skill != "lie" else "get up"          # awake already / lying: get up
-        if name == "get up" and self.skill in ("sit", "sit_to_stand"):
+        if name == "get up" and (self.skill in ("sit", "swag_sit", "sit_to_stand") or self.skill.startswith("pose:")):
             name = "wake"
         if name == "get up" and self.skill in ("stand", "walk", "run", "jump"):
             name = "stand"
