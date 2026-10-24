@@ -57,7 +57,9 @@ PLANS = {
     "swag sit": [("squat", 2.0), ("swag_sit", None)],      # the trained brain that sits down into swag
     "wake": [("sit_to_stand", 3.0), ("stand", None)],
     "lie": [("lie", None)],
-    "get up": [("get_up", 6.0), ("stand", None)],
+    # get up from lying face down (owner's plan; facedown_rise.py: 20/20 on randomized bodies): tuck the legs
+    # under, lift the body into the perch (MoveBrain), then the perch rise and the stand brain
+    "get up": [("pose:fd_tuck", 1.0), ("pose:fd_lift", 3.5), ("pose:perch_rise", 2.3), ("stand", None)],
     # Paced hops (the jump brain alone bounces at ~4 Hz). The jump brain runs until 1 tick after its
     # 2nd touchdown (a 1-2 mm prep bounce, then the visible 4-14 mm hop: from a still stand its first
     # flight is tiny), then the stand brain settles for 0.8 s: ~1 hop per 1.15 s. "hop" = once, then stand.
@@ -128,6 +130,10 @@ class MoveBrain(PoseBrain):
                 tgt[hp], tgt[kn] = hl + (self.goal[hp] - hl) * f, k0 + (self.goal[kn] - k0) * f
             tgt[an] = h[an] - self.mirror[hp] * (tgt[hp] - h[hp]) - (tgt[kn] - h[kn]) + self.sign * tilt
         return np.clip((tgt[rt.pol] - h[rt.pol]) / rt.scale, -1, 1)
+
+
+FD_TUCK = (0.0, 2.18, -0.8)            # face-down get-up: left hip pitch, knee, ankle (right hip mirrored)
+FD_LIFT = (0.3, 0.5, 2.0, -1)          # MoveBrain into the perch: lean, t1, t2, sign (facedown_rise.py)
 
 
 OBS_COMMAND = {"swag_sit": "sit", "stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "squat": "sit", "sit_to_stand": "stand",
@@ -319,6 +325,14 @@ class DuckRuntime:
                 if "ctrl" in v and k != "sit":
                     self.brains[f"pose:{k}"] = PoseBrain(v["ctrl"], self)
                     self.quiet.add(f"pose:{k}")
+                if k == "perch":                                    # face-down get-up: tuck, then lift into the perch
+                    tuck = self.home.copy()
+                    for side, sgn in (("left", 1), ("right", -1)):
+                        for j, val in (("hip_pitch", sgn * FD_TUCK[0]), ("knee", FD_TUCK[1]), ("ankle", FD_TUCK[2])):
+                            tuck[self.names.index(f"{side}_{j}")] = val
+                    self.brains["pose:fd_tuck"] = PoseBrain(tuck, self, glide=0.5)
+                    self.brains["pose:fd_lift"] = MoveBrain(v["ctrl"], self, *FD_LIFT)
+                    self.quiet.update(("pose:fd_tuck", "pose:fd_lift"))
                 if k == "perch" and "sit" in v and "rise" in v:   # sit-down into the perch and the stand-up from it
                     self.brains["pose:perch"] = MoveBrain(v["ctrl"], self, **v["sit"])
                     r = dict(v["rise"])
@@ -327,21 +341,34 @@ class DuckRuntime:
         self.brains["pose:rise"] = PoseBrain(self.home, self, glide=1.0)
         self._start("stand")
 
+    def lying(self):
+        """Trunk tilted more than ~55 deg (IMU gravity: upright reads (0, 0, -1))."""
+        return -float(self.backend.read().gravity[2]) < 0.6
+
+    def lying_face_down(self):
+        g = self.backend.read().gravity
+        return self.lying() and g[0] > 0.5 and "pose:fd_tuck" in self.brains     # nose pointing at the floor
+
     # ---------- personality inputs ----------
     def command(self, name, vx=0.0, vy=0.0, yaw=0.0):
         """Switch skill now. Returns a short report (also logged)."""
         name = ALIASES.get(name.lower().strip(), name.lower().strip())
         if name not in PLANS:
             return self._say_log(f"unknown command {name!r}")
+        fallen = name in ("wake", "get up", "stand") and self.lying_face_down()
+        if fallen:
+            name = "get up"                                  # fallen on its front: tuck, lift into the perch, stand
+        elif name == "get up" and self.lying():
+            return self._say_log("get up: only from lying face down so far (not from the back or the side)")
         if name == "wake" and self.mode in ("sleep", "squat"):
             name = "rise"
         if name == "wake" and self.skill == "pose:perch" and "pose:perch_rise" in self.brains:
             name = "perch rise"
         if name == "wake" and self.skill not in ("sit", "swag_sit", "squat", "sit_to_stand", "roll") and not self.skill.startswith("pose:"):
             name = "stand" if self.skill != "lie" else "get up"          # awake already / lying: get up
-        if name == "get up" and (self.skill in ("sit", "swag_sit", "sit_to_stand") or self.skill.startswith("pose:")):
+        if name == "get up" and not fallen and (self.skill in ("sit", "swag_sit", "sit_to_stand") or self.skill.startswith("pose:")):
             name = "wake"
-        if name == "get up" and self.skill in ("stand", "walk", "run", "jump"):
+        if name == "get up" and not fallen and self.skill in ("stand", "walk", "run", "jump"):
             name = "stand"
         self.mode = name
         self.vel_cmd = self._velocity(PLANS[name][0][0], vx, vy, yaw)

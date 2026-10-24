@@ -294,3 +294,21 @@ class TestPerch(unittest.TestCase):
         self.assertEqual(rt.skill, "stand")
         self.assertGreater(p["up"], 0.9)
         self.assertGreater(p["height"], 0.9 * env.stand_height)
+
+
+class TestGetUpFaceDown(unittest.TestCase):
+    """Fallen on its front: "get up" tucks the legs, lifts into the perch, then stands."""
+
+    def test_get_up_from_face_down(self):
+        import facedown_rise
+        be = rtm.SimBackend(facedown_rise.CFG["servo_names"])
+        rt = rtm.DuckRuntime(backend=be, brains=dict(facedown_rise.BRAINS), config=facedown_rise.CFG, log=None)
+        facedown_rise.face_down(be, rt, np.random.default_rng(3))
+        self.assertTrue(rt.lying_face_down())
+        rt.command("get up")
+        self.assertEqual(rt.mode, "get up")
+        rt.run(8.0)
+        p = be.posture()
+        self.assertEqual(rt.skill, "stand")
+        self.assertGreater(p["up"], 0.9)
+        self.assertGreater(p["height"], 0.9 * facedown_rise.STAND_H)
