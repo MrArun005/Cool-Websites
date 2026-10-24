@@ -204,9 +204,13 @@ class SkillEnv(DuckEnv):
             r_h = np.exp(-((p["height"] - h_ref) / (2 * sh if cmd == "walk" else 3 * sh)) ** 2)
             reward = up_at(0.85) * r_h * (0.6 * r_track + 0.4 * progress)
         elif cmd == "sit" and (self.task == "squat" or self.sit_q is None):
+            # Squat: the core stays straight (body upright within ~10°), only hips/knees/ankles fold.
             h_ref = max(self.crouch_height, self.start_height - 0.10 * L * s)
             r_h = np.exp(-((p["height"] - h_ref) / sh) ** 2)
-            reward = up_at(0.9) * r_h * still
+            r_up = np.exp(-((1.0 - p["up"]) / 0.02) ** 2)
+            legs = self.qadr[self.legs]
+            r_pose = np.exp(-np.sum((self.data.qpos[legs] - self.crouch_q[legs]) ** 2) / 0.5)
+            reward = r_up * r_h * still * (0.5 + 0.5 * r_pose)
         elif cmd == "sit":
             # Settle back onto belly and thighs at a fixed rate (no flopping down), then rest.
             h_ref = max(self.sit_height, self.start_height - 0.08 * L * s)
@@ -263,7 +267,7 @@ class SkillEnv(DuckEnv):
         if cmd in GAIT_HZ:
             return bool(info["up"] > 0.9 and self.vx_err < (0.06 if cmd == "walk" else 0.1) * L)
         if cmd == "sit" and (self.task == "squat" or self.sit_q is None):
-            return bool(info["up"] > 0.9 and abs(info["height"] - self.crouch_height) < 0.02 * L)
+            return bool(info["up"] > 0.985 and abs(info["height"] - self.crouch_height) < 0.02 * L)
         if cmd == "sit":
             return bool(self._seated() and abs(info["up"] - self.sit_up) < 0.1 and abs(info["vx"]) < 0.05 * L)
         if cmd == "lie":
