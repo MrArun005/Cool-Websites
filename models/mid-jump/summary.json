@@ -1,0 +1,9 @@
+{
+ "steps": 3000000,
+ "exam": {"jump": {"success": 1.0, "mean_reward": 132.5,
+   "episodes": 10, "falls": 0, "hops_per_episode": 27.8, "air_ms": 84, "sole_clearance_mm": 13.9, "rise_cm": 1.9,
+   "landing_fw_mean": 2.14, "landing_fw_peak": 3.2, "landings_over_2_5W": 0.11, "landings_over_3_5W": 0.0,
+   "paced_runtime_plan": {"rest_s": 0.8, "episodes": 5, "falls": 0, "hops_in_8s": "6-7", "peak_fw": 2.72},
+   "single_hop": {"episodes": 5, "falls": 0, "hops": 1, "peak_fw": 2.41}}},
+ "note": "Jump = 3M brain (jump_env v2: XL330 back-EMF torque-speed limit, landing penalty from 2 W, +5/W beyond 3.5 W), resumed from the v1 2.5M brain. jump_eval.py (back-EMF physics, randomized, 10 eps). Alone it bounces at ~4 Hz, so runtime.py paces it: jump brain until 3 ticks after touchdown, stand brain 0.8 s, again (~1 hop per 1.2-1.3 s); 'hop once' = one hop then stand. Slow-hop reward retrains (v3a/v3b, rest time between hops) stopped hopping at 3.5M and were dropped. mean_reward is under the v3 reward in jump_env.py."
+}

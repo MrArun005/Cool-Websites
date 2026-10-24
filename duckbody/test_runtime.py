@@ -192,5 +192,56 @@ class TestCelebrate(unittest.TestCase):
         self.assertEqual(rtm.parse("that's right!")[0], "celebrate")
 
 
+JUMP = rtm.MODELS / "mid-jump"
+
+
+@unittest.skipUnless((JUMP / "policy.onnx").exists(), "run duckbody/package.py --skill jump first")
+class TestJump(unittest.TestCase):
+    """Paced hops: the jump brain until its 2nd touchdown (prep bounce + hop), the stand brain 0.8 s."""
+
+    def hops(self, command, seconds):
+        env = SkillEnv(task="stand", randomize=False, model_path=str(rtm.ROBOT_XML))
+        env.reset(seed=0)
+        rt = runtime_on(env)
+        rt.run(1.0)                                           # from a settled stand
+        rt.command(command)
+        log = dict(air=0, hops=[], up=[], skills=[])
+
+        def watch(r):
+            feet = r.backend.read().feet
+            if feet.sum() == 0:
+                log["air"] += 1
+            else:
+                if log["air"] >= 1:
+                    log["hops"].append(r.steps * r.dt)
+                log["air"] = 0
+            log["up"].append(r.backend.posture()["up"])
+            log["skills"].append(r.skill)
+        rt.run(seconds, every=watch)
+        return rt, log
+
+    def test_paced_jump(self):
+        rt, log = self.hops("jump", 8.0)
+        self.assertGreater(min(log["up"]), 0.85)
+        sk = log["skills"]
+        cycles = sum(1 for a, b in zip(sk, sk[1:]) if a == "stand" and b == "jump") + 1
+        self.assertGreaterEqual(cycles, 5)                    # ~1 hop per 1.15 s, not a 4 Hz bounce
+        self.assertLessEqual(cycles, 8)
+        self.assertLessEqual(len(log["hops"]), 2 * cycles)    # prep bounce + hop per cycle, no more
+
+    def test_single_hop(self):
+        rt, log = self.hops("hop", 3.0)
+        self.assertGreaterEqual(len(log["hops"]), 1)
+        self.assertLessEqual(len(log["hops"]), 2)             # prep bounce + the hop
+        self.assertEqual(rt.skill, "stand")
+        self.assertGreater(min(log["up"]), 0.85)
+
+    def test_jump_text(self):
+        self.assertEqual(rtm.parse("jump")[0], "jump")
+        self.assertEqual(rtm.parse("keep hopping")[0], "jump")
+        self.assertEqual(rtm.parse("hop once")[0], "hop")
+        self.assertEqual(rtm.parse("do a little jump")[0], "hop")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -49,14 +49,16 @@ PLANS = {
     "wake": [("sit_to_stand", 3.0), ("stand", None)],
     "lie": [("lie", None)],
     "get up": [("get_up", 6.0), ("stand", None)],
-    # Paced hops (the jump brain alone bounces at ~4 Hz): the jump brain for one hop, until 3 ticks
-    # after the foot switches report the landing, then the stand brain settles for 0.8 s, again.
-    # "hop" is a single hop on command. ("again" restarts the plan; LANDED ends a step on touchdown.)
-    "jump": [("jump", "landed"), ("stand", 0.8), ("again", None)],
-    "hop": [("jump", "landed"), ("stand", None)],
+    # Paced hops (the jump brain alone bounces at ~4 Hz). The jump brain runs until 1 tick after its
+    # 2nd touchdown (a 1-2 mm prep bounce, then the visible 4-14 mm hop: from a still stand its first
+    # flight is tiny), then the stand brain settles for 0.8 s: ~1 hop per 1.15 s. "hop" = once, then stand.
+    # ("again" restarts the plan; "landedN" ends a step N touchdowns after it began.)
+    "jump": [("jump", "landed2"), ("stand", 0.8), ("again", None)],
+    "hop": [("jump", "landed2"), ("stand", None)],
     "roll": [("roll", 4.0), ("sit_to_stand", 3.0), ("stand", None)],
 }
-LANDED_TICKS, LANDED_TIMEOUT = 3, 2.0   # a "landed" step: ticks after touchdown; give up after s without a hop
+LANDED_TICKS, LANDED_TIMEOUT = 1, 2.0   # a "landed" step ends this many ticks after the touchdown (3 let the
+                                        # jump brain push off again first); give up after this many s
 ALIASES = {"hop once": "hop", "one hop": "hop", "single hop": "hop", "get_up": "get up", "getup": "get up", "wake up": "wake", "lie down": "lie", "sit down": "sit"}
 # The command one-hot each skill brain was trained with (skills_env.TASK_COMMAND).
 POSES = HERE / "model" / "poses_mid.json"
@@ -254,7 +256,7 @@ class DuckRuntime:
         self.gait_t = 0                     # ticks since the current gait started (gait clock)
         self.plan, self.plan_t = [], 0
         self.plan_all = []                  # the whole plan of the current mode (for "again")
-        self.air_ticks, self.landed_at = 0, None
+        self.air_ticks, self.landed_at, self.landings = 0, None, 0
         self.skill = self.obs_command = None
         self.fallbacks = []                 # skills asked for that have no brain yet
         self.todo = []                      # (due tick, callable): queued personality steps
@@ -340,8 +342,9 @@ class DuckRuntime:
         if feet.sum() == 0:
             self.air_ticks += 1
         else:
-            if self.air_ticks >= 2 and self.landed_at is None:
-                self.landed_at = self.plan_t          # first touchdown after a real flight in this step
+            if self.air_ticks >= 1 and self.plan_t > 3:   # a touchdown after a flight (not a settling blip)
+                self.landings += 1
+                self.landed_at = self.plan_t
             self.air_ticks = 0
         if self.plan and self._step_done(self.plan[0][1]):
             self.plan.pop(0)
@@ -354,8 +357,9 @@ class DuckRuntime:
     def _step_done(self, secs):
         if secs is None:
             return False
-        if secs == "landed":
-            return ((self.landed_at is not None and self.plan_t >= self.landed_at + LANDED_TICKS)
+        if isinstance(secs, str) and secs.startswith("landed"):     # "landed" / "landed2": after the n-th touchdown
+            n = int(secs[6:] or 1)
+            return ((self.landings >= n and self.plan_t >= self.landed_at + LANDED_TICKS)
                     or self.plan_t * self.dt >= LANDED_TIMEOUT)
         return self.plan_t * self.dt >= secs
 
@@ -393,7 +397,7 @@ class DuckRuntime:
     def _next_in_plan(self):
         skill, secs = self.plan[0]
         msg = self._start(skill)
-        timing = f" until landed" if secs == "landed" else f" for {secs:g} s" if secs else ""
+        timing = f" until {secs}" if isinstance(secs, str) else f" for {secs:g} s" if secs else ""
         return self._say_log(f"{self.mode}: {msg}" + (timing if self.skill == skill else ""))
 
     def _start(self, skill):
@@ -411,7 +415,7 @@ class DuckRuntime:
         if new_cmd not in self.gait_hz:
             self.vel_cmd = np.zeros(3)
         self.skill, self.obs_command, self.plan_t = skill, new_cmd, 0
-        self.landed_at = None
+        self.landed_at, self.landings = None, 0
         return msg
 
     def _say_log(self, msg):
@@ -503,7 +507,7 @@ def parse(clause, L=1.0):
         return "sit", {}
     if re.search(r"\b(lie|lay|lying|play dead)\b|^down$|\bget down\b", t):
         return "lie", {}
-    if re.search(r"\b(jump|hop|leap)\b", t):
+    if re.search(r"\b(jump(?:ing|s)?|hop(?:ping|s)?|leap(?:ing|s)?)\b", t):
         once = re.search(r"\b(once|one|single|a (?:little |small )?(?:hop|jump))\b", t) and not re.search(r"\b(jumping|hopping|keep)\b", t)
         return ("hop" if once else "jump"), {}
     if re.search(r"\b(roll|somersault|tumble)\b", t):
