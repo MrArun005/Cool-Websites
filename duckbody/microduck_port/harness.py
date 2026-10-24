@@ -126,12 +126,13 @@ class MicroduckSim:
         bam.actuator.max_current = None
         force_limit = bam.actuator.vin * bam.kt.value / bam.R.value
 
-        spec = mujoco.MjSpec.from_file(str(ROBOT_DIR / scene))
+        # `scene` is a file in Microduck's robot folder, or any path (e.g. the hybrid duck's scene).
+        spec = mujoco.MjSpec.from_file(str(scene if Path(scene).is_absolute() else ROBOT_DIR / scene))
         names = []
         for act in spec.actuators:
             tgt = act.target if isinstance(act.target, str) else act.target.name
-            if tgt.startswith("passive_"):
-                continue
+            if tgt.startswith("passive_") or tgt not in JOINT_NAMES:
+                continue      # not a policy servo (passive joints, the hybrid's mouth): left as MuJoCo has it
             act.set_to_motor()
             act.forcelimited = True
             act.forcerange = (-force_limit, force_limit)
