@@ -104,6 +104,7 @@
   <section class="panel" aria-labelledby="where">
     <h2 id="where">Where we are</h2>
     <p style="margin:0"><a href="https://claude.ai/artifact/Qmgw6JkPzALegcTj537aT7" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Play Bolt's Castle →</a> <span class="muted">A Takeshi's Castle-style course that Bolt runs with these brains, live in your browser.</span></p>
+    <p style="margin:0"><a href="https://claude.ai/artifact/8icBrDN9xEbALpzGasqd3t" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Watch the Bolt Agility Cup →</a> <span class="muted">Four of Bolt's brains compete on a dog-agility course: weaves, tunnels, hurdles, the pause table.</span></p>
     <p>Bolt has two trained brains that work together: one for standing, sitting and lying, one for walking, turning and running at any asked speed. Both stand and walk tall like a real dog, with lower legs close to upright and no knees on the floor. Saved in <span class="mono">models/</span>.</p>
     <div class="two">
       <div class="brain">
@@ -126,7 +127,8 @@
         <li><strong>Done: follow a person.</strong> A steering layer turns Bolt toward the person, speeds up when they pull away and stands when they stop. In the simulator it followed someone who walks, turns, jogs at 1.1 m/s and stops: no falls, on average 1.4 m behind, never more than 1.9 m. Watch "Follow a person" below.</li>
         <li><strong>Sharp turns (run 12), done.</strong> Real dogs turn sharply by stepping sideways: front paws one way, rear paws the other. The trot now does that too. The 12M brain turns as asked up to 111°/s at a walk and 56°/s while running at 1.2 m/s, with no falls in any speed or turn test. Following people it stays 1.7 m behind (was 2.6 m).</li>
         <li><strong>Getting up (run 13), done.</strong> Bolt's Castle showed that standing straight up from a sit fell 1 time in 3. Run 13 practised getting up without spinning: 0 falls in 48 tries, and 40 of 40 castle games finished.</li>
-        <li><strong>Next: athletic skills.</strong> Jumping over hurdles first: the motors can lift the paws 42 cm with no brain, but a fixed jump from a trot falls on landing 2–4 times in 4, so a brain has to learn to land. Then getting up after a fall, then galloping faster than 1.2 m/s.</li>
+        <li><strong>Hurdles, done (by stepping over).</strong> A hand-made leap reared up and tipped over backwards in every one of 64 versions tried, and training on it (run 14) learned to hover in front of the bar, so it was stopped. Bolt's belly is 36 cm up, so a bar up to 25 cm only has to be cleared by the legs: near a hurdle the trot lifts its paws over it. With no retraining, the 12M brain cleared 15 and 25 cm bars 48 times in 48. Hurdles are now in <a href="https://claude.ai/artifact/Qmgw6JkPzALegcTj537aT7" target="_blank" rel="noopener" style="color:var(--accent)">Bolt's Castle</a> and the <a href="https://claude.ai/artifact/8icBrDN9xEbALpzGasqd3t" target="_blank" rel="noopener" style="color:var(--accent)">Agility Cup</a>.</li>
+        <li><strong>Next:</strong> a real leap, trained with more freedom than a hand-made plan; getting up after a fall; galloping faster than 1.2 m/s.</li>
                 <li>Try both brains on the hand-size Bolt.</li>
         <li>Connect the brains to voice commands ("sit", "come here").</li>
       </ol>
@@ -200,7 +202,8 @@
         <tr><td>11</td><td>Speed command: slow walk to a run (0.2–1.2 m/s)</td><td>Stopped at 8M: walked at 0.4 m/s whatever speed it was asked.</td></tr>
         <tr><td>11b</td><td>Same, but speed is felt relative to the asked speed; practice speeds ramp up to 1.2 m/s</td><td><strong>Walk, turns, run 1.0 m/s, slow 0.2 m/s: all 100%.</strong> 10M saved: holds 0.2–1.2 m/s as asked.</td></tr>
         <tr><td>12</td><td>Sharp turns: step sideways like a dog, practise up to 115°/s</td><td><strong>All tests 100% incl. sharp turns.</strong> 12M saved: no falls in any speed or turn test.</td></tr>
-        <tr class="now"><td>13</td><td>Posture brain practises getting up from sit and lie, without spinning</td><td><strong>Stand, sit, lie, get up: all 100% at 3M.</strong> Saved, on the live pages. Training to 4.5M.</td></tr>
+        <tr><td>13</td><td>Posture brain practises getting up from sit and lie, without spinning</td><td><strong>Stand, sit, lie, get up: all 100% at 3M.</strong> Saved, used by the live pages and games.</td></tr>
+        <tr><td>14</td><td>Jump hurdles with a bounding leap</td><td>Stopped at 12.5M: the leap pushed backwards, and the brain learned to hover in front of the bar. Replaced by stepping over (no training needed).</td></tr>
       </tbody>
     </table></div>
   </section>

@@ -136,3 +136,18 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
 - Reuse what already works: the old posture brain already sat and lay 100%, so run 9c started
   from it and only had to learn the new stand. Centre a new pose on its own resting point: with
   the tall stand centred on the old crouch, the brain's outputs pinned at their limits and stalled.
+
+## Runs 13-14 and the games: getting up, hurdles
+
+- **A game is a good test.** Bolt's Castle played 40 games headless and showed what the exam never did:
+  standing straight up from a sit fell 1 time in 3 (also in Python). Run 13 practised getting up, with no
+  spinning allowed, and fell in none of 48 tries. Easing the motor targets instead made it worse: 12 falls in 12.
+- **Check a hand-made motion's direction before training on it.** The bounding leap's "spring" put the paws
+  in front of the hips, which pushes the body backwards. Run 14 then learned the safe local optimum: hover in
+  front of the bar and hop in place (no touch, no fall). My open-loop test had counted those as clean,
+  because it only checked for touches and falls, not whether Bolt got past the bar.
+- **Look for the easy physics first.** Bolt's belly is ~36 cm up, so only the legs need to clear a bar up to
+  25 cm. Lifting the trot's paws near a bar cleared 48 in 48 with no training, while 64 hand-made leaps all failed.
+- **Handlers matter as much as brains.** In the agility course, point-to-point steering zigzagged through the
+  weaves at 0.3 m/s; a smooth line through the poles went 0.8 m/s with no misses. High-stepping while turning
+  hard toppled Bolt twice in 24 rounds; a straight run-up and gentle steering over the bar fixed it.
