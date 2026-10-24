@@ -3,6 +3,7 @@
     python train.py --steps 8000000          # ~1 hour on 4 CPU cores
     python train.py --steps 200000 --quick   # smoke test
     python train.py --resume runs/bolt/checkpoints/policy_1500000_steps.zip   # continue after a crash
+    python train.py --resume ../models/bolt-dog-3M/policy.zip --name bolt-dog   # continue a packaged model
 
 Saves the policy to runs/<name>/policy.zip and the observation statistics to
 runs/<name>/vecnormalize.pkl. Watch progress with:
@@ -38,7 +39,9 @@ def main():
     venv = make_vec_env(BoltEnv, n_envs=args.envs, seed=args.seed, vec_env_cls=SubprocVecEnv)
     if args.resume:
         ckpt_zip = Path(args.resume)
-        stats = ckpt_zip.with_name(ckpt_zip.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")
+        stats = ckpt_zip.with_name("vecnormalize.pkl")  # packaged model folder (models/<name>/)
+        if not stats.exists():                          # training checkpoint (runs/<name>/checkpoints/)
+            stats = ckpt_zip.with_name(ckpt_zip.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")
         venv = VecNormalize.load(str(stats), venv)
         model = PPO.load(ckpt_zip, env=venv, device="cpu", tensorboard_log=str(out.parent))
         print(f"resuming from {ckpt_zip} at {model.num_timesteps:,} steps")

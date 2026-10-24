@@ -1,6 +1,8 @@
 # Cool Websites
 
-## 🦆 Bolt Duck: the robot we're building
+**Starting the new robot?** Read [HANDOFF.md](HANDOFF.md) first, then [docs/LESSONS.md](docs/LESSONS.md).
+
+## 🦆 Bolt Duck (earlier plan)
 
 A small two-legged robot pet you build yourself: the open-source Open Duck Mini v2 body (3D-printed, about $400 of parts) with Bolt's personality on top. Plan, parts, build steps and links: [`duck/README.md`](duck/README.md).
 

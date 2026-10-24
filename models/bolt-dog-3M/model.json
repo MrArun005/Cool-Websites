@@ -1,0 +1,120 @@
+{
+  "name": "bolt-dog-3M",
+  "source": "runs/bolt/checkpoints/policy_3000000_steps.zip",
+  "steps": 3000000,
+  "exam_episodes": 10,
+  "packaged": "2026-10-24",
+  "rollout_steps": 3000,
+  "control_hz": 50,
+  "obs_size": 52,
+  "action_size": 12,
+  "obs_layout": [
+    {
+      "name": "gravity_in_body_frame",
+      "size": 3
+    },
+    {
+      "name": "angular_velocity_x0.25",
+      "size": 3
+    },
+    {
+      "name": "linear_velocity_body",
+      "size": 3
+    },
+    {
+      "name": "body_height",
+      "size": 1
+    },
+    {
+      "name": "joint_pos_minus_stand",
+      "size": 12
+    },
+    {
+      "name": "joint_vel_x0.1",
+      "size": 12
+    },
+    {
+      "name": "previous_action",
+      "size": 12
+    },
+    {
+      "name": "command_one_hot",
+      "size": 4
+    },
+    {
+      "name": "gait_clock_sin_cos",
+      "size": 2
+    }
+  ],
+  "joints": [
+    "FL_abd",
+    "FL_hip",
+    "FL_knee",
+    "FR_abd",
+    "FR_hip",
+    "FR_knee",
+    "RL_abd",
+    "RL_hip",
+    "RL_knee",
+    "RR_abd",
+    "RR_hip",
+    "RR_knee"
+  ],
+  "stand_pose": [
+    0.0,
+    0.8128,
+    -1.6256,
+    0.0,
+    0.8128,
+    -1.6256,
+    0.0,
+    -0.8128,
+    1.6256,
+    0.0,
+    -0.8128,
+    1.6256
+  ],
+  "action_scale": [
+    0.4,
+    1.0,
+    1.2,
+    0.4,
+    1.0,
+    1.2,
+    0.4,
+    1.0,
+    1.2,
+    0.4,
+    1.0,
+    1.2
+  ],
+  "commands": [
+    "stand",
+    "sit",
+    "lie",
+    "walk"
+  ],
+  "command_targets": {
+    "stand": {
+      "height": 0.31,
+      "pitch": 0.0,
+      "speed": 0.0
+    },
+    "sit": {
+      "height": 0.22,
+      "pitch": 0.5,
+      "speed": 0.0
+    },
+    "lie": {
+      "height": 0.14,
+      "pitch": 0.0,
+      "speed": 0.0
+    },
+    "walk": {
+      "height": 0.29,
+      "pitch": 0.0,
+      "speed": 0.5
+    }
+  },
+  "onnx_max_difference": 7.152557373046875e-07
+}

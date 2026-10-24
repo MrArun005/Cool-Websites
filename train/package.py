@@ -16,8 +16,6 @@ Writes ../models/<name>/:
     MODEL.md           model card for people
 
 Use --checkpoint to package a specific checkpoint instead of the final policy.
-
-Status: written but not yet run end to end.
 """
 import argparse
 import datetime as dt
