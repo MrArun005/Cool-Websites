@@ -101,7 +101,7 @@
 
   <section class="panel" aria-labelledby="where">
     <h2 id="where">Where we are</h2>
-    <p>Bolt has two trained brains that work together: one for standing, sitting and lying, one for walking. Both stand and walk tall like a real dog, with lower legs close to upright and no knees on the floor. Saved in <span class="mono">models/</span>.</p>
+    <p>Bolt has two trained brains that work together: one for standing, sitting and lying, one for walking and turning. Both stand and walk tall like a real dog, with lower legs close to upright and no knees on the floor. Saved in <span class="mono">models/</span>.</p>
     <div class="two">
       <div class="brain">
         <h3>Stand, sit, lie</h3>
@@ -110,17 +110,18 @@
         <p class="muted" style="font-size:.9rem">Stands 43 cm tall on four paws. Sits 30° nose-up on all four paws, both sides alike (the old brain sat lopsided with a paw in the air).</p>
       </div>
       <div class="brain">
-        <h3>Walk</h3>
-        <span class="muted mono" style="font-size:.82rem">run 8b · 5M steps · models/bolt-dog-walk-dog-5M</span>
-        <div class="cells"><span class="c2">Walk 100%</span><span class="c2">Stand → walk 10/10</span></div>
-        <p class="muted" style="font-size:.9rem">0.41 m/s, level, 44 cm tall, lower legs about 24° from upright. Takes over from the standing brain without a stumble.</p>
+        <h3>Walk and turn</h3>
+        <span class="muted mono" style="font-size:.82rem">run 10b · 7M steps · models/bolt-dog-walk-turn-7M</span>
+        <div class="cells"><span class="c2">Walk 100%</span><span class="c2">Turn left 100%</span><span class="c2">Turn right 100%</span><span class="c2">Stand → walk 40/40</span></div>
+        <p class="muted" style="font-size:.9rem">Walks 0.34 m/s, level, 44 cm tall, lower legs about 24° from upright, and turns left or right on command (up to ~27°/s). Takes over from the real standing brain cleanly, straight or straight into a turn.</p>
       </div>
     </div>
     <div style="display:grid;gap:6px">
       <span class="label">Next</span>
       <ol>
-        <li><strong>Turning works</strong> (run 10, 6M steps): turns left and right on command, 100% on its exam, at about 80% of the asked rate (see the "Turning (new)" clip). <strong>Now training (run 10b):</strong> it fell 4 in 10 when the real standing brain handed over, so it's practising exactly that, and the exam now tests it.</li>
+        <li>Follow a person: turn toward a target and walk to it (needs a "where is the target" input next).</li>
         <li>Try both brains on the hand-size Bolt.</li>
+        <li>Connect the brains to voice commands ("sit", "come here").</li>
       </ol>
     </div>
   </section>
@@ -163,7 +164,7 @@
     </figure>
     <figure>
       <video src="video/walk.mp4" muted loop playsinline autoplay controls></video>
-      <figcaption><span class="label">Walk · run 8b</span><span class="muted mono">simulator video</span></figcaption>
+      <figcaption><span class="label">Walk, turn left, turn right · run 10b</span><span class="muted mono">simulator video</span></figcaption>
     </figure>
   </section>
 
@@ -181,7 +182,7 @@
         <tr><td>9c</td><td>Start from run 2's brain; tall stand as resting point; tidier sit</td><td><strong>Stand, sit, lie 100%.</strong> Saved.</td></tr>
         <tr><td>8b</td><td>Walk practises starting from the tall stand</td><td><strong>Walk 100%, hand-over 10/10 at 5M.</strong> Saved (5.5M was worse after real hand-overs).</td></tr>
         <tr><td>10</td><td>Turning: a turn command, longer strides on the outside of the turn</td><td>Turn left/right 100% at 6M. But hand-overs from the real standing brain fell 4 in 10.</td></tr>
-        <tr class="now"><td>10b</td><td>Practise and test hand-overs from the real standing brain</td><td>Training now.</td></tr>
+        <tr><td>10b</td><td>Practise and test hand-overs from the real standing brain</td><td><strong>Walk, turn left, turn right 100%; 40/40 clean hand-overs at 7M.</strong> Saved.</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -194,9 +195,9 @@
   const CLIPS = [
     { id: "routine", file: "data/routine_new.json", name: "Full routine" },
     { id: "posture", file: "data/posture9c.json", name: "Stand, sit, lie" },
-    { id: "walk", file: "data/walk8b.json", name: "Walk" },
-    { id: "handover", file: "data/handover_new.json", name: "Stand → walk" },
-    { id: "turn", file: "data/turn10.json", name: "Turning (new)" },
+    { id: "walk", file: "data/walk8b.json", name: "Walk straight" },
+    { id: "handover", file: "data/handover_new.json", name: "Stand → walk → turn" },
+    { id: "turn", file: "data/turn10.json", name: "Turning" },
     { id: "old", file: "data/walk_old.json", name: "Old walk (run 6, for comparison)" },
   ];
   const SPEEDS = [0.25, 0.5, 1];
