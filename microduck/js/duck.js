@@ -41,7 +41,7 @@
     standH: 0.205, crouchH: 0.135, sitH: 0.088,
     stepWidth: 0.045,                     // half the distance between the feet
     maxStepFwd: 0.15, minStepSide: 0.055, maxStepSide: 0.17,
-    walk: { T: 0.32, vmax: 0.22, clear: 0.025, bob: 0.005 },
+    walk: { T: 0.25, vmax: 0.22, clear: 0.025, bob: 0.005 },
     run: { T: 0.18, vmax: 0.45, clear: 0.045, bob: -0.014 },
     maxTurn: 1.6,
     getUpTorque: 4.0,                     // N·m the legs and neck can use to roll the body upright
@@ -276,7 +276,10 @@
       // Smooth the commands like a real controller would.
       const vt = this.canStep ? clamp(this.cmd.v, -gait.vmax * 0.5, gait.vmax) : 0;
       this.vd += clamp(vt - this.vd, -0.9 * dt, 0.9 * dt);
-      const tt = this.canStep ? clamp(this.cmd.turn, -DUCK.maxTurn, DUCK.maxTurn) : 0;
+      // Turning at speed needs sideways grip and sideways steps, so the faster
+      // it goes the gentler it turns (about 0.3 m/s² of sideways acceleration).
+      const turnMax = Math.min(DUCK.maxTurn, 0.3 / Math.max(0.05, Math.abs(this.vd)));
+      const tt = this.canStep ? clamp(this.cmd.turn, -turnMax, turnMax) : 0;
       this.yawRate += clamp(tt - this.yawRate, -5 * dt, 5 * dt);
 
       const xi = [this.c[0] + this.cv[0] / w, this.c[1] + this.cv[1] / w];
@@ -358,9 +361,11 @@
     // until it has slowed down.
     stepGait() {
       if (this.cmd.gait === 'run') return 'run';
-      const speed = Math.max(Math.abs(this.vd), Math.hypot(this.cv[0], this.cv[1]));
-      if (speed > DUCK.walk.vmax * 1.05) return 'run';
-      if (this.stepping && this.stepping.gait === 'run' && speed > DUCK.walk.vmax * 0.8) return 'run';
+      // vd is the smoothed speed the controller is tracking; the body's own
+      // speed swings up and down within every step, so it is not used here.
+      const speed = Math.abs(this.vd);
+      if (speed > DUCK.walk.vmax * 1.02) return 'run';
+      if (this.stepping && this.stepping.gait === 'run' && speed > DUCK.walk.vmax * 0.85) return 'run';
       return 'walk';
     }
 
@@ -381,7 +386,9 @@
       const xiEnd = [stance[0] + (xi[0] - stance[0]) * grow, stance[1] + (xi[1] - stance[1]) * grow];
       const hd = this.heading(), sd = this.sideDir();
       const sigma = f.side;
-      const dF = this.vd * S.T / Math.max(0.2, E - 1);
+      // Walking lands the foot a little behind the predicted capture point so
+      // the body keeps rolling forward at speed vd; a catch step aims right at it.
+      const dF = S.recover ? 0 : this.vd * S.T / Math.max(0.2, E - 1);
       const dL = 2 * DUCK.stepWidth / (E + 1);
       let tgt = [xiEnd[0] - hd[0] * dF + sd[0] * sigma * dL, xiEnd[1] - hd[1] * dF + sd[1] * sigma * dL];
       // Legs only reach so far, and must not cross.
@@ -408,7 +415,9 @@
         this.stepping = null;
         this.lastSwing = S.swing;
         this.steps++;
-        if (this.gaitOn && this.canStep) { this.startStep(1 - S.swing); return; }
+        // Keep the gait going, but after a catch step shift the weight first
+        // (the no-step branch above does that) instead of launching straight on.
+        if (this.gaitOn && this.canStep && !S.recover) { this.startStep(1 - S.swing); return; }
         // Recovering from a push: keep stepping until the feet can hold the capture point.
         const box = this.supportBox(this.feet);
         const xiNow = [this.c[0] + this.cv[0] / w, this.c[1] + this.cv[1] / w];
