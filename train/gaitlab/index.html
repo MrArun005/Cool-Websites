@@ -119,8 +119,7 @@
     <div style="display:grid;gap:6px">
       <span class="label">Next</span>
       <ol>
-        <li>Make the walk exam hand over from the real standing brain (the 5.5M walk passed the exam but crouched after real hand-overs, so we kept 5M).</li>
-        <li>Teach turning, so Bolt can follow you.</li>
+        <li><strong>Turning works</strong> (run 10, 6M steps): turns left and right on command, 100% on its exam, at about 80% of the asked rate (see the "Turning (new)" clip). <strong>Now training (run 10b):</strong> it fell 4 in 10 when the real standing brain handed over, so it's practising exactly that, and the exam now tests it.</li>
         <li>Try both brains on the hand-size Bolt.</li>
       </ol>
     </div>
@@ -153,6 +152,7 @@
       <div><span class="label">Speed</span><b id="sSpeed">–</b></div>
       <div><span class="label">Paws down</span><b id="sPaws">–</b></div>
       <div><span class="label">Knee on floor</span><b id="sKnee">–</b></div>
+      <div><span class="label">Turn asked · doing</span><b id="sTurn">–</b></div>
     </div>
   </section>
 
@@ -180,6 +180,8 @@
         <tr><td>9 / 9b</td><td>Teach a tall stand</td><td>Sit and lie kept, stand stalled (outputs stuck at their limits).</td></tr>
         <tr><td>9c</td><td>Start from run 2's brain; tall stand as resting point; tidier sit</td><td><strong>Stand, sit, lie 100%.</strong> Saved.</td></tr>
         <tr><td>8b</td><td>Walk practises starting from the tall stand</td><td><strong>Walk 100%, hand-over 10/10 at 5M.</strong> Saved (5.5M was worse after real hand-overs).</td></tr>
+        <tr><td>10</td><td>Turning: a turn command, longer strides on the outside of the turn</td><td>Turn left/right 100% at 6M. But hand-overs from the real standing brain fell 4 in 10.</td></tr>
+        <tr class="now"><td>10b</td><td>Practise and test hand-overs from the real standing brain</td><td>Training now.</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -194,6 +196,7 @@
     { id: "posture", file: "data/posture9c.json", name: "Stand, sit, lie" },
     { id: "walk", file: "data/walk8b.json", name: "Walk" },
     { id: "handover", file: "data/handover_new.json", name: "Stand → walk" },
+    { id: "turn", file: "data/turn10.json", name: "Turning (new)" },
     { id: "old", file: "data/walk_old.json", name: "Old walk (run 6, for comparison)" },
   ];
   const SPEEDS = [0.25, 0.5, 1];
@@ -421,6 +424,8 @@
     $("sKnee").textContent = knee ? "yes" : "no";
     $("sKnee").className = knee ? "bad" : "";
     $("time").textContent = `${(fi / rec.fps).toFixed(1)} / ${(rec.frames.length / rec.fps).toFixed(0)} s`;
+    const deg = (r) => `${r > 0.03 ? "left " : r < -0.03 ? "right " : ""}${Math.abs(Math.round(r * 180 / Math.PI))}°/s`;
+    $("sTurn").textContent = f.turn !== undefined && f.cmd === "walk" ? `${deg(f.turn)} · ${deg(f.yawr)}` : "–";
   }
 
   CLIPS.forEach((c) => { const b = document.createElement("button"); b.type = "button"; b.dataset.id = c.id; b.textContent = c.name; b.addEventListener("click", () => loadClip(c.id)); $("clips").append(b); });
