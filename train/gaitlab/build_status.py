@@ -3,7 +3,7 @@ import datetime as dt, json, os, re
 from pathlib import Path
 TRAIN = Path("/home/user/Cool-Websites/train")
 OUT = Path(__file__).parent
-TITLES = {"bolt8b": "Run 8b · Walk", "bolt9c": "Run 9c · Stand, sit, lie", "bolt10": "Run 10 · Turning (walk left and right on command)"}
+TITLES = {"bolt8b": "Run 8b · Walk", "bolt9c": "Run 9c · Stand, sit, lie", "bolt10": "Run 10 · Turning (walk left and right on command)", "bolt10b": "Run 10b · Turning walk, practising starts from the real standing brain"}
 runs = []
 for job_file in sorted((TRAIN / "jobs").glob("*.json")):
     job = json.loads(job_file.read_text())

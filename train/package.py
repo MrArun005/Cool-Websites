@@ -168,6 +168,7 @@ def main():
     ap.add_argument("--rollouts", type=int, default=5, help="recorded episodes per command")
     ap.add_argument("--skills", nargs="+", help="the commands this brain was trained for")
     ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall", "dog"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
+    ap.add_argument("--handover-brain", help="posture brain folder: walk hand-overs in the exam start from it")
     args = ap.parse_args()
 
     run, out = Path(args.run), Path(args.out) / args.name
@@ -190,7 +191,8 @@ def main():
     print(f"onnx export ok, max difference {onnx_err:.2e}")
 
     exam = {k: round(float(v), 3) for k, v in evaluate(policy, args.episodes, seed=4242, skills=args.skills,
-                                                       gait_generator=args.gait_generator).items()}
+                                                       gait_generator=args.gait_generator,
+                                                       handover=Policy(args.handover_brain) if args.handover_brain else None).items()}
     (out / "exam.json").write_text(json.dumps(exam, indent=2))
     print("exam:", exam)
 

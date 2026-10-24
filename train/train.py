@@ -48,6 +48,7 @@ def main():
     ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall", "dog"],
                     help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
     ap.add_argument("--turning", action="store_true", help="the walk also gets a turn command (53 inputs; see widen_brain.py)")
+    ap.add_argument("--handover-brain", help="posture brain folder: half the walk episodes start with it standing the dog up")
     args = ap.parse_args()
 
     out = Path(__file__).with_name("runs") / args.name
@@ -55,7 +56,8 @@ def main():
     torch.set_num_threads(2)
 
     venv = make_vec_env(BoltEnv, n_envs=args.envs, seed=args.seed, vec_env_cls=SubprocVecEnv,
-                        env_kwargs=dict(skills=args.skills, gait_generator=args.gait_generator, turning=args.turning))
+                        env_kwargs=dict(skills=args.skills, gait_generator=args.gait_generator, turning=args.turning,
+                                        handover_brain=args.handover_brain))
     if args.resume:
         ckpt_zip = Path(args.resume)
         stats = ckpt_zip.with_name("vecnormalize.pkl")  # packaged model folder (models/<name>/)

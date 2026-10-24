@@ -88,7 +88,7 @@ def reset_standing(env, seed):
     return obs
 
 
-def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turning=None):
+def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turning=None, handover=None):
     turning = getattr(policy, "turning", False) if turning is None else turning
     env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=turning)
     results = {}
@@ -97,12 +97,12 @@ def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turnin
         for k in range(episodes):
             env.forced_command = command
             if command == "walk" and k % 2:
-                # Hand-over: stand still first (motors hold the standing pose, as the posture
-                # brain does), then the walk brain takes over mid-stride.
+                # Hand-over: stand first (with the real posture brain when given one, otherwise
+                # the motors hold the standing pose), then the walk brain takes over mid-stride.
                 env.forced_command = "stand"
                 obs = reset_standing(env, seed + k)
                 for _ in range(50 + 7 * k % 50):
-                    obs, *_ = env.step(np.zeros(12))
+                    obs, *_ = env.step(handover.act(obs) if handover else np.zeros(12))
                 env.forced_command = "walk"
             else:
                 obs, _ = env.reset(seed=seed + k)

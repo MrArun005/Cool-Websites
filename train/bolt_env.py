@@ -70,7 +70,7 @@ class BoltEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
 
     def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
-                 skills=None, gait_generator=False, turning=False):
+                 skills=None, gait_generator=False, turning=False, handover_brain=None):
         # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
         # brain only adds corrections on top (residual control, as in "policies modulating trajectory
         # generators"). The legs are coordinated from the first step instead of having to discover it.
@@ -130,6 +130,11 @@ class BoltEnv(gym.Env):
         # Only the dog gait can turn: its paw paths take longer strides on the outside of the turn.
         self.turning = turning
         self.yaw_cmd = 0.0
+        # handover_brain: folder of a posture brain. Half the randomized walk episodes then begin
+        # with that brain standing the dog up, then hand over, so the walk practises taking over
+        # from the real standing brain (run 10 fell 4 in 10 there while passing an exam that
+        # handed over from a perfect motor-held stand).
+        self.handover_brain, self._handover = handover_brain, None
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (53 if turning else 52,), np.float32)
 
     # ---------- helpers ----------
@@ -299,7 +304,22 @@ class BoltEnv(gym.Env):
         self.walk_since = 0
         self.walk_from = STAND_POSE.copy()  # episodes start from the standing pose
         self.yaw_cmd = self._new_turn() if self.turning and not self.forced_turn_set else self.yaw_cmd
+        if (self.handover_brain and self.randomize and COMMANDS[self.command] == "walk" and not start_lying
+                and self.rng.random() < 0.5):
+            self._stand_then_hand_over(int(self.rng.integers(60, 150)))
         return self._obs(), {}
+
+    def _stand_then_hand_over(self, steps):
+        """Let the posture brain stand the dog for a while, then switch to walking."""
+        if self._handover is None:
+            from evaluate import Policy  # late: evaluate imports this module
+            self._handover = Policy(self.handover_brain)
+        walk, forced = self.command, self.forced_command
+        self.command, self.forced_command = COMMANDS.index("stand"), "stand"
+        for _ in range(steps):
+            self.step(self._handover.act(self._obs()))
+        self.forced_command = forced
+        self._switch(walk)
 
     def step(self, action):
         action = np.clip(np.asarray(action, dtype=float), -1, 1)

@@ -117,7 +117,9 @@ def main():
     ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall", "dog"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
     ap.add_argument("--patience", type=int, default=4,
                     help="stop training after this many checkpoints in a row without a new best (0 = never)")
+    ap.add_argument("--handover-brain", help="posture brain folder: walk hand-overs in the exam start from it")
     args = ap.parse_args()
+    handover = Policy(args.handover_brain) if args.handover_brain else None
 
     run, out, log = Path(args.run), Path(args.out), Path(args.log)
     (out / "clips").mkdir(parents=True, exist_ok=True)
@@ -165,7 +167,8 @@ def main():
         if getattr(policy, "turning", False):
             script = [("walk", 150, 0.0), ("walk", 150, 0.4), ("walk", 150, -0.4)]  # straight, left, right
         falls = film(policy, out / clip, label, noise=args.noise, script=script, gait_generator=args.gait_generator)
-        exam = evaluate(policy, args.episodes, seed=1000, skills=args.skills, gait_generator=args.gait_generator)
+        exam = evaluate(policy, args.episodes, seed=1000, skills=args.skills, gait_generator=args.gait_generator,
+                        handover=handover)
         data["checkpoints"].append(dict(steps=steps, exam={k: round(v, 2) for k, v in exam.items()},
                                         clip=clip, falls_in_clip=falls))
         data["checkpoints"].sort(key=lambda c: c["steps"])

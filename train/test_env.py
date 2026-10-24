@@ -348,6 +348,19 @@ class DogGaitTest(unittest.TestCase):
         self.assertTrue(passed("walk", [dict(good, yaw_rate=0.35)] * 80))  # turned close to the asked rate
         self.assertTrue(passed("walk", [dict(good, turning=False)] * 80))  # older brains aren't asked to turn
 
+    def test_walk_practice_can_start_from_the_real_standing_brain(self):
+        env = BoltEnv(randomize=True, max_steps=10_000, skills=["walk"], gait_generator="dog",
+                      handover_brain=str(MODEL.parent.parent / "models" / "bolt-dog-posture-dog-2.5M"))
+        handed = 0
+        for seed in range(8):
+            env.reset(seed=seed)
+            self.assertEqual(COMMANDS[env.command], "walk")
+            if env.t > 0:                      # the posture brain stood the dog up first
+                handed += 1
+                self.assertGreater(env.data.qpos[2], 0.38)  # standing tall when the walk takes over
+                self.assertEqual(env.walk_since, env.t)
+        self.assertGreater(handed, 0)
+
     def test_other_stances_keep_the_old_stand(self):
         self.assertEqual(BoltEnv(gait_generator="tall").targets["stand"], TARGETS["stand"])
 
