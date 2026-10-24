@@ -10,6 +10,10 @@ the soles clear the floor by ~5–8 mm with 80–110 ms of flight. With the XL33
 curve (back-EMF, ~10.8 rad/s no-load at 5 V, which the model does not have) that drops to ~2 mm and
 ~60 ms. So a "hop" here is a small bounce, and the landing is what can hurt the robot.
 
+Servos (v2): JumpEnv adds the servo's torque–speed limit (back-EMF): joint damping τ_stall/ω0 with
+ω0 ~ U(9, 11) rad/s per episode (XL330 no-load 10.8 rad/s at 5 V; nominal in jump_check.py), so the
+brain cannot use power the real servo lacks. Set JumpEnv.back_emf = False for v1 physics.
+
 Reward (per 20 ms step), products of terms (LESSONS §4) and one landing penalty:
     reward = upright × no_spin × stay_near_start × phase − shock
   phase, both soles off the floor:  1 + clip(½·rise/(3 cm×L) + ½·sole clearance/6 mm)   (1 … 2)
@@ -17,12 +21,17 @@ Reward (per 20 ms step), products of terms (LESSONS §4) and one landing penalty
                                     + 0.2 × clip(upward CoM speed / 0.4 m/s)   (push-off shaping)
   no_spin uses the whole body's (CoM) horizontal speed: the trunk origin swings ±0.4 m/s as it pitches
   during a push, which is not drift.
-  shock = 0.5·x + 0.7·x²,  x = max(0, F/W − 2.5),  F/W = 1 + a_com_z / g over the step
+  shock = 1.0·x + 2.0·x² + 5·max(0, F/W − 3.5),  x = max(0, F/W − 2.0),  F/W = 1 + a_com_z / g over the step
           (whole-body ground force from the centre-of-mass acceleration, × body weight; the 2 ms sole
           contact forces are solver noise with 1 iteration and spike to 30–100× W on any touchdown)
-A scripted hop that tucks and lands stiff peaks at F/W ≈ 4.4 and costs ~2.6 per landing, so three of
-them score below standing still; the same hops landing by reaching and yielding (F/W ≈ 3.1) score
-above it. jump_check.py verifies these signs.
+  v1 was 0.5·x + 0.7·x² from 2.5 W: the brain bounced at ~4 Hz with 71% of landings above 2.5 W and
+  peaks of 3.8 W. v2 makes a 3.5 W landing cost about a whole hop's flight credit.
+A scripted hop that tucks and lands stiff (no back-EMF) peaks at F/W ≈ 4.4 and scores far below
+standing still. jump_check.py verifies the signs: of two landings, the softer one scores higher.
+
+Single hop on command (no layout change): run this brain until the foot switches report the first
+touchdown after a flight, then switch to the stand brain (jump_eval.py --single 0: one hop, landing
+≤ 2.2 W, stands).
 
 Practice starts (training only; exams start standing): 20% crouched, ready to push; 20% in the
 air just above the floor, to practise landings.
@@ -95,7 +104,22 @@ class JumpEnv(SkillEnv):
 
     def _reward(self, action):
         if self.command != "jump":
-            return super()._reward(action)
+            # Another brain in charge (e.g. stand after a single hop): its reward, plus the landing
+            # measurements jump_eval.py reads (hops and best_hop keep counting).
+            reward, info = super()._reward(action)
+            m, d = self.model, self.data
+            mujoco.mj_subtreeVel(m, d)
+            vz = float(d.subtree_linvel[1][2])
+            fw = 1.0 + (vz - self.com_vz) / self.dt / 9.81
+            self.com_vz = vz
+            self.peak_fw = max(self.peak_fw, fw)
+            airborne = self.feet_on_ground().sum() == 0
+            self.air_steps = self.air_steps + 1 if airborne else 0
+            if self.air_steps == 2:
+                self.hops += 1
+            clear = min(self._sole_bottom(g) for g in self.sole_ids)
+            info.update(fw=fw, shock=0.0, clear=clear, airborne=bool(airborne))
+            return reward, info
         m, d = self.model, self.data
         p = self.posture()
         L = self.L

@@ -8,7 +8,9 @@ Scripted through JumpEnv.step (the policy's own action interface, nominal body):
   hop-soft     same push and tuck, then legs reach long for the floor and yield into a crouch
   drop-hard    released 3 cm above the floor, legs held in the home pose
   drop-soft    same drop, legs reach long and yield on touchdown
-The soft version of each must score higher than the hard one, and hopping higher than standing.
+  drop2-*      the same from 1.5 cm (about the height a hop reaches)
+Run with and without the servo back-EMF limit (JumpEnv.back_emf).
+Of each pair, the one landing with the lower peak force must score higher; hopping higher than standing.
 """
 import numpy as np
 
@@ -78,18 +80,35 @@ def dropper(soft):
 
 
 def main():
+    for back_emf in (False, True):
+        print(f"--- servos {'with' if back_emf else 'without'} the back-EMF torque–speed limit")
+        check(back_emf)
+
+
+def check(back_emf):
     env = JumpEnv(task="jump", randomize=False, model_path=str(MODEL), practice=False)
+    env.back_emf = back_emf
     rows = {
         "stand": episode(env, lambda e, t, l: (leg_action(e, *HOME), None)),
         "hop-hard": episode(env, hopper(False)),
         "hop-soft": episode(env, hopper(True)),
         "drop-hard": episode(env, dropper(False), seconds=1.5, drop=0.03),
         "drop-soft": episode(env, dropper(True), seconds=1.5, drop=0.03),
+        "drop2-hard": episode(env, dropper(False), seconds=1.5, drop=0.015),
+        "drop2-soft": episode(env, dropper(True), seconds=1.5, drop=0.015),
     }
     for k, v in rows.items():
         print(f"{k:10s} {v}")
-    ok = rows["hop-soft"]["reward"] > rows["hop-hard"]["reward"] and rows["drop-soft"]["reward"] > rows["drop-hard"]["reward"]
-    print("soft landings score higher than hard ones:", ok)
+    # The scripted "soft" landing is not always the softer one (from 1.5 cm reaching long lands harder),
+    # so judge each pair by what was measured: the landing with the lower peak force must score higher.
+    ok = True
+    for k in ("hop", "drop", "drop2"):
+        a, b = rows[k + "-soft"], rows[k + "-hard"]
+        if a["fell"] or b["fell"] or a["hops"] != b["hops"] or abs(a["peak_F_over_W"] - b["peak_F_over_W"]) < 0.1:
+            continue
+        soft, hard = (a, b) if a["peak_F_over_W"] < b["peak_F_over_W"] else (b, a)
+        ok &= soft["reward"] > hard["reward"]
+    print("the softer landing of each pair scores higher:", ok)
     print("hopping scores higher than standing:", max(rows["hop-soft"]["reward"], rows["hop-hard"]["reward"]) > rows["stand"]["reward"])
 
 

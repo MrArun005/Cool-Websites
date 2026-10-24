@@ -28,7 +28,12 @@ GAIT = {"walk": dict(swing=0.35, lift=0.015, sway=0.015, lead=0.2, x_off=-0.012)
 CURRICULUM = int(os.environ.get("WALK_CURRICULUM", 4_000_000))   # total training steps to full commands
 CURRICULUM_START = int(os.environ.get("WALK_CURRICULUM_START", 0))  # steps already done (when resuming)
 N_ENVS = int(os.environ.get("WALK_N_ENVS", 8))
+# Fraction of the command range at the start. The brain now starts from a behaviour-cloned walker
+# (walk_bc.py) that already covers the full range, so the default is no curriculum.
+CURRICULUM_FROM = float(os.environ.get("WALK_CURRICULUM_FROM", 1.0))
 JOINT_W = 0.08     # rad² mean over leg joints: halfway to the reference (~0.2 rad off) earns ~0.6
+TRACK_NARROW = 0.04   # m/s
+TURN_W = 0.4          # rad/s
 
 
 class WalkEnv(SkillEnv):
@@ -48,7 +53,7 @@ class WalkEnv(SkillEnv):
 
     def curriculum(self):
         done = CURRICULUM_START + self.local_steps * N_ENVS
-        return float(min(1.0, 0.4 + 0.6 * done / max(CURRICULUM, 1)))
+        return float(min(1.0, CURRICULUM_FROM + (1 - CURRICULUM_FROM) * done / max(CURRICULUM, 1)))
 
     def reset(self, seed=None, options=None):
         obs, info = super().reset(seed=seed, options=options)
@@ -76,74 +81,101 @@ class WalkEnv(SkillEnv):
         return super().step(action)
 
     def _reward(self, action):
-        reward, info = super()._reward(action)
+        """Walk / run reward (replaces SkillEnv's for these commands, same spirit: a product of terms).
+
+        core = upright × height × (0.6·track + 0.4·progress) × (0.2 + 0.8·turn)
+          track     half wide (standing still keeps a little), half narrow (σ 4 cm/s, the exam's
+                    precision): the wide-only term left no pull towards the exact speed
+          progress  linear along the command up to the commanded speed
+          turn      yaw rate within ~0.4 rad/s: under SkillEnv's 0.6 rad/s width, not turning at all
+                    still kept 70% of the reward and the exam failed on yaw
+        reward = core × (0.3 + 0.7·contact match) × (0.3 + 0.7·joint match) − smoothness
+        """
         if self.command not in GAIT_HZ:
-            return reward, info
+            return super()._reward(action)
+        p = self.posture()
+        L, v = self.L, self.vel_cmd
+        up = 1.0 if p["up"] >= 0.85 else float(np.exp(-((p["up"] - 0.85) / 0.15) ** 2))
+        sh = 0.03 * L
+        r_h = np.exp(-((p["height"] - self.stand_height) / (2 * sh if self.command == "walk" else 3 * sh)) ** 2)
+        speed = np.hypot(v[0], v[1])
+        tol = 0.12 * L + 0.5 * speed
+        e2 = (p["vx"] - v[0]) ** 2 + (p["vy"] - v[1]) ** 2
+        track = 0.5 * np.exp(-e2 / tol ** 2) + 0.5 * np.exp(-e2 / TRACK_NARROW ** 2)
+        progress = float(np.clip((p["vx"] * v[0] + p["vy"] * v[1]) / speed ** 2, 0, 1)) if speed > 0.01 * L else track
+        turn = np.exp(-((p["yaw_rate"] - v[2]) / TURN_W) ** 2)
+        core = up * r_h * (0.6 * track + 0.4 * progress) * (0.2 + 0.8 * turn)
         q_ref, stance = self.reference()
         err = np.mean((self.data.qpos[self.leg_q] - q_ref[self.legs]) ** 2)
         joint = float(np.exp(-err / JOINT_W))
         contact = float(np.mean(self.feet_on_ground() == stance))
-        info.update(joint_match=joint, contact_match=contact)
-        pen = 0.0
-        if self.smooth_weight:            # SkillEnv subtracted it from the product; re-apply after scaling
+        reward = core * (0.3 + 0.7 * contact) * (0.3 + 0.7 * joint)
+        if self.smooth_weight:
             torque = self.data.actuator_force
-            pen = self.smooth_weight * (0.5 * np.mean((action - self.last_action) ** 2)
-                                        + 0.2 * np.mean((torque / self.nominal["force"][:, 1]) ** 2)
-                                        + 0.001 * np.mean(self.data.qvel[self.dadr] ** 2))
-        core = reward + pen
-        return float(core * (0.3 + 0.7 * contact) * (0.3 + 0.7 * joint) - pen), info
+            reward -= self.smooth_weight * (0.5 * np.mean((action - self.last_action) ** 2)
+                                            + 0.2 * np.mean((torque / self.nominal["force"][:, 1]) ** 2)
+                                            + 0.001 * np.mean(self.data.qvel[self.dadr] ** 2))
+        return float(reward), dict(h_ref=self.stand_height, up_ref=1.0, joint_match=joint, contact_match=contact,
+                                   track=float(track), turn=float(turn), **p)
 
 
-def check(task="walk", seconds=4.0, seeds=(0, 1, 2)):
-    """What the reward pays per step under the same command for:
+def check(task="walk", seconds=6.0, seeds=(0, 1, 2), cmds=None):
+    """What the reward pays per step, per command, for:
       still      zero action (servos hold the home pose)
-      open_loop  the reference played on the servos, no feedback (it lags and sags, so pays less)
+      expert     the closed-loop reference walker (walk_expert.py): the brain's starting point
       ideal      the reference played kinematically (base carried at the commanded speed, feet on the
                  floor): what a brain that walks like the reference at the command would earn.
+    Falling ends the episode, so per-step values are averaged over the full episode length.
     """
     import mujoco
     from walk_gait import HERE
+    from walk_expert import GAINS, Expert
+    cmds = cmds or ([(0.12, 0, 0), (0.06, 0, 0), (0.0, 0, 0.5), (0.05, 0.05, 0), (0.0, 0, 0)] if task == "walk"
+                    else [(0.3, 0, 0), (0.22, 0, 0.2)])
     out = {}
-    cmd = np.array([0.12, 0.0, 0.0]) if task == "walk" else np.array([0.3, 0.0, 0.0])
-    for mode in ("still", "open_loop", "ideal"):
-        per_step = []
-        for s in seeds:
-            env = WalkEnv(task=task, randomize=False, seed=s, model_path=str(HERE / "model" / "duck_mid.xml"),
-                          max_seconds=seconds, practice=False)
-            env.reset(seed=s)
-            env.vel_cmd = cmd.copy()
-            env.table = env.ref[task].fast_table(env.vel_cmd, GAIT_HZ[task])
-            m, d = env.model, env.data
-            done, total, n = False, 0.0, 0
-            while not done:
-                a = np.zeros(env.action_space.shape)
-                if mode == "open_loop":
-                    q, _ = env.reference()
-                    ramp = min(1.0, env.t * env.dt / 0.5)
-                    a = np.clip(ramp * (q[env.pol] - env.home[env.pol]) / env.action_scale, -1, 1)
-                if mode == "ideal":
-                    env.t += 1
-                    q, _ = env.reference()
-                    d.qpos[env.qadr[env.legs]] = q[env.legs]
-                    d.qpos[3:7] = [1, 0, 0, 0]
-                    d.qpos[0] += cmd[0] * env.dt
-                    d.qvel[:] = 0
-                    d.qvel[0] = cmd[0]
-                    mujoco.mj_kinematics(m, d)
-                    d.qpos[2] -= min(env._sole_bottom(g) for g in env.sole_ids) + 0.0005
-                    mujoco.mj_forward(m, d)
-                    r, _ = env._reward(a)
-                    term, trunc = False, env.t >= env.max_steps
-                else:
-                    _, r, term, trunc, _ = env.step(a)
-                total += r
-                n += 1
-                done = term or trunc
-            per_step.append(round(total / n, 3))
-        out[mode] = per_step
+    for cmd in cmds:
+        cmd = np.array(cmd, dtype=float)
+        row = {}
+        for mode in ("still", "expert", "ideal"):
+            per_step = []
+            for s in seeds:
+                env = WalkEnv(task=task, randomize=False, seed=s, model_path=str(HERE / "model" / "duck_mid.xml"),
+                              max_seconds=seconds, practice=False)
+                env.reset(seed=s)
+                env.vel_cmd = cmd.copy()
+                env.table = env.ref[task].fast_table(env.vel_cmd, GAIT_HZ[task])
+                ex = Expert(env, **GAINS[task])
+                m, d = env.model, env.data
+                done, total = False, 0.0
+                while not done:
+                    a = np.zeros(env.action_space.shape)
+                    if mode == "expert":
+                        a = ex.action() * min(1.0, env.t * env.dt / 0.3)
+                    if mode == "ideal":
+                        env.t += 1
+                        q, _ = env.reference()
+                        d.qpos[env.qadr[env.legs]] = q[env.legs]
+                        d.qpos[3:7] = [np.cos(cmd[2] * env.t * env.dt / 2), 0, 0, np.sin(cmd[2] * env.t * env.dt / 2)]
+                        d.qpos[:2] += cmd[:2] * env.dt
+                        d.qvel[:] = 0
+                        d.qvel[:2] = cmd[:2]
+                        d.qvel[5] = cmd[2]
+                        mujoco.mj_kinematics(m, d)
+                        d.qpos[2] -= min(env._sole_bottom(g) for g in env.sole_ids) + 0.0005
+                        mujoco.mj_forward(m, d)
+                        r, _ = env._reward(a)
+                        term, trunc = False, env.t >= env.max_steps
+                    else:
+                        _, r, term, trunc, _ = env.step(a)
+                    total += r
+                    done = term or trunc
+                per_step.append(round(total / env.max_steps, 3))
+            row[mode] = float(np.mean(per_step))
+        out[str(cmd.tolist())] = row
     return out
 
 
 if __name__ == "__main__":
     import sys
-    print(check(sys.argv[1] if len(sys.argv) > 1 else "walk"))
+    for k, v in check(sys.argv[1] if len(sys.argv) > 1 else "walk").items():
+        print(k, v)

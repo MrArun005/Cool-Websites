@@ -69,6 +69,11 @@ class Gait:
                 w = (u - (1 - sw)) / sw
                 s, z = -0.5 + (0.5 - 0.5 * np.cos(np.pi * w)), self.lift * np.sin(np.pi * w)
             pos = self.foot0[i].copy()
+            # Turning: the stance foot swings around the body centre, not just about itself
+            # (rotating the feet in place hardly turned the body: 6° in 6 s at 0.5 rad/s).
+            th = s * wz * t_st
+            pos[0] += -th * self.foot0[i][1]
+            pos[1] += th * self.foot0[i][0]
             pos[0] += s * vx * t_st + self.x_off
             pos[1] += s * vy * t_st + y_sway
             pos[2] += z
