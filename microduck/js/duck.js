@@ -225,6 +225,7 @@
     // ---------- simulation ----------
 
     update(dt) {
+      if (!(dt > 0)) return;
       const n = Math.max(1, Math.ceil(dt / (1 / 240) - 1e-6));
       for (let i = 0; i < n; i++) this.step(dt / n);
     }

@@ -113,7 +113,8 @@
   // ---------- main loop ----------
   let last = performance.now(), acc = 0;
   function frame(now) {
-    const realDt = Math.min(0.1, (now - last) / 1000);
+    // rAF timestamps can be a little older than performance.now(), so never go backwards.
+    const realDt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     readKeys();
     duck.update(Math.min(1 / 20, realDt));

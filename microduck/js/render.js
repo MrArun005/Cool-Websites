@@ -45,9 +45,9 @@
 
     buildWorld() {
       const s = this.scene;
-      this.hemi = new THREE.HemisphereLight(0xffffff, 0x8a8577, 0.8);
+      this.hemi = new THREE.HemisphereLight(0xffffff, 0x8a8577, 0.7);
       s.add(this.hemi);
-      const sun = this.sun = new THREE.DirectionalLight(0xffffff, 0.8);
+      const sun = this.sun = new THREE.DirectionalLight(0xffffff, 0.75);
       sun.castShadow = true;
       sun.shadow.mapSize.set(1024, 1024);
       sun.shadow.radius = 4;
@@ -63,10 +63,10 @@
       s.add(floor);
       // 10 cm grid, 1 m lines a little stronger.
       this.grid = new THREE.GridHelper(20, 200);
-      this.grid.material.transparent = true; this.grid.material.opacity = 0.28;
+      this.grid.material.transparent = true; this.grid.material.opacity = 0.3; this.grid.material.vertexColors = false;
       this.grid.position.y = 0.0005;
       this.grid2 = new THREE.GridHelper(20, 20);
-      this.grid2.material.transparent = true; this.grid2.material.opacity = 0.6;
+      this.grid2.material.transparent = true; this.grid2.material.opacity = 0.6; this.grid2.material.vertexColors = false;
       this.grid2.position.y = 0.0008;
       s.add(this.grid, this.grid2);
     }
@@ -122,6 +122,7 @@
       // A slice of a slightly bigger ellipsoid, centred on +x (phi = π faces forward).
       const visor = cast(new THREE.Mesh(new THREE.SphereGeometry(0.5, 48, 32, Math.PI - 1.25, 2.5, Math.PI * 0.2, Math.PI * 0.55), this.visorMat));
       visor.scale.set(hl * 1.04, hh * 1.02, hw * 1.04);
+      visor.receiveShadow = false; dome.receiveShadow = false;   // self-shadow speckles on the curved head
       head.add(visor);
       // eyes: glowing discs with eyelids made by squashing them
       this.eyes = [-1, 1].map(s => {
@@ -298,14 +299,18 @@
     render(duck, realDt) {
       const K = duck.kinematics(), o = this.orbit;
       // The camera follows the body, gently, and ignores small bobs.
-      const k = 1 - Math.exp(-realDt * 2.5);
-      o.target.x += (K.pos[0] - o.target.x) * k;
-      o.target.z += (K.pos[2] - o.target.z) * k;
+      const k = 1 - Math.exp(-realDt * 4);
+      // Lead a little in the direction of travel so a running duck stays in frame.
+      const vel = duck.mode === 'tumble' ? [duck.tb.vel[0], duck.tb.vel[2]] : duck.cv;
+      o.target.x += (K.pos[0] + 0.25 * vel[0] - o.target.x) * k;
+      o.target.z += (K.pos[2] + 0.25 * vel[1] - o.target.z) * k;
       o.target.y += (clamp(K.pos[1], 0.06, 0.2) * 0.75 + 0.03 - o.target.y) * k;
+      // Narrow (phone) views back off so the whole duck still fits.
+      const dist = o.dist * Math.max(1, 1.1 / Math.max(0.3, this.camera.aspect));
       this.camera.position.set(
-        o.target.x + o.dist * Math.cos(o.el) * Math.sin(o.az),
-        o.target.y + o.dist * Math.sin(o.el),
-        o.target.z + o.dist * Math.cos(o.el) * Math.cos(o.az));
+        o.target.x + dist * Math.cos(o.el) * Math.sin(o.az),
+        o.target.y + dist * Math.sin(o.el),
+        o.target.z + dist * Math.cos(o.el) * Math.cos(o.az));
       this.camera.lookAt(o.target);
       this.sun.position.set(o.target.x + 0.8, 2.2, o.target.z + 1.2);
       this.sun.target.position.copy(o.target);
