@@ -23,8 +23,8 @@ from skills_env import GAIT_HZ, SkillEnv
 from walk_gait import Gait
 
 # Gait verified open-loop with walk_gait.py (see its __main__).
-GAIT = {"walk": dict(swing=0.35, lift=0.018, sway=0.015, lead=0.2, x_off=-0.012),
-        "run": dict(swing=0.4, lift=0.018, sway=0.012, lead=0.2, x_off=-0.012)}
+GAIT = {"walk": dict(swing=0.35, lift=0.015, sway=0.015, lead=0.2, x_off=-0.012),
+        "run": dict(swing=0.4, lift=0.015, sway=0.012, lead=0.2, x_off=-0.012)}
 CURRICULUM = int(os.environ.get("WALK_CURRICULUM", 4_000_000))   # total training steps to full commands
 CURRICULUM_START = int(os.environ.get("WALK_CURRICULUM_START", 0))  # steps already done (when resuming)
 N_ENVS = int(os.environ.get("WALK_N_ENVS", 8))
@@ -59,7 +59,7 @@ class WalkEnv(SkillEnv):
                 # run: from a fast walk up to the full run range
                 lo = self.vel_cmd[0] * self.curriculum()
                 self.vel_cmd = np.array([max(lo, 0.25 * self.L), 0.0, self.vel_cmd[2]])
-            self.table = self.ref[self.command].table(self.vel_cmd, GAIT_HZ[self.command])
+            self.table = self.ref[self.command].fast_table(self.vel_cmd, GAIT_HZ[self.command])
             obs = self._obs()
         return obs, info
 
@@ -95,28 +95,52 @@ class WalkEnv(SkillEnv):
 
 
 def check(task="walk", seconds=4.0, seeds=(0, 1, 2)):
-    """Standing still vs following the reference under the same commands: what each one pays."""
+    """What the reward pays per step under the same command for:
+      still      zero action (servos hold the home pose)
+      open_loop  the reference played on the servos, no feedback (it lags and sags, so pays less)
+      ideal      the reference played kinematically (base carried at the commanded speed, feet on the
+                 floor): what a brain that walks like the reference at the command would earn.
+    """
+    import mujoco
     from walk_gait import HERE
     out = {}
-    for mode in ("still", "reference"):
-        tot = []
+    cmd = np.array([0.12, 0.0, 0.0]) if task == "walk" else np.array([0.3, 0.0, 0.0])
+    for mode in ("still", "open_loop", "ideal"):
+        per_step = []
         for s in seeds:
             env = WalkEnv(task=task, randomize=False, seed=s, model_path=str(HERE / "model" / "duck_mid.xml"),
                           max_seconds=seconds, practice=False)
             env.reset(seed=s)
-            env.vel_cmd = np.array([0.12, 0.0, 0.0]) if task == "walk" else np.array([0.25, 0.0, 0.0])
-            env.table = env.ref[task].table(env.vel_cmd, GAIT_HZ[task])
-            done, total, info = False, 0.0, {}
+            env.vel_cmd = cmd.copy()
+            env.table = env.ref[task].fast_table(env.vel_cmd, GAIT_HZ[task])
+            m, d = env.model, env.data
+            done, total, n = False, 0.0, 0
             while not done:
                 a = np.zeros(env.action_space.shape)
-                if mode == "reference":
+                if mode == "open_loop":
                     q, _ = env.reference()
-                    a = np.clip((q[env.pol] - env.home[env.pol]) / env.action_scale, -1, 1)
-                _, r, term, trunc, info = env.step(a)
+                    ramp = min(1.0, env.t * env.dt / 0.5)
+                    a = np.clip(ramp * (q[env.pol] - env.home[env.pol]) / env.action_scale, -1, 1)
+                if mode == "ideal":
+                    env.t += 1
+                    q, _ = env.reference()
+                    d.qpos[env.qadr[env.legs]] = q[env.legs]
+                    d.qpos[3:7] = [1, 0, 0, 0]
+                    d.qpos[0] += cmd[0] * env.dt
+                    d.qvel[:] = 0
+                    d.qvel[0] = cmd[0]
+                    mujoco.mj_kinematics(m, d)
+                    d.qpos[2] -= min(env._sole_bottom(g) for g in env.sole_ids) + 0.0005
+                    mujoco.mj_forward(m, d)
+                    r, _ = env._reward(a)
+                    term, trunc = False, env.t >= env.max_steps
+                else:
+                    _, r, term, trunc, _ = env.step(a)
                 total += r
+                n += 1
                 done = term or trunc
-            tot.append((round(total, 1), bool(term), round(env.t * env.dt, 2)))
-        out[mode] = tot
+            per_step.append(round(total / n, 3))
+        out[mode] = per_step
     return out
 
 

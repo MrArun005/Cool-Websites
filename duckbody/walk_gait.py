@@ -24,7 +24,7 @@ JOINTS = ("hip_yaw", "hip_roll", "hip_pitch", "knee", "ankle")
 
 
 class Gait:
-    def __init__(self, model_path=None, lift=0.012, sway=0.008, x_off=-0.012, swing=0.5, lead=0.0):
+    def __init__(self, model_path=None, lift=0.015, sway=0.015, x_off=-0.012, swing=0.35, lead=0.2):
         self.m = mujoco.MjModel.from_xml_path(str(model_path or HERE / "model" / "duck_mid.xml"))
         self.d = mujoco.MjData(self.m)
         m, d = self.m, self.d
@@ -192,14 +192,15 @@ def play(vx=0.17, vy=0.0, wz=0.0, seconds=6.0, task="walk", seed=0, randomize=Fa
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--vx", type=float, default=0.17)
+    ap.add_argument("--vx", type=float, default=0.08)
     ap.add_argument("--vy", type=float, default=0.0)
     ap.add_argument("--wz", type=float, default=0.0)
     ap.add_argument("--task", default="walk")
-    ap.add_argument("--seconds", type=float, default=6.0)
-    ap.add_argument("--lift", type=float, default=0.018)
-    ap.add_argument("--sway", type=float, default=0.006)
+    ap.add_argument("--seconds", type=float, default=4.0)
+    ap.add_argument("--seeds", type=int, default=4)
     ap.add_argument("--randomize", action="store_true")
     a = ap.parse_args()
-    r = play(a.vx, a.vy, a.wz, a.seconds, a.task, randomize=a.randomize, lift=a.lift, sway=a.sway)
-    print({k: round(v, 3) if isinstance(v, float) else v for k, v in r.items()})
+    from walk_env import GAIT
+    for s in range(a.seeds):
+        r = play(a.vx, a.vy, a.wz, a.seconds, a.task, seed=s, randomize=a.randomize, **GAIT[a.task])
+        print({k: round(v, 3) if isinstance(v, float) else v for k, v in r.items()})
