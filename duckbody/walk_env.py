@@ -39,6 +39,7 @@ N_ENVS = int(os.environ.get("WALK_N_ENVS", 8))
 # Fraction of the command range at the start. The brain now starts from a behaviour-cloned walker
 # (walk_bc.py) that already covers the full range, so the default is no curriculum.
 CURRICULUM_FROM = float(os.environ.get("WALK_CURRICULUM_FROM", 1.0))
+FAST = os.environ.get("WALK_FAST", "0") == "1"   # train the fast walk (see reset)
 JOINT_W = 0.08     # rad² mean over leg joints: halfway to the reference (~0.2 rad off) earns ~0.6
 TRACK_NARROW = 0.04   # m/s
 TURN_W = 0.3          # rad/s
@@ -67,7 +68,14 @@ class WalkEnv(SkillEnv):
     def reset(self, seed=None, options=None):
         obs, info = super().reset(seed=seed, options=options)
         if self.command in GAIT_HZ:
-            if self.practice and self.task == "walk":
+            if self.practice and self.task == "walk" and FAST:
+                # fast walk ("run" on this body): the walk brain and gait, forward speed widened from the walk
+                # range (0.25 L) towards the run range (0.45 L) as the curriculum goes; the run command + run gait
+                # from the walk brain fell at once (0.6 s episodes, flat reward at 2M steps)
+                c = self.curriculum()
+                if self.rng.random() < 0.6:
+                    self.vel_cmd = np.array([self.rng.uniform(0.15, 0.25 + 0.2 * c) * self.L, 0.0, self.rng.uniform(-0.3, 0.3)])
+            elif self.practice and self.task == "walk":
                 self.vel_cmd = self.vel_cmd * self.curriculum()
             elif self.practice and self.task == "run":
                 # run: from a fast walk up to the full run range; the speed floor ramps too (a fixed 0.25 L floor
