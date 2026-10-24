@@ -113,8 +113,9 @@ def specs(m, d):
         dof = m.jnt_dofadr[j]
         kp = float(m.actuator_gainprm[a, 0])
         out["joints"].append(dict(
-            name=m.joint(j).name, range_deg=np.degrees(m.jnt_range[j]).round(1).tolist(),
-            actuator=m.actuator(a).name, kp=kp, kv=float(-m.actuator_biasprm[a, 2]),
+            name=m.joint(j).name, range_deg=np.degrees(m.actuator_ctrlrange[a]).round(1).tolist(),
+            hard_stop_deg=np.degrees(m.jnt_range[j]).round(1).tolist(),
+            actuator=m.actuator(a).name, kp=kp, kv=float(abs(m.actuator_biasprm[a, 2])),
             force_limit=float(m.actuator_forcerange[a, 1]), armature=float(m.dof_armature[dof]),
             damping=float(m.dof_damping[dof]), frictionloss=float(m.dof_frictionloss[dof])))
 
@@ -157,11 +158,12 @@ def print_specs(s):
     for b in s["bodies"]:
         print(f"{b['name']:32s} {b['mass']:8.4f}  " + " ".join(f"{x:.2e}" for x in b["inertia"]))
     print(f"TOTAL MASS {s['total_mass']:.3f} kg\n")
-    print(f"{'joint':18s} {'range (deg)':>16s} {'kp':>6s} {'kv':>5s} {'τmax N·m':>8s} {'(kg·cm)':>7s} "
+    print(f"{'joint':18s} {'servo range°':>16s} {'hard stop°':>12s} {'kp':>6s} {'kv':>5s} {'τmax N·m':>8s} {'(kg·cm)':>7s} "
           f"{'armature':>8s} {'damping':>7s} {'friction':>8s}")
     for j in s["joints"]:
         r = f"{j['range_deg'][0]:.0f} … {j['range_deg'][1]:.0f}"
-        print(f"{j['name']:18s} {r:>16s} {j['kp']:6.2f} {j['kv']:5.2f} {j['force_limit']:8.2f} "
+        h = f"{j['hard_stop_deg'][0]:.0f} … {j['hard_stop_deg'][1]:.0f}"
+        print(f"{j['name']:18s} {r:>16s} {h:>12s} {j['kp']:6.2f} {j['kv']:5.2f} {j['force_limit']:8.2f} "
               f"{j['force_limit'] / NM_PER_KGCM:7.1f} {j['armature']:8.3f} {j['damping']:7.2f} {j['frictionloss']:8.3f}")
     L, F, S = s["leg"], s["foot"], s["stand"]
     print(f"\nleg: thigh {L['thigh']*1000:.1f} mm, shin {L['shin']*1000:.1f} mm, ankle→sole {L['ankle_to_sole']*1000:.1f} mm, "

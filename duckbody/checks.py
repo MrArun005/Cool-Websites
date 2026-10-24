@@ -45,9 +45,10 @@ def leg_pose(m, knee, hip_frac=0.46, base=None):
 def place(m, d, q, clip=True):
     mujoco.mj_resetData(m, d)
     d.qpos[:] = q
-    lo, hi = m.jnt_range[1:, 0], m.jnt_range[1:, 1]
     if clip:
-        d.qpos[7:] = np.clip(d.qpos[7:], lo, hi)
+        for a in range(m.nu):
+            i = m.jnt_qposadr[m.actuator_trnid[a, 0]]
+            d.qpos[i] = np.clip(d.qpos[i], *m.actuator_ctrlrange[a])
     d.ctrl[:] = d.qpos[7:]
     mujoco.mj_forward(m, d)
     d.qpos[2] -= lowest_point(m, d, FOOT_GEOMS)
@@ -94,10 +95,10 @@ def stand_hold(m, trials=10, secs=5.0, joint_noise=0.05, tilt_noise_deg=3.0, see
                              falls=sum(r["fell"] for r in rows)))
 
 
-def crouch_sweep(m, knees=(1.37, 1.57, 1.8, 2.0, 2.2)):
+def crouch_sweep(m, knees=(1.37, 1.57, 1.8, 2.0, 2.18)):
     d = mujoco.MjData(m)
     T = m.body("trunk_assembly").id
-    kmax = m.jnt_range[m.joint("left_knee").id, 1]
+    kmax = m.actuator_ctrlrange[m.actuator("left_knee").id, 1]
     rows = []
     for k in knees:
         if k > kmax + 1e-6:
@@ -112,6 +113,27 @@ def crouch_sweep(m, knees=(1.37, 1.57, 1.8, 2.0, 2.2)):
                          base_mm=float(d.qpos[2] * 1000), trunk_bottom_mm=float(tb * 1000), tilt=tilt_deg(m, d),
                          knee_torque=float(knee_tau),
                          max_torque=float(np.abs(d.actuator_force).max())))
+    return rows
+
+
+def sit_to_stand(m, durations=(1.0, 0.5, 0.3)):
+    """Scripted rise from the deepest reachable crouch to home: peak servo torque and whether it stays up."""
+    d = mujoco.MjData(m)
+    kmax = min(m.actuator_ctrlrange[m.actuator("left_knee").id, 1], 2.05)
+    start, goal = leg_pose(m, kmax), m.key("home").qpos.copy()
+    rows = []
+    for T in durations:
+        place(m, d, start)
+        mujoco.mj_step(m, d, nstep=int(1.0 / m.opt.timestep))
+        peak, n = 0.0, int((T + 1.0) / m.opt.timestep)
+        for i in range(n):
+            a = min(i * m.opt.timestep / T, 1.0)
+            d.ctrl[:] = (1 - a) * start[7:] + a * goal[7:]
+            mujoco.mj_step(m, d)
+            peak = max(peak, float(np.abs(d.actuator_force).max()))
+        rows.append(dict(seconds=T, from_knee_deg=float(np.degrees(kmax)), peak_torque=peak,
+                         saturated=bool(peak >= m.actuator_forcerange[:, 1].min() - 1e-3),
+                         end_tilt=tilt_deg(m, d), end_height_mm=float(d.qpos[2] * 1000)))
     return rows
 
 
@@ -151,10 +173,13 @@ def lying_test(m):
         d.qpos[:] = q
         d.ctrl[:] = q[7:]
         mujoco.mj_step(m, d, nstep=int(2.0 / m.opt.timestep))
-        low = min(geom_world_vertices(m, d, g)[:, 2].min() for g in robot)
+        low = min(geom_world_vertices(m, d, g)[:, 2].min() for g in robot if m.geom_contype[g] | m.geom_conaffinity[g])
+        ghosts = sorted({m.mesh(m.geom_dataid[g]).name for g in robot if m.geom_type[g] == mujoco.mjtGeom.mjGEOM_MESH
+                         and geom_world_vertices(m, d, g)[:, 2].min() < -0.005})
         touching = sorted({m.body(m.geom_bodyid[g]).name for c in d.contact[:d.ncon] for g in c.geom if g in robot})
         out[name] = dict(trunk_com_z_mm=float(d.xipos[m.body("trunk_assembly").id][2] * 1000),
-                         lowest_part_mm=float(low * 1000), sinks_through_floor=bool(low < -0.02), touching=touching)
+                         lowest_part_mm=float(low * 1000), sinks_through_floor=bool(low < -0.02), touching=touching,
+                         visual_parts_below_floor=ghosts)
     return out
 
 
@@ -182,6 +207,12 @@ def main():
         print(f"  knee cmd {r['knee_cmd_deg']:5.0f}° (reached {r['knee_actual_deg']:4.0f}°): "
               f"base {r['base_mm']:4.0f} mm, trunk bottom {r['trunk_bottom_mm']:4.0f} mm, tilt {r['tilt']:4.1f}°, "
               f"knee torque {r['knee_torque']:.2f} N·m ({r['knee_torque'] / STALL_7V4 * 100:.0f}% of 7.4 V stall)")
+    res["sit_to_stand"] = st = sit_to_stand(m)
+    print("\nSIT-TO-STAND (scripted ramp, deepest crouch -> home):")
+    for r in st:
+        print(f"  {r['seconds']:.1f} s from knee {r['from_knee_deg']:.0f}°: peak servo torque {r['peak_torque']:.2f} N·m "
+              f"({r['peak_torque'] / STALL_7V4 * 100:.0f}% of 7.4 V stall{', AT LIMIT' if r['saturated'] else ''}), "
+              f"end tilt {r['end_tilt']:.1f}°, height {r['end_height_mm']:.0f} mm")
     res["self_collision"] = sc = self_collision_scan(path)
     print("\nSELF-COLLISION (convex hulls): always touching:", "; ".join(sc["always"]) or "none")
     for k, v in sc["new_by_knee_deg"].items():
@@ -189,8 +220,9 @@ def main():
     res["lying"] = ly = lying_test(m)
     print("\nLYING (dropped from 30 cm, 2 s):")
     for k, v in ly.items():
-        print(f"  {k}: lowest part {v['lowest_part_mm']:.0f} mm, trunk CoM {v['trunk_com_z_mm']:.0f} mm, "
-              f"{'SINKS THROUGH FLOOR' if v['sinks_through_floor'] else 'rests on floor'}; touching: {', '.join(v['touching']) or 'nothing'}")
+        print(f"  {k}: lowest colliding part {v['lowest_part_mm']:.0f} mm, trunk CoM {v['trunk_com_z_mm']:.0f} mm, "
+              f"{'SINKS THROUGH FLOOR' if v['sinks_through_floor'] else 'rests on floor'}; touching: {', '.join(v['touching']) or 'nothing'}"
+              + (f"; non-colliding parts below floor: {', '.join(v['visual_parts_below_floor'])}" if v['visual_parts_below_floor'] else ""))
     out = Path(a.out) if a.out else HERE / ("checks_upstream.json" if a.upstream else "checks.json")
     out.write_text(json.dumps(res, indent=1, default=float))
 

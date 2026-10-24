@@ -15,6 +15,7 @@
     "end_height_err_mm": -0.9808440841580224,
     "height_drift_last4s_mm": -1.1776143726335286,
     "xy_drift_mm": 12.37698145836768,
+    "slide_last4s_mm": 0.2571268698738205,
     "fell": false
    },
    {
@@ -24,6 +25,7 @@
     "end_height_err_mm": -0.9217731310416089,
     "height_drift_last4s_mm": -1.4016520497529272,
     "xy_drift_mm": 5.952741510958004,
+    "slide_last4s_mm": 0.06570570954863875,
     "fell": false
    },
    {
@@ -33,6 +35,7 @@
     "end_height_err_mm": -0.9988229539280025,
     "height_drift_last4s_mm": -1.0129908979807367,
     "xy_drift_mm": 4.333824438539158,
+    "slide_last4s_mm": 0.21659203901635798,
     "fell": false
    },
    {
@@ -42,6 +45,7 @@
     "end_height_err_mm": -0.8339683969063594,
     "height_drift_last4s_mm": -1.7528528064751636,
     "xy_drift_mm": 23.052530799472095,
+    "slide_last4s_mm": 0.5571132067088816,
     "fell": false
    },
    {
@@ -51,6 +55,7 @@
     "end_height_err_mm": -1.0837851382521357,
     "height_drift_last4s_mm": -0.6118069940731496,
     "xy_drift_mm": 12.09827832239835,
+    "slide_last4s_mm": 0.23083954888262978,
     "fell": false
    },
    {
@@ -60,6 +65,7 @@
     "end_height_err_mm": -1.0655664066215598,
     "height_drift_last4s_mm": -0.8036362826019661,
     "xy_drift_mm": 12.039014258513378,
+    "slide_last4s_mm": 0.5091357579714295,
     "fell": false
    },
    {
@@ -69,6 +75,7 @@
     "end_height_err_mm": -1.0805334850278459,
     "height_drift_last4s_mm": -0.5723307075823636,
     "xy_drift_mm": 5.741937347438785,
+    "slide_last4s_mm": 0.5347697821105021,
     "fell": false
    },
    {
@@ -78,6 +85,7 @@
     "end_height_err_mm": -0.9969429037427757,
     "height_drift_last4s_mm": -1.0924783042161046,
     "xy_drift_mm": 13.358799769299036,
+    "slide_last4s_mm": 0.3045259261662074,
     "fell": false
    },
    {
@@ -87,6 +95,7 @@
     "end_height_err_mm": -0.8345384523716637,
     "height_drift_last4s_mm": -1.7776522071251133,
     "xy_drift_mm": 13.530131407911641,
+    "slide_last4s_mm": 0.6360929596364269,
     "fell": false
    },
    {
@@ -96,6 +105,7 @@
     "end_height_err_mm": -0.8940073855350228,
     "height_drift_last4s_mm": -1.3766984599024035,
     "xy_drift_mm": 17.883058546118626,
+    "slide_last4s_mm": 0.5666190704992463,
     "fell": false
    }
   ],
@@ -105,6 +115,7 @@
    "worst_height_err_mm": 1.0837851382521357,
    "worst_drift_mm": 1.7776522071251133,
    "worst_xy_drift_mm": 23.052530799472095,
+   "worst_slide_last4s_mm": 0.6360929596364269,
    "falls": 0
   }
  },
@@ -138,8 +149,34 @@
    "reachable": false
   },
   {
-   "knee_cmd_deg": 126.05071492878112,
+   "knee_cmd_deg": 124.90479933851947,
    "reachable": false
+  }
+ ],
+ "sit_to_stand": [
+  {
+   "seconds": 1.0,
+   "from_knee_deg": 90.0,
+   "peak_torque": 0.840443182494468,
+   "saturated": false,
+   "end_tilt": 0.4411892041501919,
+   "end_height_mm": 160.46919725865075
+  },
+  {
+   "seconds": 0.5,
+   "from_knee_deg": 90.0,
+   "peak_torque": 0.9520297273126168,
+   "saturated": false,
+   "end_tilt": 0.7491135831612432,
+   "end_height_mm": 160.9575522839356
+  },
+  {
+   "seconds": 0.3,
+   "from_knee_deg": 90.0,
+   "peak_torque": 1.13856929532038,
+   "saturated": false,
+   "end_tilt": 0.38660722029870154,
+   "end_height_mm": 160.76136057483006
   }
  ],
  "self_collision": {
@@ -167,29 +204,116 @@
  "lying": {
   "on_back": {
    "trunk_com_z_mm": -192.17229902234317,
-   "lowest_part_mm": -469.93966074720396,
-   "sinks_through_floor": true,
+   "lowest_part_mm": -0.14294529652627858,
+   "sinks_through_floor": false,
    "touching": [
     "foot_assembly",
     "foot_assembly_2"
+   ],
+   "visual_parts_below_floor": [
+    "antenna",
+    "body_back",
+    "body_front",
+    "body_middle_bottom",
+    "body_middle_top",
+    "foot_bottom_pla",
+    "foot_side",
+    "foot_top",
+    "head",
+    "head_bot_sheet",
+    "head_pitch_to_yaw",
+    "head_yaw_to_roll",
+    "left_antenna_holder",
+    "left_cache",
+    "left_knee_to_ankle_left_sheet",
+    "left_knee_to_ankle_right_sheet",
+    "left_roll_to_pitch",
+    "leg_spacer",
+    "neck_left_sheet",
+    "neck_right_sheet",
+    "right_antenna_holder",
+    "right_cache",
+    "right_roll_to_pitch",
+    "roll_motor_bottom",
+    "roll_motor_top",
+    "trunk_bottom",
+    "trunk_top"
    ]
   },
   "on_front": {
    "trunk_com_z_mm": -192.7897968305907,
-   "lowest_part_mm": -473.58454103961606,
-   "sinks_through_floor": true,
+   "lowest_part_mm": -0.1792826542339459,
+   "sinks_through_floor": false,
    "touching": [
     "foot_assembly",
     "foot_assembly_2"
+   ],
+   "visual_parts_below_floor": [
+    "antenna",
+    "body_back",
+    "body_front",
+    "body_middle_bottom",
+    "body_middle_top",
+    "foot_bottom_pla",
+    "foot_side",
+    "foot_top",
+    "head",
+    "head_bot_sheet",
+    "head_pitch_to_yaw",
+    "head_yaw_to_roll",
+    "left_antenna_holder",
+    "left_cache",
+    "left_knee_to_ankle_left_sheet",
+    "left_knee_to_ankle_right_sheet",
+    "left_roll_to_pitch",
+    "leg_spacer",
+    "neck_left_sheet",
+    "neck_right_sheet",
+    "right_antenna_holder",
+    "right_cache",
+    "right_roll_to_pitch",
+    "roll_motor_bottom",
+    "roll_motor_top",
+    "trunk_bottom",
+    "trunk_top"
    ]
   },
   "on_side": {
    "trunk_com_z_mm": -192.571540955174,
-   "lowest_part_mm": -473.0322098489679,
-   "sinks_through_floor": true,
+   "lowest_part_mm": -0.17142231612130193,
+   "sinks_through_floor": false,
    "touching": [
     "foot_assembly",
     "foot_assembly_2"
+   ],
+   "visual_parts_below_floor": [
+    "antenna",
+    "body_back",
+    "body_front",
+    "body_middle_bottom",
+    "body_middle_top",
+    "foot_bottom_pla",
+    "foot_side",
+    "foot_top",
+    "head",
+    "head_bot_sheet",
+    "head_pitch_to_yaw",
+    "head_yaw_to_roll",
+    "left_antenna_holder",
+    "left_cache",
+    "left_knee_to_ankle_left_sheet",
+    "left_knee_to_ankle_right_sheet",
+    "left_roll_to_pitch",
+    "leg_spacer",
+    "neck_left_sheet",
+    "neck_right_sheet",
+    "right_antenna_holder",
+    "right_cache",
+    "right_roll_to_pitch",
+    "roll_motor_bottom",
+    "roll_motor_top",
+    "trunk_bottom",
+    "trunk_top"
    ]
   }
  }
