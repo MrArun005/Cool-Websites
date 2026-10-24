@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build a Robot</title>
+<meta name="description" content="An interactive guide to building your first robot: body, limbs, brain, RAM and memory.">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --surface-2: #eeece6;
+    --text: #1d1d1b;
+    --muted: #615f58;
+    --line: #d9d6cc;
+    --accent: #e8590c;
+    --accent-soft: #fde7da;
+    --blue: #1c6dd0;
+    --green: #2b8a3e;
+    --robot-body: #c9ccd3;
+    --robot-dark: #4a4f5a;
+    --robot-panel: #2b2f38;
+    --hl: #e8590c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15161a;
+      --surface: #1e2026;
+      --surface-2: #272a31;
+      --text: #ecebe6;
+      --muted: #a3a29b;
+      --line: #363942;
+      --accent: #ff8a3d;
+      --accent-soft: #3a2518;
+      --blue: #6aa8ff;
+      --green: #69c47a;
+      --robot-body: #8d93a0;
+      --robot-dark: #c3c7d0;
+      --robot-panel: #0d0e11;
+      --hl: #ff8a3d;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  a { color: var(--blue); }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.88em; }
+  code { background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 4px; }
+  pre { background: var(--robot-panel); color: #e6e6e6; padding: 14px 16px; border-radius: 10px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  nav { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; gap: 18px; align-items: center; height: 52px; overflow-x: auto; white-space: nowrap; }
+  nav strong { margin-right: auto; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 0.92em; }
+  nav a:hover { color: var(--text); }
+  header { padding: 56px 0 24px; }
+  h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.02em; }
+  h2 { font-size: 1.7rem; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h3 { margin: 0 0 6px; font-size: 1.1rem; }
+  .lede { font-size: 1.15rem; color: var(--muted); max-width: 680px; margin: 0; }
+  section { padding: 48px 0; border-top: 1px solid var(--line); scroll-margin-top: 52px; }
+  section > .wrap > p.intro { color: var(--muted); max-width: 720px; margin-top: 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+  @media (max-width: 820px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+
+  /* --- robot lab --- */
+  .lab { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 820px) { .lab { grid-template-columns: minmax(0, 1fr); } }
+  .stage { background: radial-gradient(circle at 50% 35%, var(--surface) 0%, var(--surface-2) 100%); border: 1px solid var(--line); border-radius: 14px; padding: 8px; }
+  #robot { width: 100%; height: auto; display: block; max-height: 460px; }
+  #robot .metal { fill: var(--robot-body); stroke: var(--robot-dark); stroke-width: 2; }
+  #robot .dark { fill: var(--robot-dark); }
+  #robot .panel { fill: var(--robot-panel); }
+  #robot .servo { fill: var(--accent); stroke: var(--robot-dark); stroke-width: 1.5; }
+  #robot .part { transition: filter .2s, opacity .2s; }
+  #robot.focus .part { opacity: 0.35; }
+  #robot.focus .part.on { opacity: 1; filter: drop-shadow(0 0 6px var(--hl)); }
+  .wheel-spin { transform-box: fill-box; transform-origin: center; }
+  .spinning .wheel-spin { animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinning .wheel-spin { animation: none; } }
+
+  .controls label { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 3.2em; gap: 10px; align-items: center; font-size: 0.93em; margin: 6px 0; }
+  .controls output { font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+  button {
+    font: inherit; font-size: 0.92em; cursor: pointer; border-radius: 999px; padding: 7px 15px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .serial { margin-top: 10px; }
+  .serial pre { height: 132px; margin: 6px 0 0; font-size: 0.8em; }
+  .small { font-size: 0.86em; color: var(--muted); }
+
+  /* --- anatomy --- */
+  .anatomy { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .organ { text-align: left; border-radius: 14px; padding: 16px; display: block; width: 100%; }
+  .organ .tag { display: inline-block; font-size: 0.75em; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .organ p { margin: 4px 0 0; color: var(--muted); font-size: 0.93em; }
+  .organ[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+
+  /* --- memory --- */
+  .mem-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .mem-row input { flex: 1; min-width: 0; font: inherit; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  .chip-box { min-height: 150px; }
+  .chip-box ul { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 6px; }
+  .chip-box li { background: var(--surface-2); border-radius: 8px; padding: 6px 10px; font-size: 0.92em; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .chip-box li button { padding: 2px 10px; font-size: 0.8em; }
+  .chip-box .empty { color: var(--muted); font-size: 0.9em; font-style: italic; }
+  .ram { border-top: 4px solid var(--blue); }
+  .rom { border-top: 4px solid var(--green); }
+  .poweroff { animation: flicker .6s; }
+  @keyframes flicker { 0%,100% { opacity: 1; } 20%,60% { opacity: .15; } 40% { opacity: .6; } }
+  #status { min-height: 1.6em; margin: 10px 0 0; font-weight: 600; }
+
+  /* --- parts table --- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 0.93em; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--surface-2); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  tfoot td { font-weight: 700; }
+
+  /* --- steps --- */
+  .steps { counter-reset: step; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  .steps li { counter-increment: step; }
+  .steps label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; cursor: pointer; }
+  .steps input { width: 20px; height: 20px; margin-top: 4px; accent-color: var(--green); }
+  .steps h3::before { content: "Step " counter(step) " · "; color: var(--accent); }
+  .steps p { margin: 4px 0 0; color: var(--muted); font-size: 0.95em; }
+  .steps li:has(input:checked) .card { opacity: 0.6; }
+  .progress { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin: 6px 0 18px; }
+  .progress div { height: 100%; width: 0; background: var(--green); transition: width .3s; }
+  .warn { border-left: 4px solid var(--accent); }
+  footer { padding: 32px 0 48px; color: var(--muted); font-size: 0.9em; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<nav aria-label="Sections">
+  <div class="wrap">
+    <strong>🤖 Build a Robot</strong>
+    <a href="#lab">Robot lab</a>
+    <a href="#anatomy">Anatomy</a>
+    <a href="#memory">Memory &amp; RAM</a>
+    <a href="#parts">Parts</a>
+    <a href="#steps">Build steps</a>
+    <a href="#code">Code</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <h1>Let's build a robot.</h1>
+    <p class="lede">Every robot, from a toy to a factory arm, is the same five things: a <b>body</b> to hold it together, <b>muscles</b> (motors) to move, <b>senses</b> (sensors) to notice the world, a <b>brain</b> (a small computer with RAM and storage) to decide, and a <b>battery</b> to power it all. This page shows how each piece works, and walks you from a pile of parts to a robot that waves, drives around and remembers your name.</p>
+  </div>
+</header>
+
+<!-- ============ LAB ============ -->
+<section id="lab">
+  <div class="wrap">
+    <h2>Robot lab: how limbs move</h2>
+    <p class="intro">Each joint is a <b>servo motor</b> (the orange dots). A servo is a motor that turns to an exact angle from 0° to 180° and holds it. Drag the sliders and watch the commands the brain would send over the USB cable to the limb controller. These are the same commands the real firmware in this repo understands.</p>
+    <div class="lab">
+      <div class="stage">
+        <svg id="robot" viewBox="0 0 320 400" role="img" aria-labelledby="robot-title">
+          <title id="robot-title">A robot with a head, two jointed arms and a wheeled base</title>
+          <!-- base + wheels -->
+          <g class="part" data-part="wheels">
+            <rect class="metal" x="88" y="300" width="144" height="40" rx="10"/>
+            <g class="wheel-spin"><circle class="dark" cx="110" cy="350" r="26"/><rect x="108" y="328" width="4" height="44" fill="var(--robot-body)"/></g>
+            <g class="wheel-spin"><circle class="dark" cx="210" cy="350" r="26"/><rect x="208" y="328" width="4" height="44" fill="var(--robot-body)"/></g>
+          </g>
+          <g class="part" data-part="battery">
+            <rect x="136" y="308" width="48" height="22" rx="4" fill="var(--green)"/>
+            <rect x="184" y="314" width="4" height="10" fill="var(--green)"/>
+            <text x="160" y="323" text-anchor="middle" font-size="11" fill="#fff" font-family="system-ui">7.4V</text>
+          </g>
+          <!-- torso -->
+          <g class="part" data-part="frame">
+            <rect class="metal" x="100" y="140" width="120" height="164" rx="16"/>
+          </g>
+          <g class="part" data-part="brain">
+            <rect class="panel" x="118" y="160" width="84" height="56" rx="6"/>
+            <rect x="126" y="168" width="22" height="16" fill="#3a8f4a"/>
+            <rect x="154" y="168" width="40" height="8" fill="#5b6270"/>
+            <rect x="154" y="180" width="40" height="8" fill="#5b6270"/>
+            <text x="160" y="208" text-anchor="middle" font-size="10" fill="#9fe2ad" font-family="ui-monospace,monospace">CPU · RAM</text>
+          </g>
+          <g class="part" data-part="spine">
+            <rect class="panel" x="128" y="228" width="64" height="40" rx="5"/>
+            <circle cx="140" cy="248" r="3" fill="#7cc4ff"/><circle cx="152" cy="248" r="3" fill="#7cc4ff"/>
+            <text x="172" y="252" text-anchor="middle" font-size="9" fill="#7cc4ff" font-family="ui-monospace,monospace">MCU</text>
+          </g>
+          <!-- left arm (viewer's left) -->
+          <g id="armL" class="part" data-part="servos">
+            <g id="lShoulder" transform="rotate(10 100 156)">
+              <rect class="metal" x="88" y="156" width="24" height="70" rx="10"/>
+              <g id="lElbow" transform="rotate(20 100 222)">
+                <rect class="metal" x="90" y="222" width="20" height="62" rx="9"/>
+                <circle class="dark" cx="100" cy="290" r="11"/>
+              </g>
+              <circle class="servo" cx="100" cy="222" r="7"/>
+            </g>
+            <circle class="servo" cx="100" cy="156" r="9"/>
+          </g>
+          <!-- right arm -->
+          <g id="armR" class="part" data-part="servos">
+            <g id="rShoulder" transform="rotate(-10 220 156)">
+              <rect class="metal" x="208" y="156" width="24" height="70" rx="10"/>
+              <g id="rElbow" transform="rotate(-20 220 222)">
+                <rect class="metal" x="210" y="222" width="20" height="62" rx="9"/>
+                <circle class="dark" cx="220" cy="290" r="11"/>
+              </g>
+              <circle class="servo" cx="220" cy="222" r="7"/>
+            </g>
+            <circle class="servo" cx="220" cy="156" r="9"/>
+          </g>
+          <!-- neck + head -->
+          <rect class="dark" x="150" y="122" width="20" height="22"/>
+          <g id="head" transform="rotate(0 160 128)">
+            <g class="part" data-part="head">
+              <rect class="metal" x="104" y="44" width="112" height="84" rx="18"/>
+              <line x1="160" y1="44" x2="160" y2="24" stroke="var(--robot-dark)" stroke-width="3"/>
+              <circle cx="160" cy="20" r="6" fill="var(--accent)"/>
+            </g>
+            <g class="part" data-part="senses">
+              <g id="face">
+                <rect class="panel" x="118" y="62" width="84" height="34" rx="10"/>
+                <circle cx="140" cy="79" r="10" fill="#7cc4ff"/>
+                <circle cx="180" cy="79" r="10" fill="#7cc4ff"/>
+                <circle cx="140" cy="79" r="4" fill="var(--robot-panel)"/>
+                <circle cx="180" cy="79" r="4" fill="var(--robot-panel)"/>
+              </g>
+              <rect class="dark" x="140" y="106" width="40" height="8" rx="4"/>
+            </g>
+          </g>
+          <g class="part" data-part="servos"><circle class="servo" cx="160" cy="132" r="7"/></g>
+        </svg>
+      </div>
+
+      <div class="card controls">
+        <h3>Joint controls</h3>
+        <div id="sliders"></div>
+        <div class="btns">
+          <button class="primary" data-act="wave">👋 Wave</button>
+          <button data-act="nod">Nod</button>
+          <button data-act="dance">💃 Dance</button>
+          <button data-act="drive">Drive</button>
+          <button data-act="home">Home pose</button>
+        </div>
+        <div class="serial">
+          <span class="small">Serial commands, brain → limb controller (<code>S joint angle</code>, <code>M left right</code>)</span>
+          <pre id="log" aria-live="polite"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ANATOMY ============ -->
+<section id="anatomy">
+  <div class="wrap">
+    <h2>Robot anatomy</h2>
+    <p class="intro">Tap a part to light it up on the robot above. A robot is built like a body: each part has one job.</p>
+    <div class="anatomy" id="organs"></div>
+  </div>
+</section>
+
+<!-- ============ MEMORY ============ -->
+<section id="memory">
+  <div class="wrap">
+    <h2>Memory, RAM and storage</h2>
+    <p class="intro">Your robot's brain is a Raspberry Pi, a full computer the size of a credit card. Like any computer it has two kinds of memory. <b>RAM</b> is fast working memory for what the robot is thinking about right now, but it is wiped the moment the power goes off. <b>Storage</b> (the SD card or SSD) is slower but keeps everything forever. A robot that "remembers you" tomorrow has to save that to storage. Try it:</p>
+    <div class="mem-row">
+      <input id="memInput" type="text" placeholder="Tell the robot something, e.g. My name is Arun" aria-label="Tell the robot something" maxlength="80">
+      <button class="primary" id="memSay">Say it</button>
+    </div>
+    <div class="grid-2">
+      <div class="card chip-box ram" id="ramBox">
+        <h3>RAM: short-term memory</h3>
+        <span class="small">Fast. Raspberry Pi 5 has 4–16 GB. Lost on power-off.</span>
+        <ul id="ramList"></ul>
+      </div>
+      <div class="card chip-box rom" id="romBox">
+        <h3>Storage: long-term memory</h3>
+        <span class="small">Slower. A 64 GB SD card or an SSD. Survives power-off.</span>
+        <ul id="romList"></ul>
+      </div>
+    </div>
+    <div class="btns">
+      <button id="powerOff">🔌 Pull the power plug</button>
+      <button id="clearRom">Wipe storage</button>
+    </div>
+    <p id="status" aria-live="polite"></p>
+    <p class="small">How much do you need? A talking, moving robot runs fine on <b>4 GB RAM</b>. Get <b>8 GB</b> if you want camera vision or a small AI model running on the robot itself. The little Arduino in the body has only <b>2 KB</b> of RAM. That's plenty for moving motors, and it's why the thinking happens on the Pi.</p>
+  </div>
+</section>
+
+<!-- ============ PARTS ============ -->
+<section id="parts">
+  <div class="wrap">
+    <h2>Shopping list</h2>
+    <p class="intro">This is a beginner build: a robot on wheels with a moving head and two arms. Walking legs are a much harder second project because the robot has to balance. Prices are rough USD ranges and vary by shop.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Part</th><th>Job</th><th>What to buy</th><th class="num">Approx.</th></tr></thead>
+        <tbody>
+          <tr><td>Brain</td><td>Thinking, memory, Wi-Fi, camera</td><td>Raspberry Pi 5 (4 GB or 8 GB RAM) + official 27 W power supply for bench testing</td><td class="num">$60–90</td></tr>
+          <tr><td>Storage</td><td>Long-term memory, operating system</td><td>64 GB microSD card (A2 class), or an NVMe SSD + HAT later</td><td class="num">$10–15</td></tr>
+          <tr><td>Spinal cord</td><td>Drives servos and motors precisely</td><td>Arduino Uno R3 or Nano (clones are fine) + USB cable</td><td class="num">$8–25</td></tr>
+          <tr><td>Arm &amp; head joints</td><td>6 servos: 2 head, 2 per arm</td><td>2× SG90 micro servos (head), 4× MG996R metal-gear servos (arms)</td><td class="num">$25–35</td></tr>
+          <tr><td>Wheels</td><td>Driving around</td><td>2WD robot chassis kit with 2 TT gear motors, wheels and caster</td><td class="num">$12–20</td></tr>
+          <tr><td>Motor driver</td><td>Lets a small chip control big motors</td><td>TB6612FNG module (or L298N)</td><td class="num">$4–8</td></tr>
+          <tr><td>Senses</td><td>See, hear, measure distance</td><td>HC-SR04 ultrasonic sensor, Raspberry Pi Camera Module 3, USB mini mic, small USB speaker</td><td class="num">$45–60</td></tr>
+          <tr><td>Heart (power)</td><td>Battery for everything</td><td>2× 18650 Li-ion cells + holder with protection board (7.4 V), on/off switch</td><td class="num">$15–25</td></tr>
+          <tr><td>Regulators</td><td>Turn 7.4 V into safe 5 V</td><td>2× 5 V / 5 A buck converters (one for the Pi, one for the servos)</td><td class="num">$10–15</td></tr>
+          <tr><td>Body shell</td><td>Head, torso, arm brackets</td><td>3D-printed PLA (free designs online), or 3 mm acrylic / foam board / cardboard to start</td><td class="num">$0–30</td></tr>
+          <tr><td>Wiring</td><td>Nerves</td><td>Jumper wires, breadboard, M3 screws &amp; standoffs, zip ties, heat-shrink</td><td class="num">$15–20</td></tr>
+        </tbody>
+        <tfoot><tr><td colspan="3">Total</td><td class="num">≈ $200–340</td></tr></tfoot>
+      </table>
+    </div>
+    <p class="small">Tools: small screwdriver set, wire stripper, multimeter ($15, the most useful tool you'll own), and a soldering iron for later. No 3D printer? Many libraries and makerspaces have one, and online print services will mail you parts.</p>
+  </div>
+</section>
+
+<!-- ============ STEPS ============ -->
+<section id="steps">
+  <div class="wrap">
+    <h2>Build it in 8 steps</h2>
+    <p class="intro">Build one system at a time and test it before adding the next. When something breaks (it will!) you'll know exactly where. Tick steps off as you go; your progress is saved in this browser.</p>
+    <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+    <ol class="steps" id="stepList"></ol>
+    <div class="card warn" style="margin-top:20px">
+      <h3>⚠️ Safety rules</h3>
+      <p style="margin:4px 0 0">Never power servos or motors from the Arduino's or Pi's 5 V pin, because they pull far more current and will reset or damage the board. Always connect all grounds (GND) together. Lithium batteries can catch fire if shorted or over-discharged, so use cells with a protection board, never leave them charging unattended, and add a power switch you can reach. Keep fingers clear of arm joints when testing; MG996R servos are strong.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CODE ============ -->
+<section id="code">
+  <div class="wrap">
+    <h2>The code</h2>
+    <p class="intro">All of this is in the <code>robot/</code> folder of this repo. You can try the brain on your laptop today, before you buy anything. It runs in simulation and prints what the motors would do.</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>🧠 Brain (Raspberry Pi, Python)</h3>
+        <p class="small"><code>robot/brain/</code>: <code>brain.py</code> understands commands, <code>memory.py</code> stores short-term memory in RAM and long-term memory in a SQLite file, and <code>body.py</code> talks to the Arduino.</p>
+<pre><code>cd robot/brain
+python3 brain.py              # simulated body
+you&gt; my name is Arun
+robot&gt; Nice to meet you, Arun!
+you&gt; wave
+you&gt; quit
+python3 brain.py              # run again…
+Robot online. Welcome back, Arun!</code></pre>
+      </div>
+      <div class="card">
+        <h3>🦴 Limbs (Arduino, C++)</h3>
+        <p class="small"><code>robot/firmware/limbs/limbs.ino</code>: moves 6 servos smoothly within safe limits, drives the wheels, reads the distance sensor, and stops the wheels by itself if the brain goes quiet.</p>
+<pre><code>S 4 90     right shoulder to 90°
+S 5 120    right elbow to 120°
+M 180 180  both wheels forward
+X          stop wheels
+D          → "D 42" (cm to nearest object)</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">Built step by step. Start small, test often, and have fun. See <code>robot/README.md</code> for wiring details.</div>
+</footer>
+
+<script>
+(() => {
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  /* ---------- joints (numbering matches limbs.ino and body.py) ---------- */
+  const JOINTS = [
+    { id: 0, key: 'head_pan',   label: 'Head pan',       min: 30, max: 150, home: 90 },
+    { id: 1, key: 'head_tilt',  label: 'Head tilt',      min: 60, max: 120, home: 90 },
+    { id: 2, key: 'l_shoulder', label: 'Left shoulder',  min: 0,  max: 180, home: 10 },
+    { id: 3, key: 'l_elbow',    label: 'Left elbow',     min: 0,  max: 150, home: 20 },
+    { id: 4, key: 'r_shoulder', label: 'Right shoulder', min: 0,  max: 180, home: 10 },
+    { id: 5, key: 'r_elbow',    label: 'Right elbow',    min: 0,  max: 150, home: 20 },
+  ];
+  const angle = Object.fromEntries(JOINTS.map(j => [j.key, j.home]));
+  const $ = id => document.getElementById(id);
+  const robot = $('robot'), log = $('log');
+
+  function render() {
+    $('head').setAttribute('transform', `rotate(${(angle.head_tilt - 90) / 2} 160 128)`);
+    $('face').setAttribute('transform', `translate(${(90 - angle.head_pan) / 60 * 10} 0)`);
+    $('lShoulder').setAttribute('transform', `rotate(${angle.l_shoulder} 100 156)`);
+    $('lElbow').setAttribute('transform', `rotate(${angle.l_elbow} 100 222)`);
+    $('rShoulder').setAttribute('transform', `rotate(${-angle.r_shoulder} 220 156)`);
+    $('rElbow').setAttribute('transform', `rotate(${-angle.r_elbow} 220 222)`);
+    for (const j of JOINTS) {
+      const s = $('s-' + j.key);
+      if (s) { s.value = Math.round(angle[j.key]); s.nextElementSibling.value = Math.round(angle[j.key]) + '°'; }
+    }
+  }
+
+  function send(line) {
+    const lines = (log.textContent ? log.textContent.split('\n') : []).concat(line).slice(-8);
+    log.textContent = lines.join('\n');
+  }
+
+  const sliders = $('sliders');
+  for (const j of JOINTS) {
+    const label = document.createElement('label');
+    label.innerHTML = `<span>${j.label} <span class="small">#${j.id}</span></span>
+      <input type="range" id="s-${j.key}" min="${j.min}" max="${j.max}" value="${j.home}">
+      <output>${j.home}°</output>`;
+    sliders.append(label);
+    const input = label.querySelector('input');
+    input.addEventListener('input', () => { stopAnim(); angle[j.key] = +input.value; render(); });
+    input.addEventListener('change', () => send(`S ${j.id} ${input.value}`));
+  }
+
+  /* ---------- tweened poses ---------- */
+  let animToken = 0;
+  const stopAnim = () => { animToken++; robot.classList.remove('spinning'); };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  function tween(target, ms, token) {
+    const start = { ...angle };
+    for (const [k, v] of Object.entries(target)) send(`S ${JOINTS.find(j => j.key === k).id} ${v}`);
+    if (reduceMotion) { Object.assign(angle, target); render(); return sleep(ms / 2); }
+    return new Promise(resolve => {
+      const t0 = performance.now();
+      const step = now => {
+        if (token !== animToken) return resolve();
+        const p = Math.min(1, (now - t0) / ms), e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+        for (const k of Object.keys(target)) angle[k] = start[k] + (target[k] - start[k]) * e;
+        render();
+        p < 1 ? requestAnimationFrame(step) : resolve();
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  const HOME = Object.fromEntries(JOINTS.map(j => [j.key, j.home]));
+  const routines = {
+    async home(t) { await tween(HOME, 500, t); },
+    async wave(t) {
+      await tween({ r_shoulder: 90, r_elbow: 60 }, 500, t);
+      for (let i = 0; i < 3 && t === animToken; i++) {
+        await tween({ r_elbow: 120 }, 280, t);
+        await tween({ r_elbow: 60 }, 280, t);
+      }
+      if (t === animToken) await tween(HOME, 500, t);
+    },
+    async nod(t) {
+      for (let i = 0; i < 2 && t === animToken; i++) {
+        await tween({ head_tilt: 70 }, 250, t);
+        await tween({ head_tilt: 110 }, 250, t);
+      }
+      if (t === animToken) await tween({ head_tilt: 90 }, 250, t);
+    },
+    async dance(t) {
+      for (let i = 0; i < 3 && t === animToken; i++) {
+        await tween({ l_shoulder: 150, l_elbow: 90, r_shoulder: 30, r_elbow: 10, head_pan: 60 }, 380, t);
+        await tween({ l_shoulder: 30, l_elbow: 10, r_shoulder: 150, r_elbow: 90, head_pan: 120 }, 380, t);
+      }
+      if (t === animToken) await tween(HOME, 500, t);
+    },
+    async drive(t) {
+      send('M 180 180');
+      robot.classList.add('spinning');
+      await sleep(1500);
+      if (t !== animToken) return;
+      robot.classList.remove('spinning');
+      send('X');
+    },
+  };
+  document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+    stopAnim();
+    routines[b.dataset.act](animToken);
+  }));
+
+  render();
+  send('READY');
+
+  /* ---------- anatomy ---------- */
+  const ORGANS = [
+    { part: 'head',    tag: 'Head',           name: 'Head & neck',    text: 'A 3D-printed or cardboard shell on top of two servos: one turns it left/right (pan), one tips it up/down (tilt).' },
+    { part: 'senses',  tag: 'Senses',         name: 'Eyes & ears',    text: 'The "eyes" are an ultrasonic sensor that measures distance with sound echoes, plus a camera. A USB mic hears you; a speaker talks back.' },
+    { part: 'brain',   tag: 'Brain',          name: 'Raspberry Pi',   text: 'A tiny full computer: CPU to think, RAM for working memory, SD card for long-term memory, Wi-Fi to talk to your phone.' },
+    { part: 'spine',   tag: 'Spinal cord',    name: 'Arduino',        text: 'A microcontroller (MCU) that turns the brain’s commands into the exact electrical pulses servos and motors need, in real time.' },
+    { part: 'servos',  tag: 'Muscles',        name: 'Servo motors',   text: 'One per joint. Each one receives a target angle (0–180°) and holds it. Shoulder + elbow = 2 servos per arm.' },
+    { part: 'frame',   tag: 'Skeleton',       name: 'Frame',          text: 'The torso holds everything together. Start with cardboard or foam board; move to 3D-printed PLA or acrylic once the design works.' },
+    { part: 'wheels',  tag: 'Legs',           name: 'Wheels & motors',text: 'Two geared DC motors through a motor driver. Spinning them at different speeds steers the robot, like a tank.' },
+    { part: 'battery', tag: 'Heart',          name: 'Battery',        text: 'A 7.4 V lithium pack, stepped down to 5 V by regulators. Servos and the Pi get separate regulators so a busy arm can’t reboot the brain.' },
+  ];
+  const organs = $('organs');
+  for (const o of ORGANS) {
+    const b = document.createElement('button');
+    b.className = 'card organ';
+    b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `<span class="tag">${o.tag}</span><h3>${o.name}</h3><p>${o.text}</p>`;
+    b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') !== 'true';
+      organs.querySelectorAll('.organ').forEach(x => x.setAttribute('aria-pressed', 'false'));
+      robot.querySelectorAll('.part').forEach(p => p.classList.toggle('on', on && p.dataset.part === o.part));
+      robot.classList.toggle('focus', on);
+      b.setAttribute('aria-pressed', String(on));
+      if (on && robot.getBoundingClientRect().bottom < 60) $('lab').scrollIntoView();
+    });
+    organs.append(b);
+  }
+
+  /* ---------- memory demo ---------- */
+  let ram = [];
+  let rom = store.get('robot-rom', []);
+  const status = $('status');
+
+  function li(text, actionLabel, onAction) {
+    const el = document.createElement('li');
+    const span = document.createElement('span');
+    span.textContent = text;
+    el.append(span);
+    if (actionLabel) {
+      const b = document.createElement('button');
+      b.textContent = actionLabel;
+      b.addEventListener('click', onAction);
+      el.append(b);
+    }
+    return el;
+  }
+  function renderMem() {
+    const ramList = $('ramList'), romList = $('romList');
+    ramList.replaceChildren(...ram.map((t, i) => li(t, 'Save →', () => {
+      if (!rom.includes(t)) rom.push(t);
+      store.set('robot-rom', rom);
+      status.textContent = 'Written to storage. This one will survive a power cut.';
+      renderMem();
+    })));
+    romList.replaceChildren(...rom.map(t => li(t)));
+    if (!ram.length) ramList.innerHTML = '<li class="empty">Empty</li>';
+    if (!rom.length) romList.innerHTML = '<li class="empty">Nothing saved yet</li>';
+  }
+  function say() {
+    const input = $('memInput'), t = input.value.trim();
+    if (!t) return;
+    ram = [...ram, t].slice(-6);
+    input.value = '';
+    status.textContent = 'Heard it. It’s in RAM for now. Press "Save" to keep it.';
+    renderMem();
+  }
+  $('memSay').addEventListener('click', say);
+  $('memInput').addEventListener('keydown', e => { if (e.key === 'Enter') say(); });
+  $('powerOff').addEventListener('click', () => {
+    const lost = ram.length;
+    ram = [];
+    const box = $('ramBox');
+    box.classList.remove('poweroff'); void box.offsetWidth; box.classList.add('poweroff');
+    status.textContent = lost
+      ? `Power cut! ${lost} thing${lost > 1 ? 's' : ''} in RAM vanished. Storage kept ${rom.length}.`
+      : `Power cut! RAM was already empty. Storage kept ${rom.length}.`;
+    renderMem();
+  });
+  $('clearRom').addEventListener('click', () => {
+    rom = []; store.set('robot-rom', rom);
+    status.textContent = 'Storage wiped, like formatting the SD card.';
+    renderMem();
+  });
+  renderMem();
+
+  /* ---------- build steps ---------- */
+  const STEPS = [
+    ['Set up the brain', 'Flash Raspberry Pi OS onto the SD card with Raspberry Pi Imager, boot the Pi, connect to Wi-Fi, and run python3 robot/brain/brain.py in simulation.'],
+    ['Make one servo move', 'Plug the Arduino into your computer, install the Arduino IDE, wire one servo (signal → pin 2, power from a separate 5 V supply, grounds joined) and upload limbs.ino. Type "S 0 45" in the Serial Monitor.'],
+    ['Build the base', 'Assemble the 2WD chassis kit. Wire both motors to the TB6612 driver and the driver to the Arduino. Test with "M 150 150" then "X", wheels off the ground!'],
+    ['Add power', 'Battery → switch → two buck converters set to 5.1 V (check with a multimeter before connecting anything). One feeds the Pi, one feeds servos and motor logic.'],
+    ['Build the torso & arms', 'Cut or print the torso. Mount a servo at each shoulder, attach the upper arm to the servo horn, mount the elbow servo on the upper arm, then the forearm. Center every servo at 90° before attaching horns.'],
+    ['Add the head', 'Pan servo on top of the torso, tilt servo on a bracket above it, head shell on top. Mount the ultrasonic sensor as the "eyes" and the camera between them.'],
+    ['Connect brain to body', 'USB cable from Pi to Arduino. Run python3 brain.py --port /dev/ttyACM0. Say "wave". Your robot waves!'],
+    ['Give it a voice & more memory', 'Add the mic and speaker. Use a speech-to-text library to turn your words into text for brain.py, and text-to-speech to reply. Teach it facts and watch it remember them after a reboot.'],
+  ];
+  let done = store.get('robot-steps', []);
+  const stepList = $('stepList');
+  STEPS.forEach(([title, text], i) => {
+    const el = document.createElement('li');
+    el.innerHTML = `<label class="card"><input type="checkbox"><span><h3></h3><p></p></span></label>`;
+    el.querySelector('h3').textContent = title;
+    el.querySelector('p').textContent = text;
+    const cb = el.querySelector('input');
+    cb.checked = done.includes(i);
+    cb.addEventListener('change', () => {
+      done = cb.checked ? [...new Set([...done, i])] : done.filter(x => x !== i);
+      store.set('robot-steps', done);
+      updateBar();
+    });
+    stepList.append(el);
+  });
+  function updateBar() { $('bar').style.width = (done.length / STEPS.length * 100) + '%'; }
+  updateBar();
+})();
+</script>
+</body>
+</html>
