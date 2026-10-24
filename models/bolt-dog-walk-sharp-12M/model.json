@@ -1,0 +1,187 @@
+{
+  "name": "bolt-dog-walk-sharp-12M",
+  "source": "runs/bolt12/checkpoints/policy_12000000_steps.zip",
+  "steps": 12000000,
+  "exam_episodes": 10,
+  "packaged": "2026-10-24",
+  "rollout_steps": 1250,
+  "control_hz": 50,
+  "obs_size": 52,
+  "action_size": 12,
+  "obs_layout": [
+    {
+      "name": "gravity_in_body_frame",
+      "size": 3
+    },
+    {
+      "name": "angular_velocity_x0.25",
+      "size": 3
+    },
+    {
+      "name": "linear_velocity_body",
+      "size": 3
+    },
+    {
+      "name": "body_height",
+      "size": 1
+    },
+    {
+      "name": "joint_pos_minus_stand",
+      "size": 12
+    },
+    {
+      "name": "joint_vel_x0.1",
+      "size": 12
+    },
+    {
+      "name": "previous_action",
+      "size": 12
+    },
+    {
+      "name": "command_one_hot",
+      "size": 4
+    },
+    {
+      "name": "gait_clock_sin_cos",
+      "size": 2
+    }
+  ],
+  "joints": [
+    "FL_abd",
+    "FL_hip",
+    "FL_knee",
+    "FR_abd",
+    "FR_hip",
+    "FR_knee",
+    "RL_abd",
+    "RL_hip",
+    "RL_knee",
+    "RR_abd",
+    "RR_hip",
+    "RR_knee"
+  ],
+  "stand_pose": [
+    0.0,
+    0.8128,
+    -1.6256,
+    0.0,
+    0.8128,
+    -1.6256,
+    0.0,
+    -0.8128,
+    1.6256,
+    0.0,
+    -0.8128,
+    1.6256
+  ],
+  "action_scale": [
+    0.4,
+    1.0,
+    1.2,
+    0.4,
+    1.0,
+    1.2,
+    0.4,
+    1.0,
+    1.2,
+    0.4,
+    1.0,
+    1.2
+  ],
+  "commands": [
+    "stand",
+    "sit",
+    "lie",
+    "walk"
+  ],
+  "command_targets": {
+    "stand": {
+      "height": 0.315,
+      "pitch": 0.0,
+      "speed": 0.0,
+      "pose": [
+        0.0,
+        0.8128,
+        -1.6256,
+        0.0,
+        0.8128,
+        -1.6256,
+        0.0,
+        -0.8128,
+        1.6256,
+        0.0,
+        -0.8128,
+        1.6256
+      ]
+    },
+    "sit": {
+      "height": 0.208,
+      "pitch": 0.54,
+      "speed": 0.0,
+      "pose": [
+        0.0,
+        0.55,
+        -1.1,
+        0.0,
+        0.55,
+        -1.1,
+        0.0,
+        -1.75,
+        2.7,
+        0.0,
+        -1.75,
+        2.7
+      ]
+    },
+    "lie": {
+      "height": 0.131,
+      "pitch": 0.0,
+      "speed": 0.0,
+      "pose": [
+        0.0,
+        1.35,
+        -2.7,
+        0.0,
+        1.35,
+        -2.7,
+        0.0,
+        -1.35,
+        2.7,
+        0.0,
+        -1.35,
+        2.7
+      ]
+    },
+    "walk": {
+      "height": 0.29,
+      "pitch": 0.0,
+      "speed": 0.5,
+      "pose": null
+    }
+  },
+  "skills": [
+    "walk"
+  ],
+  "gait_generator": {
+    "used": true,
+    "stance": "dog",
+    "stance_pose": [
+      0.0,
+      0.2747,
+      -0.5493,
+      0.0,
+      0.2747,
+      -0.5493,
+      0.0,
+      -0.2747,
+      0.5493,
+      0.0,
+      -0.2747,
+      0.5493
+    ],
+    "residual_scale": 0.35,
+    "how": "while walking: motor targets = reference_gait.trot(phase, 0.15, 0.3, base=stance_pose) + residual_scale x action_scale x action; eased in from stand_pose over the first 0.5 s of walking; for 'dog' the trot is reference_gait.paw_trot(phase, **PAW_GAIT) instead"
+  },
+  "onnx_max_difference": 6.556510925292969e-07,
+  "sharp_turns": true
+}
