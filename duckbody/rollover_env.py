@@ -21,7 +21,7 @@ from backkick import _qmul, _quat
 from skills_env import SkillEnv
 
 
-SMOOTH_STEPS = 2_000_000     # total steps (all envs) for the smoothness penalties to reach full weight
+SMOOTH_STEPS = 500_000       # total steps (all envs) for the smoothness penalties to reach full weight (v3 resumes from v2)
 N_ENVS = 4
 
 
@@ -73,7 +73,10 @@ class RollOverEnv(SkillEnv):
         k = min(1.0, self.local_steps * N_ENVS / SMOOTH_STEPS)
         if k > 0:
             da = action - self.last_action
-            reward -= k * (0.15 * float(np.mean(da ** 2)) + 0.01 * float(w @ w))
+            ww = float(w @ w)
+            # v3: the owner found the 3M roll still a hard flip (peak spin ~13 rad/s): spin costs 3x more, and
+            # spinning faster than 6 rad/s costs extra
+            reward -= k * (0.15 * float(np.mean(da ** 2)) + 0.03 * ww + 0.02 * max(0.0, ww - 36.0))
         return float(reward), dict(h_ref=self.stand_height, up_ref=1.0, gx=float(g[0]), **p)
 
     def success(self, info):
