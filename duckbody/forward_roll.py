@@ -72,6 +72,8 @@ def score(x):
 def _set_k(k):
     global K
     K = k
+    import torch
+    torch.set_num_threads(1)
 
 
 def main():
@@ -83,13 +85,14 @@ def main():
     ap.add_argument("--keys", type=int, default=5)
     a = ap.parse_args()
     K = a.keys
-    e, _ = setup()
-    n = e.action_space.shape[0]
+    n = SkillEnv(task="squat", model_path=str(HERE / "model" / "duck_mid.xml")).action_space.shape[0]
     rng = np.random.default_rng(0)
     mu = np.concatenate([np.zeros(K * n), np.full(K, 0.3)])
     sd = np.concatenate([np.full(K * n, 0.8), np.full(K, 0.2)])
     best = (-9.0, None)
-    with Pool(a.workers, initializer=_set_k, initargs=(K,)) as pool:
+    import multiprocessing as mp
+    with mp.get_context("spawn").Pool(a.workers, initializer=_set_k, initargs=(K,)) as pool:   # spawn: forking after
+        # torch is loaded (the squat brain) deadlocked the worker (0% CPU for 12 min)
         for it in range(a.iters):
             X = mu + sd * rng.standard_normal((a.pop, mu.size))
             S = np.array(pool.map(score, list(X)))
