@@ -43,8 +43,12 @@ TARGETS = {
     "walk": dict(height=0.29, pitch=0.0, speed=0.5, pose=None),
 }
 ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)  # radians per unit action: abd, hip, knee
+
+
+def trot(phase):
+    from reference_gait import trot as reference_trot  # imported late: reference_gait imports this module
+    return reference_trot(phase, hip_swing=0.15, knee_lift=0.3)
 FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
-TROT = np.array([1, 0, 0, 1])  # FL+RR step together, then FR+RL
 
 
 class BoltEnv(gym.Env):
@@ -184,8 +188,13 @@ class BoltEnv(gym.Env):
         upright = np.exp(-(p["roll"] / 0.15) ** 2)
 
         if name == "walk":
-            stance_a = np.sin(2 * np.pi * 2.0 * self.t * self.dt / self.ts) > 0  # trot rhythm, 2 Hz clock
-            gait = np.mean(feet == (TROT if stance_a else 1 - TROT))
+            # Imitate the reference trot (reference_gait.py): match its joint angles and its
+            # foot contacts at this moment of the stride. Following an example is far faster to
+            # learn than discovering walking from scratch (Disney BDX, Open Duck Mini).
+            phase = 2 * np.pi * 2.0 * self.t * self.dt / self.ts  # 2 Hz gait clock, same as the obs
+            q_ref, stance_ref = trot(phase)
+            gait = np.mean(feet == stance_ref)
+            imitation = np.exp(-np.mean((self.data.qpos[7:] - q_ref) ** 2) / 0.05)
             # Wide enough that standing still still scores a little: a too-strict speed term makes
             # the whole product zero, and then nothing rewards starting to move.
             target = self.walk_speed()
@@ -195,8 +204,10 @@ class BoltEnv(gym.Env):
                 np.exp(-(p["pitch"] / 0.25) ** 2) * upright,
                 np.exp(-(p["yaw_rate"] / 0.6) ** 2),
                 0.3 + 0.7 * gait,
+                0.2 + 0.8 * imitation,
             ]
             progress = np.clip(p["vx"] / target, -1.0, 1.0)  # every bit of forward speed pays
+            progress += imitation  # following the example pays on its own, even before it moves
         else:
             pose_err = np.mean((self.data.qpos[7:] - np.asarray(goal["pose"])) ** 2)
             speed = np.hypot(p["vx"], p["vy"])

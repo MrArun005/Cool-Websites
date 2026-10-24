@@ -106,6 +106,20 @@ class WalkRewardTest(unittest.TestCase):
         self.assertLess(pay[0.2], pay[0.4])
         self.assertGreater(pay[0.2] - pay[0.0], 0.2)  # a clear signal to start moving
 
+    def test_copying_the_trot_pays_more_than_standing_still(self):
+        from bolt_env import trot
+        totals = {}
+        for mode in ("stand still", "copy trot"):
+            env = BoltEnv(randomize=False, max_steps=10_000)
+            env.forced_command = "walk"
+            env.reset(seed=0)
+            total = 0.0
+            for _ in range(200):
+                q = trot(2 * np.pi * 2.0 * env.t * env.dt)[0] if mode == "copy trot" else STAND_POSE
+                total += env.step((q - STAND_POSE) / ACTION_SCALE)[1]
+            totals[mode] = total
+        self.assertGreater(totals["copy trot"], totals["stand still"] * 1.3, totals)
+
 
 if __name__ == "__main__":
     unittest.main()
