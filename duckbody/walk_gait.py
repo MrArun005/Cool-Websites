@@ -21,6 +21,10 @@ from env import HERE
 
 LEGS = ("left", "right")
 JOINTS = ("hip_yaw", "hip_roll", "hip_pitch", "knee", "ankle")
+# IK weights: foot position (m), then sole rotation about world x, y, z (rad). The yaw weight was
+# 0.02, so the IK twisted hip_yaw ±0.11 rad every step just to help lift and sway the foot, and the
+# body spun ±2-3 rad/s on every step (even marching in place); now the foot keeps its heading.
+YAW_W = [1, 1, 1, 0.02, 0.05, 0.5]
 
 
 class Gait:
@@ -100,7 +104,7 @@ class Gait:
             if np.linalg.norm(ep) < 1e-5 and np.linalg.norm(er) < 1e-4:
                 break
             mujoco.mj_jacSite(m, d, jacp, jacr, self.sites[i])
-            w = np.array([1, 1, 1, 0.05, 0.05, 0.02])        # orientation counts as ~5 cm/rad (roll least)
+            w = np.array(YAW_W)                              # position, then sole roll / pitch / yaw (rad ~ cm)
             J = np.vstack([jacp[:, self.dadr[i]], jacr[:, self.dadr[i]]]) * w[:, None]
             e = np.concatenate([ep, er]) * w
             dq = J.T @ np.linalg.solve(J @ J.T + 1e-6 * np.eye(6), e)

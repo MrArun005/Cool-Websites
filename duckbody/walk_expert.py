@@ -19,7 +19,7 @@ import numpy as np
 
 from skills_env import GAIT_HZ
 
-DEFAULT = dict(kx=0.0, kxd=0.0, kv=0.0, ky=0.0, kyd=0.0, kw=0.0, lead=1, dmax=0.03)
+DEFAULT = dict(dx0=0.0, kx=0.0, kxd=0.0, kv=0.0, ky=0.0, kyd=0.0, kw=0.0, lead=1, dmax=0.03)
 # Gains found by random search (scratch tune.py: survival and command tracking on randomized bodies).
 GAINS = {"walk": dict(kx=0.055, kxd=0.0025, kv=0.0531, ky=0.0099, kyd=-0.0106, kw=1.7447)}
 GAINS["run"] = dict(GAINS["walk"])
@@ -69,7 +69,7 @@ class Expert:
         f = GAIT_HZ[cmd]
         g, w, p = self.state()
         v = e.vel_cmd
-        dx = G["kx"] * g[0] + G["kxd"] * w[1] + G["kv"] * (p["vx"] - v[0])
+        dx = G["dx0"] + G["kx"] * g[0] + G["kxd"] * w[1] + G["kv"] * (p["vx"] - v[0])
         dy = G["ky"] * g[1] + G["kyd"] * w[0] + G["kv"] * (p["vy"] - v[1])
         dx, dy = np.clip([dx, dy], -G["dmax"], G["dmax"])
         self.wz_i = 0.98 * self.wz_i + 0.02 * (v[2] - p["yaw_rate"])
@@ -119,7 +119,7 @@ def rollout(gains, task="walk", seed=0, seconds=6.0, cmd=None, randomize=True, r
     d = env.data
     R0 = d.xmat[env.trunk].reshape(3, 3).copy()
     x0 = d.qpos[:3].copy()
-    done, rew, lifts, prev = False, 0.0, np.zeros(2), env.feet_on_ground()
+    done, rew, lifts, prev, errs = False, 0.0, np.zeros(2), env.feet_on_ground(), []
     yaw0 = np.arctan2(R0[1, 0], R0[0, 0])
     while not done:
         a = ex.action()
@@ -127,6 +127,9 @@ def rollout(gains, task="walk", seed=0, seconds=6.0, cmd=None, randomize=True, r
         a = s * a
         _, r, term, trunc, info = env.step(a)
         rew += r
+        if env.t * env.dt > 1.0:
+            v = env.vel_cmd
+            errs.append(abs(info["vx"] - v[0]) + abs(info["vy"] - v[1]) + 0.2 * env.L * abs(info["yaw_rate"] - v[2]))
         f = env.feet_on_ground()
         lifts += (prev == 1) & (f == 0)
         prev = f
@@ -137,7 +140,8 @@ def rollout(gains, task="walk", seed=0, seconds=6.0, cmd=None, randomize=True, r
     dyaw = np.arctan2(R[1, 0], R[0, 0]) - yaw0
     dyaw = (dyaw + np.pi) % (2 * np.pi) - np.pi
     return dict(cmd=[round(float(c), 3) for c in env.vel_cmd], T=T, fell=bool(term), vx=dp[0] / T, vy=dp[1] / T,
-                wz=dyaw / T, lifts=lifts.tolist(), reward=rew / max(env.t, 1))
+                wz=dyaw / T, lifts=lifts.tolist(), reward=rew / max(env.t, 1),
+                err=float(np.mean(errs)) if errs else 1.0)
 
 
 if __name__ == "__main__":
