@@ -114,6 +114,13 @@ class SkillEnv(DuckEnv):
             # only); DuckEnv would rest it on the soles.
             m, d = self.model, self.data
             q = self.seat_q.copy()
+            if self.practice and r.random() < 0.3:
+                # Practise the hard middle: start part-way from the seat to the upright squat.
+                f = r.uniform(0.3, 0.8)
+                q[7:] = q[7:] + (self.crouch_q[7:] - q[7:]) * f
+                q[2] = q[2] + (self.crouch_height - q[2]) * f
+                q[3:7] = base._quat_mul([1, 0, 0, 0], q[3:7]) * (1 - f) + np.array([1.0, 0, 0, 0]) * f
+                q[3:7] /= np.linalg.norm(q[3:7])
             q[self.qadr] = np.clip(q[self.qadr] + r.normal(0, 0.02, m.nu), self.lo, self.hi)
             yaw = r.uniform(-np.pi, np.pi)
             q[3:7] = base._quat_mul([np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)], q[3:7])
@@ -239,6 +246,9 @@ class SkillEnv(DuckEnv):
         r_pose = np.exp(-np.sum((self.data.qpos[legs] - self.crouch_q[legs]) ** 2) / 1.0)
         still = np.exp(-(p["vx"] ** 2 + p["vy"] ** 2) / (0.15 * L) ** 2)
         reward = r_h * r_up * still * (0.4 + 0.6 * r_pose)
+        # Push harder: every bit of rise above the seat pays while staying fairly upright.
+        rise = float(np.clip((p["height"] - self.seat_q[2]) / (self.crouch_height - self.seat_q[2]), 0, 1))
+        reward += 0.5 * rise * (1.0 if p["up"] > 0.75 else 0.0)
         vz, az = self.data.qvel[2], self.data.qacc[2]
         reward -= DESCENT_W * max(0.0, -vz - MAX_DESCENT) + SHOCK_W * abs(az)
         reward -= IMPACT_W * max(0.0, self._belly_force() / self.weight - IMPACT_FREE)
