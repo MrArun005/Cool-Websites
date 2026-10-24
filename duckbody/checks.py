@@ -178,7 +178,7 @@ def lying_test(m):
                          and geom_world_vertices(m, d, g)[:, 2].min() < -0.005})
         touching = sorted({m.body(m.geom_bodyid[g]).name for c in d.contact[:d.ncon] for g in c.geom if g in robot})
         out[name] = dict(trunk_com_z_mm=float(d.xipos[m.body("trunk_assembly").id][2] * 1000),
-                         lowest_part_mm=float(low * 1000), sinks_through_floor=bool(low < -0.02), touching=touching,
+                         lowest_part_mm=float(low * 1000), sinks_through_floor=bool(low < -0.02 or d.xipos[m.body("trunk_assembly").id][2] < 0.02), touching=touching,
                          visual_parts_below_floor=ghosts)
     return out
 

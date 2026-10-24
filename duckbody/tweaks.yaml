@@ -8,7 +8,8 @@
 # Upstream only lets the two TPU soles touch anything. Trunk, head, thighs and shins pass through
 # the floor, so sitting, lying, falling and getting up cannot be simulated at all.
 # Turns the real printed shells into colliders (MuJoCo uses each part's convex hull).
-# Legs also collide with each other (no crossing legs through each other while walking).
+# Legs also collide with each other (no crossing legs through each other while walking), and the
+# head collides with the trunk (with neck pitch 65° or head pitch 45° the head shell reaches the body).
 collision_parts:
   enabled: true
   parts:
@@ -21,7 +22,7 @@ collision_parts:
     foot_assembly: [foot_top, foot_side]               # top of the foot (soles already collide)
     foot_assembly_2: [foot_top, foot_side]
 
-# Upstream's "home" keyframe puts the soles 10 mm under the floor, so every episode starts with a
+# Upstream's "home" keyframe puts the soles 17 mm under the floor, so every episode starts with a
 # solver kick. Recompute the base height so the soles just touch.
 home_on_floor: true
 

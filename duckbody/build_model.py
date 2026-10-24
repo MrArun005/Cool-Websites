@@ -19,10 +19,11 @@ UPSTREAM_SCENE = HERE / "model" / "upstream" / "scene_flat_terrain.xml"
 LEG_JOINTS = [f"{s}_{j}" for s in ("left", "right") for j in ("hip_yaw", "hip_roll", "hip_pitch", "knee", "ankle")]
 BNO055_POS = [-0.08711, 0.0, 0.0417909]  # BNO055 board origin in the trunk frame (from the CAD)
 
-# Contact bits: floor contype 1 / conaffinity 0 (upstream). Leg parts collide with the floor and with
-# each other; trunk and head collide with the floor (and legs' soles) but not with the hips they sit on.
+# Contact bits (contype, conaffinity); two geoms touch if (ct1 & ca2) or (ct2 & ca1).
+# Floor is (1, 0) upstream, soles (1, 1). Legs touch the floor and each other; trunk and head touch
+# the floor and each other (head nodding into the body) but not the hips they are bolted to.
 LEG_BITS = (2, 3)
-BODY_BITS = (0, 1)
+BITS = {"trunk_assembly": (0, 5), "head_assembly": (4, 1)}
 
 
 def build(tweaks, out):
@@ -34,8 +35,7 @@ def build(tweaks, out):
     if cp.get("enabled"):
         n = 0
         for body, meshes in cp["parts"].items():
-            is_leg = not body.startswith(("trunk", "head"))
-            ct, ca = LEG_BITS if is_leg else BODY_BITS
+            ct, ca = BITS.get(body, LEG_BITS)
             b = spec.body(body)
             for g in list(b.geoms):
                 if g.type == mujoco.mjtGeom.mjGEOM_MESH and g.meshname in meshes and g.classname.name == "visual":

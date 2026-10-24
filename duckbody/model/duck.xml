@@ -115,12 +115,12 @@
         <geom class="visual" pos="-0.019 0 0.0648909" quat="1 0 0 0" material="body_middle_top_material" mesh="body_middle_top"/>
         <geom class="visual" pos="-0.019 0 0.0648909" quat="1 0 0 0" material="trunk_bottom_material" mesh="trunk_bottom"/>
         <geom class="visual" pos="-0.019 0 0.0648909" quat="1 0 0 0" material="trunk_top_material" mesh="trunk_top"/>
-        <geom name="trunk_assembly_body_front_col0" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="body_front"/>
-        <geom name="trunk_assembly_body_back_col1" pos="-0.019 0 0.0648909" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="body_back"/>
-        <geom name="trunk_assembly_body_middle_bottom_col2" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="body_middle_bottom"/>
-        <geom name="trunk_assembly_body_middle_top_col3" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="body_middle_top"/>
-        <geom name="trunk_assembly_trunk_bottom_col4" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="trunk_bottom"/>
-        <geom name="trunk_assembly_trunk_top_col5" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="trunk_top"/>
+        <geom name="trunk_assembly_body_front_col0" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" conaffinity="5" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="body_front"/>
+        <geom name="trunk_assembly_body_back_col1" pos="-0.019 0 0.0648909" type="mesh" contype="0" conaffinity="5" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="body_back"/>
+        <geom name="trunk_assembly_body_middle_bottom_col2" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" conaffinity="5" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="body_middle_bottom"/>
+        <geom name="trunk_assembly_body_middle_top_col3" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" conaffinity="5" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="body_middle_top"/>
+        <geom name="trunk_assembly_trunk_bottom_col4" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" conaffinity="5" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="trunk_bottom"/>
+        <geom name="trunk_assembly_trunk_top_col5" pos="-0.019 0 0.0648909" quat="1 0 0 0" type="mesh" contype="0" conaffinity="5" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="trunk_top"/>
         <site name="trunk" pos="-0.024 0 0.0881909"/>
         <body name="hip_roll_assembly" pos="-0.019 0.035 0.0459409" quat="1 0 0 0">
           <inertial pos="0.000795081 -5.46541e-06 -0.03306" quat="0.70723 0.0130259 0.0134112 0.706737" mass="0.06648" diaginertia="2.81818e-05 2.44554e-05 1.42544e-05"/>
@@ -186,10 +186,10 @@
                 <geom class="visual" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" material="left_antenna_holder_material" mesh="left_antenna_holder"/>
                 <geom class="visual" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" material="head_bot_sheet_material" mesh="head_bot_sheet"/>
                 <geom class="visual" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" material="head_material" mesh="head"/>
-                <geom name="head_assembly_right_antenna_holder_col6" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="right_antenna_holder"/>
-                <geom name="head_assembly_left_antenna_holder_col7" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="left_antenna_holder"/>
-                <geom name="head_assembly_head_bot_sheet_col8" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="head_bot_sheet"/>
-                <geom name="head_assembly_head_col9" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" type="mesh" contype="0" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="head"/>
+                <geom name="head_assembly_right_antenna_holder_col6" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" type="mesh" contype="4" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="right_antenna_holder"/>
+                <geom name="head_assembly_left_antenna_holder_col7" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" type="mesh" contype="4" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="left_antenna_holder"/>
+                <geom name="head_assembly_head_bot_sheet_col8" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" type="mesh" contype="4" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="head_bot_sheet"/>
+                <geom name="head_assembly_head_col9" pos="-0.12906 0 0.06095" quat="0.707107 0 0.707107 0" type="mesh" contype="4" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="head"/>
                 <site name="head" pos="0.04245 0 0.03595" quat="0.707107 0 0.707107 0"/>
               </body>
             </body>

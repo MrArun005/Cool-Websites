@@ -205,7 +205,7 @@
   "on_back": {
    "trunk_com_z_mm": -192.17229902234317,
    "lowest_part_mm": -0.14294529652627858,
-   "sinks_through_floor": false,
+   "sinks_through_floor": true,
    "touching": [
     "foot_assembly",
     "foot_assembly_2"
@@ -243,7 +243,7 @@
   "on_front": {
    "trunk_com_z_mm": -192.7897968305907,
    "lowest_part_mm": -0.1792826542339459,
-   "sinks_through_floor": false,
+   "sinks_through_floor": true,
    "touching": [
     "foot_assembly",
     "foot_assembly_2"
@@ -281,7 +281,7 @@
   "on_side": {
    "trunk_com_z_mm": -192.571540955174,
    "lowest_part_mm": -0.17142231612130193,
-   "sinks_through_floor": false,
+   "sinks_through_floor": true,
    "touching": [
     "foot_assembly",
     "foot_assembly_2"
