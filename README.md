@@ -2,6 +2,14 @@
 
 **Starting the new robot?** Read [HANDOFF.md](HANDOFF.md) first, then [docs/LESSONS.md](docs/LESSONS.md).
 
+## 🦆 Micro Duck sim
+
+Open `microduck/index.html` through a local server (`python3 -m http.server`, then `/microduck/`). It's a small two-legged duck robot that balances with real physics: inverted-pendulum balance, capture-point stepping, and a rigid-body tumble when it's shoved too hard. It sleeps, wakes up, stands up, walks, runs, turns and dances, and it gets back up after a fall. You can drive it with WASD, or click it to push it. How it works: [`microduck/README.md`](microduck/README.md).
+
+```bash
+node --test microduck/test/*.test.js
+```
+
 ## 🦆 Bolt Duck (earlier plan)
 
 A small two-legged robot pet you build yourself: the open-source Open Duck Mini v2 body (3D-printed, about $400 of parts) with Bolt's personality on top. Plan, parts, build steps and links: [`duck/README.md`](duck/README.md).
