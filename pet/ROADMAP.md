@@ -77,12 +77,12 @@ Swap the scripted motions for a physics engine where **every motor torque, foot 
 
 **4a. Small servo dog (≈ $300–600).** Proves the whole pipeline (sim → policy → real motors) cheaply.
 - 12 servos (3 per leg), PCA9685 servo driver, IMU (BNO085), Raspberry Pi 5 brain (reuse the one from `robot/`), mic and speaker, 2S Li-ion pack.
-- Frame: 3D-printed (open designs like SpotMicro), or start from a kit like Petoi Bittle.
+- Frame: 3D-printed (open designs like SpotMicro), or start from a kit like Petoi Bittle X (list price from $279; about $319–339 at US retailers in Oct 2026).
 - Can do: stand, sit, lie, shake, beg, bow, walk, turn, talk, small hops. Not flips.
 
-**4b. Brushless dog that can flip (≈ $2,000–6,000).** Prices change, so check current ones.
-- DIY: an open-source brushless quadruped design, e.g. the Stanford Pupper family or ODRI Solo-12.
-- Or buy a commercial robot dog with an SDK and run our brain on it.
+**4b. Brushless dog that can flip (≈ $1,000–4,000).** Prices as of Oct 2026; check before buying.
+- DIY: Stanford Pupper v3, an open-source design with brushless motors and a Raspberry Pi 5, about $1,000 in parts by the project's own estimate. Budget extra for 3D printing, spares and tools.
+- Or buy: Unitree Go2 Air ($1,600) or Pro ($2,800) list price, plus about $400–1,000 shipping and import duties; US dealers charge more. We'd run our brain on its SDK. Check which tricks it does out of the box and how much of the low-level control the cheaper models open to your own code before buying.
 
 **Before the first real backflip:**
 - The Phase 2 policy passes with randomized physics *and* with the measured mass and motor data of the real robot
@@ -92,6 +92,31 @@ Swap the scripted motions for a physics engine where **every motor torque, foot 
 **Exit test:** the real robot does every trick the sim does (within its hardware limits) and answers you out loud.
 
 ---
+
+## Budget
+
+All figures in USD, Oct 2026. "Have" means the Raspberry Pi and tools from the `robot/` project.
+
+| Item | Cheapest path | Comfortable path |
+|---|---|---|
+| Phase 1: digital dog | $0 | $0 |
+| Phase 2: training compute | $0 (your own PC; this repo trains on 4 CPU cores) | $20–150 renting a cloud GPU for faster, bigger runs |
+| Phase 3: language-model brain (see below) | ~$2/month | ~$20–40/month |
+| Phase 4a: servo dog | ~$300 (Bittle X kit) | ~$500–600 (DIY 12-servo dog with Pi 5, IMU, mic/speaker) |
+| Phase 4b: flipping dog | ~$1,200 (Pupper v3 DIY plus extras) | ~$2,000–4,000 (Unitree Go2 delivered) |
+| Tools & spares (multimeter, soldering, 3D-printing, broken parts) | ~$100 | ~$300–500 (incl. a 3D printer) |
+| **Total to a dog that sits, walks and talks (Phases 1–4a)** | **≈ $400–500** | **≈ $1,000** |
+| **Total to a dog that can backflip (adds 4b)** | **≈ $1,700** | **≈ $3,500–5,000** |
+
+**Language-model cost (Phase 3)**, assuming ~200 short exchanges a day, each about 3,000 input tokens (instructions, trick list, memory) and 150 output tokens:
+
+| Model | Price per million tokens (input / output) | ≈ per month |
+|---|---|---|
+| Claude Haiku 5.5 | $0.10 / $0.50 | ~$2 |
+| Claude Sonnet 5.5 | $2 / $10 | ~$18 with prompt caching (~$45 without) |
+| Claude Opus 5.5 | $4 / $20 | ~$36 with prompt caching (~$90 without) |
+
+Start with Haiku for commands and switch to a bigger model only where measurement shows it's funnier or understands better. "Thinking" tokens are billed as output, so real costs can run higher.
 
 ## Rough timeline (part-time)
 
