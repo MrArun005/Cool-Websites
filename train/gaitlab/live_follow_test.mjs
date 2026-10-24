@@ -11,7 +11,7 @@ const bolt = new Bolt(mj, bundle);
 let falls = 0, dists = [], top = 0;
 for (let s = 0; s < +sessions; s++) {
   bolt.reset(bundle.start);
-  const crowd = new Crowd(5, 100 + s), follow = new Follow();
+  const crowd = new Crowd(5, 100 + s), follow = new Follow((v) => bolt.maxTurn(v), bundle.constants.sharp_turns);
   let rng = 7 + s, target = 0, nextSwitch = 0;
   const rand = () => ((rng = (rng * 1664525 + 1013904223) >>> 0) / 4294967296);
   for (let k = 0; k < +seconds * 50; k++) {

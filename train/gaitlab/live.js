@@ -47,21 +47,22 @@ function legIK(x, z, front) {
   return front ? [beta + bend / 2, -bend] : [beta - bend / 2, bend];
 }
 
-// Joint targets of the paw-path trot at a phase (reference_gait.paw_trot).
-function pawTrot(phase, step, lift, height, turn) {
+// Joint targets of the paw-path trot at a phase (reference_gait.paw_trot). spin (rad turned per
+// stance) is the sharp turn: paws step sideways along the arc the turn sweeps at each hip.
+function pawTrot(phase, step, lift, height, turn, spin, hipX, hipY) {
   const q = new Float64Array(12);
   for (let leg = 0; leg < 4; leg++) {
     const u = ((((phase + Math.PI * PAIR[leg] + Math.PI / 2) / (2 * Math.PI)) % 1) + 1) % 1;
     const right = leg === 1 || leg === 3;
-    const stride = step + (right ? turn : -turn);
-    let x, z;
-    if (u < 0.5) { x = stride / 2 - stride * (u / 0.5); z = -height; }
+    const stride = step + (right ? turn : -turn) - spin * hipY[leg], side = spin * hipX[leg];
+    let x, y, z;
+    if (u < 0.5) { const k = u / 0.5; x = stride / 2 - stride * k; y = side / 2 - side * k; z = -height; }
     else {
       const w = (u - 0.5) / 0.5, smooth = w * w * (3 - 2 * w);
-      x = -stride / 2 + stride * smooth; z = -height + lift * Math.sin(Math.PI * w);
+      x = -stride / 2 + stride * smooth; y = -side / 2 + side * smooth; z = -height + lift * Math.sin(Math.PI * w);
     }
-    const [hip, knee] = legIK(x, z, leg < 2);
-    q[3 * leg + 1] = hip; q[3 * leg + 2] = knee;
+    const [hip, knee] = legIK(x, -Math.hypot(z, y), leg < 2);
+    q[3 * leg] = Math.atan2(y, -z); q[3 * leg + 1] = hip; q[3 * leg + 2] = knee;
   }
   return q;
 }
@@ -99,12 +100,16 @@ export class Bolt {
   freq() { return 2.0 + clamp((this.speedCmd - 0.5) / 0.7, 0, 1); }
   stride() { return clamp(this.speedCmd / (2.15 * this.freq()), 0, 0.2); }
   turn() {
+    if (this.c.sharp_turns) return 0;   // sharp-turn brains steer with spin instead
     const limit = Math.min(0.05, Math.max(0, 0.22 - this.stride()));
     return clamp(this.c.turn_gain * this.yawCmd, -limit, limit);
   }
+  spin() { return this.c.sharp_turns ? clamp(this.yawCmd, -this.c.sharp_turn, this.c.sharp_turn) * 0.5 / this.freq() : 0; }
+  // the fastest turn this brain practised at speed v (rad/s)
+  maxTurn(v) { return this.c.sharp_turns ? clamp(this.c.sharp_turn - 1.25 * Math.max(0, v - 0.4), 1, this.c.sharp_turn) : this.c.max_turn; }
   basePose() {
     if (this.command !== "walk") return this.command === "stand" ? this.c.dog_pose : this.c.stand_pose;
-    const g = this.c.paw_gait, q = pawTrot(this.phase, this.stride(), g.lift, g.height, this.turn());
+    const g = this.c.paw_gait, q = pawTrot(this.phase, this.stride(), g.lift, g.height, this.turn(), this.spin(), this.c.hip_x, this.c.hip_y);
     const a = Math.min(1, (this.t - this.walkSince) / 25);
     return Array.from(q, (v, i) => this.walkFrom[i] + a * (v - this.walkFrom[i]));
   }
@@ -156,8 +161,11 @@ export class Bolt {
 // So the asked speed changes gradually, tops out at 1.0 m/s, and Bolt stands only after trotting
 // slowly for half a second. Checked headless with live_follow_test.mjs.
 export class Follow {
-  constructor() {
+  // maxTurn(v): the fastest turn the walk brain practised at speed v (Bolt.maxTurn). Sharp-turn brains
+  // turn harder toward the person (gain 2.5 instead of 1.5).
+  constructor(maxTurn = () => 0.6, sharp = false) {
     this.KEEP = 1.0; this.TOP = 1.0; this.UP = 0.6; this.DOWN = 1.0;  // m, m/s, m/s per s
+    this.GAIN = sharp ? 2.5 : 1.5; this.maxTurn = maxTurn;
     this.standing = true; this.speed = 0.2; this.slowSteps = 0;
   }
   decide(dist, bearing, dt) {
@@ -171,7 +179,8 @@ export class Follow {
     this.speed = want > this.speed ? Math.min(want, this.speed + this.UP * dt) : Math.max(want, this.speed - this.DOWN * dt);
     this.slowSteps = stopping && this.speed <= 0.2 ? this.slowSteps + 1 : 0;
     if (this.slowSteps >= 25) { this.standing = true; return { command: "stand", turn: 0, speed: this.speed }; }
-    return { command: "walk", turn: clamp(1.5 * bearing, -0.6, 0.6), speed: this.speed };
+    const top = this.maxTurn(this.speed);
+    return { command: "walk", turn: clamp(this.GAIN * bearing, -top, top), speed: this.speed };
   }
 }
 

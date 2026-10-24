@@ -113,9 +113,9 @@
       </div>
       <div class="brain">
         <h3>Walk, turn and run</h3>
-        <span class="muted mono" style="font-size:.82rem">run 11b · 8.5M steps · models/bolt-dog-walk-run-8.5M</span>
+        <span class="muted mono" style="font-size:.82rem">run 11b · 10M steps · models/bolt-dog-walk-run-10M</span>
         <div class="cells"><span class="c2">Walk 100%</span><span class="c2">Turn left 100%</span><span class="c2">Turn right 100%</span><span class="c2">Run 1.0 m/s 100%</span><span class="c2">Slow 0.2 m/s 100%</span></div>
-        <p class="muted" style="font-size:.9rem">Goes the speed it is asked: 0.2, 0.4 and 0.7 m/s exactly, with no falls and no knees on the floor; about 0.76 m/s when asked for 1.0 on bumpy, randomised physics. Turns on command and takes over from the standing brain. Following a person, it ran at up to 1.19 m/s and never fell behind more than 1.9 m (the old walk brain fell 6 m behind).</p>
+        <p class="muted" style="font-size:.9rem">Goes the speed it is asked, from a slow walk to a run: 0.2, 0.4, 0.7, 1.0 and 1.2 m/s asked give 0.22, 0.41, 0.70, 0.99 and 1.18 m/s on bumpy, randomised physics, with no knees on the floor. Turns on command and takes over from the standing brain. Following a person, it ran at up to 1.19 m/s and never fell behind more than 1.9 m (the old walk brain fell 6 m behind).</p>
       </div>
     </div>
     <div style="display:grid;gap:6px">
@@ -123,7 +123,7 @@
       <ol>
         <li><strong>New: live follow.</strong> Pick "Live" below. Bolt runs in your browser with the same physics and brains as in training, and follows whichever of five wandering people you pick. Switch at any moment. Testing it found two ways to fall, both now fixed: stopping dead from a run (it now slows down first) and speeding up while turning round (it now turns first). After the fixes, 0 falls in 80 simulated minutes.</li>
         <li><strong>Done: follow a person.</strong> A steering layer turns Bolt toward the person, speeds up when they pull away and stands when they stop. In the simulator it followed someone who walks, turns, jogs at 1.1 m/s and stops: no falls, on average 1.4 m behind, never more than 1.9 m. Watch "Follow a person" below.</li>
-        <li><strong>Run 11b finished (10M).</strong> Checking whether the 9M–10M brains run 1.0–1.2 m/s better than the saved 8.5M one.</li>
+        <li><strong>Now training (run 12): sharp turns.</strong> Bolt turned at most 34°/s, so turning round to follow someone took over 5 s. Real dogs turn sharply by stepping sideways: front paws one way, rear paws the other. The trot now does that too, and with no brain it already turns about 100°/s. Run 12 teaches the 10M brain to balance on it, practising turns up to 115°/s. The live page switches to it once it passes.</li>
                 <li>Try both brains on the hand-size Bolt.</li>
         <li>Connect the brains to voice commands ("sit", "come here").</li>
       </ol>
@@ -567,7 +567,7 @@
   function restartLive() {
     live.bolt.reset(live.bundle.start);
     live.crowd = new live.lib.Crowd(PEOPLE, (Math.random() * 1e9) >>> 0);
-    live.follow = new live.lib.Follow();
+    live.follow = new live.lib.Follow((v) => live.bolt.maxTurn(v), live.bundle.constants.sharp_turns);
     live.t = 0; live.acc = 0; live.fell = false; live.last = null;
     choose(live.target); $("loading").hidden = true;
     lastTorso = null; resetView();
