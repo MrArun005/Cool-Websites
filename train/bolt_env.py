@@ -20,18 +20,28 @@ import numpy as np
 MODEL = Path(__file__).with_name("bolt.xml")
 
 COMMANDS = ["stand", "sit", "lie", "walk"]
-# What each command should look like: body-centre height (m), nose-up pitch (rad), forward speed (m/s).
-TARGETS = {
-    "stand": dict(height=0.31, pitch=0.0, speed=0.0),
-    "sit": dict(height=0.22, pitch=0.5, speed=0.0),
-    "lie": dict(height=0.14, pitch=0.0, speed=0.0),
-    "walk": dict(height=0.29, pitch=0.0, speed=0.5),
-}
+
+
+def pose(front_hip, front_knee, rear_hip, rear_knee):
+    """Joint targets for all 12 motors (abd, hip, knee per leg). Front legs bend opposite to rear legs."""
+    front, rear = [0.0, front_hip, -front_knee], [0.0, -rear_hip, rear_knee]
+    return np.array(front * 2 + rear * 2)
+
 
 _A = 0.8128  # hip angle for the standing pose: feet straight under the hips
-STAND_POSE = np.array([0, _A, -2 * _A, 0, _A, -2 * _A, 0, -_A, 2 * _A, 0, -_A, 2 * _A])
-_L = 1.357
-LIE_POSE = np.array([0, _L, -2 * _L, 0, _L, -2 * _L, 0, -_L, 2 * _L, 0, -_L, 2 * _L])
+STAND_POSE = pose(_A, 2 * _A, _A, 2 * _A)
+SIT_POSE = pose(0.55, 1.1, 1.75, 2.7)    # rear legs folded, rump down, front legs braced
+LIE_POSE = pose(1.35, 2.7, 1.35, 2.7)    # all four legs folded under the body
+
+# What each command should look like. Heights and pitches were MEASURED by holding each pose
+# in simulation (poses.py), not guessed: body-centre height (m), nose-up pitch (rad), forward
+# speed (m/s), and the joint pose to aim for.
+TARGETS = {
+    "stand": dict(height=0.315, pitch=0.0, speed=0.0, pose=STAND_POSE.round(4).tolist()),
+    "sit": dict(height=0.208, pitch=0.54, speed=0.0, pose=SIT_POSE.round(4).tolist()),
+    "lie": dict(height=0.131, pitch=0.0, speed=0.0, pose=LIE_POSE.round(4).tolist()),
+    "walk": dict(height=0.29, pitch=0.0, speed=0.5, pose=None),
+}
 ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)  # radians per unit action: abd, hip, knee
 FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 TROT = np.array([1, 0, 0, 1])  # FL+RR step together, then FR+RL
@@ -116,7 +126,7 @@ class BoltEnv(gym.Env):
 
         start_lying = self.randomize and self.rng.random() < 0.25
         pose = LIE_POSE if start_lying else STAND_POSE
-        d.qpos[2] = 0.15 if start_lying else 0.33
+        d.qpos[2] = 0.14 if start_lying else 0.33
         yaw = self.rng.uniform(-np.pi, np.pi)
         d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
         d.qpos[7:] = np.clip(pose + self.rng.normal(0, 0.05, 12), self.lo, self.hi)
@@ -145,26 +155,45 @@ class BoltEnv(gym.Env):
         return self._obs(), float(reward), bool(fell), bool(truncated), info
 
     def _reward(self, action):
+        """Pay for doing what was asked, multiplied together so one bad part spoils the score.
+
+        Additive rewards let the dog settle for a compromise (stand on three legs, half-sit);
+        a product of terms doesn't. A small additive share keeps a learning signal when the
+        dog is still far from the goal.
+        """
         name = COMMANDS[self.command]
         goal, p = TARGETS[name], self.posture()
-        r_height = np.exp(-((p["height"] - goal["height"]) / 0.05) ** 2)
-        r_pitch = np.exp(-((p["pitch"] - goal["pitch"]) / 0.2) ** 2)
-        r_roll = np.exp(-(p["roll"] / 0.2) ** 2)
-        r_speed = np.exp(-((p["vx"] - goal["speed"]) / 0.2) ** 2 - (p["vy"] / 0.2) ** 2)
-        r_turn = np.exp(-(p["yaw_rate"] / 0.6) ** 2)
-        reward = 1.0 * r_height + 1.0 * r_pitch + 0.5 * r_roll + (1.5 if name == "walk" else 0.5) * r_speed + 0.2 * r_turn
+        feet = self.feet_on_ground()
+        upright = np.exp(-(p["roll"] / 0.15) ** 2)
 
         if name == "walk":
-            # Trot rhythm: diagonal pairs on the ground in turn, following the 2 Hz clock.
-            stance_a = np.sin(2 * np.pi * 2.0 * self.t * self.dt) > 0
-            want = TROT if stance_a else 1 - TROT
-            reward += 0.1 * np.sum(self.feet_on_ground() == want)
+            stance_a = np.sin(2 * np.pi * 2.0 * self.t * self.dt) > 0  # trot rhythm, 2 Hz clock
+            gait = np.mean(feet == (TROT if stance_a else 1 - TROT))
+            terms = [
+                np.exp(-((p["vx"] - goal["speed"]) / 0.15) ** 2) * np.exp(-(p["vy"] / 0.2) ** 2),
+                np.exp(-((p["height"] - goal["height"]) / 0.06) ** 2),
+                np.exp(-(p["pitch"] / 0.25) ** 2) * upright,
+                np.exp(-(p["yaw_rate"] / 0.6) ** 2),
+                0.3 + 0.7 * gait,
+            ]
+        else:
+            pose_err = np.mean((self.data.qpos[7:] - np.asarray(goal["pose"])) ** 2)
+            speed = np.hypot(p["vx"], p["vy"])
+            terms = [
+                np.exp(-((p["height"] - goal["height"]) / 0.06) ** 2),
+                np.exp(-((p["pitch"] - goal["pitch"]) / 0.25) ** 2) * upright,
+                np.exp(-pose_err / 0.4),
+                np.exp(-(speed / 0.15) ** 2),
+            ]
+            if name == "stand":
+                terms.append((feet.sum() / 4) ** 2)  # three feet down scores 0.56, four scores 1
+        reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms)
 
         torque = self.data.actuator_force
         reward -= 0.02 * np.sum((action - self.last_action) ** 2)  # smooth, not twitchy
         reward -= 2e-4 * np.sum(torque ** 2)                        # don't waste energy
         reward -= 1e-4 * np.sum(self.data.qvel[6:] ** 2)
-        return reward * 0.5, dict(command=name, **p)
+        return reward * 0.5, dict(command=name, feet=feet, **p)
 
     def render(self):
         if self.renderer is None:

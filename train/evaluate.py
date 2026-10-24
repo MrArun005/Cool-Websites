@@ -31,17 +31,25 @@ class Policy:
 
 
 def passed(command, window):
-    """Did the dog hold the commanded posture over the last stretch of the window?"""
+    """Did the dog really do it over the last stretch of the window?
+
+    Checks the MEASURED pose (see poses.py) and the feet: standing needs all four feet down,
+    walking needs every foot to take steps.
+    """
     goal = TARGETS[command]
     h = np.mean([p["height"] for p in window])
     pitch = np.mean([p["pitch"] for p in window])
     roll = np.mean([abs(p["roll"]) for p in window])
     vx = np.mean([p["vx"] for p in window])
+    feet = np.mean([p["feet"] for p in window], axis=0)
     upright = min(p["up"] for p in window) > 0.2
     if command == "walk":
-        return upright and 0.3 <= vx <= 0.75 and abs(pitch) < 0.25 and roll < 0.25
+        return upright and 0.3 <= vx <= 0.75 and abs(pitch) < 0.25 and roll < 0.25 and feet.min() >= 0.2
     speed = np.mean([np.hypot(p["vx"], p["vy"]) for p in window])
-    return upright and abs(h - goal["height"]) < 0.04 and abs(pitch - goal["pitch"]) < 0.15 and roll < 0.15 and speed < 0.15
+    ok = upright and abs(h - goal["height"]) < 0.03 and abs(pitch - goal["pitch"]) < 0.12 and roll < 0.12 and speed < 0.15
+    if command == "stand":
+        ok = ok and feet.min() >= 0.9
+    return bool(ok)
 
 
 def run_segment(env, policy, obs, command, steps):

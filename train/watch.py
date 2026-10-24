@@ -103,6 +103,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--target", type=int, default=6_000_000)
     ap.add_argument("--episodes", type=int, default=10, help="exam episodes per command")
+    ap.add_argument("--label", default="", help="name of this run, shown on the progress page")
     args = ap.parse_args()
 
     run, out, log = Path(args.run), Path(args.out), Path(args.log)
@@ -113,7 +114,7 @@ def main():
 
     def save(status):
         curve = read_curve(log)
-        data.update(status=status, target_steps=args.target, curve=curve,
+        data.update(status=status, target_steps=args.target, curve=curve, label=args.label,
                     steps=curve[-1][0] if curve else 0,
                     updated=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"))
         write_json(data_path, data)

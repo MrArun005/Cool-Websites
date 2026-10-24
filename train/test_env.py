@@ -7,7 +7,8 @@ import unittest
 import mujoco
 import numpy as np
 
-from bolt_env import COMMANDS, MODEL, STAND_POSE, BoltEnv
+from bolt_env import ACTION_SCALE, COMMANDS, MODEL, STAND_POSE, TARGETS, BoltEnv
+from evaluate import passed
 
 
 class ModelTest(unittest.TestCase):
@@ -56,6 +57,38 @@ class EnvTest(unittest.TestCase):
         oa, _ = a.reset(seed=5)
         ob, _ = b.reset(seed=5)
         np.testing.assert_allclose(oa, ob)
+
+
+class TargetTest(unittest.TestCase):
+    """Training targets must be reachable: holding each measured pose must pass the exam."""
+
+    def hold(self, command, steps=250):
+        env = BoltEnv(randomize=False, max_steps=10_000)
+        env.forced_command = command
+        env.reset(seed=1)
+        action = (np.asarray(TARGETS[command]["pose"]) - STAND_POSE) / ACTION_SCALE
+        window = [env.step(action)[4] for _ in range(steps)]
+        return env, window
+
+    def test_held_poses_pass_the_exam(self):
+        for command in ["stand", "sit", "lie"]:
+            _, window = self.hold(command)
+            self.assertTrue(passed(command, window[-80:]), command)
+
+    def test_each_pose_pays_most_under_its_own_command(self):
+        for command in ["stand", "sit", "lie"]:
+            env, _ = self.hold(command)
+            pay = {}
+            for c in ["stand", "sit", "lie"]:
+                env.set_command(c)
+                pay[c] = env._reward(np.zeros(12))[0]
+            self.assertEqual(max(pay, key=pay.get), command, pay)
+
+    def test_standing_on_three_legs_pays_less(self):
+        env, _ = self.hold("stand")
+        four = env._reward(np.zeros(12))[0]
+        env.feet_on_ground = lambda: np.array([1.0, 1.0, 1.0, 0.0])
+        self.assertLess(env._reward(np.zeros(12))[0], four * 0.75)
 
 
 if __name__ == "__main__":
