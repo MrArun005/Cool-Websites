@@ -45,7 +45,7 @@ def main():
     ap.add_argument("--quick", action="store_true", help="tiny run to check everything works")
     ap.add_argument("--resume", help="checkpoint .zip to continue from; its vecnormalize .pkl must sit next to it")
     ap.add_argument("--skills", nargs="+", help="train a brain for only these commands, e.g. --skills walk")
-    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall"],
+    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall", "dog"],
                     help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
     args = ap.parse_args()
 

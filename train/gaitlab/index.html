@@ -131,6 +131,7 @@ td.ok { color: var(--paw); }
     <div class="readout"><span class="label">Nose-up tilt</span><b id="r-pitch">–</b><span class="tgt" id="t-pitch"></span></div>
     <div class="readout"><span class="label">Forward speed</span><b id="r-speed">–</b><span class="tgt" id="t-speed"></span></div>
     <div class="readout"><span class="label">Lowest knee</span><b id="r-knee">–</b><span class="tgt">above the floor</span></div>
+    <div class="readout"><span class="label">Lower-leg tilt</span><b id="r-tilt">–</b><span class="tgt">0° = upright, like a dog</span></div>
     <div class="readout"><span class="label">Paws down</span><b id="r-paws">–</b><span class="tgt" id="r-pawlist"></span></div>
   </section>
 
@@ -189,13 +190,16 @@ td.ok { color: var(--paw); }
           <tr><td>knee/shin on floor</td><td class="bad">15% (500k)</td><td class="ok">0%</td></tr>
           <tr><td>falls taking over from stand</td><td class="bad">9 of 10 (2M)</td><td class="ok">0 of 10</td></tr>
           <tr><td>speed</td><td>0.40–0.52 m/s</td><td>0.48 m/s</td></tr>
+          <tr><td>lower-leg tilt</td><td class="bad">65°, up to 86°</td><td class="bad">35–39°, up to 55°</td></tr>
         </tbody>
       </table></div>
       <ul style="margin-top:12px">
         <li><strong>Stand, sit, lie are solid.</strong> The posture brain hits every measured target within about 1 cm and sits at 29° nose-up against a 31° target.</li>
         <li><strong>The new walk stands tall</strong> on a dog-like stance, front legs straighter than rear, and keeps every knee off the floor.</li>
         <li><strong>The hand-over works now.</strong> In the full routine the standing brain passes control to the walk brain mid-stride without a stumble.</li>
-        <li><strong>One thing to watch:</strong> it walks about 7° nose-up. That's small, and training is still running, so later checkpoints may level out.</li>
+        <li><strong>Lower legs slope too much</strong> (you spotted this): 35–39° from upright, up to 55°, and a rear shin trails almost flat while stepping. Real dogs and cats keep the lower leg near upright and bring the paw forward on a low arc under the body.</li>
+        <li><strong>Next: the "Dog gait" clip.</strong> The trot is now planned by the paw's path, the way animals move. With no brain at all it walks 0.47 m/s, level, 43.5 cm tall, lower legs about 23°, with a third less motor force.</li>
+        <li><strong>Also to watch:</strong> it walks about 7° nose-up. That's small, and training is still running, so later checkpoints may level out.</li>
       </ul>
       <p class="label">Run 7 keeps training in the background; new checkpoints can be added here.</p>
     </div>
@@ -211,13 +215,14 @@ td.ok { color: var(--paw); }
     { id: "stand", file: "data/stand.json", name: "Stand", note: "posture brain" },
     { id: "sit", file: "data/sit.json", name: "Sit", note: "posture brain" },
     { id: "lie", file: "data/lie.json", name: "Lie down", note: "posture brain" },
+    { id: "doggait", file: "data/doggait.json", name: "Dog gait · next", note: "paw paths, no brain yet" },
     { id: "walk7", file: "data/walk7.json", name: "Walk · new", note: "run 7, tall stance" },
     { id: "handover7", file: "data/handover7.json", name: "Stand → walk · new", note: "run 7 takes over" },
     { id: "walk", file: "data/walk.json", name: "Old walk", note: "run 6, 2M, crouch" },
     { id: "walk500k", file: "data/walk-500k.json", name: "Old walk", note: "run 6, 500k, drags knee" },
     { id: "handover", file: "data/handover.json", name: "Old stand → walk", note: "run 6, 2M, falls" },
   ];
-  const BRAIN_NAMES = { posture: "posture brain (stand, sit, lie)", walk7: "new walk brain, run 7 (tall stance)",
+  const BRAIN_NAMES = { posture: "posture brain (stand, sit, lie)", nobrain: "no brain: the planned paw paths alone", walk7: "new walk brain, run 7 (tall stance)",
                         walk2M: "old walk brain, run 6 at 2M (crouch)", walk500k: "old walk brain, run 6 at 500k (crouch)" };
   const SPEEDS = [0.1, 0.25, 0.5, 1];
   const CAMS = ["Side", "Front", "Three-quarter", "Below"];
@@ -566,6 +571,12 @@ td.ok { color: var(--paw); }
     $("t-speed").textContent = tg.speed != null ? `target ${tg.speed.toFixed(1)} m/s` : "";
     $("r-knee").innerHTML = `${(Math.min(...knees) * 100).toFixed(1)} <small>cm</small>`;
     $("r-paws").textContent = `${paws.length} of 4`;
+    const tilts = LEGS.map((L) => {
+      const k = rec.knee[L] * 7, f0 = rec.paw[L] * 7, p = f.p;
+      const dx = p[k] - p[f0], dy = p[k + 1] - p[f0 + 1], dz = p[k + 2] - p[f0 + 2];
+      return Math.atan2(Math.hypot(dx, dy), dz) * 180 / Math.PI;
+    });
+    $("r-tilt").innerHTML = `${Math.round(tilts.reduce((a, b) => a + b, 0) / 4)}<small>°</small>`;
     $("r-pawlist").textContent = paws.join(" ") || "none";
   }
 

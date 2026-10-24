@@ -49,12 +49,19 @@ ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)  # radians per unit action: abd, hip,
 # brain pushed knees onto the floor (runs 5-6). "tall" is a dog-like stance, front legs straighter
 # than rear; held open-loop it carries the body at ~40 cm with knees ~19 cm up, trots faster
 # with less motor force, and scrapes nothing (measured, see docs/LESSONS.md).
-STANCES = {"crouch": STAND_POSE, "tall": pose(0.35, 0.7, 0.55, 1.1)}
-WALK_HEIGHT = {None: TARGETS["walk"]["height"], "crouch": TARGETS["walk"]["height"], "tall": 0.40}
+# "dog" plans the trot by the paw's path (reference_gait.paw_trot), the way real dogs and cats
+# walk: paws stay under the body, lower legs near upright, swing on a low arc. With no brain it
+# tilts the lower legs ~20° instead of ~33°, trots at 0.47 m/s instead of 0.27, and needs a
+# third less motor force than "tall" (measured). Run 7's lower legs sloped to 55°.
+STANCES = {"crouch": STAND_POSE, "tall": pose(0.35, 0.7, 0.55, 1.1), "dog": pose(0.2747, 0.5493, 0.2747, 0.5493)}
+WALK_HEIGHT = {None: TARGETS["walk"]["height"], "crouch": TARGETS["walk"]["height"], "tall": 0.40, "dog": 0.435}
+PAW_GAIT = dict(step=0.125, lift=0.06, height=0.385)  # m: stride length, paw lift, paw depth below the hip
 
 
 def trot(phase, stance="crouch"):
-    from reference_gait import trot as reference_trot  # imported late: reference_gait imports this module
+    from reference_gait import paw_trot, trot as reference_trot  # imported late: reference_gait imports this module
+    if stance == "dog":
+        return paw_trot(phase, **PAW_GAIT)
     return reference_trot(phase, hip_swing=0.15, knee_lift=0.3, base=STANCES[stance])
 FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 
@@ -126,7 +133,7 @@ class BoltEnv(gym.Env):
         if not self.walking_on_generator():
             return STAND_POSE
         q = trot(self.gait_phase(), self.stance)[0]
-        if self.stance == "tall":
+        if self.stance in ("tall", "dog"):
             # Ease from the standing pose into the trot over half a second, so a walk can start
             # from whatever the standing brain left behind (runs 5-6 jumped straight in and the
             # 2M brain fell 9 times in 10 when taking over from the standing brain).
@@ -151,6 +158,14 @@ class BoltEnv(gym.Env):
         if command != self.command and COMMANDS[command] == "walk":
             self.walk_since = self.t
         self.command = command
+
+    def shin_tilt(self):
+        """Mean lower-leg tilt from upright, in degrees (real dogs keep it near upright)."""
+        d, m, tilts = self.data, self.model, []
+        for leg, foot in zip(("FL", "FR", "RL", "RR"), self.foot_ids):
+            v = d.xpos[m.body(f"{leg}_shin").id] - d.geom_xpos[foot]
+            tilts.append(np.degrees(np.arctan2(np.hypot(v[0], v[1]), v[2])))
+        return float(np.mean(tilts))
 
     def leg_scrapes(self):
         """How many legs have a knee, shin or thigh on the floor (body on the floor counts as one).
@@ -221,7 +236,7 @@ class BoltEnv(gym.Env):
         yaw = self.rng.uniform(-np.pi, np.pi)
         d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
         self.phase0 = 0.0
-        if self.stance == "tall" and self.randomize:
+        if self.stance in ("tall", "dog") and self.randomize:
             # start anywhere in the stride, slightly tipped, like a hand-over from another brain
             self.phase0 = self.rng.uniform(0, 2 * np.pi)
             tip = self.rng.normal(0, 0.04, 2)
@@ -266,7 +281,7 @@ class BoltEnv(gym.Env):
         """
         name = COMMANDS[self.command]
         goal, p = TARGETS[name], self.posture()
-        scrapes = self.leg_scrapes()
+        scrapes, tilt = self.leg_scrapes(), self.shin_tilt()
         feet = self.feet_on_ground()
         upright = np.exp(-(p["roll"] / 0.15) ** 2)
 
@@ -288,6 +303,8 @@ class BoltEnv(gym.Env):
                 np.exp(-(p["pitch"] / 0.25) ** 2) * upright,
                 np.exp(-(p["yaw_rate"] / 0.6) ** 2),
                 np.exp(-scrapes),  # each leg with a knee, shin or thigh on the floor costs ~2/3
+                # "dog" gait only: lower legs sloping past 30° cost more and more
+                np.clip(1 - max(0.0, tilt - 30) / 30, 0.2, 1.0) if self.stance == "dog" else 1.0,
                 0.3 + 0.7 * gait,
                 0.2 + 0.8 * imitation,
             ]
@@ -311,7 +328,7 @@ class BoltEnv(gym.Env):
         reward -= 0.02 * np.sum((action - self.last_action) ** 2)  # smooth, not twitchy
         reward -= 2e-4 * np.sum(torque ** 2)                        # don't waste energy
         reward -= 1e-4 * np.sum((self.data.qvel[6:] * self.ts) ** 2)
-        return reward * 0.5, dict(command=name, feet=feet, scrape=scrapes, walk_height=self.walk_height, **p)
+        return reward * 0.5, dict(command=name, feet=feet, scrape=scrapes, shin_tilt=tilt, walk_height=self.walk_height, **p)
 
     def render(self):
         if self.renderer is None:

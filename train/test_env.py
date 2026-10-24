@@ -219,5 +219,44 @@ class TallWalkTest(unittest.TestCase):
         self.assertGreater(np.abs(env.base_pose() - STAND_POSE).max(), 0.3)  # fully into the tall trot
 
 
+
+class DogGaitTest(unittest.TestCase):
+    """The paw-path trot: legs under the body, lower legs near upright, like a real dog."""
+
+    def test_leg_ik_puts_the_paw_where_asked(self):
+        from reference_gait import leg_ik
+        m = mujoco.MjModel.from_xml_path(str(MODEL))
+        d = mujoco.MjData(m)
+        d.qpos[2], d.qpos[3] = 1.0, 1.0
+        for x, z in [(0.0, -0.385), (0.06, -0.38), (-0.06, -0.38), (0.0, -0.325)]:
+            for leg, front in (("FL", True), ("RR", False)):
+                i = ["FL", "FR", "RL", "RR"].index(leg)
+                d.qpos[7:] = 0
+                d.qpos[7 + 3 * i + 1], d.qpos[7 + 3 * i + 2] = leg_ik(x, z, front)
+                mujoco.mj_kinematics(m, d)
+                rel = d.geom_xpos[m.geom(f"{leg}_foot").id] - d.xpos[m.body(f"{leg}_hip").id]
+                np.testing.assert_allclose(rel[[0, 2]], [x, z], atol=1e-6)
+
+    def test_do_nothing_brain_walks_with_upright_lower_legs(self):
+        env = BoltEnv(randomize=False, max_steps=10_000, skills=["walk"], gait_generator="dog")
+        env.forced_command = "walk"
+        env.reset(seed=0)
+        tilt, hs, vx = [], [], []
+        for t in range(300):
+            _, _, fell, _, info = env.step(np.zeros(12))
+            self.assertFalse(fell)
+            if t > 100:
+                tilt.append(info["shin_tilt"]); hs.append(info["height"]); vx.append(info["vx"])
+        self.assertLess(np.median(tilt), 27)            # the old tall trot: ~33°
+        self.assertAlmostEqual(np.mean(hs), info["walk_height"], delta=0.02)
+        self.assertGreater(np.mean(vx), 0.3)            # walks on its own, before any training
+
+    def test_exam_fails_sloping_lower_legs(self):
+        good = dict(height=0.435, walk_height=0.435, pitch=0.0, roll=0.0, vx=0.5, vy=0.0, up=1.0,
+                    feet=np.array([0.5, 0.5, 0.5, 0.5]), scrape=0, shin_tilt=22.0)
+        self.assertTrue(passed("walk", [good] * 80))
+        self.assertFalse(passed("walk", [dict(good, shin_tilt=38.0)] * 80))  # like run 7
+
+
 if __name__ == "__main__":
     unittest.main()

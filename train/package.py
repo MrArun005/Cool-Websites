@@ -167,7 +167,7 @@ def main():
     ap.add_argument("--episodes", type=int, default=20, help="exam tries per command")
     ap.add_argument("--rollouts", type=int, default=5, help="recorded episodes per command")
     ap.add_argument("--skills", nargs="+", help="the commands this brain was trained for")
-    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
+    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall", "dog"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
     args = ap.parse_args()
 
     run, out = Path(args.run), Path(args.out) / args.name
@@ -214,7 +214,8 @@ def main():
                             residual_scale=BoltEnv.RESIDUAL_SCALE,
                             how="while walking: motor targets = reference_gait.trot(phase, 0.15, 0.3, base=stance_pose) "
                                 "+ residual_scale x action_scale x action"
-                                + ("; eased in from stand_pose over the first 0.5 s of walking" if args.gait_generator == "tall" else ""))
+                                + ("; eased in from stand_pose over the first 0.5 s of walking" if args.gait_generator in ("tall", "dog") else "")
+                                + ("; for 'dog' the trot is reference_gait.paw_trot(phase, **PAW_GAIT) instead" if args.gait_generator == "dog" else ""))
         if args.gait_generator else dict(used=False),
         onnx_max_difference=onnx_err,
     )

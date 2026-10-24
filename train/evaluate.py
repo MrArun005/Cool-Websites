@@ -47,8 +47,10 @@ def passed(command, window):
     if command == "walk":
         scraping = np.mean([p.get("scrape", 0) > 0 for p in window])
         tall_enough = abs(h - window[0].get("walk_height", goal["height"])) < 0.05
+        # lower legs near upright, like a real dog's (a "dog" walk with no brain: ~20°)
+        upright_legs = np.median([p.get("shin_tilt", 0) for p in window]) < 30
         return bool(upright and 0.3 <= vx <= 0.75 and abs(pitch) < 0.25 and roll < 0.25 and feet.min() >= 0.2
-                    and scraping < 0.02 and tall_enough)
+                    and scraping < 0.02 and tall_enough and upright_legs)
     speed = np.mean([np.hypot(p["vx"], p["vy"]) for p in window])
     ok = upright and abs(h - goal["height"]) < 0.03 and abs(pitch - goal["pitch"]) < 0.12 and roll < 0.12 and speed < 0.15
     if command == "stand":

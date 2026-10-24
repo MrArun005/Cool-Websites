@@ -112,7 +112,7 @@ def main():
     ap.add_argument("--label", default="", help="name of this run, shown on the progress page")
     ap.add_argument("--noise", action="store_true", help="film with exploration noise, as while practising")
     ap.add_argument("--skills", nargs="+", help="the commands this brain was trained for (exam and score only these)")
-    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
+    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall", "dog"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
     ap.add_argument("--patience", type=int, default=4,
                     help="stop training after this many checkpoints in a row without a new best (0 = never)")
     args = ap.parse_args()

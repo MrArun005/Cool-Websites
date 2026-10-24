@@ -24,6 +24,13 @@ LEGS = ["FL", "FR", "RL", "RR"]
 PARTS = ["foot", "shin", "thigh"]
 
 
+class NoBrain:
+    """--brain name=none: zero output, so only the built-in trot moves the legs."""
+
+    def act(self, obs, deterministic=True):
+        return np.zeros(12)
+
+
 def describe(m):
     """Every visible dog geom: shape, size, and what part of which leg it is."""
     geoms = []
@@ -118,14 +125,14 @@ def summary(geoms, frames, settle=50):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--brain", action="append", required=True,
-                    help="name=folder with policy.zip + vecnormalize.pkl (packaged model or run folder)")
+                    help="name=folder with policy.zip + vecnormalize.pkl (packaged model or run folder), or name=none")
     ap.add_argument("--script", nargs="+", required=True, help="command:seconds:brain steps, played in order")
     ap.add_argument("--seed", type=int, default=50)
-    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
+    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall", "dog"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
     ap.add_argument("--label", default="")
     ap.add_argument("-o", "--out", required=True)
     args = ap.parse_args()
-    brains = {name: Policy(path) for name, path in (b.split("=", 1) for b in args.brain)}
+    brains = {name: (NoBrain() if path == "none" else Policy(path)) for name, path in (b.split("=", 1) for b in args.brain)}
     script = [(c, float(s), b) for c, s, b in (step.split(":") for step in args.script)]
     geoms, frames = record(brains, script, args.seed, args.gait_generator)
     rows = summary(geoms, frames)
