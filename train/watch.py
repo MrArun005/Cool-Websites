@@ -5,9 +5,9 @@
 Runs alongside train.py and keeps going until the final policy.zip appears.
 Writes into --out:
     data.json          learning curve, plus exam results for every checkpoint
-    clips/<steps>.mp4  the dog given a sequence of commands, acting the way
-                       it does while practising (with its exploration noise),
-                       so you see it try, wobble and fall
+    clips/<steps>.mp4  the dog given a sequence of commands, showing what it has
+                       learned (no exploration noise; pass --noise to see it the
+                       way it acts while practising)
 Step 0 is an untrained dog: random motor twitches.
 """
 import argparse
@@ -51,7 +51,7 @@ def read_curve(log_path):
     return points
 
 
-def film(policy, path, steps_label):
+def film(policy, path, steps_label, noise=False):
     import imageio.v2 as imageio
     from PIL import Image, ImageDraw, ImageFont
 
@@ -68,7 +68,7 @@ def film(policy, path, steps_label):
         for command, steps in SCRIPT:
             env.set_command(command)
             for k in range(steps):
-                obs, _, fell, _, _ = env.step(policy.act(obs, deterministic=False))
+                obs, _, fell, _, _ = env.step(policy.act(obs, deterministic=not noise))
                 if fell and fallen_for == 0:
                     falls += 1
                     fallen_for = 1
@@ -104,6 +104,7 @@ def main():
     ap.add_argument("--target", type=int, default=6_000_000)
     ap.add_argument("--episodes", type=int, default=10, help="exam episodes per command")
     ap.add_argument("--label", default="", help="name of this run, shown on the progress page")
+    ap.add_argument("--noise", action="store_true", help="film with exploration noise, as while practising")
     args = ap.parse_args()
 
     run, out, log = Path(args.run), Path(args.out), Path(args.log)
@@ -122,7 +123,7 @@ def main():
     def process(steps, policy):
         label = "untrained" if steps == 0 else f"after {steps:,} practice steps"
         clip = f"clips/{steps:010d}.mp4"
-        falls = film(policy, out / clip, label)
+        falls = film(policy, out / clip, label, noise=args.noise)
         exam = evaluate(policy, args.episodes, seed=1000)
         data["checkpoints"].append(dict(steps=steps, exam={k: round(v, 2) for k, v in exam.items()},
                                         clip=clip, falls_in_clip=falls))
