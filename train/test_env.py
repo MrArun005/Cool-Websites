@@ -361,6 +361,32 @@ class DogGaitTest(unittest.TestCase):
                 self.assertEqual(env.walk_since, env.t)
         self.assertGreater(handed, 0)
 
+    def test_speed_command_sets_the_pace_without_a_brain(self):
+        got = {}
+        for speed in (0.4, 1.0):
+            env = BoltEnv(randomize=False, max_steps=10_000, skills=["walk"], gait_generator="dog",
+                          turning=True, speed_control=True)
+            env.forced_command = "walk"
+            env.reset(seed=1)
+            env.set_turn(0.0)
+            env.set_speed(speed)
+            self.assertEqual(env._obs().shape, (54,))
+            vs = []
+            for t in range(300):
+                _, _, fell, _, info = env.step(np.zeros(12))
+                self.assertFalse(fell)
+                if t > 150:
+                    vs.append(info["vx"])
+            got[speed] = np.mean(vs)
+        self.assertAlmostEqual(got[1.0], 1.0, delta=0.12)
+        self.assertGreater(got[1.0], got[0.4] + 0.4)  # running really is faster
+
+    def test_exam_checks_the_asked_speed(self):
+        good = dict(height=0.435, walk_height=0.435, pitch=0.0, roll=0.0, vx=1.0, vy=0.0, up=1.0, feet=np.array([0.5] * 4),
+                    scrape=0, shin_tilt=23.0, yaw_rate=0.0, yaw_cmd=0.0, turning=True, speed_cmd=1.0)
+        self.assertTrue(passed("walk", [good] * 80))
+        self.assertFalse(passed("walk", [dict(good, vx=0.5)] * 80))  # asked to run, walked
+
     def test_other_stances_keep_the_old_stand(self):
         self.assertEqual(BoltEnv(gait_generator="tall").targets["stand"], TARGETS["stand"])
 

@@ -1,0 +1,91 @@
+{
+  "name": "bolt-run11-running",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt11",
+        "--steps",
+        "10000000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--turning",
+        "--speed-control",
+        "--handover-brain",
+        "../models/bolt-dog-posture-dog-2.5M",
+        "--resume",
+        "runs/run_start/policy.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt11",
+        "--steps",
+        "10000000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--turning",
+        "--speed-control",
+        "--handover-brain",
+        "../models/bolt-dog-posture-dog-2.5M",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/bolt11/checkpoints/policy_*_steps.zip",
+      "log": "runs/bolt11/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/bolt11/policy.zip",
+        "log_contains": "^done:"
+      }
+    },
+    {
+      "name": "watch",
+      "cmd": [
+        "python",
+        "-u",
+        "watch.py",
+        "runs/bolt11",
+        "--log",
+        "runs/bolt11/train.log",
+        "--out",
+        "runs/bolt11/watch",
+        "--target",
+        "10000000",
+        "--patience",
+        "0",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--handover-brain",
+        "../models/bolt-dog-posture-dog-2.5M",
+        "--label",
+        "Run 11: walk, turn and run at any asked speed (0.2-1.2 m/s)"
+      ],
+      "log": "runs/bolt11/watch.log",
+      "done_when": {
+        "log_contains": "^finished"
+      }
+    }
+  ]
+}

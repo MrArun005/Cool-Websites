@@ -67,7 +67,7 @@ def check_onnx(policy, path, samples=200, gait_generator=False):
     """Run the ONNX file next to the original policy on real observations; they must agree."""
     import onnxruntime as ort
     session = ort.InferenceSession(str(path))
-    env = BoltEnv(randomize=True, gait_generator=gait_generator, turning=policy.turning)
+    env = BoltEnv(randomize=True, gait_generator=gait_generator, turning=policy.turning, speed_control=policy.speed_control)
     obs, _ = env.reset(seed=5)
     worst = 0.0
     for _ in range(samples):
@@ -79,7 +79,8 @@ def check_onnx(policy, path, samples=200, gait_generator=False):
 
 
 def record_rollouts(policy, episodes_per_command, steps=250, seed=2000, commands=COMMANDS, gait_generator=False):
-    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=policy.turning)
+    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=policy.turning,
+                  speed_control=policy.speed_control)
     keys = ("obs", "action", "reward", "command", "height", "pitch", "roll", "vx", "fell", "episode")
     data = {k: [] for k in keys}
     episode = 0

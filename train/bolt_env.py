@@ -58,10 +58,10 @@ WALK_HEIGHT = {None: TARGETS["walk"]["height"], "crouch": TARGETS["walk"]["heigh
 PAW_GAIT = dict(step=0.125, lift=0.06, height=0.385)  # m: stride length, paw lift, paw depth below the hip
 
 
-def trot(phase, stance="crouch", turn=0.0):
+def trot(phase, stance="crouch", turn=0.0, step=None):
     from reference_gait import paw_trot, trot as reference_trot  # imported late: reference_gait imports this module
     if stance == "dog":
-        return paw_trot(phase, **PAW_GAIT, turn=turn)
+        return paw_trot(phase, **dict(PAW_GAIT, **({"step": step} if step is not None else {})), turn=turn)
     return reference_trot(phase, hip_swing=0.15, knee_lift=0.3, base=STANCES[stance])
 FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 
@@ -70,7 +70,7 @@ class BoltEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
 
     def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
-                 skills=None, gait_generator=False, turning=False, handover_brain=None):
+                 skills=None, gait_generator=False, turning=False, handover_brain=None, speed_control=False):
         # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
         # brain only adds corrections on top (residual control, as in "policies modulating trajectory
         # generators"). The legs are coordinated from the first step instead of having to discover it.
@@ -110,6 +110,7 @@ class BoltEnv(gym.Env):
         self.total_steps = 0  # this env's steps across all episodes (drives the walk curriculum)
         self.t, self.command, self.walk_since, self.phase0 = 0, 0, 0, 0.0
         self.forced_turn_set = False
+        self.forced_speed_set = False
         self.walk_from = STAND_POSE.copy()  # motor targets the walk eases in from
 
         m = self.model
@@ -135,7 +136,12 @@ class BoltEnv(gym.Env):
         # from the real standing brain (run 10 fell 4 in 10 there while passing an exam that
         # handed over from a perfect motor-held stand).
         self.handover_brain, self._handover = handover_brain, None
-        self.observation_space = gym.spaces.Box(-np.inf, np.inf, (53 if turning else 52,), np.float32)
+        # speed_control=True (with turning): a speed command (m/s) as a 54th input, from a slow walk to
+        # a run. The gait steps faster and takes longer strides to match: with no brain it reaches
+        # 1.29 m/s at 3 steps/s and 20 cm strides, well inside the motors' force limit (measured).
+        assert turning or not speed_control, "speed control comes after the turn command in the input layout"
+        self.speed_control, self.speed_cmd, self.phase = speed_control, 0.4, 0.0
+        self.observation_space = gym.spaces.Box(-np.inf, np.inf, (52 + turning + speed_control,), np.float32)
 
     # ---------- helpers ----------
     RESIDUAL_SCALE = 0.35  # with the gait generator on, the brain's corrections are this fraction of normal
@@ -144,7 +150,23 @@ class BoltEnv(gym.Env):
         return self.gait_generator and COMMANDS[self.command] == "walk"
 
     def gait_phase(self):
+        if self.speed_control:
+            return self.phase  # integrated: the step rate changes with the speed command
         return 2 * np.pi * 2.0 * self.t * self.dt / self.ts + self.phase0  # 2 Hz gait clock in full-size time
+
+    MAX_SPEED = 1.2  # m/s, a trot-run: 3 steps/s with 20 cm strides
+
+    def gait_freq(self):
+        """Steps per second for each leg pair: 2 at a walk, up to 3 when running."""
+        if not self.speed_control:
+            return 2.0
+        return 2.0 + float(np.clip((self.speed_cmd - 0.5) / 0.7, 0.0, 1.0))
+
+    def gait_stride(self):
+        """Stride length (m) that gives the commanded speed at this step rate (measured: v ≈ 2.15·f·stride)."""
+        if not self.speed_control:
+            return None
+        return float(np.clip(self.speed_cmd / (2.15 * self.gait_freq()), 0.0, 0.2))
 
     def base_pose(self):
         """What the motors do when the brain outputs zero."""
@@ -156,7 +178,7 @@ class BoltEnv(gym.Env):
             if self.stance == "dog" and COMMANDS[self.command] == "stand":
                 return STANCES["dog"]
             return STAND_POSE
-        q = trot(self.gait_phase(), self.stance, self.gait_turn())[0]
+        q = trot(self.gait_phase(), self.stance, self.gait_turn(), self.gait_stride())[0]
         if self.stance in ("tall", "dog"):
             # Ease into the trot over half a second from walk_from (see _switch); runs 5-6 jumped
             # straight in and the 2M brain fell 9 times in 10 when taking over from standing.
@@ -167,7 +189,20 @@ class BoltEnv(gym.Env):
     MAX_TURN = 0.6     # rad/s (~35°/s): strides stay within what the paw-path gait handled without a brain
 
     def gait_turn(self):
-        return float(np.clip(self.TURN_GAIN * self.yaw_cmd, -0.05, 0.05)) if self.turning else 0.0
+        if not self.turning:
+            return 0.0
+        stride = self.gait_stride()
+        limit = 0.05 if stride is None else min(0.05, max(0.0, 0.22 - stride))  # the outside stride stays <= 22 cm
+        return float(np.clip(self.TURN_GAIN * self.yaw_cmd, -limit, limit))
+
+    def _new_speed(self):
+        """A speed command: often a normal walk, otherwise anything from slow to running."""
+        return 0.4 if self.rng.random() < 0.2 else float(self.rng.uniform(0.2, self.MAX_SPEED))
+
+    def set_speed(self, v):
+        """Ask for a forward speed in m/s; stays until changed."""
+        self.speed_cmd = float(v)
+        self.forced_speed_set = True
 
     def _new_turn(self):
         """A turn command like an owner would give: often straight, otherwise left or right."""
@@ -253,7 +288,7 @@ class BoltEnv(gym.Env):
             gravity, d.qvel[3:6] * self.ts * 0.25, v_body, [d.qpos[2] / self.s],
             d.qpos[7:] - STAND_POSE, d.qvel[6:] * self.ts * 0.1, self.last_action,
             cmd, [np.sin(clock), np.cos(clock)],
-        ] + ([[self.yaw_cmd]] if self.turning else []))
+        ] + ([[self.yaw_cmd]] if self.turning else []) + ([[self.speed_cmd]] if self.speed_control else []))
         if self.randomize:
             obs += self.rng.normal(0, 0.01, obs.shape)  # sensors are noisy
         return obs.astype(np.float32)
@@ -304,6 +339,9 @@ class BoltEnv(gym.Env):
         self.walk_since = 0
         self.walk_from = STAND_POSE.copy()  # episodes start from the standing pose
         self.yaw_cmd = self._new_turn() if self.turning and not self.forced_turn_set else self.yaw_cmd
+        if self.speed_control and not self.forced_speed_set:
+            self.speed_cmd = self._new_speed()
+        self.phase = self.phase0
         if (self.handover_brain and self.randomize and COMMANDS[self.command] == "walk" and not start_lying
                 and self.rng.random() < 0.5):
             self._stand_then_hand_over(int(self.rng.integers(60, 150)))
@@ -326,6 +364,8 @@ class BoltEnv(gym.Env):
         self.data.ctrl[:] = np.clip(self.base_pose() + self.action_scale() * action, self.lo, self.hi)
         mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
         self.t += 1
+        if self.speed_control:
+            self.phase += 2 * np.pi * self.gait_freq() * self.dt / self.ts
         self.total_steps += 8  # 8 parallel envs share the curriculum clock (train.py default)
 
         reward, info = self._reward(action)
@@ -337,6 +377,8 @@ class BoltEnv(gym.Env):
             self._switch(self.rng.choice(self.skills))  # new command, like a real owner would give
         if self.turning and not self.forced_turn_set and self.t % 150 == 0:
             self.yaw_cmd = self._new_turn()  # a new turn every 3 s
+        if self.speed_control and not self.forced_speed_set and self.t % 150 == 0:
+            self.speed_cmd = self._new_speed()  # and a new speed
         truncated = self.t >= self.max_steps
         return self._obs(), float(reward), bool(fell), bool(truncated), info
 
@@ -357,16 +399,17 @@ class BoltEnv(gym.Env):
             # Imitate the reference trot (reference_gait.py): match its joint angles and its
             # foot contacts at this moment of the stride. Following an example is far faster to
             # learn than discovering walking from scratch (Disney BDX, Open Duck Mini).
-            q_ref, stance_ref = trot(self.gait_phase(), self.stance or "crouch", self.gait_turn())  # same clock as the obs
+            q_ref, stance_ref = trot(self.gait_phase(), self.stance or "crouch", self.gait_turn(), self.gait_stride())  # same clock as the obs
             gait = np.mean(feet == stance_ref)
             # Width matters: at 0.05 a dog halfway to the trot scored ~0, so there was no
             # "warmer, warmer" signal. At 0.3, halfway earns about a third.
             imitation = np.exp(-np.mean((self.data.qpos[7:] - q_ref) ** 2) / 0.3)
             # Wide enough that standing still still scores a little: a too-strict speed term makes
             # the whole product zero, and then nothing rewards starting to move.
-            target = self.walk_speed()
+            target = self.speed_cmd if self.speed_control else self.walk_speed()
+            v_width = 0.15 + 0.2 * target if self.speed_control else 0.35  # faster asks allow a bit more error
             terms = [
-                np.exp(-((p["vx"] - target) / 0.35) ** 2) * np.exp(-(p["vy"] / 0.25) ** 2),
+                np.exp(-((p["vx"] - target) / v_width) ** 2) * np.exp(-(p["vy"] / 0.25) ** 2),
                 np.exp(-((p["height"] - self.walk_height) / 0.06) ** 2),
                 np.exp(-(p["pitch"] / 0.25) ** 2) * upright,
                 np.exp(-((p["yaw_rate"] - self.yaw_cmd) / (0.3 if self.turning else 0.6)) ** 2),  # turn as asked (0 = straight)
@@ -403,6 +446,7 @@ class BoltEnv(gym.Env):
         reward -= 2e-4 * np.sum(torque ** 2)                        # don't waste energy
         reward -= 1e-4 * np.sum((self.data.qvel[6:] * self.ts) ** 2)
         return reward * 0.5, dict(command=name, feet=feet, scrape=scrapes, shin_tilt=tilt, walk_height=self.walk_height, yaw_cmd=self.yaw_cmd, turning=self.turning,
+                                  speed_cmd=self.speed_cmd if self.speed_control else None,
                                   goal_height=goal["height"], **p)
 
     def render(self):

@@ -58,7 +58,8 @@ def describe(m):
 
 def record(brains, script, seed, gait_generator):
     turning = any(getattr(b, "turning", False) for b in brains.values())
-    env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator, turning=turning)
+    speed = any(getattr(b, "speed_control", False) for b in brains.values())
+    env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator, turning=turning, speed_control=speed)
     env.forced_command = script[0][0]
     obs, _ = env.reset(seed=seed)
     m, d = env.model, env.data
@@ -67,11 +68,13 @@ def record(brains, script, seed, gait_generator):
     index = {g["id"]: i for i, g in enumerate(geoms)}
     frames = []
     quat = np.zeros(4)
-    for command, seconds, brain, turn in script:
+    for command, seconds, brain, turn, v in script:
         env.forced_command = command
         env.set_command(command)
         if turning:
             env.set_turn(turn)
+        if speed:
+            env.set_speed(v)
         for _ in range(int(seconds * 50)):
             obs, _, fell, _, _ = env.step(brains[brain].act(obs))
             pose = []
@@ -94,7 +97,7 @@ def record(brains, script, seed, gait_generator):
                 elif c.geom1 in index and c.geom2 in index:
                     rubbing.add(tuple(sorted((index[c.geom1], index[c.geom2]))))
             R = d.xmat[1].reshape(3, 3)
-            frames.append(dict(cmd=command, brain=brain, turn=turn, yawr=round(float(d.qvel[5]), 3), p=pose, floor=sorted(on_floor), scrape=sorted(scrape),
+            frames.append(dict(cmd=command, brain=brain, turn=turn, speed=v, yawr=round(float(d.qvel[5]), 3), p=pose, floor=sorted(on_floor), scrape=sorted(scrape),
                                rub=[list(r) for r in sorted(rubbing)],
                                vx=round(float(d.qvel[:3] @ R[:, 0]), 3), h=round(float(d.qpos[2]), 3),
                                pitch=round(float(np.degrees(np.arcsin(R[2, 0]))), 1),  # nose up is positive
@@ -137,7 +140,8 @@ def main():
     ap.add_argument("-o", "--out", required=True)
     args = ap.parse_args()
     brains = {name: (NoBrain() if path == "none" else Policy(path)) for name, path in (b.split("=", 1) for b in args.brain)}
-    script = [(f[0], float(f[1]), f[2], float(f[3]) if len(f) > 3 else 0.0) for f in (step.split(":") for step in args.script)]
+    script = [(f[0], float(f[1]), f[2], float(f[3]) if len(f) > 3 else 0.0, float(f[4]) if len(f) > 4 else 0.4)
+              for f in (step.split(":") for step in args.script)]
     geoms, frames = record(brains, script, args.seed, args.gait_generator)
     rows = summary(geoms, frames)
     stand_env = BoltEnv(gait_generator=args.gait_generator)  # the dog stance stands taller than the default

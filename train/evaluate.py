@@ -23,8 +23,10 @@ class Policy:
         run_dir = Path(run_dir)
         self.model = PPO.load(run_dir / "policy.zip", device="cpu")
         # brains that can turn have a 53rd input (the turn command); build a matching env
-        self.turning = self.model.observation_space.shape[0] == 53
-        self.norm = VecNormalize.load(str(run_dir / "vecnormalize.pkl"), DummyVecEnv([lambda: BoltEnv(turning=self.turning)]))
+        n_inputs = self.model.observation_space.shape[0]
+        self.turning, self.speed_control = n_inputs >= 53, n_inputs >= 54
+        self.norm = VecNormalize.load(str(run_dir / "vecnormalize.pkl"),
+                                      DummyVecEnv([lambda: BoltEnv(turning=self.turning, speed_control=self.speed_control)]))
         self.norm.training = False
 
     def act(self, obs, deterministic=True):
@@ -49,6 +51,10 @@ def passed(command, window):
     feet = np.mean([p["feet"] for p in window], axis=0)
     upright = min(p["up"] for p in window) > 0.2
     if command == "walk":
+        speed_ok = 0.3 <= vx <= 0.75
+        if window[0].get("speed_cmd") is not None:  # brains with a speed command: go the asked speed
+            v = window[0]["speed_cmd"]
+            speed_ok = abs(vx - v) < 0.1 + 0.15 * v
         # brains that can turn must turn as asked, within ~11°/s (0 = straight); older brains aren't asked
         turned_right = True
         if window[0].get("turning"):
@@ -58,7 +64,7 @@ def passed(command, window):
         tall_enough = abs(h - window[0].get("walk_height", goal["height"])) < 0.05
         # lower legs near upright, like a real dog's (a "dog" walk with no brain: ~20°)
         upright_legs = np.median([p.get("shin_tilt", 0) for p in window]) < 30
-        return bool(upright and 0.3 <= vx <= 0.75 and abs(pitch) < 0.25 and roll < 0.25 and feet.min() >= 0.2
+        return bool(upright and speed_ok and abs(pitch) < 0.25 and roll < 0.25 and feet.min() >= 0.2
                     and scraping < 0.02 and tall_enough and upright_legs and turned_right)
     speed = np.mean([np.hypot(p["vx"], p["vy"]) for p in window])
     goal_h = window[0].get("goal_height", goal["height"])  # the env's own target (the dog stance stands taller)
@@ -90,7 +96,10 @@ def reset_standing(env, seed):
 
 def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turning=None, handover=None):
     turning = getattr(policy, "turning", False) if turning is None else turning
-    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=turning)
+    speed = getattr(policy, "speed_control", False)
+    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=turning, speed_control=speed)
+    if speed:
+        env.set_speed(0.4)  # the walk and turn parts of the exam walk at 0.4 m/s
     results = {}
     for command in (skills or COMMANDS):
         wins = 0
@@ -126,6 +135,22 @@ def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turnin
                 wins += ok
             results[name] = wins / episodes
         env.forced_turn_set = False
+
+    if speed and "walk" in (skills or COMMANDS):
+        # Running: straight at 1.0 m/s; then a slow walk at 0.2 m/s.
+        for name, v in (("run", 1.0), ("slow", 0.2)):
+            wins = 0
+            for k in range(episodes):
+                env.forced_command = "walk"
+                obs, _ = env.reset(seed=seed + 700 + k)
+                env.set_turn(0.0)
+                env.set_speed(v)
+                obs = env._obs()
+                _, ok, _ = run_segment(env, policy, obs, "walk", 250)
+                wins += ok
+            results[name] = wins / episodes
+        env.set_speed(0.4)
+        env.forced_speed_set = False
 
     # Obeying a sequence of commands in a row, the way you'd actually use it.
     if skills and set(skills) != set(COMMANDS):
