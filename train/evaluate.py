@@ -63,8 +63,8 @@ def run_segment(env, policy, obs, command, steps):
     return obs, passed(command, window[-steps // 3:]), False
 
 
-def evaluate(policy, episodes, seed=0, skills=None):
-    env = BoltEnv(randomize=True, max_steps=10_000)
+def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False):
+    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator)
     results = {}
     for command in (skills or COMMANDS):
         wins = 0

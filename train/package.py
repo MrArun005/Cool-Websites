@@ -63,11 +63,11 @@ def export_onnx(policy, path):
                       dynamic_axes={"obs": {0: "batch"}, "action": {0: "batch"}}, dynamo=False)
 
 
-def check_onnx(policy, path, samples=200):
+def check_onnx(policy, path, samples=200, gait_generator=False):
     """Run the ONNX file next to the original policy on real observations; they must agree."""
     import onnxruntime as ort
     session = ort.InferenceSession(str(path))
-    env = BoltEnv(randomize=True)
+    env = BoltEnv(randomize=True, gait_generator=gait_generator)
     obs, _ = env.reset(seed=5)
     worst = 0.0
     for _ in range(samples):
@@ -78,12 +78,13 @@ def check_onnx(policy, path, samples=200):
     return worst
 
 
-def record_rollouts(policy, episodes_per_command, steps=250, seed=2000):
-    env = BoltEnv(randomize=True, max_steps=10_000)
+def record_rollouts(policy, episodes_per_command, steps=250, seed=2000, commands=COMMANDS, gait_generator=False):
+    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator)
     keys = ("obs", "action", "reward", "command", "height", "pitch", "roll", "vx", "fell", "episode")
     data = {k: [] for k in keys}
     episode = 0
-    for c, command in enumerate(COMMANDS):
+    for command in commands:
+        c = COMMANDS.index(command)
         for k in range(episodes_per_command):
             env.forced_command = command
             obs, _ = env.reset(seed=seed + episode)
@@ -104,9 +105,10 @@ def record_rollouts(policy, episodes_per_command, steps=250, seed=2000):
 
 def model_card(name, facts, exam, curve, onnx_err):
     last = curve[-1] if curve else None
-    rows = "\n".join(f"| {c} | {exam[c]:.0%} |" for c in COMMANDS)
-    learned = [c for c in COMMANDS if exam[c] >= 0.8]
-    missing = [c for c in COMMANDS if exam[c] < 0.8]
+    skills = facts.get("skills") or COMMANDS
+    rows = "\n".join(f"| {c} | {exam[c]:.0%} |" for c in skills)
+    learned = [c for c in skills if exam[c] >= 0.8]
+    missing = [c for c in skills if exam[c] < 0.8]
     return f"""# {name}
 
 Bolt's movement brain, trained with reinforcement learning (PPO) in MuJoCo.
@@ -118,8 +120,8 @@ Packaged {facts['packaged']} from `{facts['source']}` after **{facts['steps']:,}
 | Command | Passed |
 |---|---|
 {rows}
-| all 7 commands in a row | {exam['sequence']:.0%} |
-| fell over during the sequence | {exam['fell']:.0%} |
+{f"| all 7 commands in a row | {exam['sequence']:.0%} |" if 'sequence' in exam else ""}
+{f"| fell over during the sequence | {exam['fell']:.0%} |" if 'fell' in exam else ""}
 
 **Learned:** {', '.join(learned) or 'nothing reliably yet'}. **Not yet:** {', '.join(missing) or 'nothing'}.
 {f"Final training score per attempt: {last[1]:.0f}, survived {last[2]} of 600 steps." if last else ""}
@@ -157,6 +159,8 @@ def main():
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "models"))
     ap.add_argument("--episodes", type=int, default=20, help="exam tries per command")
     ap.add_argument("--rollouts", type=int, default=5, help="recorded episodes per command")
+    ap.add_argument("--skills", nargs="+", help="the commands this brain was trained for")
+    ap.add_argument("--gait-generator", action="store_true", help="the brain was trained on top of the reference trot")
     args = ap.parse_args()
 
     run, out = Path(args.run), Path(args.out) / args.name
@@ -175,10 +179,11 @@ def main():
     steps = steps or int(policy.model.num_timesteps)
 
     export_onnx(policy, out / "policy.onnx")
-    onnx_err = check_onnx(policy, out / "policy.onnx")
+    onnx_err = check_onnx(policy, out / "policy.onnx", gait_generator=args.gait_generator)
     print(f"onnx export ok, max difference {onnx_err:.2e}")
 
-    exam = {k: round(float(v), 3) for k, v in evaluate(policy, args.episodes, seed=4242).items()}
+    exam = {k: round(float(v), 3) for k, v in evaluate(policy, args.episodes, seed=4242, skills=args.skills,
+                                                       gait_generator=args.gait_generator).items()}
     (out / "exam.json").write_text(json.dumps(exam, indent=2))
     print("exam:", exam)
 
@@ -187,7 +192,7 @@ def main():
         f.write("steps,score_per_attempt,steps_survived,seconds\n")
         f.writelines(",".join(map(str, p)) + "\n" for p in curve)
 
-    rollouts = record_rollouts(policy, args.rollouts)
+    rollouts = record_rollouts(policy, args.rollouts, commands=args.skills or COMMANDS, gait_generator=args.gait_generator)
     np.savez_compressed(out / "rollouts.npz", **rollouts)
 
     facts = dict(
@@ -196,7 +201,10 @@ def main():
         control_hz=50, obs_size=52, action_size=12,
         obs_layout=[{"name": n, "size": s} for n, s in OBS_LAYOUT],
         joints=JOINTS, stand_pose=STAND_POSE.round(4).tolist(), action_scale=ACTION_SCALE.tolist(),
-        commands=COMMANDS, command_targets=TARGETS,
+        commands=COMMANDS, command_targets=TARGETS, skills=args.skills or COMMANDS,
+        gait_generator=dict(used=bool(args.gait_generator), residual_scale=BoltEnv.RESIDUAL_SCALE,
+                            how="while walking: motor targets = reference_gait.trot(phase, 0.15, 0.3) + residual_scale x action_scale x action")
+        if args.gait_generator else dict(used=False),
         onnx_max_difference=onnx_err,
     )
     (out / "model.json").write_text(json.dumps(facts, indent=2))

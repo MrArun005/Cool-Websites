@@ -135,5 +135,30 @@ class WalkRewardTest(unittest.TestCase):
         self.assertGreater(imit(half) - imit(crouch), 0.2)
 
 
+class GaitGeneratorTest(unittest.TestCase):
+    def test_do_nothing_brain_already_trots_in_rhythm(self):
+        env = BoltEnv(randomize=False, max_steps=10_000, skills=["walk"], gait_generator=True)
+        env.forced_command = "walk"
+        env.reset(seed=3)
+        hips, x0 = [], None
+        for t in range(300):
+            _, _, fell, _, info = env.step(np.zeros(12))
+            self.assertFalse(fell)
+            if t == 100:
+                x0 = env.posture()
+            if t >= 100:
+                hips.append(env.data.qpos[7:][[1, 4, 7, 10]])
+        h = np.array(hips)
+        self.assertGreater(np.corrcoef(h[:, 0], h[:, 3])[0, 1], 0.8)   # diagonal pair together
+        self.assertLess(np.corrcoef(h[:, 0], h[:, 1])[0, 1], -0.5)     # left and right alternate
+
+    def test_generator_only_affects_walking(self):
+        env = BoltEnv(randomize=False, gait_generator=True)
+        env.forced_command = "sit"
+        env.reset(seed=0)
+        np.testing.assert_allclose(env.base_pose(), STAND_POSE)
+        np.testing.assert_allclose(env.action_scale(), ACTION_SCALE)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -55,7 +55,11 @@ class BoltEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
 
     def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
-                 skills=None):
+                 skills=None, gait_generator=False):
+        # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
+        # brain only adds corrections on top (residual control, as in "policies modulating trajectory
+        # generators"). The legs are coordinated from the first step instead of having to discover it.
+        self.gait_generator = gait_generator
         # skills: which commands this brain practises, e.g. ["walk"] for a walk-only brain. The
         # observation layout always keeps all commands, so every brain can be swapped in instantly.
         self.skills = [COMMANDS.index(c) for c in (skills or COMMANDS)]
@@ -92,6 +96,21 @@ class BoltEnv(gym.Env):
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (52,), np.float32)
 
     # ---------- helpers ----------
+    RESIDUAL_SCALE = 0.35  # with the gait generator on, the brain's corrections are this fraction of normal
+
+    def walking_on_generator(self):
+        return self.gait_generator and COMMANDS[self.command] == "walk"
+
+    def gait_phase(self):
+        return 2 * np.pi * 2.0 * self.t * self.dt / self.ts  # 2 Hz gait clock in full-size time
+
+    def base_pose(self):
+        """What the motors do when the brain outputs zero."""
+        return trot(self.gait_phase())[0] if self.walking_on_generator() else STAND_POSE
+
+    def action_scale(self):
+        return ACTION_SCALE * (self.RESIDUAL_SCALE if self.walking_on_generator() else 1.0)
+
     walk_ramp_steps = 2_000_000  # total env steps over which the walk target rises 0.2 -> 0.5 m/s
 
     def walk_speed(self):
@@ -164,7 +183,7 @@ class BoltEnv(gym.Env):
 
     def step(self, action):
         action = np.clip(np.asarray(action, dtype=float), -1, 1)
-        self.data.ctrl[:] = np.clip(STAND_POSE + ACTION_SCALE * action, self.lo, self.hi)
+        self.data.ctrl[:] = np.clip(self.base_pose() + self.action_scale() * action, self.lo, self.hi)
         mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
         self.t += 1
         self.total_steps += 8  # 8 parallel envs share the curriculum clock (train.py default)

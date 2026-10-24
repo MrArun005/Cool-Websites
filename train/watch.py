@@ -57,7 +57,7 @@ def read_curve(log_path):
     return points
 
 
-def film(policy, path, steps_label, noise=False, script=SCRIPT):
+def film(policy, path, steps_label, noise=False, script=SCRIPT, gait_generator=False):
     import imageio.v2 as imageio
     from PIL import Image, ImageDraw, ImageFont
 
@@ -66,7 +66,7 @@ def film(policy, path, steps_label, noise=False, script=SCRIPT):
         small = ImageFont.truetype("DejaVuSans.ttf", 18)
     except OSError:
         big = small = ImageFont.load_default()
-    env = BoltEnv(randomize=False, max_steps=100_000)
+    env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator)
     env.forced_command = "stand"
     obs, _ = env.reset(seed=7)
     falls, fallen_for = 0, 0
@@ -112,6 +112,7 @@ def main():
     ap.add_argument("--label", default="", help="name of this run, shown on the progress page")
     ap.add_argument("--noise", action="store_true", help="film with exploration noise, as while practising")
     ap.add_argument("--skills", nargs="+", help="the commands this brain was trained for (exam and score only these)")
+    ap.add_argument("--gait-generator", action="store_true", help="the brain was trained on top of the reference trot")
     ap.add_argument("--patience", type=int, default=4,
                     help="stop training after this many checkpoints in a row without a new best (0 = never)")
     args = ap.parse_args()
@@ -158,8 +159,8 @@ def main():
         label = "untrained" if steps == 0 else f"after {steps:,} practice steps"
         clip = f"clips/{steps:010d}.mp4"
         script = [(c, 250) for c in args.skills] if args.skills else SCRIPT
-        falls = film(policy, out / clip, label, noise=args.noise, script=script)
-        exam = evaluate(policy, args.episodes, seed=1000, skills=args.skills)
+        falls = film(policy, out / clip, label, noise=args.noise, script=script, gait_generator=args.gait_generator)
+        exam = evaluate(policy, args.episodes, seed=1000, skills=args.skills, gait_generator=args.gait_generator)
         data["checkpoints"].append(dict(steps=steps, exam={k: round(v, 2) for k, v in exam.items()},
                                         clip=clip, falls_in_clip=falls))
         data["checkpoints"].sort(key=lambda c: c["steps"])
