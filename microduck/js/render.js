@@ -232,7 +232,9 @@
       const bg = cssColor('--scene-bg', '#e9ece6');
       this.scene.background = bg;
       this.scene.fog = new THREE.Fog(bg, 1.6, 6);
-      this.floorMat.color = cssColor('--scene-floor', '#f4f5f1');
+      // The sun and sky light the floor above its own colour; tone it down so it
+      // ends up close to the token, and the grid stays visible.
+      this.floorMat.color = cssColor('--scene-floor', '#f4f5f1').multiplyScalar(0.72);
       const grid = cssColor('--scene-grid', '#9aa49c');
       this.grid.material.color = grid; this.grid2.material.color = grid;
       const z = cssColor('--muted', '#5d6a61');
