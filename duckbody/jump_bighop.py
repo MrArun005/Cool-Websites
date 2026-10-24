@@ -12,7 +12,7 @@ Episode: 2.5 s from standing (training, JumpEnv's practice starts: 20% crouched,
 landings). It ends 0.3 s after the hop lands; the runtime hands over to the stand brain there.
   the hop        the first flight whose soles clear ≥ 3 mm (smaller prep bounces are free)
   before it      0.05 ready + 0.3 × clip(upward CoM speed / 0.4 m/s)   (dip-and-push shaping)
-                 in the air: 0.5 × clip(clearance / 12 mm) per step
+                 in the air: 0.5 × clip(clearance / 12 mm) per step (both shapings only in the first 1 s)
   at landing     BONUS × clip((max clearance − 4 mm) / 8 mm): nothing under 4 mm, ¼ at 6 mm, full at 12 mm
   after landing  0.1 + 0.3 × standing still (CoM speed), −1 per step with both feet off the floor
   always         upright × no_spin gates the positive terms; JumpEnv's landing shock penalty
@@ -33,6 +33,7 @@ BONUS = 30.0
 CLEAR_ZERO, CLEAR_FULL = 0.004, 0.012
 AFTER_S = 0.3             # s the episode goes on after the hop lands (landing shock, settle)
 PUSH_V, PUSH_W = 0.4, 0.3
+SHAPE_S = 1.0             # s: push / prep-flight shaping only this long (no farming it with small bounces)
 
 
 class BigHopEnv(JumpEnv):
@@ -80,7 +81,8 @@ class BigHopEnv(JumpEnv):
                 self.stage = 1                                  # this flight is the hop
             if self.stage <= 1:
                 self.best_hop = max(self.best_hop, rise)
-                r += gate * 0.5 * float(np.clip(clear / CLEAR_FULL, 0, 1))
+                if self.stage == 1 or self.t * self.dt < SHAPE_S:
+                    r += gate * 0.5 * float(np.clip(clear / CLEAR_FULL, 0, 1))
             else:
                 self.extra_air += 1
                 r -= 1.0                                        # no more hops after the landing
@@ -93,7 +95,8 @@ class BigHopEnv(JumpEnv):
                 self.max_steps = min(self.max_steps, self.t + int(AFTER_S / self.dt))
             self.air_now, self.flight_clear = 0, 0.0
             if self.stage == 0:
-                r += gate * (0.05 + PUSH_W * float(np.clip(vz / PUSH_V, 0, 1)))
+                push = PUSH_W * float(np.clip(vz / PUSH_V, 0, 1)) if self.t * self.dt < SHAPE_S else 0.0
+                r += gate * (0.05 + push)
             elif self.stage == 2:
                 still = float(np.exp(-float(v_com @ v_com) / 0.05 ** 2)) if feet.sum() == 2 else 0.0
                 r += gate * (0.1 + 0.3 * still)
@@ -136,7 +139,15 @@ def check():
     """Sign check (scripted through BigHopEnv.step, nominal body, back-EMF): one hop must beat standing,
     a hop that keeps bouncing must score below the same hop that stops, the bigger hop more."""
     from jump_check import CROUCH, PUSH, REACH, SOFT, HOME, leg_action, pose
+    for be in (True, False):
+        print(f"--- {'with' if be else 'without'} back-EMF (without: the scripted hops clear more)")
+        check_one(be)
+
+
+def check_one(back_emf):
+    from jump_check import CROUCH, PUSH, REACH, SOFT, HOME, leg_action, pose
     env = BigHopEnv(task="jump", randomize=False, model_path=str(HERE / "model" / "duck_mid.xml"), practice=False)
+    env.back_emf = back_emf
 
     def run(plan):
         env.reset(seed=0)
