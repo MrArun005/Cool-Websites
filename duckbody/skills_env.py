@@ -204,7 +204,9 @@ class SkillEnv(DuckEnv):
         # Sitting back rocks the body far backwards on the way down (measured: up dips to ~0.3), so a
         # sit episode only ends when the duck is actually on its back.
         terminated = bool((info["up"] < 0.3 and self.task in ("stand", "walk", "run", "squat", "jump"))
-                          or (info["up"] < 0.0 and self.task == "sit"))
+                          or (info["up"] < 0.0 and self.task == "sit")
+                          # rising from the seat: tipping past ~65° is a fall (the first try flipped over)
+                          or (info["up"] < 0.4 and self.task == "sit_to_stand" and self.sit_q is not None))
         if terminated:
             reward = 0.0
         truncated = self.t >= self.max_steps
@@ -230,7 +232,7 @@ class SkillEnv(DuckEnv):
         p = self.posture()
         L, s, sh = self.L, self.t * self.dt, 0.03 * self.L
         h_ref = min(self.crouch_height, self.start_height + 0.05 * L * s)
-        r_h = np.exp(-((p["height"] - h_ref) / (2 * sh)) ** 2) if p["height"] < h_ref else 1.0
+        r_h = np.exp(-((p["height"] - h_ref) / (2 * sh)) ** 2)     # above the squat is as wrong as below
         up_ref = min(1.0, self.start_up + 0.3 * s)
         r_up = np.exp(-((p["up"] - up_ref) / 0.12) ** 2) if p["up"] < up_ref else 1.0
         legs = self.qadr[self.legs]
