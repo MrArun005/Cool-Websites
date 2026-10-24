@@ -180,20 +180,24 @@ td.ok { color: var(--paw); }
       <p class="label" style="margin-top:8px">Averages skip the first second after each command (the change-over). Small grey numbers are the measured targets.</p>
     </div>
     <div class="note">
-      <h2>What the clips show</h2>
-      <ul>
-        <li><strong>Stand, sit, lie are solid.</strong> The posture brain hits every measured target within about 1 cm, and sits at 29° nose-up against a target of 31°.</li>
-        <li><strong>The 500k walk brain (the saved one) drags a knee.</strong> A knee, shin or thigh is on the floor about 15% of the time, mostly the rear right. It does take over smoothly from standing.</li>
-        <li><strong>The 2M walk brain keeps its knees off the floor</strong> and is faster at 0.52 m/s. But it falls in 9 of 10 tries when it takes over from the standing brain. See "Stand → walk". It only learned to start from its own starting position.</li>
-        <li><strong>Every walk is a deep crouch.</strong> Knees sit only 6–12 cm off the floor on 40 cm legs. The walk is built on the standing pose, and that pose is a Z-shaped crouch. This is why it looks like crawling.</li>
+      <h2>New walk vs old walk</h2>
+      <div class="tbl"><table>
+        <thead><tr><th></th><th>old (run 6)</th><th>new (run 7, 500k)</th></tr></thead>
+        <tbody>
+          <tr><td>body height</td><td>29–30 cm</td><td class="ok">41 cm</td></tr>
+          <tr><td>lowest knee (median)</td><td>6–12 cm</td><td class="ok">19 cm</td></tr>
+          <tr><td>knee/shin on floor</td><td class="bad">15% (500k)</td><td class="ok">0%</td></tr>
+          <tr><td>falls taking over from stand</td><td class="bad">9 of 10 (2M)</td><td class="ok">0 of 10</td></tr>
+          <tr><td>speed</td><td>0.40–0.52 m/s</td><td>0.48 m/s</td></tr>
+        </tbody>
+      </table></div>
+      <ul style="margin-top:12px">
+        <li><strong>Stand, sit, lie are solid.</strong> The posture brain hits every measured target within about 1 cm and sits at 29° nose-up against a 31° target.</li>
+        <li><strong>The new walk stands tall</strong> on a dog-like stance, front legs straighter than rear, and keeps every knee off the floor.</li>
+        <li><strong>The hand-over works now.</strong> In the full routine the standing brain passes control to the walk brain mid-stride without a stumble.</li>
+        <li><strong>One thing to watch:</strong> it walks about 7° nose-up. That's small, and training is still running, so later checkpoints may level out.</li>
       </ul>
-      <h2>Fixes queued for the next walk training</h2>
-      <ol>
-        <li>A taller, more dog-like walking stance.</li>
-        <li>A penalty whenever a knee, shin or thigh touches the floor.</li>
-        <li>Practice starting from the standing brain's pose, so the hand-over works.</li>
-        <li>An exam that fails any of the above, so "best" can't be a knee-dragger again.</li>
-      </ol>
+      <p class="label">Run 7 keeps training in the background; new checkpoints can be added here.</p>
     </div>
   </section>
 </div>
@@ -203,15 +207,18 @@ td.ok { color: var(--paw); }
 <script>
 (() => {
   const CLIPS = [
-    { id: "routine", file: "data/routine.json", name: "Full routine", note: "stand · sit · lie · walk" },
+    { id: "routine7", file: "data/routine7.json", name: "Full routine", note: "stand · sit · lie · walk" },
     { id: "stand", file: "data/stand.json", name: "Stand", note: "posture brain" },
     { id: "sit", file: "data/sit.json", name: "Sit", note: "posture brain" },
     { id: "lie", file: "data/lie.json", name: "Lie down", note: "posture brain" },
-    { id: "walk", file: "data/walk.json", name: "Walk", note: "2M brain" },
-    { id: "walk500k", file: "data/walk-500k.json", name: "Walk", note: "500k brain (saved)" },
-    { id: "handover", file: "data/handover.json", name: "Stand → walk", note: "2M brain takes over" },
+    { id: "walk7", file: "data/walk7.json", name: "Walk · new", note: "run 7, tall stance" },
+    { id: "handover7", file: "data/handover7.json", name: "Stand → walk · new", note: "run 7 takes over" },
+    { id: "walk", file: "data/walk.json", name: "Old walk", note: "run 6, 2M, crouch" },
+    { id: "walk500k", file: "data/walk-500k.json", name: "Old walk", note: "run 6, 500k, drags knee" },
+    { id: "handover", file: "data/handover.json", name: "Old stand → walk", note: "run 6, 2M, falls" },
   ];
-  const BRAIN_NAMES = { posture: "posture brain (stand, sit, lie)", walk2M: "walk brain, 2M steps", walk500k: "walk brain, 500k steps (saved)" };
+  const BRAIN_NAMES = { posture: "posture brain (stand, sit, lie)", walk7: "new walk brain, run 7 (tall stance)",
+                        walk2M: "old walk brain, run 6 at 2M (crouch)", walk500k: "old walk brain, run 6 at 500k (crouch)" };
   const SPEEDS = [0.1, 0.25, 0.5, 1];
   const CAMS = ["Side", "Front", "Three-quarter", "Below"];
   const LEGS = ["FL", "FR", "RL", "RR"];
@@ -226,8 +233,8 @@ td.ok { color: var(--paw); }
   const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
 
   let rec = null, frame = 0, clock = 0, playing = true, speed = 0.5, cam = "Three-quarter";
-  let clipId = store.get("bolt-clip") || "routine";
-  if (!CLIPS.some((c) => c.id === clipId)) clipId = "routine";
+  let clipId = store.get("bolt-clip") || "routine7";
+  if (!CLIPS.some((c) => c.id === clipId)) clipId = "routine7";
   const cache = {};
 
   // ---------- renderer and lighting (MuJoCo is z-up; keep it that way) ----------
