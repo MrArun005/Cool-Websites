@@ -1,6 +1,6 @@
 """Follow a person: a steering layer on top of Bolt's trained brains, tested in the simulator.
 
-    python follow.py --posture ../models/bolt-dog-posture-dog-2.5M --walk ../models/bolt-dog-walk-run \
+    python follow.py --posture ../models/bolt-dog-posture-dog-2.5M --walk ../models/bolt-dog-walk-run-8.5M \
                      -o follow.json
 
 On the robot, the camera says where the person is. Here a simulated person walks a route

@@ -101,7 +101,7 @@
 
   <section class="panel" aria-labelledby="where">
     <h2 id="where">Where we are</h2>
-    <p>Bolt has two trained brains that work together: one for standing, sitting and lying, one for walking and turning. Both stand and walk tall like a real dog, with lower legs close to upright and no knees on the floor. Saved in <span class="mono">models/</span>.</p>
+    <p>Bolt has two trained brains that work together: one for standing, sitting and lying, one for walking, turning and running at any asked speed. Both stand and walk tall like a real dog, with lower legs close to upright and no knees on the floor. Saved in <span class="mono">models/</span>.</p>
     <div class="two">
       <div class="brain">
         <h3>Stand, sit, lie</h3>
@@ -110,19 +110,18 @@
         <p class="muted" style="font-size:.9rem">Stands 43 cm tall on four paws. Sits 30° nose-up on all four paws, both sides alike (the old brain sat lopsided with a paw in the air).</p>
       </div>
       <div class="brain">
-        <h3>Walk and turn</h3>
-        <span class="muted mono" style="font-size:.82rem">run 10b · 7M steps · models/bolt-dog-walk-turn-7M</span>
-        <div class="cells"><span class="c2">Walk 100%</span><span class="c2">Turn left 100%</span><span class="c2">Turn right 100%</span><span class="c2">Stand → walk 40/40</span></div>
-        <p class="muted" style="font-size:.9rem">Walks 0.34 m/s, level, 44 cm tall, lower legs about 24° from upright, and turns left or right on command (up to ~27°/s). Takes over from the real standing brain cleanly, straight or straight into a turn.</p>
+        <h3>Walk, turn and run</h3>
+        <span class="muted mono" style="font-size:.82rem">run 11b · 8.5M steps · models/bolt-dog-walk-run-8.5M</span>
+        <div class="cells"><span class="c2">Walk 100%</span><span class="c2">Turn left 100%</span><span class="c2">Turn right 100%</span><span class="c2">Run 1.0 m/s 100%</span><span class="c2">Slow 0.2 m/s 100%</span></div>
+        <p class="muted" style="font-size:.9rem">Goes the speed it is asked: 0.2, 0.4 and 0.7 m/s exactly, with no falls and no knees on the floor; about 0.76 m/s when asked for 1.0 on bumpy, randomised physics. Turns on command and takes over from the standing brain. Following a person, it ran at up to 1.19 m/s and never fell behind more than 1.9 m (the old walk brain fell 6 m behind).</p>
       </div>
     </div>
     <div style="display:grid;gap:6px">
       <span class="label">Next</span>
       <ol>
-        <li><strong>Now training (run 11b): running.</strong> The walk gets a speed command from a slow walk (0.2 m/s) to a run (1.2 m/s), so Bolt can keep up with a person who runs. Run 11 kept walking at 0.4 m/s whatever it was asked, so now the brain feels its speed compared to the asked speed. Practice speeds go up step by step to a full run. At 8M steps it holds 0.2, 0.4 and 0.7 m/s when asked, with no falls and no knees on the floor. At 1.0 m/s it now reaches 0.73 m/s but still falls in 4 of 6 tries on bumpy, randomised physics. At 7.5M it fell straight away. It is only now practising 1.0–1.2 m/s.</li>
-        <li><strong>Then: follow a person.</strong> A steering layer points Bolt at the person, walks faster when they pull away and stands when they stop. You'll see a replay with the person here.</li>
-        <li>Follow a person: a steering layer turns toward them and sets the speed from their distance, using the walk-and-run brain. Then a simulator test with a person who walks, turns and runs.</li>
-        <li>Try both brains on the hand-size Bolt.</li>
+        <li><strong>Done: follow a person.</strong> A steering layer turns Bolt toward the person, speeds up when they pull away and stands when they stop. In the simulator it followed someone who walks, turns, jogs at 1.1 m/s and stops: no falls, on average 1.4 m behind, never more than 1.9 m. Watch "Follow a person" below.</li>
+        <li><strong>Still training (run 11b): faster running.</strong> The walk gets a speed command from a slow walk (0.2 m/s) to a run (1.2 m/s), so Bolt can keep up with a person who runs. Run 11 kept walking at 0.4 m/s whatever it was asked, so now the brain feels its speed compared to the asked speed. Practice speeds go up step by step to a full run. The 8.5M brain is saved and passes every test. Training continues to 10M to try to make 1.0–1.2 m/s solid on bumpy ground. Asked for 1.2 m/s, it still falls in 2 of 6 tries. A later checkpoint replaces the saved one only if it does better.</li>
+                <li>Try both brains on the hand-size Bolt.</li>
         <li>Connect the brains to voice commands ("sit", "come here").</li>
       </ol>
     </div>
@@ -198,6 +197,7 @@
 <script>
 (() => {
   const CLIPS = [
+    { id: "follow", file: "data/follow.json", name: "Follow a person (runs)" },
     { id: "routine", file: "data/routine_new.json", name: "Full routine" },
     { id: "posture", file: "data/posture9c.json", name: "Stand, sit, lie" },
     { id: "walk", file: "data/walk8b.json", name: "Walk straight" },
@@ -366,8 +366,9 @@
   { const skin = new THREE.MeshStandardMaterial({ color: lin("#e3620b"), roughness: 0.6 }), dark = new THREE.MeshStandardMaterial({ color: lin("#2a2f35"), roughness: 0.7 });
     const body = mesh(new THREE.CylinderGeometry(0.17, 0.14, 0.62, 24), skin, [0, 0, 1.15], [Math.PI / 2, 0, 0]);
     const head = mesh(new THREE.SphereGeometry(0.11, 24, 16), skin, [0, 0, 1.6]);
-    const legL = mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.84, 12), dark, [0, 0.08, 0.42], [Math.PI / 2, 0, 0]);
-    const legR = mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.84, 12), dark, [0, -0.08, 0.42], [Math.PI / 2, 0, 0]);
+    const hip = (side) => { const g = new THREE.Group(); g.position.set(0, side, 0.84);
+      g.add(mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.84, 12), dark, [0, 0, -0.42], [Math.PI / 2, 0, 0])); return g; };
+    const legL = hip(0.08), legR = hip(-0.08);
     person.add(body, head, legL, legR); person.userData.legs = [legL, legR]; }
   person.visible = false; scene.add(person);
   const ringGeo = new THREE.RingGeometry(0.03, 0.042, 40);
@@ -403,6 +404,11 @@
     if (!rec) return;
     const f = rec.frames[frame], t = rec.torso * 7, x = f.p[t], y = f.p[t + 1], yaw = (f.yaw || 0) * Math.PI / 180;
     const fwd = new THREE.Vector3(Math.cos(yaw), Math.sin(yaw), 0), left = new THREE.Vector3(-Math.sin(yaw), Math.cos(yaw), 0);
+    if (f.person) {  // follow clips: a side view that holds Bolt and the person ahead of it
+      const target = new THREE.Vector3(x, y, 0.7).addScaledVector(fwd, 0.8);
+      camera.position.copy(target).addScaledVector(fwd, -0.4).addScaledVector(left, -3.8).add(new THREE.Vector3(0, 0, 0.9));
+      controls.target.copy(target); controls.update(); lastTorso = { x, y }; return;
+    }
     const target = new THREE.Vector3(x, y, 0.2);
     camera.position.copy(target).addScaledVector(fwd, 0.7).addScaledVector(left, -1.25).add(new THREE.Vector3(0, 0, 0.35));
     controls.target.copy(target); controls.update(); lastTorso = { x, y };
@@ -433,8 +439,8 @@
     person.visible = !!f.person;
     if (f.person) {
       person.position.set(f.person[0], f.person[1], 0); person.rotation.set(0, 0, f.person[2]);
-      const swing = f.person[3] > 0.05 ? 0.5 * Math.sin(fi / rec.fps * (f.person[3] > 0.8 ? 14 : 9)) : 0;
-      person.userData.legs[0].rotation.set(Math.PI / 2 + swing, 0, 0); person.userData.legs[1].rotation.set(Math.PI / 2 - swing, 0, 0);
+      const swing = f.person[3] > 0.05 ? (f.person[3] > 0.8 ? 0.5 : 0.3) * Math.sin(fi / rec.fps * (f.person[3] > 0.8 ? 14 : 9)) : 0;
+      person.userData.legs[0].rotation.set(0, swing, 0); person.userData.legs[1].rotation.set(0, -swing, 0);
     }
     const paws = LEGS.filter((L) => f.floorSet.has(rec.paw[L])).length;
     const knee = LEGS.some((L) => rec.legParts[L].some((j) => f.scrapeSet.has(j))) && !resting;
