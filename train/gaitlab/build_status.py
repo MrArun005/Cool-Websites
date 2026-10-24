@@ -20,7 +20,10 @@ for job_file in sorted((TRAIN / "jobs").glob("*.json")):
     num = lambda k: (lambda m: float(m[-1]) if m else None)(re.findall(rf"\|\s+{k}\s+\|\s+([-\d.e+]+)", text))
     data = TRAIN / "runs" / name / "watch" / "data.json"
     cks = json.loads(data.read_text())["checkpoints"] if data.exists() else []
-    runs.append(dict(title=TITLES.get(name, name), steps=int(num("total_timesteps") or 0),
+    saved = [int(m) for f in (TRAIN / "runs" / name / "checkpoints").glob("policy_*_steps.zip")
+             for m in re.findall(r"policy_(\d+)_steps", f.name)]
+    # the training log has no progress table when resuming, so fall back to the newest saved checkpoint
+    runs.append(dict(title=TITLES.get(name, name), steps=int(num("total_timesteps") or max(saved, default=0)),
                      target=int(cmd[cmd.index("--steps") + 1]), fps=num("fps"),
                      restarts=sum(j["restarts"] for j in st["jobs"]),
                      exam=cks[-1]["exam"] if cks else None, exam_steps=cks[-1]["steps"] if cks else None))
