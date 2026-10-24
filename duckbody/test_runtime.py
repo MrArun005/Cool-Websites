@@ -106,10 +106,10 @@ class TestRuntime(unittest.TestCase):
         np.testing.assert_allclose(o[56:58], [0, 1], atol=1e-6)   # gait clock starts at 0
         rt.command("walk", vx=5.0)                            # clipped to the trained range
         self.assertLessEqual(rt.vel_cmd[0], 0.25 * rt.L + 1e-9)
-        msg = rt.command("lie")                               # no brain: stand, and say so
+        msg = rt.command("roll")                              # no brain: stand, and say so
         self.assertEqual(rt.skill, "stand")
-        self.assertIn("no lie brain", msg)
-        self.assertIn("lie", rt.fallbacks)
+        self.assertIn("no roll brain", msg)
+        self.assertIn("roll", rt.fallbacks)
         np.testing.assert_allclose(rt.observe()[53:58], 0)    # standing: no velocity, no clock
         rt.command("idle")
         self.assertEqual(rt.skill, "stand")
@@ -312,3 +312,22 @@ class TestGetUpFaceDown(unittest.TestCase):
         self.assertEqual(rt.skill, "stand")
         self.assertGreater(p["up"], 0.9)
         self.assertGreater(p["height"], 0.9 * facedown_rise.STAND_H)
+
+
+class TestLieAndGetUp(unittest.TestCase):
+    """"lie" ends lying face down; "get up" stands again."""
+
+    def test_lie_then_get_up(self):
+        brains, cfg = rtm.load_brains()
+        be = rtm.SimBackend(cfg["servo_names"])
+        rt = rtm.DuckRuntime(backend=be, brains=brains, config=cfg, log=None)
+        rt.run(1.0)
+        rt.command("lie")
+        rt.run(9.0)
+        self.assertTrue(rt.lying_face_down())
+        rt.command("get up")
+        rt.run(9.0)
+        p = be.posture()
+        self.assertEqual(rt.skill, "stand")
+        self.assertGreater(p["up"], 0.9)
+        self.assertGreater(p["height"], 0.9 * cfg["stand_height"])

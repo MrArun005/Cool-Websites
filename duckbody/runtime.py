@@ -56,7 +56,9 @@ PLANS = {
     "swag": [("squat", 2.0), ("swag_sit", 3.0), ("pose:swag", None)],
     "swag sit": [("squat", 2.0), ("swag_sit", None)],      # the trained brain that sits down into swag
     "wake": [("sit_to_stand", 3.0), ("stand", None)],
-    "lie": [("lie", None)],
+    # lie down on the belly (lie_down.py: 20/20 lying, 20/20 got up again, landing 0.2 g): sit into the perch,
+    # fold forward into the face-down tuck (MoveBrain), stay there; "get up" brings it back
+    "lie": [("squat", 2.0), ("pose:perch", 3.0), ("pose:lower", 2.3), ("pose:fd_tuck", None)],
     # get up from lying face down (owner's plan; facedown_rise.py: 20/20 on randomized bodies): tuck the legs
     # under, lift the body into the perch (MoveBrain), then the perch rise and the stand brain
     "get up": [("pose:fd_tuck", 1.0), ("pose:fd_lift", 3.5), ("pose:perch_rise", 2.3), ("stand", None)],
@@ -134,6 +136,7 @@ class MoveBrain(PoseBrain):
 
 FD_TUCK = (0.0, 2.18, -0.8)            # face-down get-up: left hip pitch, knee, ankle (right hip mirrored)
 FD_LIFT = (0.3, 0.5, 2.0, -1)          # MoveBrain into the perch: lean, t1, t2, sign (facedown_rise.py)
+LIE_LOWER = (0.0, 0.8, 1.0, -1)        # MoveBrain from the perch down onto the belly: lean, t1, t2, sign (lie_down.py)
 
 
 OBS_COMMAND = {"swag_sit": "sit", "stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "squat": "sit", "sit_to_stand": "stand",
@@ -332,6 +335,8 @@ class DuckRuntime:
                             tuck[self.names.index(f"{side}_{j}")] = val
                     self.brains["pose:fd_tuck"] = PoseBrain(tuck, self, glide=0.5)
                     self.brains["pose:fd_lift"] = MoveBrain(v["ctrl"], self, *FD_LIFT)
+                    self.brains["pose:lower"] = MoveBrain(tuck, self, *LIE_LOWER)
+                    self.quiet.add("pose:lower")
                     self.quiet.update(("pose:fd_tuck", "pose:fd_lift"))
                 if k == "perch" and "sit" in v and "rise" in v:   # sit-down into the perch and the stand-up from it
                     self.brains["pose:perch"] = MoveBrain(v["ctrl"], self, **v["sit"])
