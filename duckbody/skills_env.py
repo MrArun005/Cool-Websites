@@ -273,10 +273,11 @@ class SkillEnv(DuckEnv):
             up_ref = 1.0 - (1.0 - self.sit_up) * frac
             r_up = np.exp(-((p["up"] - up_ref) / 0.15) ** 2)
             legs = self.qadr[self.legs]
-            r_pose = np.exp(-np.sum((self.data.qpos[legs] - self.sit_cmd[legs]) ** 2) / 0.5)
+            # Both legs folded like the measured sit (the brain found 'swag': one leg out, pose error ~5).
+            r_pose = np.exp(-np.sum((self.data.qpos[legs] - self.sit_cmd[legs]) ** 2) / 1.0)
             gentle = np.exp(-(max(0.0, -self.data.qvel[2]) / (0.3 * L)) ** 2)
             seated = 1.0 if h_ref > self.sit_height + 0.005 else (1.0 if self._seated() else 0.4)
-            reward = r_up * r_h * still * gentle * (0.5 + 0.5 * r_pose) * seated
+            reward = r_up * r_h * still * gentle * (0.2 + 0.8 * r_pose) * seated
         elif cmd == "lie":
             h_ref = max(self.lie_height, self.start_height - 0.08 * L * s)
             r_h = np.exp(-((p["height"] - h_ref) / sh) ** 2)
@@ -329,7 +330,9 @@ class SkillEnv(DuckEnv):
         if cmd == "sit" and (self.task == "squat" or self.sit_q is None):
             return bool(info["up"] > 0.985 and abs(info["height"] - self.crouch_height) < 0.02 * L)
         if cmd == "sit":
-            return bool(self._seated() and abs(info["up"] - self.sit_up) < 0.1 and abs(info["vx"]) < 0.05 * L)
+            legs = self.qadr[self.legs]
+            folded = np.sum((self.data.qpos[legs] - self.sit_cmd[legs]) ** 2) < 0.6   # both legs, not swag
+            return bool(self._seated() and folded and abs(info["up"] - self.sit_up) < 0.1 and abs(info["vx"]) < 0.05 * L)
         if cmd == "lie":
             return bool(info["up"] > 0.6 and self._trunk_on_floor() and abs(info["vx"]) < 0.05 * L)
         if cmd == "jump":
