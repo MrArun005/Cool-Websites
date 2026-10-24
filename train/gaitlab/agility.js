@@ -1,0 +1,195 @@
+// Bolt's Agility Cup: a dog-agility course for Bolt's trained brains, on the live simulator (live.js).
+//
+// Like a real agility competition: a numbered course is set out, each dog runs it in turn, and the
+// judge counts faults (5 for a missed weave pole, 5 for a refusal or a wrong tunnel entry, 5 for a
+// knocked bar) plus time faults (1 per second over the standard course time). A fall eliminates the
+// dog. The best round is the fewest faults, then the fastest time. Each competitor is a different
+// trained walk brain, steered round the course by the same handler (the course runner below).
+// agility_test.mjs runs many rounds headless.
+
+import { Driver, posture, rng } from "./game.js";
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+export const OBSTACLES = {
+  weave: { title: "Weave poles", how: "Weave through all 8 poles, first pole on the left shoulder" },
+  tunnel: { title: "Tunnel", how: "Run through the tunnel, in at the near end" },
+  table: { title: "Pause table", how: "Lie down on the table while the judge counts 5" },
+  jump: { title: "Hurdle", how: "Jump the bar without knocking it" },
+};
+// m: Bolt's body is rigid, so the poles are wider apart than a real 60 cm weave. Bolt follows a smooth
+// wave through them (side: how far it swings out at each pole), at most ~1.4 rad/s of turning.
+export const WEAVE = { poles: 8, spacing: 1.2, side: 0.4, lookahead: 0.5 };   // 0 missed poles in 10 at 0.8 m/s
+export let WEAVE_SPEED = 0.8;   // m/s through the weaves
+export function setWeaveSpeed(v) { WEAVE_SPEED = v; }
+
+// The course: obstacles along a winding path from the start line (course coordinates: x ahead of
+// Bolt at the start, y to its left). Each obstacle has an entry point, a heading and a length.
+export function buildAgility(seed, { jumps = false } = {}) {
+  const r = rng(seed);
+  const kinds = ["weave", "tunnel", "table", "tunnel"].concat(jumps ? ["jump", "jump", "jump"] : []);
+  for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
+  if (kinds[0] === "table") kinds.push(kinds.shift());              // a course never opens with the table
+  let x = 0.5, y = 0, h = 0;
+  const obstacles = kinds.map((kind, n) => {
+    h += n === 0 ? (r() * 2 - 1) * 0.3 : (r() * 2 - 1) * 0.9;        // up to ~50° between obstacles
+    const gap = kind === "weave" ? 2.6 : 2.2, L = kind === "weave" ? WEAVE.spacing * (WEAVE.poles - 1) : kind === "tunnel" ? 3.0 : 0;
+    const entry = [x + gap * Math.cos(h), y + gap * Math.sin(h)];
+    const exit = [entry[0] + L * Math.cos(h), entry[1] + L * Math.sin(h)];
+    x = exit[0]; y = exit[1];
+    return { n: n + 1, kind, entry, exit, h, L, ...OBSTACLES[kind] };
+  });
+  const last = obstacles[obstacles.length - 1];
+  const finish = [last.exit[0] + 2.5 * Math.cos(last.h), last.exit[1] + 2.5 * Math.sin(last.h)];
+  // standard course time: the path at 0.55 m/s, plus the 5 s on the table and getting on and off it
+  let length = 0, p = [0, 0];
+  for (const o of obstacles) { length += Math.hypot(o.entry[0] - p[0], o.entry[1] - p[1]) + o.L; p = o.exit; }
+  length += Math.hypot(finish[0] - p[0], finish[1] - p[1]);
+  return { seed, obstacles, finish, finishH: last.h, sct: Math.round(length / 0.55 + 9) };
+}
+
+// One competitor's round. Call step() 50 times a second.
+export class Round {
+  constructor(bolt, course, start, name) {
+    this.bolt = bolt; this.course = course; this.name = name;
+    bolt.reset(start);
+    const w = bolt.where();
+    this.origin = [w.x, w.y]; this.yaw0 = w.yaw;
+    this.driver = new Driver(bolt);
+    this.t = 0; this.clock = 0; this.index = 0; this.faults = 0; this.notes = [];
+    this.phase = "ready"; this.task = null; this.events = []; this.over = false;
+    this.cmd = { command: "stand", turn: 0, speed: 0.2 };
+  }
+  world([x, y]) { const c = Math.cos(this.yaw0), s = Math.sin(this.yaw0); return [this.origin[0] + c * x - s * y, this.origin[1] + s * x + c * y]; }
+  local() {
+    const w = this.bolt.where(), dx = w.x - this.origin[0], dy = w.y - this.origin[1], c = Math.cos(this.yaw0), s = Math.sin(this.yaw0);
+    return [c * dx + s * dy, -s * dx + c * dy];
+  }
+  // position relative to an obstacle: along its heading from the entry, and to its left
+  rel(o) { const [x, y] = this.local(), dx = x - o.entry[0], dy = y - o.entry[1]; return [Math.cos(o.h) * dx + Math.sin(o.h) * dy, -Math.sin(o.h) * dx + Math.cos(o.h) * dy]; }
+  at(o, along, side) { return [o.entry[0] + Math.cos(o.h) * along - Math.sin(o.h) * side, o.entry[1] + Math.sin(o.h) * along + Math.cos(o.h) * side]; }
+  get obstacle() { return this.course.obstacles[this.index]; }
+  say(text, kind = "info") { this.events.push({ t: this.clock, text, kind }); }
+  fault(n, why) { this.faults += n; this.notes.push(why); this.say(`${why}: ${n} faults`, "bad"); }
+  get timeFaults() { return Math.max(0, Math.ceil(this.clock - this.course.sct)); }
+  get total() { return this.faults + this.timeFaults; }
+
+  step() {
+    if (this.over) return;
+    const dt = this.bolt.dt;
+    this.t += dt;
+    if (this.phase === "ready") {
+      this.cmd = { command: "stand", turn: 0, speed: 0.2 };
+      if (this.t >= 2) { this.phase = "run"; this.say(`${this.name}: go!`, "station"); this.begin(); }
+    } else {
+      this.clock += dt;
+      this.play(dt);
+    }
+    const c = this.cmd, b = this.bolt;
+    b.setCommand(c.command);
+    if (c.command === "walk") { b.setTurn(c.turn); b.setSpeed(c.speed); }
+    b.tick();
+    if (b.fell()) { this.over = true; this.phase = "eliminated"; this.say(`${this.name} fell: eliminated`, "bad"); }
+  }
+  begin() {
+    const o = this.obstacle;
+    this.task = o ? { stage: "approach", wp: 0, held: 0, settle: 0, checked: 0, missed: false } : { stage: "finish" };
+    if (o) this.say(`${o.n}. ${o.title}`, "station");
+  }
+  next(note) {
+    if (note) this.say(note, "good");
+    this.index += 1; this.begin();
+  }
+  waypoints(o) {   // the line the handler sends Bolt along through this obstacle
+    if (o.kind === "weave") {
+      const s = WEAVE.spacing, w = WEAVE.side;
+      // first pole on Bolt's left shoulder: Bolt passes it on the right (negative side), then alternates
+      return [[-1.4, -w * 0.5], ...Array.from({ length: WEAVE.poles }, (_, k) => [k * s, k % 2 ? w : -w]), [(WEAVE.poles - 1) * s + 1.2, 0]];
+    }
+    if (o.kind === "tunnel") return [[-1.2, 0], [0, 0], [o.L, 0], [o.L + 1.0, 0]];
+    if (o.kind === "jump") return [[-2.0, 0], [1.5, 0]];
+    return [[0, 0]];
+  }
+
+  play(dt) {
+    const o = this.obstacle, k = this.task;
+    if (!o) {   // run for the finish line
+      const f = this.course.finish;
+      this.cmd = this.driver.toward(this.world(f), 1.0, false, dt);
+      const [x, y] = this.local(), along = Math.cos(this.course.finishH) * (x - f[0]) + Math.sin(this.course.finishH) * (y - f[1]);
+      if (along > 0) {
+        this.over = true; this.phase = "finished";
+        this.say(`${this.name}: ${this.clock.toFixed(2)} s, ${this.total} faults${this.total === 0 ? ", clear round!" : ""}`, this.total === 0 ? "good" : "info");
+      }
+      return;
+    }
+    if (o.kind === "table") return this.table(o, dt);
+    const wps = this.waypoints(o), [along, side] = this.rel(o);
+    let target = wps[k.wp];
+    const last = k.wp === wps.length - 1, weaving = o.kind === "weave" && k.wp > 0;
+    const cruise = weaving ? WEAVE_SPEED : o.kind === "tunnel" ? 0.7 : 0.8;
+    if (weaving) {   // aim a little way ahead on a smooth wave through the poles, like a handler's line
+      const a = Math.min(along + WEAVE.lookahead, (WEAVE.poles - 1) * WEAVE.spacing + 1.2);
+      const end = (WEAVE.poles - 1) * WEAVE.spacing;
+      target = [a, a > end ? 0 : -WEAVE.side * Math.cos(Math.PI * Math.max(0, a) / WEAVE.spacing)];
+    }
+    this.cmd = this.driver.toward(this.world(this.at(o, target[0], target[1])), k.wp === 0 ? 0.9 : cruise, false, dt, weaving ? 1 : 2);
+    // move on to the next waypoint once level with this one
+    if (along >= target[0] - (o.kind === "weave" ? 0.05 : 0.2) && (k.wp > 0 || Math.abs(side) < 0.6)) k.wp += 1;
+    if (o.kind === "weave") {      // judge each pole as Bolt passes it: pole k must be on the right side
+      while (k.checked < WEAVE.poles && along >= k.checked * WEAVE.spacing) {
+        const want = k.checked % 2 ? 1 : -1;
+        if (Math.sign(side) !== want || Math.abs(side) < 0.05) k.missed = true;
+        k.checked += 1;
+      }
+    }
+    if (o.kind === "tunnel" && k.wp === 2 && !k.entered) {   // just went in: through the near end?
+      k.entered = true;
+      if (Math.abs(side) > 0.4) this.fault(5, "Missed the tunnel entry");
+    }
+    if (o.kind === "jump" && this.bolt.hurdleHits && this.bolt.hurdleHits() > 0 && !k.knocked) { k.knocked = true; this.fault(5, "Knocked the bar"); }
+    if (k.wp >= wps.length || (last && along > target[0])) {
+      if (o.kind === "weave" && k.missed) this.fault(5, "Missed a weave pole");
+      this.next(o.kind === "weave" && !k.missed ? "Weaves: clean" : o.kind === "tunnel" ? "Tunnel: through" : o.kind === "jump" && !k.knocked ? "Clear jump" : "");
+    }
+  }
+  table(o, dt) {   // run up, stop, lie down for the judge's count of 5, get up, go on
+    const k = this.task;
+    if (k.stage === "approach") {
+      this.cmd = this.driver.toward(this.world(o.entry), 0.9, true, dt);
+      if (this.cmd.dist < 0.25 || (this.cmd.dist < 0.45 && this.driver.speed <= 0.25)) { k.stage = "brake"; k.settle = 0; }
+      return;
+    }
+    if (k.stage === "brake") {    // a slow trot for 0.5 s before stopping (stopping dead tips Bolt over)
+      this.cmd = { ...this.driver.toward(this.world(o.entry), 0.2, true, dt), speed: 0.2 };
+      if ((k.settle += dt) > 0.5) { k.stage = "settle"; k.settle = 0; }
+      return;
+    }
+    if (k.stage === "settle") {
+      this.cmd = { command: "stand", turn: 0, speed: 0.2 };
+      if ((k.settle += dt) > 0.6) { k.stage = "down"; k.count = 6; }   // the judge starts counting at 5
+      return;
+    }
+    if (k.stage === "down") {
+      this.cmd = { command: "lie", turn: 0, speed: 0.2 };
+      k.held = posture(this.bolt) === "lie" ? k.held + dt : 0;
+      const count = Math.max(0, 5 - Math.floor(k.held));
+      if (count !== k.count) { k.count = count; if (count > 0) this.say(`Judge: ${count}…`, "count"); }
+      if (k.held >= 5) { k.stage = "up"; k.settle = 0; this.say("Judge: go!", "count"); }
+      return;
+    }
+    if (k.stage === "up") {
+      this.cmd = { command: "stand", turn: 0, speed: 0.2 };
+      if ((k.settle += dt) > 1.0) {
+        const [along, side] = this.rel(o);
+        if (Math.hypot(along, side) > 0.6) this.fault(5, "Off the table");
+        this.driver.speed = 0.2; this.next("Table: done");
+      }
+    }
+  }
+}
+
+// The leaderboard: clear rounds first, then fewest faults, then fastest.
+export function rank(results) {
+  return results.slice().sort((a, b) => (a.eliminated - b.eliminated) || (a.total - b.total) || (a.time - b.time));
+}

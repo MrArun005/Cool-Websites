@@ -1,0 +1,281 @@
+<title>Bolt Agility Cup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+  /* Layout: the ring in 3D with who is running and their faults on top, the controls under it,
+     then the leaderboard and the commentary. Same look as the Gait Lab and Bolt's Castle. */
+{{GAME_CSS}}
+  .board td:first-child { font: 700 1rem var(--display); }
+  .board tr.now td { background: var(--accent-soft); }
+  .board .clear { color: var(--good); font-weight: 600; }
+  .board .elim { color: var(--bad); font-weight: 600; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="label">Bolt robot dog · a competition on the live simulator</span>
+    <h1>Bolt Agility Cup</h1>
+    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through all eight poles, take the tunnel from the right end, and lie on the pause table for the judge's count of five. The judge counts 5 faults for a missed pole or a wrong tunnel entry, and 1 fault per second over the standard course time. The fewest faults wins, then the fastest time. A fall is elimination. Everything runs in your browser, in the same physics as training.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="ring">
+    <h2 id="ring" class="label" style="font-size:.72rem">The ring</h2>
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">Loading…</div>
+      <div class="hud tl"><span class="label">Running</span><b id="hDog">–</b><span class="muted" id="hObstacle"></span></div>
+      <div class="hud tr"><span class="label">Time</span><b id="hTime">0.00 s</b><span class="label">Faults</span><b id="hFaults">0</b><span class="label">Course time</span><b id="hSct">–</b></div>
+      <div class="banner" id="banner" aria-live="polite"></div>
+      <div class="result" id="result" hidden><div class="card"><span class="label">Results</span><h2 id="rTitle"></h2><ul id="rList"></ul><button class="btn" type="button" id="again">New course</button></div></div>
+      <div class="hint"><span id="gridNote">grid = 50 cm</span> · drag to turn the view, scroll or pinch to zoom</div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="start" type="button">Start the competition</button>
+      <button class="btn" id="new" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">New course</button>
+      <button class="btn" id="pause" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Pause</button>
+      <span class="label">Speed</span>
+      <div class="chips" id="speeds" role="group" aria-label="Playback speed"></div>
+    </div>
+    <ul class="course" id="course" aria-label="The course"></ul>
+  </section>
+
+  <div class="two">
+    <section class="panel" aria-labelledby="lb">
+      <h2 id="lb">Leaderboard</h2>
+      <div class="table-scroll"><table class="board" style="min-width:420px">
+        <thead><tr><th>#</th><th>Dog</th><th>Time</th><th>Faults</th><th></th></tr></thead>
+        <tbody id="board"><tr><td colspan="5" class="muted">No rounds yet.</td></tr></tbody>
+      </table></div>
+      <p class="muted" style="font-size:.85rem;margin:0">Ace and Blaze are run 12 brains, which turn sharply by stepping sideways. Comet and Dash are run 11b brains, which can only turn by lengthening their outside strides, so the weaves are hard for them.</p>
+    </section>
+    <section class="panel" aria-labelledby="said">
+      <h2 id="said">Commentary</h2>
+      <ul class="log" id="log"><li class="muted">Press "Start the competition".</li></ul>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+{{SCENE_JS}}
+  controls.maxDistance = 22;
+  let C = {};
+  function colors() { C = { accent: lin(css("--accent")) }; }
+
+  // ---------- Bolt: the same body as the Gait Lab, posed from the live simulator ----------
+  let parts = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp }; });
+  }
+  const m4 = new THREE.Matrix4();
+  function drawBolt() {
+    const d = bolt.data, xp = d.geom_xpos, xm = d.geom_xmat;
+    for (const pt of parts) {
+      if (!pt.obj) continue;
+      const i = pt.g.id, k = 9 * i;
+      m4.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.obj.position.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.obj.quaternion.setFromRotationMatrix(m4);
+    }
+  }
+
+  // ---------- the course, in course coordinates (x ahead from the start line, y to the left) ----------
+  const ring = new THREE.Group(); scene.add(ring);
+  const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.7, ...extra });
+  function box(w, d, h, mat, x, y, z) { return mesh(new THREE.BoxGeometry(w, d, h), mat, [x, y, z]); }
+  function post(r, h, mat, x, y, z0 = 0) { return mesh(new THREE.CylinderGeometry(r, r, h, 20), mat, [x, y, z0 + h / 2], [Math.PI / 2, 0, 0]); }
+  function label(text, bg, fg, size = 0.34) {   // a numbered sign facing the camera
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const g = c.getContext("2d");
+    g.beginPath(); g.arc(64, 64, 58, 0, 2 * Math.PI); g.fillStyle = bg; g.fill();
+    g.fillStyle = fg; g.font = `800 ${text.length > 1 ? 58 : 72}px Archivo, Arial, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text, 64, 68);
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, toneMapped: false })); s.scale.set(size, size, 1); s.renderOrder = 3; return s;
+  }
+  // an obstacle, built in its own frame: x along its heading from the entry, y to its left
+  function obstacle(o, agility) {
+    const g = new THREE.Group(), white = std("#f4f4f0"), red = std("#c4372f"), blue = std("#2f6fb5"), yellow = std("#e8b62c");
+    g.position.set(o.entry[0], o.entry[1], 0); g.rotation.z = o.h;
+    if (o.kind === "weave") {
+      const W = agility.WEAVE, L = W.spacing * (W.poles - 1);
+      g.add(box(L + 0.3, 0.06, 0.03, std("#9aa19c"), L / 2, 0, 0.015));
+      for (let k = 0; k < W.poles; k++) {
+        g.add(post(0.02, 1.0, white, k * W.spacing, 0));
+        for (const z of [0.25, 0.55, 0.85]) g.add(post(0.0215, 0.08, k % 2 ? blue : red, k * W.spacing, 0, z));
+      }
+    } else if (o.kind === "tunnel") {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, o.L, 40, 1, true), std("#2f6fb5", { side: THREE.DoubleSide, transparent: true, opacity: 0.45, depthWrite: false }));
+      tube.rotation.z = Math.PI / 2; tube.position.set(o.L / 2, 0, 0.42); g.add(tube);
+      for (let k = 0; k <= 6; k++) { const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.425, 0.012, 8, 40), std(k % 2 ? "#e8b62c" : "#1f4f86")); ring2.rotation.y = Math.PI / 2; ring2.position.set(k * o.L / 6, 0, 0.42); g.add(ring2); }
+    } else if (o.kind === "table") {
+      g.add(box(1.0, 1.0, 0.04, std("#e3620b", { roughness: 0.95 }), 0, 0, 0.02));
+      for (const [x, y] of [[0.47, 0.47], [0.47, -0.47], [-0.47, 0.47], [-0.47, -0.47]]) g.add(box(0.06, 0.06, 0.045, std("#7b5229"), x, y, 0.0225));
+    } else if (o.kind === "jump") {
+      for (const y of [0.65, -0.65]) g.add(post(0.03, 0.6, white, 0, y));
+      g.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.2, 16), red, [0, 0, 0.15]));
+    }
+    const sign = label(String(o.n), "#ffffff", "#191b1a");   // the judge's number for this obstacle
+    sign.position.set(-0.6, 0.75, 1.05); g.add(sign, post(0.012, 0.9, std("#9aa19c"), -0.6, 0.75));
+    return g;
+  }
+  function gate(at, h, text, color) {
+    const g = new THREE.Group(); g.position.set(at[0], at[1], 0); g.rotation.z = h;
+    for (const y of [0.9, -0.9]) g.add(post(0.035, 1.3, std(color), 0, y));
+    g.add(box(0.05, 1.86, 0.28, std(color), 0, 0, 1.42));
+    const s = label(text, color, "#ffffff", 0.5); s.position.set(0, 0, 1.85); g.add(s);
+    return g;
+  }
+  function buildRing() {
+    while (ring.children.length) ring.remove(ring.children[0]);
+    const w = bolt.where();
+    ring.position.set(w.x, w.y, 0); ring.rotation.set(0, 0, w.yaw);
+    ring.add(gate([0.3, 0], 0, "GO", "#2f8a4c"), gate(course.finish, course.finishH, "END", "#c4372f"));
+    course.obstacles.forEach((o) => ring.add(obstacle(o, agility)));
+  }
+
+  // ---------- the competition ----------
+  let lib, agility, bundle, bolt = null, course = null, round = null, queue = [], results = [], acc = 0, playing = true, speed = 1, seen = 0, bannerUntil = 0, wait = 0;
+  const dogs = () => Object.keys(bundle.competitors);
+  const SPEEDS = [1, 2, 4];
+  function setSpeed(s) { speed = s; [...$("speeds").children].forEach((x, i) => x.setAttribute("aria-pressed", String(SPEEDS[i] === s))); }
+  SPEEDS.forEach((s) => { const b = document.createElement("button"); b.type = "button"; b.textContent = `${s}×`; b.addEventListener("click", () => setSpeed(s)); $("speeds").append(b); });
+  setSpeed(1);
+  function banner(text, kind) {
+    const el = $("banner"); el.textContent = text; el.className = `banner show ${kind === "good" ? "good" : kind === "bad" ? "bad" : ""}`;
+    bannerUntil = performance.now() + 1400 / Math.max(1, speed / 1.5);
+  }
+  function log(text, kind, t) {
+    const li = document.createElement("li");
+    li.innerHTML = `<time>${t === undefined ? "" : t.toFixed(1) + " s"}</time><span class="${kind}"></span>`; li.lastChild.textContent = text;
+    const list = $("log"); if (list.firstElementChild && list.firstElementChild.classList.contains("muted")) list.innerHTML = "";
+    list.prepend(li); while (list.children.length > 14) list.lastChild.remove();
+  }
+  function renderCourse() {
+    $("course").innerHTML = course.obstacles.map((o, i) => `<li class="${round && !round.over && round.index === i ? "now" : ""}">${o.n}. ${o.title}</li>`).join("") + `<li>Course time ${course.sct} s</li>`;
+  }
+  function renderBoard() {
+    const ranked = agility.rank(results), now = round && !round.over ? round.name : null;
+    const rows = ranked.map((r, i) => `<tr><td>${r.eliminated ? "–" : i + 1}</td><td>${r.name}</td><td class="mono">${r.eliminated ? "–" : r.time.toFixed(2) + " s"}</td><td class="mono">${r.eliminated ? "–" : r.total}</td><td class="${r.eliminated ? "elim" : r.total === 0 ? "clear" : ""}">${r.eliminated ? "Eliminated" : r.total === 0 ? "Clear round" : r.notes.join(", ")}</td></tr>`);
+    if (now) rows.push(`<tr class="now"><td>…</td><td>${now}</td><td colspan="3" class="muted">running now</td></tr>`);
+    queue.forEach((n) => rows.push(`<tr><td></td><td class="muted">${n}</td><td colspan="3" class="muted">waiting</td></tr>`));
+    $("board").innerHTML = rows.join("") || `<tr><td colspan="5" class="muted">No rounds yet.</td></tr>`;
+  }
+  function newCourse() {
+    course = agility.buildAgility((Math.random() * 1e9) >>> 0);
+    bolt.reset(bundle.start); buildRing();
+    round = null; queue = []; results = []; $("result").hidden = true;
+    renderCourse(); renderBoard(); $("log").innerHTML = ""; log(`New course: ${course.obstacles.length} obstacles, course time ${course.sct} s.`, "info");
+    $("hDog").textContent = "–"; $("hObstacle").textContent = "Press Start"; $("hTime").textContent = "0.00 s"; $("hFaults").textContent = "0"; $("hSct").textContent = `${course.sct} s`;
+    resetView();
+  }
+  function startCompetition() {
+    if (!course) return;
+    results = []; queue = dogs(); $("result").hidden = true; $("log").innerHTML = "";
+    nextDog();
+  }
+  function nextDog() {
+    if (!queue.length) { round = null; renderBoard(); showResults(); return; }
+    const name = queue.shift(), spec = bundle.competitors[name];
+    bolt.useWalk(spec, spec.sharp_turns);
+    round = new agility.Round(bolt, course, bundle.start, name);
+    seen = 0; acc = 0; lastBolt = null; resetView(); renderBoard(); renderCourse();
+    banner(name.split(" ")[0], "info"); log(`${name} steps up to the start.`, "station");
+  }
+  function finishRound() {
+    const r = round;
+    results.push({ name: r.name, time: r.clock, total: r.total, notes: r.notes.concat(r.timeFaults ? [`${r.timeFaults} time faults`] : []), eliminated: r.phase === "eliminated" });
+    renderBoard();
+    banner(r.phase === "eliminated" ? "ELIMINATED" : r.total === 0 ? "CLEAR ROUND!" : `${r.total} FAULTS`, r.phase === "eliminated" || r.total ? "bad" : "good");
+    wait = 2.0;   // a pause before the next dog
+  }
+  function showResults() {
+    const ranked = agility.rank(results), win = ranked[0];
+    $("rTitle").textContent = win && !win.eliminated ? `${win.name.split(" ")[0]} wins!` : "No winner";
+    $("rList").innerHTML = ranked.map((r, i) => `<li>${r.eliminated ? "–" : i + 1}. ${r.name}: ${r.eliminated ? "eliminated" : `${r.time.toFixed(2)} s, ${r.total} faults`}</li>`).join("");
+    $("result").hidden = false;
+    log(win && !win.eliminated ? `${win.name} wins the Agility Cup.` : "Nobody finished.", "good");
+  }
+  function resetView() {
+    const w = bolt.where(), c = Math.cos(w.yaw), s = Math.sin(w.yaw);
+    const target = new THREE.Vector3(w.x + 2.0 * c, w.y + 2.0 * s, 0.5);
+    camera.position.set(target.x - 5.8 * c + 3.2 * s, target.y - 5.8 * s - 3.2 * c, 3.8);
+    controls.target.copy(target); controls.update(); lastBolt = { x: w.x, y: w.y };
+  }
+  let lastBolt = null;
+  function follow() {
+    const w = bolt.where();
+    if (lastBolt) { const dx = w.x - lastBolt.x, dy = w.y - lastBolt.y; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy; }
+    lastBolt = { x: w.x, y: w.y };
+    if (grid) grid.position.set(Math.round(w.x / 0.5) * 0.5, Math.round(w.y / 0.5) * 0.5, 0.0004);
+    sun.position.set(w.x + 4, w.y - 5.6, 10.4); sun.target.position.set(w.x, w.y, 0);
+  }
+  function hud() {
+    if (!round) return;
+    const o = round.obstacle;
+    $("hDog").textContent = round.name;
+    $("hObstacle").textContent = round.phase === "ready" ? "At the start" : round.over ? (round.phase === "eliminated" ? "Eliminated" : "Finished") : o ? `${o.n}. ${o.title}: ${o.how}` : "Run for the finish";
+    $("hTime").textContent = `${round.clock.toFixed(2)} s`;
+    $("hFaults").textContent = String(round.total);
+    $("hSct").textContent = `${course.sct} s`;
+  }
+  async function boot() {
+    try {
+      const [l, a, m, b] = await Promise.all([import("./live.js"), import("./agility.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_agility.json").then((x) => x.json())]);
+      lib = l; agility = a; bundle = b;
+      bolt = new lib.Bolt(await m.default(), bundle);
+    } catch (e) {
+      console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
+    }
+    buildDog(bundle.geoms); newCourse(); $("loading").hidden = true;
+  }
+  $("start").addEventListener("click", () => bolt && startCompetition());
+  $("new").addEventListener("click", () => bolt && newCourse());
+  $("again").addEventListener("click", () => bolt && newCourse());
+  $("pause").addEventListener("click", () => { playing = !playing; $("pause").textContent = playing ? "Pause" : "Play"; });
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stageEl);
+  const retheme = () => { colors(); makeGrid(); };
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (bolt) {
+      if (round && playing) {
+        if (!round.over) {
+          acc += dt * speed;
+          let n = 0;
+          while (acc >= bolt.dt && n < 40 && !round.over) { round.step(); acc -= bolt.dt; n++; }
+          if (n === 40) acc = 0;
+          while (seen < round.events.length) {
+            const e = round.events[seen++];
+            log(e.text, e.kind, e.t);
+            if (e.kind === "bad") banner(e.text.split(":")[0], "bad");
+            else if (e.kind === "count") banner(e.text.replace("Judge: ", "").replace("…", ""), "info");
+            renderCourse();
+          }
+          if (round.over) finishRound();
+        } else if ((wait -= dt * speed) <= 0) nextDog();
+      }
+      if (now > bannerUntil) $("banner").classList.remove("show");
+      drawBolt(); follow(); hud();
+      const s = now / 1000, cmd = round ? round.cmd.command : "stand";
+      if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (cmd === "walk" ? 9 : 5));
+      eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));
+    }
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  colors(); makeGrid(24, 0.5); setReach(5); resize(); requestAnimationFrame(tick); boot();
+})();
+</script>

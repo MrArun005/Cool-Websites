@@ -1,0 +1,522 @@
+<title>Bolt Agility Cup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f3f4f1; --panel: #ffffff; --ink: #191b1a; --muted: #5d625e; --line: #d9dcd6;
+    --accent: #e3620b; --accent-soft: #fbe6d6; --good: #2f8a4c; --warn: #b7791f; --bad: #c4372f;
+    --cell-0: #f1e1de; --cell-1: #f6edd9; --cell-2: #dcefdf;
+    --stage-top: #f7f8f5; --stage-bottom: #e2e5df; --grid: #bcc2bb;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121413; --panel: #1b1e1c; --ink: #e9ebe7; --muted: #a0a69f; --line: #303531;
+      --accent: #ff8a3d; --accent-soft: #3a2415; --good: #63c27f; --warn: #e2b04a; --bad: #ff7a6e;
+      --cell-0: #3a2220; --cell-1: #3a3120; --cell-2: #1f3626;
+      --stage-top: #1f2321; --stage-bottom: #131614; --grid: #39403b; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121413; --panel: #1b1e1c; --ink: #e9ebe7; --muted: #a0a69f; --line: #303531;
+    --accent: #ff8a3d; --accent-soft: #3a2415; --good: #63c27f; --warn: #e2b04a; --bad: #ff7a6e;
+    --cell-0: #3a2220; --cell-1: #3a3120; --cell-2: #1f3626;
+    --stage-top: #1f2321; --stage-bottom: #131614; --grid: #39403b; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 28px; }
+  h1, h2, h3 { font-family: var(--display); letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; }
+  h2 { font-size: 1.2rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 700; }
+  .label { font: 500 0.72rem/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  p { margin: 0; max-width: 70ch; }
+  .muted { color: var(--muted); }
+
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; font: 500 0.82rem var(--mono); border: 1px solid var(--line); background: var(--panel); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+  .pill.live .dot { background: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  @media (prefers-reduced-motion: reduce) { .pill.live .dot { animation: none; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+  .brain { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 8px; align-content: start; }
+  .cells { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cells span { font: 500 0.85rem var(--mono); padding: 5px 10px; border-radius: 6px; }
+  .c0 { background: var(--cell-0); color: var(--bad); }
+  .c1 { background: var(--cell-1); color: var(--warn); }
+  .c2 { background: var(--cell-2); color: var(--good); }
+  ol, ul { margin: 0; padding-left: 1.2em; display: grid; gap: 5px; max-width: 72ch; }
+
+  .stage { position: relative; border-radius: 10px; overflow: hidden; background: linear-gradient(var(--stage-top), var(--stage-bottom)); aspect-ratio: 16 / 9; max-width: 100%; min-height: 260px; border: 1px solid var(--line); }
+  .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .stage .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 500 14px var(--mono); }
+  .stage .loading[hidden] { display: none; }
+  .stage .hint { position: absolute; left: 10px; bottom: 8px; right: 10px; font: 400 11px var(--mono); color: var(--muted); pointer-events: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .live-bar { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--accent-soft); }
+  .live-bar[hidden] { display: none; }
+  .chips button { font: 500 0.82rem var(--body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chips button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+  .btn { font: 600 0.85rem var(--body); padding: 7px 14px; border-radius: 8px; border: 0; background: var(--ink); color: var(--panel); cursor: pointer; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+  .stats div { display: grid; gap: 2px; }
+  .stats b { font: 500 1.05rem var(--mono); font-variant-numeric: tabular-nums; }
+  .stats b.bad { color: var(--bad); }
+
+  .bar { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .bar > div { height: 100%; background: var(--accent); }
+
+  figure { margin: 0; display: grid; gap: 8px; min-width: 0; }
+  video { width: 100%; max-width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 10px; display: block; }
+  figcaption { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 500 0.72rem var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  td:first-child { font-family: var(--mono); white-space: nowrap; }
+  tr.now td { background: var(--accent-soft); }
+  /* Layout: the ring in 3D with who is running and their faults on top, the controls under it,
+     then the leaderboard and the commentary. Same look as the Gait Lab and Bolt's Castle. */
+  .stage { aspect-ratio: 16 / 10; min-height: 320px; }
+  .hud { position: absolute; display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--panel) 82%, transparent); border: 1px solid var(--line); pointer-events: none; max-width: min(60%, 340px); }
+  .hud b { font: 700 1.05rem var(--display); }
+  .hud .muted { font-size: 0.82rem; line-height: 1.35; }
+  .hud.tl { left: 10px; top: 10px; }
+  .hud.tr { right: 10px; top: 10px; text-align: right; grid-template-columns: auto auto; column-gap: 10px; align-items: baseline; }
+  .hud.tr b { font: 500 1.05rem var(--mono); font-variant-numeric: tabular-nums; }
+  .banner { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0.9); font: 800 clamp(2rem, 7vw, 4.2rem)/1 var(--display); letter-spacing: 0.02em; color: #fff; padding: 12px 26px; border-radius: 14px; background: var(--accent); opacity: 0; pointer-events: none; white-space: nowrap; transition: opacity 0.18s, transform 0.18s; text-align: center; }
+  .banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .banner.good { background: var(--good); }
+  .banner.bad { background: var(--bad); }
+  .result { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+  .result[hidden] { display: none; }
+  .result .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: grid; gap: 10px; width: min(92%, 380px); text-align: center; }
+  .result h2 { font-size: 1.6rem; font-weight: 800; }
+  .result ul { list-style: none; padding: 0; text-align: left; gap: 4px; }
+  .course { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; max-width: none; }
+  .course li { font: 500 0.82rem var(--body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+  .course li.now { border-color: var(--accent); background: var(--accent-soft); }
+  .course li.pass { background: var(--cell-2); color: var(--good); border-color: transparent; }
+  .course li.fail { background: var(--cell-0); color: var(--bad); border-color: transparent; }
+  .log { list-style: none; padding: 0; max-width: none; font-size: 0.9rem; }
+  .log li { display: flex; gap: 10px; }
+  .log time { font: 400 0.82rem var(--mono); color: var(--muted); min-width: 4.5em; }
+  .log .good { color: var(--good); } .log .bad { color: var(--bad); } .log .shout { color: var(--accent); font-weight: 600; }
+  .shouts button { font-weight: 600; }
+  .btn[disabled], .chips button[disabled] { opacity: 0.45; cursor: default; }
+  .muted { color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .banner { transition: none; } }
+  .board td:first-child { font: 700 1rem var(--display); }
+  .board tr.now td { background: var(--accent-soft); }
+  .board .clear { color: var(--good); font-weight: 600; }
+  .board .elim { color: var(--bad); font-weight: 600; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="label">Bolt robot dog · a competition on the live simulator</span>
+    <h1>Bolt Agility Cup</h1>
+    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through all eight poles, take the tunnel from the right end, and lie on the pause table for the judge's count of five. The judge counts 5 faults for a missed pole or a wrong tunnel entry, and 1 fault per second over the standard course time. The fewest faults wins, then the fastest time. A fall is elimination. Everything runs in your browser, in the same physics as training.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="ring">
+    <h2 id="ring" class="label" style="font-size:.72rem">The ring</h2>
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">Loading…</div>
+      <div class="hud tl"><span class="label">Running</span><b id="hDog">–</b><span class="muted" id="hObstacle"></span></div>
+      <div class="hud tr"><span class="label">Time</span><b id="hTime">0.00 s</b><span class="label">Faults</span><b id="hFaults">0</b><span class="label">Course time</span><b id="hSct">–</b></div>
+      <div class="banner" id="banner" aria-live="polite"></div>
+      <div class="result" id="result" hidden><div class="card"><span class="label">Results</span><h2 id="rTitle"></h2><ul id="rList"></ul><button class="btn" type="button" id="again">New course</button></div></div>
+      <div class="hint"><span id="gridNote">grid = 50 cm</span> · drag to turn the view, scroll or pinch to zoom</div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="start" type="button">Start the competition</button>
+      <button class="btn" id="new" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">New course</button>
+      <button class="btn" id="pause" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Pause</button>
+      <span class="label">Speed</span>
+      <div class="chips" id="speeds" role="group" aria-label="Playback speed"></div>
+    </div>
+    <ul class="course" id="course" aria-label="The course"></ul>
+  </section>
+
+  <div class="two">
+    <section class="panel" aria-labelledby="lb">
+      <h2 id="lb">Leaderboard</h2>
+      <div class="table-scroll"><table class="board" style="min-width:420px">
+        <thead><tr><th>#</th><th>Dog</th><th>Time</th><th>Faults</th><th></th></tr></thead>
+        <tbody id="board"><tr><td colspan="5" class="muted">No rounds yet.</td></tr></tbody>
+      </table></div>
+      <p class="muted" style="font-size:.85rem;margin:0">Ace and Blaze are run 12 brains, which turn sharply by stepping sideways. Comet and Dash are run 11b brains, which can only turn by lengthening their outside strides, so the weaves are hard for them.</p>
+    </section>
+    <section class="panel" aria-labelledby="said">
+      <h2 id="said">Commentary</h2>
+      <ul class="log" id="log"><li class="muted">Press "Start the competition".</li></ul>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+  // ---------- 3D scene (MuJoCo is z-up; keep it that way) ----------
+  const stageEl = $("stage");
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  stageEl.prepend(renderer.domElement);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.01, 60);
+  camera.up.set(0, 0, 1);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.minDistance = 0.3; controls.maxDistance = 5;
+  (function studio() {
+    const env = new THREE.Scene();
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(12, 12, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.22, 0.24, 0.26), side: THREE.BackSide })));
+    const box = (w, h, color, pos, rot) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })); m.position.set(...pos); if (rot) m.rotation.set(...rot); env.add(m); };
+    box(6, 4, new THREE.Color(5, 5, 5), [0, 0, 5.5]);
+    box(4, 3, new THREE.Color(1.6, 1.55, 1.5), [5.5, -1, 1.5], [0, Math.PI / 2, 0]);
+    box(4, 2, new THREE.Color(0.9, 1.0, 1.15), [-2, 5.5, 1], [Math.PI / 2, 0, 0]);
+    scene.environment = new THREE.PMREMGenerator(renderer).fromScene(env, 0.04).texture;
+  })();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x3a4246, 0.35));
+  const sun = new THREE.DirectionalLight(0xfff4e8, 1.5);
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 4; sun.shadow.bias = -0.0004;
+  Object.assign(sun.shadow.camera, { left: -1.2, right: 1.2, top: 1.2, bottom: -1.2, near: 0.1, far: 8 });
+  scene.add(sun, sun.target);
+  function setReach(r) {   // how far around Bolt shadows are drawn
+    sunReach = r;
+    Object.assign(sun.shadow.camera, { left: -1.2 * r, right: 1.2 * r, top: 1.2 * r, bottom: -1.2 * r, far: 8 * r });
+    sun.shadow.camera.updateProjectionMatrix();
+  }
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.28 }));
+  floor.receiveShadow = true; scene.add(floor);
+  let grid = null, gridSize = 6, gridCell = 0.1, sunReach = 1;
+  function makeGrid(size = gridSize, cell = gridCell) {
+    gridSize = size; gridCell = cell;
+    if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+    const c = lin(css("--grid"));
+    grid = new THREE.GridHelper(size, Math.round(size / cell), c, c);
+    $("gridNote").textContent = `grid = ${Math.round(cell * 100)} cm`;
+    grid.material.toneMapped = false; grid.rotation.x = Math.PI / 2; grid.position.z = 0.0004;
+    scene.add(grid);
+  }
+
+  // ---------- Bolt's body: shaped parts riding on the simulator's frames ----------
+  const M = {
+    shell: new THREE.MeshPhysicalMaterial({ color: lin("#f1f0eb"), roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.18 }),
+    frame: new THREE.MeshStandardMaterial({ color: lin("#2a2f35"), roughness: 0.42, metalness: 0.45 }),
+    rubber: new THREE.MeshStandardMaterial({ color: lin("#1c2024"), roughness: 0.9 }),
+    visor: new THREE.MeshPhysicalMaterial({ color: lin("#07090c"), roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.03 }),
+    led: new THREE.MeshStandardMaterial({ color: lin("#ff7a1a"), emissive: lin("#ff7a1a"), emissiveIntensity: 1.4, roughness: 0.4 }),
+    eye: new THREE.MeshStandardMaterial({ color: lin("#0a1a20"), emissive: lin("#6fe3ff"), emissiveIntensity: 2.2 }),
+    earIn: new THREE.MeshStandardMaterial({ color: lin("#3a3f46"), roughness: 0.7 }),
+  };
+  function rounded(a, b, c, p = 0.5, taper = 0, seg = 40) {   // rounded box: p = 1 ellipsoid, smaller p boxier
+    const g = new THREE.SphereGeometry(1, seg, Math.round(seg * 0.75));
+    const pos = g.attributes.position, v = new THREE.Vector3(), f = (t) => Math.sign(t) * Math.pow(Math.abs(t), p);
+    for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const s = 1 + taper * f(v.x); pos.setXYZ(i, a * f(v.x), b * f(v.y) * s, c * f(v.z) * s); }
+    g.computeVertexNormals(); return g;
+  }
+  function limb(profile, len) {   // lathe along local z; profile [t, radius], t = 0 bottom, 1 top
+    const g = new THREE.LatheGeometry(profile.map(([t, r]) => new THREE.Vector2(r, (t - 0.5) * len)), 32);
+    g.rotateX(Math.PI / 2); return g;
+  }
+  function mesh(geo, mat, pos, rot) { const m = new THREE.Mesh(geo, mat); if (pos) m.position.set(...pos); if (rot) m.rotation.set(...rot); m.castShadow = m.receiveShadow = true; return m; }
+  function between(a, b, r, mat) {
+    const A = new THREE.Vector3(...a), d = new THREE.Vector3(...b).sub(A);
+    const m = mesh(new THREE.CylinderGeometry(r, r, d.length(), 24), mat);
+    m.position.copy(A).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); return m;
+  }
+  function jointHousing(r, len, side, mat) {
+    const g = new THREE.Group();
+    g.add(mesh(new THREE.CylinderGeometry(r, r, len, 32), mat));
+    g.add(mesh(new THREE.TorusGeometry(r * 0.72, r * 0.1, 10, 40), M.led, [0, side * len / 2, 0], [Math.PI / 2, 0, 0]));
+    g.add(mesh(new THREE.CylinderGeometry(r * 0.6, r * 0.6, 0.004, 32), M.shell, [0, side * (len / 2 + 0.001), 0]));
+    return g;
+  }
+  let tail = null, eyes = [];
+  function partMesh(g) {
+    const mats = {}, mat = (k) => mats[k] || (mats[k] = M[k].clone());
+    const side = g.leg && g.leg[1] === "L" ? 1 : -1, grp = new THREE.Group();
+    switch (g.part) {
+      case "torso": {
+        grp.add(mesh(rounded(0.272, 0.116, 0.072, 0.42, 0.07), mat("shell")));
+        grp.add(mesh(rounded(0.25, 0.104, 0.05, 0.5), mat("frame"), [0, 0, -0.03]));
+        grp.add(mesh(rounded(0.15, 0.011, 0.006, 0.4), M.led, [-0.02, 0, 0.072]));
+        for (const s of [1, -1]) for (const x of [-0.08, -0.04, 0]) grp.add(mesh(rounded(0.012, 0.004, 0.026, 0.5), M.frame, [x, s * 0.117, 0.005]));
+        grp.add(between([0.2, 0, 0.03], [0.31, 0, 0.075], 0.038, mat("frame")));
+        tail = new THREE.Group(); tail.position.set(-0.262, 0, 0.035);
+        const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.05, 0, 0.04), new THREE.Vector3(-0.08, 0, 0.1), new THREE.Vector3(-0.085, 0, 0.15)]);
+        tail.add(mesh(new THREE.TubeGeometry(curve, 24, 0.011, 12, false), M.frame));
+        tail.add(mesh(new THREE.SphereGeometry(0.018, 20, 14), M.led, [-0.085, 0, 0.152]));
+        grp.add(tail); break;
+      }
+      case "head": {
+        grp.add(mesh(rounded(0.084, 0.074, 0.064, 0.5, -0.05), mat("shell")));
+        grp.add(mesh(rounded(0.03, 0.062, 0.046, 0.45), M.visor, [0.062, 0, 0.008]));
+        eyes = [];
+        for (const s of [1, -1]) {
+          const e = mesh(rounded(0.004, 0.014, 0.018, 0.4), M.eye, [0.092, s * 0.03, 0.014]); eyes.push(e); grp.add(e);
+          const ear = new THREE.Group(); ear.position.set(-0.025, s * 0.05, 0.055); ear.rotation.set(-s * 0.35, -0.15, 0);
+          ear.add(mesh(rounded(0.016, 0.03, 0.052, 0.55), M.frame, [0, 0, 0.045]));
+          ear.add(mesh(rounded(0.006, 0.02, 0.036, 0.55), M.earIn, [0.012, 0, 0.045]));
+          grp.add(ear);
+        }
+        break;
+      }
+      case "snout":
+        grp.add(mesh(rounded(0.042, 0.046, 0.032, 0.55, -0.12), mat("shell"), [0.004, 0, -0.004]));
+        grp.add(mesh(rounded(0.012, 0.018, 0.012, 0.6), M.rubber, [0.045, 0, 0.008])); break;
+      case "hip joint": grp.add(jointHousing(0.037, 0.06, side, mat("frame"))); break;
+      case "thigh":
+        grp.add(mesh(limb([[0, 0], [0.02, 0.019], [0.2, 0.023], [0.5, 0.029], [0.78, 0.031], [0.95, 0.026], [1, 0]], 0.2), mat("shell")));
+        grp.add(mesh(limb([[0, 0], [0.02, 0.016], [0.5, 0.02], [0.98, 0.02], [1, 0]], 0.21), mat("frame"), [0, -side * 0.004, 0])); break;
+      case "knee joint": grp.add(jointHousing(0.029, 0.05, side, mat("frame"))); break;
+      case "shin":
+        grp.add(mesh(limb([[0, 0], [0.02, 0.012], [0.4, 0.014], [0.85, 0.019], [0.98, 0.02], [1, 0]], 0.2), mat("frame")));
+        grp.add(mesh(limb([[0.45, 0], [0.47, 0.0185], [0.8, 0.0215], [0.95, 0.021], [0.97, 0]], 0.2), mat("shell"))); break;
+      case "foot":
+        grp.add(mesh(rounded(0.031, 0.027, 0.024, 0.6), mat("rubber"), [0.006, 0, 0]));
+        grp.add(mesh(new THREE.TorusGeometry(0.026, 0.0035, 8, 32), M.led, [0.004, 0, 0.012])); break;
+      default: return null;
+    }
+    return { grp, tint: Object.values(mats) };
+  }
+  const dog = new THREE.Group(); scene.add(dog);
+  controls.maxDistance = 22;
+  let C = {};
+  function colors() { C = { accent: lin(css("--accent")) }; }
+
+  // ---------- Bolt: the same body as the Gait Lab, posed from the live simulator ----------
+  let parts = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp }; });
+  }
+  const m4 = new THREE.Matrix4();
+  function drawBolt() {
+    const d = bolt.data, xp = d.geom_xpos, xm = d.geom_xmat;
+    for (const pt of parts) {
+      if (!pt.obj) continue;
+      const i = pt.g.id, k = 9 * i;
+      m4.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.obj.position.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.obj.quaternion.setFromRotationMatrix(m4);
+    }
+  }
+
+  // ---------- the course, in course coordinates (x ahead from the start line, y to the left) ----------
+  const ring = new THREE.Group(); scene.add(ring);
+  const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.7, ...extra });
+  function box(w, d, h, mat, x, y, z) { return mesh(new THREE.BoxGeometry(w, d, h), mat, [x, y, z]); }
+  function post(r, h, mat, x, y, z0 = 0) { return mesh(new THREE.CylinderGeometry(r, r, h, 20), mat, [x, y, z0 + h / 2], [Math.PI / 2, 0, 0]); }
+  function label(text, bg, fg, size = 0.34) {   // a numbered sign facing the camera
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const g = c.getContext("2d");
+    g.beginPath(); g.arc(64, 64, 58, 0, 2 * Math.PI); g.fillStyle = bg; g.fill();
+    g.fillStyle = fg; g.font = `800 ${text.length > 1 ? 58 : 72}px Archivo, Arial, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text, 64, 68);
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, toneMapped: false })); s.scale.set(size, size, 1); s.renderOrder = 3; return s;
+  }
+  // an obstacle, built in its own frame: x along its heading from the entry, y to its left
+  function obstacle(o, agility) {
+    const g = new THREE.Group(), white = std("#f4f4f0"), red = std("#c4372f"), blue = std("#2f6fb5"), yellow = std("#e8b62c");
+    g.position.set(o.entry[0], o.entry[1], 0); g.rotation.z = o.h;
+    if (o.kind === "weave") {
+      const W = agility.WEAVE, L = W.spacing * (W.poles - 1);
+      g.add(box(L + 0.3, 0.06, 0.03, std("#9aa19c"), L / 2, 0, 0.015));
+      for (let k = 0; k < W.poles; k++) {
+        g.add(post(0.02, 1.0, white, k * W.spacing, 0));
+        for (const z of [0.25, 0.55, 0.85]) g.add(post(0.0215, 0.08, k % 2 ? blue : red, k * W.spacing, 0, z));
+      }
+    } else if (o.kind === "tunnel") {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, o.L, 40, 1, true), std("#2f6fb5", { side: THREE.DoubleSide, transparent: true, opacity: 0.45, depthWrite: false }));
+      tube.rotation.z = Math.PI / 2; tube.position.set(o.L / 2, 0, 0.42); g.add(tube);
+      for (let k = 0; k <= 6; k++) { const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.425, 0.012, 8, 40), std(k % 2 ? "#e8b62c" : "#1f4f86")); ring2.rotation.y = Math.PI / 2; ring2.position.set(k * o.L / 6, 0, 0.42); g.add(ring2); }
+    } else if (o.kind === "table") {
+      g.add(box(1.0, 1.0, 0.04, std("#e3620b", { roughness: 0.95 }), 0, 0, 0.02));
+      for (const [x, y] of [[0.47, 0.47], [0.47, -0.47], [-0.47, 0.47], [-0.47, -0.47]]) g.add(box(0.06, 0.06, 0.045, std("#7b5229"), x, y, 0.0225));
+    } else if (o.kind === "jump") {
+      for (const y of [0.65, -0.65]) g.add(post(0.03, 0.6, white, 0, y));
+      g.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.2, 16), red, [0, 0, 0.15]));
+    }
+    const sign = label(String(o.n), "#ffffff", "#191b1a");   // the judge's number for this obstacle
+    sign.position.set(-0.6, 0.75, 1.05); g.add(sign, post(0.012, 0.9, std("#9aa19c"), -0.6, 0.75));
+    return g;
+  }
+  function gate(at, h, text, color) {
+    const g = new THREE.Group(); g.position.set(at[0], at[1], 0); g.rotation.z = h;
+    for (const y of [0.9, -0.9]) g.add(post(0.035, 1.3, std(color), 0, y));
+    g.add(box(0.05, 1.86, 0.28, std(color), 0, 0, 1.42));
+    const s = label(text, color, "#ffffff", 0.5); s.position.set(0, 0, 1.85); g.add(s);
+    return g;
+  }
+  function buildRing() {
+    while (ring.children.length) ring.remove(ring.children[0]);
+    const w = bolt.where();
+    ring.position.set(w.x, w.y, 0); ring.rotation.set(0, 0, w.yaw);
+    ring.add(gate([0.3, 0], 0, "GO", "#2f8a4c"), gate(course.finish, course.finishH, "END", "#c4372f"));
+    course.obstacles.forEach((o) => ring.add(obstacle(o, agility)));
+  }
+
+  // ---------- the competition ----------
+  let lib, agility, bundle, bolt = null, course = null, round = null, queue = [], results = [], acc = 0, playing = true, speed = 1, seen = 0, bannerUntil = 0, wait = 0;
+  const dogs = () => Object.keys(bundle.competitors);
+  const SPEEDS = [1, 2, 4];
+  function setSpeed(s) { speed = s; [...$("speeds").children].forEach((x, i) => x.setAttribute("aria-pressed", String(SPEEDS[i] === s))); }
+  SPEEDS.forEach((s) => { const b = document.createElement("button"); b.type = "button"; b.textContent = `${s}×`; b.addEventListener("click", () => setSpeed(s)); $("speeds").append(b); });
+  setSpeed(1);
+  function banner(text, kind) {
+    const el = $("banner"); el.textContent = text; el.className = `banner show ${kind === "good" ? "good" : kind === "bad" ? "bad" : ""}`;
+    bannerUntil = performance.now() + 1400 / Math.max(1, speed / 1.5);
+  }
+  function log(text, kind, t) {
+    const li = document.createElement("li");
+    li.innerHTML = `<time>${t === undefined ? "" : t.toFixed(1) + " s"}</time><span class="${kind}"></span>`; li.lastChild.textContent = text;
+    const list = $("log"); if (list.firstElementChild && list.firstElementChild.classList.contains("muted")) list.innerHTML = "";
+    list.prepend(li); while (list.children.length > 14) list.lastChild.remove();
+  }
+  function renderCourse() {
+    $("course").innerHTML = course.obstacles.map((o, i) => `<li class="${round && !round.over && round.index === i ? "now" : ""}">${o.n}. ${o.title}</li>`).join("") + `<li>Course time ${course.sct} s</li>`;
+  }
+  function renderBoard() {
+    const ranked = agility.rank(results), now = round && !round.over ? round.name : null;
+    const rows = ranked.map((r, i) => `<tr><td>${r.eliminated ? "–" : i + 1}</td><td>${r.name}</td><td class="mono">${r.eliminated ? "–" : r.time.toFixed(2) + " s"}</td><td class="mono">${r.eliminated ? "–" : r.total}</td><td class="${r.eliminated ? "elim" : r.total === 0 ? "clear" : ""}">${r.eliminated ? "Eliminated" : r.total === 0 ? "Clear round" : r.notes.join(", ")}</td></tr>`);
+    if (now) rows.push(`<tr class="now"><td>…</td><td>${now}</td><td colspan="3" class="muted">running now</td></tr>`);
+    queue.forEach((n) => rows.push(`<tr><td></td><td class="muted">${n}</td><td colspan="3" class="muted">waiting</td></tr>`));
+    $("board").innerHTML = rows.join("") || `<tr><td colspan="5" class="muted">No rounds yet.</td></tr>`;
+  }
+  function newCourse() {
+    course = agility.buildAgility((Math.random() * 1e9) >>> 0);
+    bolt.reset(bundle.start); buildRing();
+    round = null; queue = []; results = []; $("result").hidden = true;
+    renderCourse(); renderBoard(); $("log").innerHTML = ""; log(`New course: ${course.obstacles.length} obstacles, course time ${course.sct} s.`, "info");
+    $("hDog").textContent = "–"; $("hObstacle").textContent = "Press Start"; $("hTime").textContent = "0.00 s"; $("hFaults").textContent = "0"; $("hSct").textContent = `${course.sct} s`;
+    resetView();
+  }
+  function startCompetition() {
+    if (!course) return;
+    results = []; queue = dogs(); $("result").hidden = true; $("log").innerHTML = "";
+    nextDog();
+  }
+  function nextDog() {
+    if (!queue.length) { round = null; renderBoard(); showResults(); return; }
+    const name = queue.shift(), spec = bundle.competitors[name];
+    bolt.useWalk(spec, spec.sharp_turns);
+    round = new agility.Round(bolt, course, bundle.start, name);
+    seen = 0; acc = 0; lastBolt = null; resetView(); renderBoard(); renderCourse();
+    banner(name.split(" ")[0], "info"); log(`${name} steps up to the start.`, "station");
+  }
+  function finishRound() {
+    const r = round;
+    results.push({ name: r.name, time: r.clock, total: r.total, notes: r.notes.concat(r.timeFaults ? [`${r.timeFaults} time faults`] : []), eliminated: r.phase === "eliminated" });
+    renderBoard();
+    banner(r.phase === "eliminated" ? "ELIMINATED" : r.total === 0 ? "CLEAR ROUND!" : `${r.total} FAULTS`, r.phase === "eliminated" || r.total ? "bad" : "good");
+    wait = 2.0;   // a pause before the next dog
+  }
+  function showResults() {
+    const ranked = agility.rank(results), win = ranked[0];
+    $("rTitle").textContent = win && !win.eliminated ? `${win.name.split(" ")[0]} wins!` : "No winner";
+    $("rList").innerHTML = ranked.map((r, i) => `<li>${r.eliminated ? "–" : i + 1}. ${r.name}: ${r.eliminated ? "eliminated" : `${r.time.toFixed(2)} s, ${r.total} faults`}</li>`).join("");
+    $("result").hidden = false;
+    log(win && !win.eliminated ? `${win.name} wins the Agility Cup.` : "Nobody finished.", "good");
+  }
+  function resetView() {
+    const w = bolt.where(), c = Math.cos(w.yaw), s = Math.sin(w.yaw);
+    const target = new THREE.Vector3(w.x + 2.0 * c, w.y + 2.0 * s, 0.5);
+    camera.position.set(target.x - 5.8 * c + 3.2 * s, target.y - 5.8 * s - 3.2 * c, 3.8);
+    controls.target.copy(target); controls.update(); lastBolt = { x: w.x, y: w.y };
+  }
+  let lastBolt = null;
+  function follow() {
+    const w = bolt.where();
+    if (lastBolt) { const dx = w.x - lastBolt.x, dy = w.y - lastBolt.y; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy; }
+    lastBolt = { x: w.x, y: w.y };
+    if (grid) grid.position.set(Math.round(w.x / 0.5) * 0.5, Math.round(w.y / 0.5) * 0.5, 0.0004);
+    sun.position.set(w.x + 4, w.y - 5.6, 10.4); sun.target.position.set(w.x, w.y, 0);
+  }
+  function hud() {
+    if (!round) return;
+    const o = round.obstacle;
+    $("hDog").textContent = round.name;
+    $("hObstacle").textContent = round.phase === "ready" ? "At the start" : round.over ? (round.phase === "eliminated" ? "Eliminated" : "Finished") : o ? `${o.n}. ${o.title}: ${o.how}` : "Run for the finish";
+    $("hTime").textContent = `${round.clock.toFixed(2)} s`;
+    $("hFaults").textContent = String(round.total);
+    $("hSct").textContent = `${course.sct} s`;
+  }
+  async function boot() {
+    try {
+      const [l, a, m, b] = await Promise.all([import("./live.js"), import("./agility.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_agility.json").then((x) => x.json())]);
+      lib = l; agility = a; bundle = b;
+      bolt = new lib.Bolt(await m.default(), bundle);
+    } catch (e) {
+      console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
+    }
+    buildDog(bundle.geoms); newCourse(); $("loading").hidden = true;
+  }
+  $("start").addEventListener("click", () => bolt && startCompetition());
+  $("new").addEventListener("click", () => bolt && newCourse());
+  $("again").addEventListener("click", () => bolt && newCourse());
+  $("pause").addEventListener("click", () => { playing = !playing; $("pause").textContent = playing ? "Pause" : "Play"; });
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stageEl);
+  const retheme = () => { colors(); makeGrid(); };
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (bolt) {
+      if (round && playing) {
+        if (!round.over) {
+          acc += dt * speed;
+          let n = 0;
+          while (acc >= bolt.dt && n < 40 && !round.over) { round.step(); acc -= bolt.dt; n++; }
+          if (n === 40) acc = 0;
+          while (seen < round.events.length) {
+            const e = round.events[seen++];
+            log(e.text, e.kind, e.t);
+            if (e.kind === "bad") banner(e.text.split(":")[0], "bad");
+            else if (e.kind === "count") banner(e.text.replace("Judge: ", "").replace("…", ""), "info");
+            renderCourse();
+          }
+          if (round.over) finishRound();
+        } else if ((wait -= dt * speed) <= 0) nextDog();
+      }
+      if (now > bannerUntil) $("banner").classList.remove("show");
+      drawBolt(); follow(); hud();
+      const s = now / 1000, cmd = round ? round.cmd.command : "stand";
+      if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (cmd === "walk" ? 9 : 5));
+      eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));
+    }
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  colors(); makeGrid(24, 0.5); setReach(5); resize(); requestAnimationFrame(tick); boot();
+})();
+</script>

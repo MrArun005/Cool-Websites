@@ -80,6 +80,11 @@ export class Bolt {
     this.torso = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_BODY.value, "torso");
     this.dt = this.c.dt;
   }
+  // swap in another walk brain (agility competitors), with the gait it was trained on
+  useWalk(spec, sharp) {
+    this.brains.walk = spec instanceof Brain ? spec : new Brain(spec);
+    this.c = { ...this.c, sharp_turns: sharp };
+  }
   reset(start) {
     const { mj, model: m, data: d } = this;
     mj.mj_resetData(m, d);

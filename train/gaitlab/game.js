@@ -69,11 +69,12 @@ export function buildCastle(seed) {
 // Drives Bolt to points: turn toward the point first, then speed up; brake before stopping.
 export class Driver {
   constructor(bolt) { this.bolt = bolt; this.speed = 0.2; this.slow = 0; }
-  // returns {command, turn, speed}; stop: come to a halt at the point (true) or drive through it
-  toward(p, cruise, stop, dt) {
+  // returns {command, turn, speed}; stop: come to a halt at the point (true) or drive through it;
+  // bend: how much to slow for a turn (2: turn first, then go; 1: keep moving through constant turns)
+  toward(p, cruise, stop, dt, bend = 2) {
     const w = this.bolt.where(), dx = p[0] - w.x, dy = p[1] - w.y, dist = Math.hypot(dx, dy);
     const bearing = wrap(Math.atan2(dy, dx) - w.yaw);
-    let want = Math.min(cruise, stop ? 0.2 + 1.0 * Math.max(0, dist - 0.3) : cruise) * Math.max(0, Math.cos(bearing)) ** 2;
+    let want = Math.min(cruise, stop ? 0.2 + 1.0 * Math.max(0, dist - 0.3) : cruise) * Math.max(0, Math.cos(bearing)) ** bend;
     want = clamp(want, 0.2, 1.2);
     this.speed = want > this.speed ? Math.min(want, this.speed + 0.6 * dt) : Math.max(want, this.speed - 1.0 * dt);
     const top = Math.min(1.5, this.bolt.maxTurn(this.speed));

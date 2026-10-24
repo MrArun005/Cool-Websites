@@ -85,6 +85,8 @@ def main():
     ap.add_argument("--walk", required=True)
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--reference", required=True, help="where to write the Python reference run")
+    ap.add_argument("--competitor", action="append", default=[], metavar="NAME=FOLDER",
+                    help="more walk brains for the agility competition (speed-control brains)")
     args = ap.parse_args()
     walk = Policy(args.walk)
     start, ref = reference(Policy(args.posture), walk)
@@ -102,6 +104,9 @@ def main():
                     walk=dict(brain(args.walk), source=Path(args.walk).name)),
         start=start,  # Bolt standing, as BoltEnv.reset leaves it (seed 0, no randomness)
     )
+    if args.competitor:   # agility competitors: name -> walk brain and the gait it turns with
+        bundle["competitors"] = {name: dict(brain(path), sharp_turns=Policy(path).sharp_turns, source=Path(path).name)
+                                 for name, path in (c.split("=", 1) for c in args.competitor)}
     Path(args.out).write_text(json.dumps(bundle, separators=(",", ":")))
     Path(args.reference).write_text(json.dumps(ref, separators=(",", ":")))
     print(f"wrote {args.out} ({Path(args.out).stat().st_size / 1e6:.1f} MB) and {args.reference} ({len(ref['steps'])} steps)")
