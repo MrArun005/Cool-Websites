@@ -51,7 +51,8 @@
       sun.castShadow = true;
       sun.shadow.mapSize.set(1024, 1024);
       sun.shadow.radius = 4;
-      sun.shadow.bias = -0.0005;
+      sun.shadow.bias = -0.0004;
+      sun.shadow.normalBias = 0.002;      // no shadow acne on the curved shells
       Object.assign(sun.shadow.camera, { left: -0.6, right: 0.6, top: 0.6, bottom: -0.6, near: 0.2, far: 5 });
       s.add(sun, sun.target);
 
@@ -62,10 +63,10 @@
       s.add(floor);
       // 10 cm grid, 1 m lines a little stronger.
       this.grid = new THREE.GridHelper(20, 200);
-      this.grid.material.transparent = true; this.grid.material.opacity = 0.18;
+      this.grid.material.transparent = true; this.grid.material.opacity = 0.28;
       this.grid.position.y = 0.0005;
       this.grid2 = new THREE.GridHelper(20, 20);
-      this.grid2.material.transparent = true; this.grid2.material.opacity = 0.35;
+      this.grid2.material.transparent = true; this.grid2.material.opacity = 0.6;
       this.grid2.position.y = 0.0008;
       s.add(this.grid, this.grid2);
     }
@@ -90,10 +91,11 @@
       belly.scale.set(bl * 0.62, bh * 0.5, bw * 0.92);
       belly.position.set(-0.005, -0.03, 0);
       body.add(belly);
-      const tail = cast(new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.05, 20), shell));
-      tail.position.set(-bl / 2 + 0.002, 0.022, 0);
-      tail.rotation.z = Math.PI / 2 + 0.6;
-      tail.scale.set(1, 1, 1.6);
+      // a short, flat, upturned tail
+      const tail = cast(new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.034, 20), shell));
+      tail.position.set(-bl / 2 + 0.004, 0.024, 0);
+      tail.rotation.z = Math.PI / 2 + 0.75;
+      tail.scale.set(1, 1, 0.55);
       body.add(tail);
       // a small status light on the back
       this.backLight = new THREE.Mesh(new THREE.SphereGeometry(0.006, 12, 8), this.eyeMat);
@@ -165,14 +167,14 @@
       footShape.quadraticCurveTo(L - 0.016, 0, L - 0.024, -W / 6);
       footShape.quadraticCurveTo(L - 0.02, -W / 2 + 0.006, L - 0.03, -W / 2 - 0.002);
       footShape.lineTo(-0.025, -0.012);
-      const footGeom = new THREE.ExtrudeGeometry(footShape, { depth: DUCK.sole[1], bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelSegments: 2 });
+      const footGeom = new THREE.ExtrudeGeometry(footShape, { depth: DUCK.sole[1] - 0.004, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.0015, bevelSegments: 2 });
       footGeom.rotateX(Math.PI / 2);            // lie flat; shape y becomes world z
       footGeom.translate(-0.012, DUCK.sole[1], 0);
       const cyl = (r1, r2, mat) => cast(new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, 1, 16), mat));
       const ball = (r, mat) => cast(new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), mat));
       this.legs = [0, 1].map(() => {
         const leg = {
-          thigh: cyl(0.014, 0.012, shell), shin: cyl(0.011, 0.009, dark),
+          thigh: cyl(0.012, 0.0105, shell), shin: cyl(0.011, 0.009, dark),
           knee: ball(0.014, this.jointMat), ankle: ball(0.01, this.jointMat),
           foot: new THREE.Group(),
         };
@@ -228,7 +230,7 @@
     applyTheme() {
       const bg = cssColor('--scene-bg', '#e9ece6');
       this.scene.background = bg;
-      this.scene.fog = new THREE.Fog(bg, 2.5, 7);
+      this.scene.fog = new THREE.Fog(bg, 1.6, 6);
       this.floorMat.color = cssColor('--scene-floor', '#f4f5f1');
       const grid = cssColor('--scene-grid', '#9aa49c');
       this.grid.material.color = grid; this.grid2.material.color = grid;
