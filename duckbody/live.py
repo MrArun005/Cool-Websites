@@ -201,20 +201,84 @@ def snap(model_path, run, log, out, seconds=None, fps=25, task="stand", skills=F
     return res
 
 
+def latest_brain(run):
+    run = Path(run)
+    final = run / "policy.zip"
+    ckpts = sorted((run / "checkpoints").glob("policy_*_steps.zip"), key=lambda p: int(re.findall(r"\d+", p.name)[0]))
+    if final.exists() and (not ckpts or final.stat().st_mtime >= ckpts[-1].stat().st_mtime):
+        return final, run / "vecnormalize.pkl", "final"
+    if ckpts:
+        n = int(re.findall(r"\d+", ckpts[-1].name)[0])
+        return ckpts[-1], ckpts[-1].with_name(f"policy_vecnormalize_{n}_steps.pkl"), n
+    return None, None, 0
+
+
+def test_all(out, episodes=5, only=None):
+    """Exam every skill with its newest brain (or none yet: servos hold the home pose); save a replay of each."""
+    from stable_baselines3 import PPO
+    from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+    from env import DuckEnv
+    from skills_env import SECONDS, SKILL_TASKS, SkillEnv
+
+    results = json.loads((out / "tests.json").read_text()) if (out / "tests.json").exists() else {}
+    for task in ([only] if only else SKILL_TASKS):
+        run = HERE / "runs" / f"mid_{task}"
+        ckpt, stats, steps = latest_brain(run)
+        if task == "stand" and ckpt is None:          # the first stand run, on the original layout
+            ckpt, stats, steps = latest_brain(HERE / "runs" / "mid_stand_v1")
+            cls, model_path, layout = DuckEnv, HERE / "model" / "duck_mid_knee90.xml", "first stand layout"
+        else:
+            cls, model_path, layout = SkillEnv, HERE / "model" / "duck_mid.xml", "skills layout"
+        wins, rewards, frames_ep = 0, [], None
+        policy = PPO.load(ckpt, device="cpu") if ckpt else None
+        for ep in range(episodes):
+            env = cls(task=task, randomize=True, seed=100 + ep, model_path=str(model_path), max_seconds=SECONDS[task])
+            m, d = env.model, env.data
+            obs, _ = env.reset(seed=100 + ep)
+            if policy:
+                venv = VecNormalize.load(str(stats), DummyVecEnv([lambda: env]))
+                venv.training = False
+            frames, total, done, t = [], 0.0, False, 0
+            while not done:
+                a = policy.predict(venv.normalize_obs(obs[None]), deterministic=True)[0][0] if policy else np.zeros(env.action_space.shape)
+                obs, r, term, trunc, info = env.step(a)
+                total += r
+                if ep == 0 and t % 2 == 0:
+                    frames.append(np.concatenate([d.xpos[1:], d.xquat[1:]], 1).round(5).ravel().tolist())
+                t += 1
+                done = term or trunc
+            wins += info["success"]
+            rewards.append(total)
+            if ep == 0:
+                frames_ep = dict(fps=25, seconds=t / 50, fell=bool(term), success=bool(info["success"]), task=task,
+                                 steps=steps, checkpoint=ckpt.name if ckpt else None, frames=frames,
+                                 bodies=[m.body(b).name for b in range(1, m.nbody)])
+        (out / f"rollout_{task}.json").write_text(json.dumps(frames_ep, separators=(",", ":")))
+        results[task] = dict(success=wins / episodes, episodes=episodes, mean_reward=round(float(np.mean(rewards)), 1),
+                             brain=(f"{steps:,} steps" if isinstance(steps, int) and steps else ("final" if ckpt else "none yet")),
+                             layout=layout)
+        print(f"{task:13s} {wins}/{episodes} succeeded, reward {np.mean(rewards):6.1f}, brain {results[task]['brain']}")
+    (out / "tests.json").write_text(json.dumps(results))
+    return results
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["mesh", "glb", "snap"])
+    ap.add_argument("what", choices=["mesh", "glb", "snap", "test"])
     ap.add_argument("--model", default="model/duck_mid.xml")
     ap.add_argument("--run", default="runs/mid_stand")
     ap.add_argument("--log", default="mid_stand.log")
     ap.add_argument("--out", required=True)
     ap.add_argument("--task", default="stand")
     ap.add_argument("--skills", action="store_true")
+    ap.add_argument("--only", help="test: just this skill")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     model = (Path.cwd() / a.model).resolve()
-    if a.what == "glb":
+    if a.what == "test":
+        test_all(out, only=a.only)
+    elif a.what == "glb":
         print(f"owner's GLB split into parts; max mismatch vs the model {glb_mesh(model, out) * 1000:.3f} mm")
     elif a.what == "mesh":
         print(len(mesh(model, out)), "bodies")
