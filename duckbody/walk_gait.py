@@ -24,11 +24,11 @@ JOINTS = ("hip_yaw", "hip_roll", "hip_pitch", "knee", "ankle")
 
 
 class Gait:
-    def __init__(self, model_path=None, lift=0.012, sway=0.008, x_off=-0.012, duty=0.5):
+    def __init__(self, model_path=None, lift=0.012, sway=0.008, x_off=-0.012, swing=0.5, lead=0.0):
         self.m = mujoco.MjModel.from_xml_path(str(model_path or HERE / "model" / "duck_mid.xml"))
         self.d = mujoco.MjData(self.m)
         m, d = self.m, self.d
-        self.lift, self.sway, self.x_off, self.duty = lift, sway, x_off, duty
+        self.lift, self.sway, self.x_off, self.swing, self.lead = lift, sway, x_off, swing, lead
         self.home_q = m.key("home").qpos.copy()
         self.home_ctrl = m.key("home").ctrl.copy()
         self.trunk = m.body("trunk_assembly").id
@@ -47,22 +47,32 @@ class Gait:
         self.cache = {}
 
     def feet(self, phase, cmd, freq):
-        """Foot positions and yaw (trunk frame) at a gait phase, for command (vx, vy, yaw rate)."""
+        """Foot positions and yaw (trunk frame) at a gait phase, for command (vx, vy, yaw rate).
+
+        Each leg: stance for (1 - swing) of the cycle, sliding back by the commanded speed × stance
+        time; swing for the rest, lifting and returning. Left swings at the end of the cycle, right
+        half a cycle earlier; the body sways over the single-support foot (lead: phase advance).
+        """
         vx, vy, wz = cmd
-        half = 0.5 / freq                                   # one step (stance of one foot) in seconds
+        sw = self.swing
+        t_st = (1 - sw) / freq                              # stance time of one foot
+        u0 = (phase / (2 * np.pi)) % 1.0
+        # Body over the left foot in the middle of the left single support (right foot swinging).
+        c = 0.5 - sw / 2 - self.lead
+        y_sway = -self.sway * np.cos(2 * np.pi * (u0 - c))
         out = []
         for i in range(2):
-            p = (phase + np.pi * i) % (2 * np.pi)           # left: stance in [0, π), right shifted by π
-            if p < np.pi:                                    # stance: from +1/2 to -1/2 of the stride
-                s, z = 0.5 - p / np.pi, 0.0
+            u = (u0 + 0.5 * i) % 1.0                        # left: stance in [0, 1-sw), right shifted by 1/2
+            if u < 1 - sw:                                   # stance: from +1/2 to -1/2 of the stride
+                s, z = 0.5 - u / (1 - sw), 0.0
             else:                                            # swing: smooth back to the front
-                u = (p - np.pi) / np.pi
-                s, z = -0.5 + (0.5 - 0.5 * np.cos(np.pi * u)), self.lift * np.sin(np.pi * u)
+                w = (u - (1 - sw)) / sw
+                s, z = -0.5 + (0.5 - 0.5 * np.cos(np.pi * w)), self.lift * np.sin(np.pi * w)
             pos = self.foot0[i].copy()
-            pos[0] += s * vx * half + self.x_off
-            pos[1] += s * vy * half - self.sway * np.sin(phase)
+            pos[0] += s * vx * t_st + self.x_off
+            pos[1] += s * vy * t_st + y_sway
             pos[2] += z
-            out.append((pos, s * wz * half, z > 0))
+            out.append((pos, s * wz * t_st, z > 0))
         return out
 
     def ik(self, i, pos, yaw, q_init):
@@ -106,9 +116,37 @@ class Gait:
                 ctrl[k, self.act[i]] = q[i]
                 stance[k, i] = float(not swing)
         if len(self.cache) > 512:
-            self.cache.clear()
+            self.cache = {k: v for k, v in self.cache.items() if k[0] == "grid"}
         self.cache[key] = (ctrl, stance)
         return ctrl, stance
+
+    GRID = dict(vx=np.linspace(-0.1, 0.4, 11), vy=np.linspace(-0.08, 0.08, 5), wz=np.linspace(-0.8, 0.8, 9))
+
+    def fast_table(self, cmd, freq):
+        """table() for any command from per-axis tables (built once): base + the change each axis makes.
+        The legs move little, so the effects add up (checked against the exact IK in __main__)."""
+        key = ("grid", freq)
+        if key not in self.cache:
+            base = self.table((0.0, 0.0, 0.0), freq)
+            axes = {}
+            for j, ax in enumerate(("vx", "vy", "wz")):
+                rows = []
+                for v in self.GRID[ax]:
+                    c = np.zeros(3)
+                    c[j] = v
+                    rows.append(self.table(c, freq)[0] - base[0])
+                axes[ax] = np.array(rows)
+            self.cache[key] = (base, axes)
+        (ctrl0, _), axes = self.cache[key]
+        ctrl = ctrl0.copy()
+        for j, ax in enumerate(("vx", "vy", "wz")):
+            g = self.GRID[ax]
+            x = np.clip(cmd[j], g[0], g[-1])
+            k = min(int(np.searchsorted(g, x, side="right")) - 1, len(g) - 2)
+            f = (x - g[k]) / (g[k + 1] - g[k])
+            ctrl += (1 - f) * axes[ax][k] + f * axes[ax][k + 1]
+        # Planned contacts depend only on the phase.
+        return ctrl, self.cache[key][0][1]
 
     def at(self, phase, cmd, freq):
         ctrl, stance = self.table(cmd, freq)
@@ -131,7 +169,7 @@ def play(vx=0.17, vy=0.0, wz=0.0, seconds=6.0, task="walk", seed=0, randomize=Fa
     d = env.data
     x0, min_up, steps, done, t = d.qpos[:3].copy(), 1.0, 0, False, 0
     R0 = d.xmat[env.trunk].reshape(3, 3).copy()
-    contact_match, rew = [], 0.0
+    contact_match, rew, airborne = [], 0.0, []
     while not done:
         phase = 2 * np.pi * f * env.t * env.dt
         q, stance = g.at(phase, env.vel_cmd, f)
@@ -141,12 +179,13 @@ def play(vx=0.17, vy=0.0, wz=0.0, seconds=6.0, task="walk", seed=0, randomize=Fa
         _, r, term, trunc, info = env.step(act)
         rew += r
         contact_match.append(np.mean(env.feet_on_ground() == stance))
+        airborne.append(1 - env.feet_on_ground())
         min_up = min(min_up, info["up"])
         done = term or trunc
     dp = R0.T @ (d.qpos[:3] - x0)
     R = d.xmat[env.trunk].reshape(3, 3)
     return dict(forward=float(dp[0]), side=float(dp[1]), speed=float(dp[0] / (env.t * env.dt)), fell=bool(term),
-                min_up=float(min_up), height=float(d.qpos[2]), contact_match=float(np.mean(contact_match)),
+                min_up=float(min_up), height=float(d.qpos[2]), contact_match=float(np.mean(contact_match)), lifted=float(np.mean(airborne)),
                 heading=float(np.degrees(np.arctan2((R0.T @ R)[1, 0], (R0.T @ R)[0, 0]))), reward=rew,
                 seconds=env.t * env.dt)
 
