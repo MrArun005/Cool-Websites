@@ -50,8 +50,16 @@ TROT = np.array([1, 0, 0, 1])  # FL+RR step together, then FR+RL
 class BoltEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
 
-    def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None):
-        self.model = mujoco.MjModel.from_xml_path(str(MODEL))
+    def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0):
+        # scale < 1 builds a smaller, dynamically similar Bolt (see scale_robot.py). Everything the
+        # policy observes and is scored on is converted back to full-size units, so the same brain
+        # can drive any size.
+        self.s, self.ts = scale, np.sqrt(scale)  # length and time scale
+        if scale == 1.0:
+            self.model = mujoco.MjModel.from_xml_path(str(MODEL))
+        else:
+            from scale_robot import scaled_xml
+            self.model = mujoco.MjModel.from_xml_string(scaled_xml(scale))
         self.data = mujoco.MjData(self.model)
         self.frame_skip = 10  # 0.002 s physics step × 10 = 50 Hz control
         self.dt = self.model.opt.timestep * self.frame_skip
@@ -88,21 +96,21 @@ class BoltEnv(gym.Env):
         pitch = np.arcsin(np.clip(R[2, 0], -1, 1))   # nose-up is positive
         roll = np.arcsin(np.clip(R[2, 1], -1, 1))
         v_body = R.T @ self.data.qvel[0:3]
-        return dict(height=self.data.qpos[2], pitch=pitch, roll=roll, up=R[2, 2],
-                    vx=v_body[0], vy=v_body[1], yaw_rate=self.data.qvel[5])
+        return dict(height=self.data.qpos[2] / self.s, pitch=pitch, roll=roll, up=R[2, 2],
+                    vx=v_body[0] / self.ts, vy=v_body[1] / self.ts, yaw_rate=self.data.qvel[5] * self.ts)
 
     def feet_on_ground(self):
-        return np.array([self.data.geom_xpos[g][2] < 0.03 for g in self.foot_ids], dtype=float)
+        return np.array([self.data.geom_xpos[g][2] < 0.03 * self.s for g in self.foot_ids], dtype=float)
 
     def _obs(self):
         d, R = self.data, self._rotation()
         gravity = R.T @ np.array([0, 0, -1.0])
-        v_body = R.T @ d.qvel[0:3]
-        clock = 2 * np.pi * 2.0 * self.t * self.dt  # 2 Hz gait clock
+        v_body = R.T @ d.qvel[0:3] / self.ts
+        clock = 2 * np.pi * 2.0 * self.t * self.dt / self.ts  # 2 Hz gait clock (full-size time)
         cmd = np.zeros(len(COMMANDS)); cmd[self.command] = 1
         obs = np.concatenate([
-            gravity, d.qvel[3:6] * 0.25, v_body, [d.qpos[2]],
-            d.qpos[7:] - STAND_POSE, d.qvel[6:] * 0.1, self.last_action,
+            gravity, d.qvel[3:6] * self.ts * 0.25, v_body, [d.qpos[2] / self.s],
+            d.qpos[7:] - STAND_POSE, d.qvel[6:] * self.ts * 0.1, self.last_action,
             cmd, [np.sin(clock), np.cos(clock)],
         ])
         if self.randomize:
@@ -126,7 +134,7 @@ class BoltEnv(gym.Env):
 
         start_lying = self.randomize and self.rng.random() < 0.25
         pose = LIE_POSE if start_lying else STAND_POSE
-        d.qpos[2] = 0.14 if start_lying else 0.33
+        d.qpos[2] = (0.14 if start_lying else 0.33) * self.s
         yaw = self.rng.uniform(-np.pi, np.pi)
         d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
         d.qpos[7:] = np.clip(pose + self.rng.normal(0, 0.05, 12), self.lo, self.hi)
@@ -167,7 +175,7 @@ class BoltEnv(gym.Env):
         upright = np.exp(-(p["roll"] / 0.15) ** 2)
 
         if name == "walk":
-            stance_a = np.sin(2 * np.pi * 2.0 * self.t * self.dt) > 0  # trot rhythm, 2 Hz clock
+            stance_a = np.sin(2 * np.pi * 2.0 * self.t * self.dt / self.ts) > 0  # trot rhythm, 2 Hz clock
             gait = np.mean(feet == (TROT if stance_a else 1 - TROT))
             terms = [
                 np.exp(-((p["vx"] - goal["speed"]) / 0.15) ** 2) * np.exp(-(p["vy"] / 0.2) ** 2),
@@ -189,10 +197,10 @@ class BoltEnv(gym.Env):
                 terms.append((feet.sum() / 4) ** 2)  # three feet down scores 0.56, four scores 1
         reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms)
 
-        torque = self.data.actuator_force
+        torque = self.data.actuator_force / self.s ** 4  # full-size units
         reward -= 0.02 * np.sum((action - self.last_action) ** 2)  # smooth, not twitchy
         reward -= 2e-4 * np.sum(torque ** 2)                        # don't waste energy
-        reward -= 1e-4 * np.sum(self.data.qvel[6:] ** 2)
+        reward -= 1e-4 * np.sum((self.data.qvel[6:] * self.ts) ** 2)
         return reward * 0.5, dict(command=name, feet=feet, **p)
 
     def render(self):
@@ -201,7 +209,7 @@ class BoltEnv(gym.Env):
             self.camera = mujoco.MjvCamera()
             self.camera.type = mujoco.mjtCamera.mjCAMERA_TRACKING
             self.camera.trackbodyid = self.torso
-            self.camera.distance, self.camera.elevation, self.camera.azimuth = 1.8, -18, 120
+            self.camera.distance, self.camera.elevation, self.camera.azimuth = 1.8 * self.s, -18, 120
         self.renderer.update_scene(self.data, self.camera)
         return self.renderer.render()
 
