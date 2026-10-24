@@ -106,10 +106,10 @@ class TestRuntime(unittest.TestCase):
         np.testing.assert_allclose(o[56:58], [0, 1], atol=1e-6)   # gait clock starts at 0
         rt.command("walk", vx=5.0)                            # clipped to the trained range
         self.assertLessEqual(rt.vel_cmd[0], 0.25 * rt.L + 1e-9)
-        msg = rt.command("roll")                              # no brain: stand, and say so
+        msg = rt.command("run")                               # no brain: stand, and say so
         self.assertEqual(rt.skill, "stand")
-        self.assertIn("no roll brain", msg)
-        self.assertIn("roll", rt.fallbacks)
+        self.assertIn("no run brain", msg)
+        self.assertIn("run", rt.fallbacks)
         np.testing.assert_allclose(rt.observe()[53:58], 0)    # standing: no velocity, no clock
         rt.command("idle")
         self.assertEqual(rt.skill, "stand")
@@ -355,6 +355,23 @@ class TestGetUpFromBack(unittest.TestCase):
         rt.command("get up")
         self.assertEqual(rt.mode, "roll get up")
         rt.run(14.0)
+        p = be.posture()
+        self.assertEqual(rt.skill, "stand")
+        self.assertGreater(p["up"], 0.9)
+
+
+class TestForwardRoll(unittest.TestCase):
+    """"roll": squat, tumble over the head onto the back, roll onto the belly, get up, stand."""
+
+    def test_roll_and_stand(self):
+        brains, cfg = rtm.load_brains()
+        be = rtm.SimBackend(cfg["servo_names"])
+        rt = rtm.DuckRuntime(backend=be, brains=brains, config=cfg, log=None)
+        rt.run(1.0)
+        rt.command("roll")
+        rt.run(5.0)
+        self.assertLess(be.read().gravity[0], -0.5)          # on its back after the tumble
+        rt.run(15.0)
         p = be.posture()
         self.assertEqual(rt.skill, "stand")
         self.assertGreater(p["up"], 0.9)

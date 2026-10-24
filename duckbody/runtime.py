@@ -71,7 +71,10 @@ PLANS = {
     # ("again" restarts the plan; "landedN" ends a step N touchdowns after it began.)
     "jump": [("jump", "landed2"), ("stand", 0.8), ("again", None)],
     "hop": [("jump", "landed2"), ("stand", None)],
-    "roll": [("roll", 4.0), ("sit_to_stand", 3.0), ("stand", None)],
+    # forward roll (forward_roll.py: 18/20 over the head onto the back on randomized bodies): squat, tumble
+    # forward (searched keyframes), then roll onto the belly (roll-over brain) and the face-down get-up
+    "roll": [("squat", 2.0), ("pose:tumble", 3.0), ("get_up", 4.0), ("pose:fd_tuck", 1.0), ("pose:fd_lift", 3.5),
+             ("pose:perch_rise", 2.3), ("stand", None)],
 }
 LANDED_TICKS, LANDED_TIMEOUT = 1, 2.0   # a "landed" step ends this many ticks after the touchdown (3 let the
                                         # jump brain push off again first); give up after this many s
@@ -140,6 +143,28 @@ class MoveBrain(PoseBrain):
 FD_TUCK = (0.0, 2.18, -0.8)            # face-down get-up: left hip pitch, knee, ankle (right hip mirrored)
 FD_LIFT = (0.3, 0.5, 2.0, -1)          # MoveBrain into the perch: lean, t1, t2, sign (facedown_rise.py)
 LIE_LOWER = (0.0, 0.8, 1.0, -1)        # MoveBrain from the perch down onto the belly: lean, t1, t2, sign (lie_down.py)
+
+
+class KeyframeBrain(PoseBrain):
+    """Replays a searched motion: keyframes of policy actions, each reached by a linear ramp over its duration
+    (forward_roll.py), starting from the action the robot is holding; then holds the last keyframe."""
+
+    def __init__(self, keys, durations, rt):
+        self.rt, self.keys, self.durs = rt, np.asarray(keys, float), np.asarray(durations, float)
+        self.t0 = self.start = None
+
+    def begin(self):
+        self.t0, self.start = self.rt.steps, self.rt.last_action.copy()
+
+    def __call__(self, obs):
+        if self.t0 is None:
+            self.begin()
+        t, prev = (self.rt.steps - self.t0) * self.rt.dt, self.start
+        for key, dur in zip(self.keys, self.durs):
+            if t < dur:
+                return prev + (key - prev) * max(t, self.rt.dt) / dur
+            t, prev = t - dur, key
+        return self.keys[-1]
 
 
 OBS_COMMAND = {"swag_sit": "sit", "stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "squat": "sit", "sit_to_stand": "stand",
@@ -348,6 +373,11 @@ class DuckRuntime:
                     self.quiet.add("pose:perch_rise")
         self.brains["pose:rise"] = PoseBrain(self.home, self, glide=1.0)
         self.quiet.add("get_up")                            # roll over with the head still (as trained)
+        fr = HERE / "model" / "forward_roll.json"
+        if fr.exists():
+            j = json.loads(fr.read_text())
+            self.brains["pose:tumble"] = KeyframeBrain(j["keys"], j["durations"], self)
+            self.quiet.add("pose:tumble")
         self._start("stand")
 
     def lying(self):
