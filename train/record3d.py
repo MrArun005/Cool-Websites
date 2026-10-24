@@ -17,7 +17,7 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
-from bolt_env import TARGETS, BoltEnv
+from bolt_env import BoltEnv
 from evaluate import Policy
 
 LEGS = ["FL", "FR", "RL", "RR"]
@@ -136,7 +136,9 @@ def main():
     script = [(c, float(s), b) for c, s, b in (step.split(":") for step in args.script)]
     geoms, frames = record(brains, script, args.seed, args.gait_generator)
     rows = summary(geoms, frames)
-    targets = {c: {k: v for k, v in t.items() if k != "pose"} for c, t in TARGETS.items()}
+    stand_env = BoltEnv(gait_generator=args.gait_generator)  # the dog stance stands taller than the default
+    targets = {c: {k: v for k, v in t.items() if k != "pose"} for c, t in stand_env.targets.items()}
+    targets["walk"]["height"] = stand_env.walk_height
     Path(args.out).write_text(json.dumps(dict(label=args.label, fps=50, brains=dict(b.split("=", 1) for b in args.brain),
                                               targets=targets, geoms=geoms, frames=frames, summary=rows),
                                          separators=(",", ":")))
