@@ -11,6 +11,7 @@ Reward per step: dense along the whole roll, from the IMU gravity in the trunk f
           + 1.0 if face down (g_x > 0.5 and tilted > 55 deg)            the goal the "get up" plan starts from
           + 0.5 x exp(-|trunk angular velocity|^2 / 4) when face down   (come to rest there)
     - 0.002 x |vertical trunk acceleration|                             (no slamming)
+    - k x (0.15 x mean(action change^2) + 0.01 x |trunk angular velocity|^2)   v2: no flailing, k ramps 0 -> 1
 Success: face down and nearly still at the end.
 """
 import mujoco
@@ -20,7 +21,13 @@ from backkick import _qmul, _quat
 from skills_env import SkillEnv
 
 
+SMOOTH_STEPS = 2_000_000     # total steps (all envs) for the smoothness penalties to reach full weight
+N_ENVS = 4
+
+
 class RollOverEnv(SkillEnv):
+    local_steps = 0
+
     def __init__(self, task=None, **kw):
         kw.setdefault("max_seconds", 4)
         super().__init__(task=task, **kw)
@@ -60,6 +67,13 @@ class RollOverEnv(SkillEnv):
         if down:
             reward += 0.5 * float(np.exp(-float(w @ w) / 4.0))
         reward -= 0.002 * abs(float(self.data.qacc[2]))
+        # v2, smoothness (Microduck's order: discover first, then polish): the 1M brain rolled over 10/10 but
+        # flailed like a cockroach on its back. Ramped in over SMOOTH_STEPS so the roll is not unlearned.
+        self.local_steps += 1
+        k = min(1.0, self.local_steps * N_ENVS / SMOOTH_STEPS)
+        if k > 0:
+            da = action - self.last_action
+            reward -= k * (0.15 * float(np.mean(da ** 2)) + 0.01 * float(w @ w))
         return float(reward), dict(h_ref=self.stand_height, up_ref=1.0, gx=float(g[0]), **p)
 
     def success(self, info):
