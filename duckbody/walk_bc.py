@@ -74,7 +74,7 @@ def build_model(venv, log_std, lr):
     return PPO("MlpPolicy", venv, n_steps=512, batch_size=4096, n_epochs=5, learning_rate=lr, gamma=0.99,
                gae_lambda=0.95, clip_range=0.2, ent_coef=0.0, max_grad_norm=1.0, target_kl=0.03,
                policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]), activation_fn=torch.nn.ELU,
-                                  log_std_init=log_std), seed=0, device="cpu", verbose=0)
+                                  log_std_init=log_std), seed=0, device="cpu", verbose=1)
 
 
 def norm(vn, O):
