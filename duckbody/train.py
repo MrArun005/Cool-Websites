@@ -45,7 +45,8 @@ def exam(model, venv, tasks, episodes=4, seed=123, model_path=None, env_cls=Duck
     """Deterministic rollouts per task: success rate at the end of the episode, mean reward."""
     out = {}
     for task in tasks:
-        env = env_cls(task=task, randomize=True, seed=seed, model_path=model_path)
+        env = env_cls(task=task, randomize=True, seed=seed, model_path=model_path,
+                      **(dict(practice=False) if env_cls is SkillEnv else {}))
         wins, rewards = 0, []
         for ep in range(episodes):
             obs, _ = env.reset(seed=seed + ep)

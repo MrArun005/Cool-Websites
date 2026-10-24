@@ -41,8 +41,9 @@ QUIET = ("squat", "sit", "lie", "jump", "roll")   # no head turning or talking d
 
 
 class SkillEnv(DuckEnv):
-    def __init__(self, task=None, **kw):
+    def __init__(self, task=None, practice=True, **kw):
         kw.pop("task_weights", None)
+        self.practice = practice          # practice starts in training; exams always start from standing
         super().__init__(task=None, task_weights=(1, 1, 1, 1), **kw)
         self.forced_skill = task
         m, d = self.model, self.data
@@ -69,6 +70,12 @@ class SkillEnv(DuckEnv):
             sit = json.loads(poses.read_text())["sit"]
             self.sit_q = np.array(sit["qpos"])
             self.sit_height, self.sit_up = float(self.sit_q[2]), float(sit["up"])   # already settled when measured
+            # Joint targets that produce it (settled angles sag under load; commanding those tips it over).
+            self.sit_cmd = self.sit_q.copy()
+            if "ctrl_legs" in sit:
+                from poses import leg_q
+                c = sit["ctrl_legs"]
+                leg_q(m, self.sit_cmd, c["hip"], c["knee"], c["ankle"])
 
     def _geom_bottom(self, g):
         m, d = self.model, self.data
@@ -96,6 +103,23 @@ class SkillEnv(DuckEnv):
             d.qpos[:] = q
             d.ctrl[:] = q[self.qadr]
             mujoco.mj_forward(m, d)
+        if task == "sit" and self.sit_q is not None and self.practice:
+            # Practise the hard end of the trick too (LESSONS §5): 30% of episodes start squatting,
+            # 20% already seated (learn to stay put without rolling onto its back).
+            u = r.random()
+            start = self.crouch_q if u < 0.3 else (self.sit_q if u < 0.5 else None)
+            if start is not None:
+                m, d = self.model, self.data
+                q = start.copy()
+                q[self.qadr] = np.clip(q[self.qadr] + r.normal(0, 0.02, m.nu), self.lo, self.hi)
+                if u < 0.3:
+                    q[2] = self.crouch_height
+                yaw = r.uniform(-np.pi, np.pi)
+                q[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)] if u < 0.3 else q[3:7]
+                mujoco.mj_resetData(m, d)
+                d.qpos[:] = q
+                d.ctrl[:] = (self.sit_cmd if u >= 0.3 else q)[self.qadr]
+                mujoco.mj_forward(m, d)
         self.task, self.command = task, TASK_COMMAND[task]
         self.vel_cmd = np.zeros(3)
         if task == "walk" and r.random() > 0.1:
@@ -157,7 +181,10 @@ class SkillEnv(DuckEnv):
             v = self.vel_cmd
             err = abs(info["vx"] - v[0]) + abs(info["vy"] - v[1]) + 0.2 * self.L * abs(info["yaw_rate"] - v[2])
             self.vx_err = 0.98 * self.vx_err + 0.02 * err
-        terminated = bool(info["up"] < 0.3 and self.task in ("stand", "walk", "run", "squat", "sit", "jump"))
+        # Sitting back rocks the body far backwards on the way down (measured: up dips to ~0.3), so a
+        # sit episode only ends when the duck is actually on its back.
+        terminated = bool((info["up"] < 0.3 and self.task in ("stand", "walk", "run", "squat", "jump"))
+                          or (info["up"] < 0.0 and self.task == "sit"))
         if terminated:
             reward = 0.0
         truncated = self.t >= self.max_steps
@@ -216,13 +243,15 @@ class SkillEnv(DuckEnv):
             r_pose = np.exp(-np.sum((self.data.qpos[legs] - self.crouch_q[legs]) ** 2) / 0.5)
             reward = r_up * r_h * still * (0.5 + 0.5 * r_pose)
         elif cmd == "sit":
-            # Settle back onto belly and thighs at a fixed rate (no flopping down), then rest.
-            h_ref = max(self.sit_height, self.start_height - 0.08 * L * s)
-            r_h = np.exp(-((p["height"] - h_ref) / sh) ** 2)
-            up_ref = max(self.sit_up, 1.0 - (1.0 - self.sit_up) * min(1.0, s / 1.5))
-            r_up = np.exp(-((p["up"] - up_ref) / 0.12) ** 2)
+            # Settle back onto belly and thighs at a pace it can follow (~2 s), then rest. The body may
+            # lean back only as far as it has come down: tilt is judged against the height reached.
+            h_ref = max(self.sit_height, self.start_height - 0.035 * L * s)
+            r_h = np.exp(-((p["height"] - h_ref) / (2 * sh)) ** 2)
+            frac = float(np.clip((self.stand_height - p["height"]) / (self.stand_height - self.sit_height), 0, 1))
+            up_ref = 1.0 - (1.0 - self.sit_up) * frac
+            r_up = np.exp(-((p["up"] - up_ref) / 0.15) ** 2)
             legs = self.qadr[self.legs]
-            r_pose = np.exp(-np.sum((self.data.qpos[legs] - self.sit_q[legs]) ** 2) / 0.5)
+            r_pose = np.exp(-np.sum((self.data.qpos[legs] - self.sit_cmd[legs]) ** 2) / 0.5)
             gentle = np.exp(-(max(0.0, -self.data.qvel[2]) / (0.3 * L)) ** 2)
             seated = 1.0 if h_ref > self.sit_height + 0.005 else (1.0 if self._seated() else 0.4)
             reward = r_up * r_h * still * gentle * (0.5 + 0.5 * r_pose) * seated

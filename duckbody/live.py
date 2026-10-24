@@ -172,7 +172,8 @@ def snap(model_path, run, log, out, seconds=None, fps=25, task="stand", skills=F
         ckpt = None
 
     cls = SkillEnv if skills else DuckEnv
-    env = cls(task=task, randomize=True, seed=7, model_path=str(model_path), max_seconds=seconds or SECONDS.get(task, 10))
+    env = cls(task=task, randomize=True, seed=7, model_path=str(model_path), max_seconds=seconds or SECONDS.get(task, 10),
+              **(dict(practice=False) if cls is SkillEnv else {}))
     m, d = env.model, env.data
     obs, _ = env.reset(seed=7)
     if ckpt:
@@ -232,7 +233,8 @@ def test_all(out, episodes=5, only=None):
         wins, rewards, frames_ep = 0, [], None
         policy = PPO.load(ckpt, device="cpu") if ckpt else None
         for ep in range(episodes):
-            env = cls(task=task, randomize=True, seed=100 + ep, model_path=str(model_path), max_seconds=SECONDS[task])
+            kw = dict(practice=False) if cls is SkillEnv else {}
+            env = cls(task=task, randomize=True, seed=100 + ep, model_path=str(model_path), max_seconds=SECONDS[task], **kw)
             m, d = env.model, env.data
             obs, _ = env.reset(seed=100 + ep)
             if policy:

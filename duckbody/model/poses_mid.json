@@ -36,6 +36,11 @@
    2.03804,
    -0.37238
   ],
-  "note": "Real sitting (owner's option B): resting back on belly and thighs, legs folded. Measured by poses.py."
+  "note": "Real sitting (owner's option B): resting back on belly and thighs, legs folded. Measured by poses.py.",
+  "ctrl_legs": {
+   "hip": 0.52,
+   "knee": 2.05,
+   "ankle": -0.31
+  }
  }
 }
