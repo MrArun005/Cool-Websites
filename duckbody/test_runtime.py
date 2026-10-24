@@ -86,7 +86,7 @@ class TestRuntime(unittest.TestCase):
         rt = rtm.DuckRuntime(rtm.SimBackend(cfg["servo_names"], model=env.model, data=env.data),
                              brains=brains, config=cfg, log=None)
         self.assertEqual(rt.skill, "stand")
-        rt.command("sleep")                                   # squat first, then sit back after 2 s
+        rt.command("sit")                                     # squat first, then sit back after 2 s (sleep now stays in the squat)
         self.assertEqual((rt.skill, rt.obs_command), ("squat", "sit"))
         rt.run(2.1)
         self.assertEqual((rt.skill, rt.obs_command), ("swag_sit", "sit"))
@@ -245,3 +245,27 @@ class TestJump(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+SQUAT = rtm.MODELS / "mid-squat"
+
+
+@unittest.skipUnless((SQUAT / "policy.onnx").exists(), "run duckbody/package.py --skill squat first")
+class TestSleepWake(unittest.TestCase):
+    """Sleep in the squat, wake: glide to the home pose, then the stand brain."""
+
+    def test_sleep_then_wake(self):
+        env = SkillEnv(task="stand", randomize=False, model_path=str(rtm.ROBOT_XML))
+        env.reset(seed=0)
+        rt = runtime_on(env)
+        rt.run(1.0)
+        rt.command("sleep")
+        rt.run(3.0)
+        self.assertLess(env.posture()["height"], env.crouch_height + 0.01)    # down in the squat
+        rt.command("wake")
+        self.assertEqual(rt.mode, "rise")
+        rt.run(4.0)
+        p = env.posture()
+        self.assertEqual(rt.skill, "stand")
+        self.assertGreater(p["up"], 0.95)
+        self.assertLess(abs(p["height"] - env.stand_height), 0.01)

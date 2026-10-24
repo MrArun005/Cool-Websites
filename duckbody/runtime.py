@@ -42,7 +42,13 @@ PLANS = {
     "walk": [("walk", None)], "run": [("run", None)],
     # sit is chained: squat first, then settle back onto belly and thighs (how it was trained)
     # this body sits stably as swag (one leg out); the symmetric sit rolled it onto its back
-    "sit": [("squat", 2.0), ("swag_sit", None)], "sleep": [("squat", 2.0), ("swag_sit", None)], "squat": [("squat", None)],
+    "sit": [("squat", 2.0), ("swag_sit", None)], "squat": [("squat", None)],
+    # sleep in the squat: from the floor seat this body cannot stand back up (every push from the seat tips
+    # it onto its back: the tail is on the floor, the weight behind the feet), from the squat it can
+    "sleep": [("squat", None)],
+    # wake from the squat: glide the servo targets to the home pose over 1 s, then the stand brain
+    # (the stand brain alone, started in the squat, fell 5/5; with the 0.5-2 s glide first, 5/5 stood)
+    "rise": [("pose:rise", 1.0), ("stand", None)],
     # saved poses: get down like sit, then glide into the pose and hold it (statically stable)
     "swag": [("squat", 2.0), ("swag_sit", 3.0), ("pose:swag", None)],
     "swag sit": [("squat", 2.0), ("swag_sit", None)],      # the trained brain that sits down into swag
@@ -270,6 +276,7 @@ class DuckRuntime:
                 if "ctrl" in v and k != "sit":
                     self.brains[f"pose:{k}"] = PoseBrain(v["ctrl"], self)
                     self.quiet.add(f"pose:{k}")
+        self.brains["pose:rise"] = PoseBrain(self.home, self, glide=1.0)
         self._start("stand")
 
     # ---------- personality inputs ----------
@@ -278,6 +285,8 @@ class DuckRuntime:
         name = ALIASES.get(name.lower().strip(), name.lower().strip())
         if name not in PLANS:
             return self._say_log(f"unknown command {name!r}")
+        if name == "wake" and self.mode in ("sleep", "squat"):
+            name = "rise"
         if name == "wake" and self.skill not in ("sit", "swag_sit", "squat", "sit_to_stand", "roll") and not self.skill.startswith("pose:"):
             name = "stand" if self.skill != "lie" else "get up"          # awake already / lying: get up
         if name == "get up" and (self.skill in ("sit", "swag_sit", "sit_to_stand") or self.skill.startswith("pose:")):
