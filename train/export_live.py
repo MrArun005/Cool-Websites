@@ -29,8 +29,9 @@ from evaluate import Policy, reset_standing
 from record3d import describe
 from reference_gait import HIP_X, HIP_Y
 
-# The reference run: (command, steps, turn rad/s, speed m/s); ends by braking, then standing
-SCRIPT = [("stand", 100, 0.0, 0.4), ("walk", 150, 0.0, 0.4), ("walk", 150, 0.4, 0.7), ("walk", 150, -0.3, 1.0),
+# The reference run: (command, steps, turn rad/s, speed m/s): sit, lie, walk, run, turn sharply, brake, stand
+SCRIPT = [("stand", 100, 0.0, 0.4), ("sit", 150, 0.0, 0.4), ("stand", 100, 0.0, 0.4), ("lie", 150, 0.0, 0.4),
+          ("stand", 125, 0.0, 0.4), ("walk", 150, 0.0, 0.4), ("walk", 150, 0.4, 0.7), ("walk", 150, -0.3, 1.0),
           ("walk", 100, 1.5, 0.3), ("walk", 50, 0.0, 0.2), ("stand", 100, 0.0, 0.2)]
 
 

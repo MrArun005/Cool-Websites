@@ -52,6 +52,7 @@ def main():
     ap.add_argument("--handover-brain", help="posture brain folder: half the walk episodes start with it standing the dog up")
     ap.add_argument("--speed-control", action="store_true", help="the walk also gets a speed command, up to a run (54 inputs)")
     ap.add_argument("--sharp-turns", action="store_true", help="turn by stepping sideways, up to 2 rad/s (dog gait with speed control)")
+    ap.add_argument("--getting-up", action="store_true", help="posture brains: practise standing up from sit and lie more, without spinning")
     args = ap.parse_args()
 
     out = Path(__file__).with_name("runs") / args.name
@@ -61,7 +62,7 @@ def main():
     venv = make_vec_env(BoltEnv, n_envs=args.envs, seed=args.seed, vec_env_cls=SubprocVecEnv,
                         env_kwargs=dict(skills=args.skills, gait_generator=args.gait_generator, turning=args.turning,
                                         handover_brain=args.handover_brain, speed_control=args.speed_control,
-                                        sharp_turns=args.sharp_turns))
+                                        sharp_turns=args.sharp_turns, getting_up=args.getting_up))
     if args.sharp_turns:  # same inputs as other speed brains, so the run folder records the gait
         (out / "gait.json").write_text(json.dumps(dict(sharp_turns=True)))
     if args.resume:

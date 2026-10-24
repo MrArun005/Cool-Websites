@@ -71,7 +71,7 @@ class BoltEnv(gym.Env):
 
     def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
                  skills=None, gait_generator=False, turning=False, handover_brain=None, speed_control=False,
-                 sharp_turns=False):
+                 sharp_turns=False, getting_up=False):
         # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
         # brain only adds corrections on top (residual control, as in "policies modulating trajectory
         # generators"). The legs are coordinated from the first step instead of having to discover it.
@@ -148,6 +148,10 @@ class BoltEnv(gym.Env):
         # folder (gait.json) rather than by the input count.
         assert not sharp_turns or (speed_control and self.stance == "dog"), "sharp turns are for the dog gait with speed control"
         self.sharp_turns = sharp_turns
+        # getting_up=True (posture brains): practise standing up from sit and lie much more often, and
+        # without spinning. The 2.5M posture brain fell 4 times in 12 standing straight up from a sit,
+        # twisting at up to 3 rad/s on the way up.
+        self.getting_up = getting_up
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (52 + turning + speed_control,), np.float32)
 
     # ---------- helpers ----------
@@ -415,7 +419,10 @@ class BoltEnv(gym.Env):
         if fell:
             reward -= 5.0  # falling ends the attempt; a huge penalty made "never try anything" win
         if self.forced_command is None and self.t % self.command_period == 0:
-            self._switch(self.rng.choice(self.skills))  # new command, like a real owner would give
+            if self.getting_up and COMMANDS[self.command] in ("sit", "lie") and self.rng.random() < 0.6:
+                self._switch(COMMANDS.index("stand"))     # get up (practised more: see getting_up)
+            else:
+                self._switch(self.rng.choice(self.skills))  # new command, like a real owner would give
         if self.speed_control and not self.forced_speed_set and self.t % 150 == 0:
             self.speed_cmd = self._new_speed()  # a new speed every 3 s
         if self.turning and not self.forced_turn_set and self.t % 150 == 0:
@@ -478,7 +485,9 @@ class BoltEnv(gym.Env):
                 np.exp(-(speed / 0.15) ** 2),
             ]
             if name in ("stand", "sit"):
-                terms.append((feet.sum() / 4) ** 4)  # three paws down scores 0.32, four score 1  # three feet down scores 0.32, four scores 1
+                terms.append((feet.sum() / 4) ** 4)
+            if self.getting_up:
+                terms.append(np.exp(-(p["yaw_rate"] / 0.6) ** 2))  # no spinning while changing posture  # three paws down scores 0.32, four score 1  # three feet down scores 0.32, four scores 1
             progress = 0.0
         reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms) + 0.5 * progress
 

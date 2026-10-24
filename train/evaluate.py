@@ -159,6 +159,23 @@ def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turnin
         env.set_speed(0.4)
         env.forced_speed_set = False
 
+    if {"stand", "sit"} <= set(skills or COMMANDS):
+        # Getting up: sit, then stand straight up. Half the tries on nominal physics, where the 2.5M
+        # posture brain fell 4 times in 12.
+        wins = 0
+        for k in range(episodes):
+            env.randomize = bool(k % 2)
+            env.forced_command = "stand"
+            obs = reset_standing(env, seed + 900 + k)
+            for _ in range(60 + 9 * k):
+                obs, *_ = env.step(policy.act(obs))
+            obs, ok, fell = run_segment(env, policy, obs, "sit", 150)
+            if not fell:
+                obs, ok, fell = run_segment(env, policy, obs, "stand", 175)
+            wins += ok and not fell
+            env.randomize = True
+        results["get_up"] = wins / episodes
+
     # Obeying a sequence of commands in a row, the way you'd actually use it.
     if skills and set(skills) != set(COMMANDS):
         return results  # a single-skill brain isn't asked to do the whole sequence

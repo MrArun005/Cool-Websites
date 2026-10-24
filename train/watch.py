@@ -138,7 +138,7 @@ def main():
         write_json(data_path, data)
 
     def score(exam):
-        keys = list(args.skills or COMMANDS) + [k for k in ("turn_left", "turn_right", "sharp_left", "sharp_right", "run", "slow") if k in exam]
+        keys = list(args.skills or COMMANDS) + [k for k in ("turn_left", "turn_right", "sharp_left", "sharp_right", "run", "slow", "get_up") if k in exam]
         return float(np.mean([exam[c] for c in keys]))
 
     def keep_best(steps, exam, zip_path=None, stats=None):

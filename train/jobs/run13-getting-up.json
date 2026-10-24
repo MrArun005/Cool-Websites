@@ -1,0 +1,89 @@
+{
+  "name": "bolt-run13-getting-up",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt13",
+        "--steps",
+        "4500000",
+        "--envs",
+        "8",
+        "--skills",
+        "stand",
+        "sit",
+        "lie",
+        "--gait-generator",
+        "dog",
+        "--getting-up",
+        "--resume",
+        "../models/bolt-dog-posture-dog-2.5M/policy.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt13",
+        "--steps",
+        "4500000",
+        "--envs",
+        "8",
+        "--skills",
+        "stand",
+        "sit",
+        "lie",
+        "--gait-generator",
+        "dog",
+        "--getting-up",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/bolt13/checkpoints/policy_*_steps.zip",
+      "log": "runs/bolt13/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/bolt13/policy.zip",
+        "log_contains": "^done:"
+      }
+    },
+    {
+      "name": "watch",
+      "cmd": [
+        "python",
+        "-u",
+        "watch.py",
+        "runs/bolt13",
+        "--log",
+        "runs/bolt13/train.log",
+        "--out",
+        "runs/bolt13/watch",
+        "--target",
+        "4500000",
+        "--patience",
+        "0",
+        "--skills",
+        "stand",
+        "sit",
+        "lie",
+        "--gait-generator",
+        "dog",
+        "--label",
+        "Run 13: get up from sit and lie steadily (no spinning)"
+      ],
+      "log": "runs/bolt13/watch.log",
+      "done_when": {
+        "log_contains": "^finished"
+      }
+    }
+  ]
+}
