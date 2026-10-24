@@ -167,13 +167,13 @@ class DuckEnv(gym.Env):
         return g
 
     def feet_on_ground(self):
+        # Vectorized over the contact list (the per-contact Python loop was a third of each step).
         d = self.data
-        on = np.zeros(2)
-        for c in d.contact[:d.ncon]:
-            for i, s in enumerate(self.sole_ids):
-                if s in (c.geom[0], c.geom[1]) and self.floor in (c.geom[0], c.geom[1]):
-                    on[i] = 1
-        return on
+        if d.ncon == 0:
+            return np.zeros(2)
+        g = d.contact.geom[:d.ncon]
+        floor = (g == self.floor).any(1)
+        return np.array([float(((g == s).any(1) & floor).any()) for s in self.sole_ids])
 
     def _obs(self):
         d = self.data

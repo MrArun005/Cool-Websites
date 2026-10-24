@@ -196,22 +196,21 @@ class SkillEnv(DuckEnv):
         return self._obs(), float(reward), terminated, bool(truncated), info
 
     # ---------- rewards ----------
-    def _trunk_on_floor(self):
+    def _touching(self, geoms):
         d = self.data
-        for c in d.contact[:d.ncon]:
-            if self.floor in (c.geom[0], c.geom[1]) and (c.geom[0] in self.trunk_geoms or c.geom[1] in self.trunk_geoms):
-                return True
-        return False
+        if d.ncon == 0:
+            return False
+        g = d.contact.geom[:d.ncon]
+        return bool(((g == self.floor).any(1) & np.isin(g, geoms).any(1)).any())
+
+    def _trunk_on_floor(self):
+        return self._touching(self.trunk_geoms)
 
     def _seated(self):
         return self._trunk_on_floor() and self._thighs_down()
 
     def _thighs_down(self):
-        d = self.data
-        for c in d.contact[:d.ncon]:
-            if self.floor in (c.geom[0], c.geom[1]) and (c.geom[0] in self.thigh_geoms or c.geom[1] in self.thigh_geoms):
-                return True
-        return False
+        return self._touching(self.thigh_geoms)
 
     def _reward(self, action):
         cmd = self.command
