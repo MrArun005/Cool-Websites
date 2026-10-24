@@ -183,25 +183,25 @@ td.ok { color: var(--paw); }
     <div class="note">
       <h2>New walk vs old walk</h2>
       <div class="tbl"><table>
-        <thead><tr><th></th><th>old (run 6)</th><th>new (run 7, 500k)</th></tr></thead>
+        <thead><tr><th></th><th>old (run 6)</th><th>run 7, 5M steps</th></tr></thead>
         <tbody>
-          <tr><td>body height</td><td>29–30 cm</td><td class="ok">41 cm</td></tr>
-          <tr><td>lowest knee (median)</td><td>6–12 cm</td><td class="ok">19 cm</td></tr>
+          <tr><td>body height</td><td>29–30 cm</td><td class="ok">40 cm</td></tr>
+          <tr><td>lowest knee (median)</td><td>6–12 cm</td><td class="ok">18 cm</td></tr>
           <tr><td>knee/shin on floor</td><td class="bad">15% (500k)</td><td class="ok">0%</td></tr>
           <tr><td>falls taking over from stand</td><td class="bad">9 of 10 (2M)</td><td class="ok">0 of 10</td></tr>
-          <tr><td>speed</td><td>0.40–0.52 m/s</td><td>0.48 m/s</td></tr>
-          <tr><td>lower-leg tilt</td><td class="bad">65°, up to 86°</td><td class="bad">35–39°, up to 55°</td></tr>
+          <tr><td>speed</td><td>0.40–0.52 m/s</td><td>0.51 m/s</td></tr><tr><td>nose-up lean</td><td>2°</td><td class="ok">1° (was 7° at 500k)</td></tr>
+          <tr><td>lower-leg tilt</td><td class="bad">65°, up to 86°</td><td class="bad">38°, up to 41°</td></tr>
         </tbody>
       </table></div>
       <ul style="margin-top:12px">
         <li><strong>Stand, sit, lie are solid.</strong> The posture brain hits every measured target within about 1 cm and sits at 29° nose-up against a 31° target.</li>
         <li><strong>The new walk stands tall</strong> on a dog-like stance, front legs straighter than rear, and keeps every knee off the floor.</li>
         <li><strong>The hand-over works now.</strong> In the full routine the standing brain passes control to the walk brain mid-stride without a stumble.</li>
-        <li><strong>Lower legs slope too much</strong> (you spotted this): 35–39° from upright, up to 55°, and a rear shin trails almost flat while stepping. Real dogs and cats keep the lower leg near upright and bring the paw forward on a low arc under the body.</li>
+        <li><strong>Lower legs slope too much</strong> (you spotted this): still 38° from upright at 5M steps (up to 41°; it was up to 55° earlier), and a rear shin trails almost flat while stepping. Real dogs and cats keep the lower leg near upright and bring the paw forward on a low arc under the body.</li>
         <li><strong>Next: the "Dog gait" clip.</strong> The trot is now planned by the paw's path, the way animals move. With no brain at all it walks 0.47 m/s, level, 43.5 cm tall, lower legs about 23°, with a third less motor force.</li>
-        <li><strong>Also to watch:</strong> it walks about 7° nose-up. That's small, and training is still running, so later checkpoints may level out.</li>
+        <li><strong>The nose-up lean is gone:</strong> 7° at 500k steps, about 1° at 5M.</li>
       </ul>
-      <p class="label">Run 7 keeps training in the background; new checkpoints can be added here.</p>
+      <p class="label">Run 7 clips are from its 5M-step checkpoint. Training continues in the background.</p>
     </div>
   </section>
 </div>
@@ -216,13 +216,13 @@ td.ok { color: var(--paw); }
     { id: "sit", file: "data/sit.json", name: "Sit", note: "posture brain" },
     { id: "lie", file: "data/lie.json", name: "Lie down", note: "posture brain" },
     { id: "doggait", file: "data/doggait.json", name: "Dog gait · next", note: "paw paths, no brain yet" },
-    { id: "walk7", file: "data/walk7.json", name: "Walk · new", note: "run 7, tall stance" },
-    { id: "handover7", file: "data/handover7.json", name: "Stand → walk · new", note: "run 7 takes over" },
+    { id: "walk7", file: "data/walk7.json", name: "Walk · now", note: "run 7 at 5M, tall stance" },
+    { id: "handover7", file: "data/handover7.json", name: "Stand → walk · now", note: "run 7 at 5M takes over" },
     { id: "walk", file: "data/walk.json", name: "Old walk", note: "run 6, 2M, crouch" },
     { id: "walk500k", file: "data/walk-500k.json", name: "Old walk", note: "run 6, 500k, drags knee" },
     { id: "handover", file: "data/handover.json", name: "Old stand → walk", note: "run 6, 2M, falls" },
   ];
-  const BRAIN_NAMES = { posture: "posture brain (stand, sit, lie)", nobrain: "no brain: the planned paw paths alone", walk7: "new walk brain, run 7 (tall stance)",
+  const BRAIN_NAMES = { posture: "posture brain (stand, sit, lie)", nobrain: "no brain: the planned paw paths alone", walk7: "walk brain, run 7 at 5M steps (tall stance)",
                         walk2M: "old walk brain, run 6 at 2M (crouch)", walk500k: "old walk brain, run 6 at 500k (crouch)" };
   const SPEEDS = [0.1, 0.25, 0.5, 1];
   const CAMS = ["Side", "Front", "Three-quarter", "Below"];
