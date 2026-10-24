@@ -158,7 +158,7 @@ class SimBackend(Backend):
             self.camera = self.mj.MjvCamera()
             self.camera.type = self.mj.mjtCamera.mjCAMERA_TRACKING
             self.camera.trackbodyid = self.trunk
-            self.camera.distance, self.camera.elevation, self.camera.azimuth = 0.7, -15, 140
+            self.camera.distance, self.camera.elevation, self.camera.azimuth = 0.55, -15, 140
         self.renderer.update_scene(self.data, self.camera)
         return self.renderer.render()
 
@@ -186,6 +186,9 @@ def load_brains(models_dir=MODELS):
         for k in ("servo_names", "policy_servos", "obs_size", "action_size", "home", "action_scale", "commands"):
             if c[k] != cfg[k]:
                 raise ValueError(f"{p}: {k} differs from the other brains; every skill must share one layout")
+        zip_ = p.parent / "policy.zip"
+        if zip_.exists() and zip_.stat().st_mtime > p.stat().st_mtime + 1:
+            print(f"warning: {zip_} is newer than policy.onnx; re-run duckbody/package.py --skill {c['skill']}")
         brains[c["skill"]] = OnnxBrain(p)
     if cfg is None:
         raise FileNotFoundError(f"no brains in {models_dir}/mid-*/policy.onnx: run duckbody/package.py --all")
@@ -458,8 +461,8 @@ DEMO = [  # (name, what the personality does, seconds, expectation)
 ]
 
 
-def demo(out_dir=HERE / "renders", render=True, script=None):
-    rt = DuckRuntime(log=print)
+def demo(out_dir=HERE / "renders", render=True, script=None, models_dir=MODELS):
+    rt = DuckRuntime(models_dir=models_dir, log=print)
     be = rt.backend
     print(f"brains: {', '.join(sorted(rt.brains))}")
     frames, strip, results = [], [], []
@@ -520,9 +523,10 @@ def main():
     ap.add_argument("--demo", action="store_true", help="scripted show in the sim")
     ap.add_argument("--script", help='text commands, e.g. "go to sleep; wake up; walk forward" (4 s each)')
     ap.add_argument("--no-render", action="store_true")
+    ap.add_argument("--models", default=str(MODELS), help="folder with mid-<skill>/policy.onnx brains")
     a = ap.parse_args()
     if a.demo or a.script:
-        demo(render=not a.no_render, script=a.script)
+        demo(render=not a.no_render, script=a.script, models_dir=Path(a.models))
     else:
         ap.print_help()
 

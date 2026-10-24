@@ -3,6 +3,7 @@
     python duckbody/package.py --skill stand          # models/mid-stand/policy.onnx + model.json + MODEL.md
     python duckbody/package.py --all                  # every models/mid-*/ that has a policy.zip
     python duckbody/package.py --skill sit --from duckbody/runs/mid_sit/best   # brain from another folder
+    python duckbody/package.py --all --models /tmp/models                      # another models root
 
 One graph does everything the training loop did around the network (LESSONS §3):
 
@@ -203,10 +204,10 @@ action = brain.run(None, {{"obs": obs[None].astype("float32")}})[0][0]
 """
 
 
-def package(skill, src=None, samples=1000):
+def package(skill, src=None, samples=1000, models=MODELS):
     if skill not in SKILL_TASKS:
         raise SystemExit(f"unknown skill {skill!r}; one of {SKILL_TASKS}")
-    out = MODELS / f"mid-{skill}"
+    out = Path(models) / f"mid-{skill}"
     src = Path(src) if src else out
     out.mkdir(parents=True, exist_ok=True)
     if src.resolve() != out.resolve():
@@ -246,14 +247,15 @@ def main():
     g.add_argument("--all", action="store_true", help="every models/mid-*/ with a policy.zip")
     ap.add_argument("--from", dest="src", help="take policy.zip + vecnormalize.pkl from this folder")
     ap.add_argument("--samples", type=int, default=1000)
+    ap.add_argument("--models", default=str(MODELS), help="models root (default: repo models/)")
     a = ap.parse_args()
     torch.set_num_threads(1)
     if a.all:
-        skills = sorted(p.name[4:] for p in MODELS.glob("mid-*") if (p / "policy.zip").exists())
-        results = {s: package(s, samples=a.samples) for s in skills}
+        skills = sorted(p.name[4:] for p in Path(a.models).glob("mid-*") if (p / "policy.zip").exists())
+        results = {s: package(s, samples=a.samples, models=a.models) for s in skills}
         print("summary:", ", ".join(f"{s} {e:.1e}" for s, e in results.items()))
     else:
-        package(a.skill, a.src, a.samples)
+        package(a.skill, a.src, a.samples, a.models)
 
 
 if __name__ == "__main__":
