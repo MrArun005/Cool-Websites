@@ -4,10 +4,10 @@ Skill brain **get_up** for the mid duck (`duckbody/model/duck_mid.xml`), trained
 (`duckbody/train.py --skills --task get_up`). Command it was trained under: `stand`.
 Packaged 2026-10-24.
 
-- Training steps: **1,000,000** (about 5.6 h of simulated duck time)
+- Training steps: **3,000,000** (about 16.7 h of simulated duck time)
 - Test score: no summary.json
 - ONNX vs stable-baselines3 on 1000 observations from SkillEnv rollouts: max abs
-  difference **4.8e-07**
+  difference **6.0e-07**
 
 ## Files
 
