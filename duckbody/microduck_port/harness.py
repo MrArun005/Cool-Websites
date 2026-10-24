@@ -69,6 +69,7 @@ DECIMATION = 4              # 50 Hz
 HOME_TRUNK_Z = 0.125        # body_server.py HOME_TRUNK_Z
 # velstand_env_cfg "recovery complete": tilt < 25 deg and trunk z > 0.09
 UP_TILT_DEG, UP_Z = 25.0, 0.09
+NOISE = np.r_[[0.03] * 3, [0.01] * 3, [0.001] * 14, [0.25] * 14, [0.0] * 14].astype(np.float32)
 STAND_Z = 0.10              # our stricter "at standing height" (measured standing trunk z ~0.115)
 
 SCENE_FULL = "scene_allcollisions.xml"   # every part collides (velstand was trained on this body)
@@ -113,7 +114,8 @@ def _axis_quat(axis, ang):
 
 
 class MicroduckSim:
-    def __init__(self, scene: str = SCENE_FULL, vin: float = BAM_VIN, delay: bool = True, seed: int = 0):
+    def __init__(self, scene: str = SCENE_FULL, vin: float = BAM_VIN, delay: bool = True, obs_noise: bool = True,
+                 seed: int = 0):
         from bam.model import load_model
         from bam.mujoco import MujocoController
 
@@ -156,6 +158,7 @@ class MicroduckSim:
         s = self.m.sensor("imu_ang_vel")
         self.gyro_adr = slice(s.adr[0], s.adr[0] + 3)
         self.delay = delay
+        self.obs_noise = obs_noise
         self.reset_state()
 
     # --- state ---------------------------------------------------------------------------------
@@ -215,7 +218,7 @@ class MicroduckSim:
         return float(self.d.xpos[self.trunk][2])
 
     def obs(self):
-        return np.concatenate([
+        o = np.concatenate([
             self.d.sensordata[self.gyro_adr],
             self.gravity(),
             self.d.qpos[self.qadr] - DEFAULT_POSE,
@@ -223,6 +226,9 @@ class MicroduckSim:
             self.last_action,
             self.command,
         ]).astype(np.float32)
+        if self.obs_noise:   # microduck_velocity_env_cfg actor noise: Unoise gyro .03, grav .01, qpos .001, qvel .25
+            o[:48] += self.rng.uniform(-1, 1, 48).astype(np.float32) * NOISE
+        return o
 
     # --- acting ---------------------------------------------------------------------------------
     def step(self, policy: Policy):
