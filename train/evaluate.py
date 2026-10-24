@@ -52,7 +52,8 @@ def passed(command, window):
         return bool(upright and 0.3 <= vx <= 0.75 and abs(pitch) < 0.25 and roll < 0.25 and feet.min() >= 0.2
                     and scraping < 0.02 and tall_enough and upright_legs)
     speed = np.mean([np.hypot(p["vx"], p["vy"]) for p in window])
-    ok = upright and abs(h - goal["height"]) < 0.03 and abs(pitch - goal["pitch"]) < 0.12 and roll < 0.12 and speed < 0.15
+    goal_h = window[0].get("goal_height", goal["height"])  # the env's own target (the dog stance stands taller)
+    ok = upright and abs(h - goal_h) < 0.03 and abs(pitch - goal["pitch"]) < 0.12 and roll < 0.12 and speed < 0.15
     if command == "stand":
         ok = ok and feet.min() >= 0.9
     return bool(ok)

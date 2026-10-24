@@ -78,6 +78,13 @@ class BoltEnv(gym.Env):
         self.stance = "crouch" if gait_generator is True else (gait_generator or None)
         self.gait_generator = bool(self.stance)
         self.walk_height = WALK_HEIGHT[self.stance]
+        # With the "dog" stance the dog also STANDS that way, so standing and walking match and
+        # a walk can start without first rising 12 cm (run 8 fell 2 in 10 hand-overs from the
+        # old crouch). Held by the motors it settles at 43.6 cm, level, all four paws down, with
+        # under half the motor force of the crouch (measured with poses.settle).
+        self.targets = {k: dict(v) for k, v in TARGETS.items()}
+        if self.stance == "dog":
+            self.targets["stand"].update(height=0.436, pose=STANCES["dog"].round(4).tolist())
         # skills: which commands this brain practises, e.g. ["walk"] for a walk-only brain. The
         # observation layout always keeps all commands, so every brain can be swapped in instantly.
         self.skills = [COMMANDS.index(c) for c in (skills or COMMANDS)]
@@ -280,7 +287,7 @@ class BoltEnv(gym.Env):
         dog is still far from the goal.
         """
         name = COMMANDS[self.command]
-        goal, p = TARGETS[name], self.posture()
+        goal, p = self.targets[name], self.posture()
         scrapes, tilt = self.leg_scrapes(), self.shin_tilt()
         feet = self.feet_on_ground()
         upright = np.exp(-(p["roll"] / 0.15) ** 2)
@@ -328,7 +335,8 @@ class BoltEnv(gym.Env):
         reward -= 0.02 * np.sum((action - self.last_action) ** 2)  # smooth, not twitchy
         reward -= 2e-4 * np.sum(torque ** 2)                        # don't waste energy
         reward -= 1e-4 * np.sum((self.data.qvel[6:] * self.ts) ** 2)
-        return reward * 0.5, dict(command=name, feet=feet, scrape=scrapes, shin_tilt=tilt, walk_height=self.walk_height, **p)
+        return reward * 0.5, dict(command=name, feet=feet, scrape=scrapes, shin_tilt=tilt, walk_height=self.walk_height,
+                                  goal_height=goal["height"], **p)
 
     def render(self):
         if self.renderer is None:

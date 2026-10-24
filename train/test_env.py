@@ -251,6 +251,29 @@ class DogGaitTest(unittest.TestCase):
         self.assertAlmostEqual(np.mean(hs), info["walk_height"], delta=0.02)
         self.assertGreater(np.mean(vx), 0.3)            # walks on its own, before any training
 
+    def test_dog_stance_stands_tall_and_pays_best_for_it(self):
+        from bolt_env import STANCES
+        pays = {}
+        for name, held in (("dog stance", STANCES["dog"]), ("old crouch", STAND_POSE)):
+            env = BoltEnv(randomize=False, max_steps=10_000, gait_generator="dog")
+            env.forced_command = "stand"
+            env.reset(seed=0)
+            total, window = 0.0, []
+            for t in range(250):
+                _, r, fell, _, info = env.step((held - STAND_POSE) / ACTION_SCALE)  # hold the pose, no brain
+                self.assertFalse(fell)
+                total += r
+                window.append(info)
+            pays[name] = total
+            if name == "dog stance":
+                self.assertTrue(passed("stand", window[-80:]))   # tall, level, four paws down
+            else:
+                self.assertFalse(passed("stand", window[-80:]))  # the crouch is no longer a "stand" here
+        self.assertGreater(pays["dog stance"], pays["old crouch"] * 1.3, pays)
+
+    def test_other_stances_keep_the_old_stand(self):
+        self.assertEqual(BoltEnv(gait_generator="tall").targets["stand"], TARGETS["stand"])
+
     def test_exam_fails_sloping_lower_legs(self):
         good = dict(height=0.435, walk_height=0.435, pitch=0.0, roll=0.0, vx=0.5, vy=0.0, up=1.0,
                     feet=np.array([0.5, 0.5, 0.5, 0.5]), scrape=0, shin_tilt=22.0)
