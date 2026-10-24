@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 train/runs/
 *.mp4
+hardware/mini/cad/stl/
