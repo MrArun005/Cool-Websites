@@ -312,6 +312,16 @@ class DogGaitTest(unittest.TestCase):
         lowest = min(env.step(np.zeros(12))[4]["height"] for _ in range(40))
         self.assertGreater(lowest, 0.40)                 # never sags toward the old 31 cm crouch
 
+    def test_exam_hand_over_starts_from_a_standing_dog(self):
+        from evaluate import reset_standing
+        env = BoltEnv(randomize=True, max_steps=10_000, gait_generator="dog")
+        env.forced_command = "stand"
+        heights = []
+        for seed in range(1000, 1030):
+            reset_standing(env, seed)
+            heights.append(env.data.qpos[2])
+        self.assertGreater(min(heights), 0.3)  # some of these seeds start lying without it
+
     def test_other_stances_keep_the_old_stand(self):
         self.assertEqual(BoltEnv(gait_generator="tall").targets["stand"], TARGETS["stand"])
 

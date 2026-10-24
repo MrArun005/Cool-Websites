@@ -70,6 +70,15 @@ def run_segment(env, policy, obs, command, steps):
     return obs, passed(command, window[-steps // 3:]), False
 
 
+def reset_standing(env, seed):
+    """Reset until the dog starts on its feet: a hand-over is from standing, not from lying."""
+    obs, _ = env.reset(seed=seed)
+    while env.data.qpos[2] < 0.2 * env.s:
+        seed += 10_000
+        obs, _ = env.reset(seed=seed)
+    return obs
+
+
 def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False):
     env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator)
     results = {}
@@ -81,7 +90,7 @@ def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False):
                 # Hand-over: stand still first (motors hold the standing pose, as the posture
                 # brain does), then the walk brain takes over mid-stride.
                 env.forced_command = "stand"
-                obs, _ = env.reset(seed=seed + k)
+                obs = reset_standing(env, seed + k)
                 for _ in range(50 + 7 * k % 50):
                     obs, *_ = env.step(np.zeros(12))
                 env.forced_command = "walk"
