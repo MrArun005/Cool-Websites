@@ -183,6 +183,9 @@ class BoltEnv(gym.Env):
         self.jumping, self.jump_t, self.hurdle_run = jumping, -1, False
         self.practise_hurdles = True  # exams switch this off and set their own hurdles
         self.hurdle_at, self.hurdle_dir, self.hurdle_h = np.array([100.0, 0.0]), np.array([1.0, 0.0]), 0.0
+        # one jump per hurdle (landing short is a refusal, not another try), and a bonus for clearing
+        # it cleanly: run 14's first try learned to hover in front of the bar, hopping in place
+        self.hurdle_jumped = self.hurdle_touched = self.hurdle_cleared = False
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (52 + turning + speed_control + jumping,), np.float32)
 
     # ---------- helpers ----------
@@ -219,6 +222,7 @@ class BoltEnv(gym.Env):
         fwd = R[:2, 0] / np.linalg.norm(R[:2, 0])
         self.hurdle_dir, self.hurdle_h = fwd, height
         self.hurdle_at = self.data.qpos[:2] + fwd * ahead
+        self.hurdle_jumped = self.hurdle_touched = self.hurdle_cleared = False
         g = self.model.geom("hurdle").id
         self.model.geom_pos[g] = [self.hurdle_at[0], self.hurdle_at[1], height - 0.15]  # a 30 cm box, sunk to show `height`
         yaw = np.arctan2(fwd[1], fwd[0])
@@ -244,10 +248,11 @@ class BoltEnv(gym.Env):
             if self.jump_t >= JUMP_STEPS:  # landed: ease back into the trot from the dog stance
                 self.jump_t = -1
                 self.walk_from, self.walk_since = STANCES["dog"].copy(), self.t
-        elif COMMANDS[self.command] == "walk" and 0 < self.hurdle_ahead() < self.JUMP_AT:
-            self.jump_t = 0
-        if self.hurdle_run and self.jump_t < 0 and self.hurdle_ahead() < -1.0:
-            self.place_hurdle(self.rng.uniform(1.8, 3.0), self._new_hurdle_height())
+        elif COMMANDS[self.command] == "walk" and 0 < self.hurdle_ahead() < self.JUMP_AT and not self.hurdle_jumped:
+            self.jump_t, self.hurdle_jumped = 0, True
+        refused = self.hurdle_jumped and self.jump_t < 0 and self.hurdle_ahead() > 0 and self.t - self.walk_since > 100
+        if self.hurdle_run and self.jump_t < 0 and (self.hurdle_ahead() < -1.0 or refused):
+            self.place_hurdle(self.rng.uniform(1.8, 3.0), self._new_hurdle_height())  # the next one (after 2 s stuck: move on)
 
     def _new_hurdle_height(self):
         """Hurdles get taller as training goes on: up to 10 cm at first, up to 20 cm after 2M steps (8 envs)."""
@@ -537,6 +542,10 @@ class BoltEnv(gym.Env):
         upright = np.exp(-(p["roll"] / 0.15) ** 2)
 
         hits = self.hurdle_hits() if self.jumping else 0
+        self.hurdle_touched |= hits > 0
+        cleared = False
+        if self.jumping and self.hurdle_jumped and not self.hurdle_cleared and self.hurdle_ahead() < -0.4:
+            self.hurdle_cleared = cleared = not self.hurdle_touched  # over it, without touching it
         if name == "walk" and self.jump_t >= 0:
             # Mid-jump: stay upright (looser on pitch: a bound tips nose-up, then nose-down), don't touch
             # the hurdle, keep going forward, keep knees off the floor, and roughly follow the jump plan.
@@ -596,7 +605,7 @@ class BoltEnv(gym.Env):
             if self.getting_up:
                 terms.append(np.exp(-(p["yaw_rate"] / 0.6) ** 2))  # no spinning while changing posture
             progress = 0.0
-        reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms) + 0.5 * progress
+        reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms) + 0.5 * progress + (6.0 if cleared else 0.0)
 
         torque = self.data.actuator_force / self.s ** 4  # full-size units
         reward -= 0.02 * np.sum((action - self.last_action) ** 2)  # smooth, not twitchy
