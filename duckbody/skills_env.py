@@ -34,7 +34,7 @@ SKILL_TASKS = ["stand", "walk", "run", "squat", "sit", "sit_to_stand", "lie", "g
 TASK_COMMAND = {"stand": "stand", "walk": "walk", "run": "run", "squat": "sit", "sit": "sit", "sit_to_stand": "stand",
                 "lie": "lie", "get_up": "stand", "jump": "jump", "roll": "roll"}
 START = {"stand": "stand", "walk": "stand", "run": "stand", "squat": "stand", "sit": "stand",
-         "sit_to_stand": "seated", "lie": "stand", "get_up": "get_up", "jump": "stand", "roll": "crouched"}
+         "sit_to_stand": "seated", "lie": "crouched", "get_up": "get_up", "jump": "stand", "roll": "crouched"}
 SECONDS = {"stand": 10, "walk": 10, "run": 8, "squat": 6, "sit": 6, "sit_to_stand": 5, "lie": 6, "get_up": 6,
            "jump": 6, "roll": 4}
 GAIT_HZ = {"walk": 1.8, "run": 2.6}
