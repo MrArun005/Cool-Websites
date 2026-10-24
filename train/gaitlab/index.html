@@ -1,206 +1,187 @@
 <title>Bolt Gait Lab</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: a lab bench. Clip picker and live readouts on top, the 3D stage in the middle,
-   transport and the footfall chart under it, measured results and findings last.
-   Everything in real units (cm, degrees, m/s, seconds). */
-:root {
-  --bg: #eef1f0;
-  --panel: #ffffff;
-  --ink: #1b2326;
-  --muted: #5b6a6f;
-  --line: #d2dadb;
-  --stage-top: #f7f9f8;
-  --stage-bottom: #dfe5e4;
-  --grid: #b9c3c4;
-  --accent: #e2700b;
-  --paw: #0f8a7c;
-  --rest: #c08a00;
-  --bad: #d33a3a;
-  --c-stand: #4f6fa8;
-  --c-sit: #8a5aa6;
-  --c-lie: #3f8f6a;
-  --c-walk: #c4641a;
-  --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
-  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #111719; --panel: #182023; --ink: #e5ebeb; --muted: #93a2a5; --line: #2b3639;
-    --stage-top: #1d272a; --stage-bottom: #0f1416; --grid: #34433f;
-    --accent: #ff8a2a; --paw: #2cc2b0; --rest: #e8bb2e; --bad: #ff5f5f;
-    --c-stand: #7f9ddb; --c-sit: #c08ee0; --c-lie: #6cc79c; --c-walk: #f0954a; color-scheme: dark;
+  /* Layout: one page, top to bottom: what's happening now, where we are, watch it in 3D,
+     simulator videos, the training history. Same look as the training watch page. */
+  :root {
+    --bg: #f3f4f1; --panel: #ffffff; --ink: #191b1a; --muted: #5d625e; --line: #d9dcd6;
+    --accent: #e3620b; --accent-soft: #fbe6d6; --good: #2f8a4c; --warn: #b7791f; --bad: #c4372f;
+    --cell-0: #f1e1de; --cell-1: #f6edd9; --cell-2: #dcefdf;
+    --stage-top: #f7f8f5; --stage-bottom: #e2e5df; --grid: #bcc2bb;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   }
-}
-:root[data-theme="dark"] {
-  --bg: #111719; --panel: #182023; --ink: #e5ebeb; --muted: #93a2a5; --line: #2b3639;
-  --stage-top: #1d272a; --stage-bottom: #0f1416; --grid: #34433f;
-  --accent: #ff8a2a; --paw: #2cc2b0; --rest: #e8bb2e; --bad: #ff5f5f;
-  --c-stand: #7f9ddb; --c-sit: #c08ee0; --c-lie: #6cc79c; --c-walk: #f0954a; color-scheme: dark;
-}
-* { box-sizing: border-box; }
-body {
-  background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--body);
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 20px 40px;
-}
-.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
-header { display: grid; gap: 12px; }
-h1 { font: 700 clamp(26px, 4vw, 36px)/1.05 var(--display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
-h1 span { color: var(--accent); }
-.sub { color: var(--muted); margin: 4px 0 0; max-width: 70ch; }
-h2 { font: 700 19px/1.2 var(--display); margin: 0 0 8px; letter-spacing: .02em; text-wrap: balance; }
-.label { font: 500 11px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121413; --panel: #1b1e1c; --ink: #e9ebe7; --muted: #a0a69f; --line: #303531;
+      --accent: #ff8a3d; --accent-soft: #3a2415; --good: #63c27f; --warn: #e2b04a; --bad: #ff7a6e;
+      --cell-0: #3a2220; --cell-1: #3a3120; --cell-2: #1f3626;
+      --stage-top: #1f2321; --stage-bottom: #131614; --grid: #39403b; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121413; --panel: #1b1e1c; --ink: #e9ebe7; --muted: #a0a69f; --line: #303531;
+    --accent: #ff8a3d; --accent-soft: #3a2415; --good: #63c27f; --warn: #e2b04a; --bad: #ff7a6e;
+    --cell-0: #3a2220; --cell-1: #3a3120; --cell-2: #1f3626;
+    --stage-top: #1f2321; --stage-bottom: #131614; --grid: #39403b; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 28px; }
+  h1, h2, h3 { font-family: var(--display); letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; }
+  h2 { font-size: 1.2rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 700; }
+  .label { font: 500 0.72rem/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  p { margin: 0; max-width: 70ch; }
+  .muted { color: var(--muted); }
 
-.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
-.seg button { font: 500 14px/1 var(--body); color: var(--ink); background: transparent; border: 0; padding: 10px 14px; cursor: pointer; border-right: 1px solid var(--line); }
-.seg button:last-child { border-right: 0; }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
-.seg button:focus-visible, .btn:focus-visible, input:focus-visible, canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.clips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.clips .seg button { text-align: left; }
-.clips .seg button small { display: block; font: 400 11px/1.2 var(--mono); color: inherit; opacity: .7; margin-top: 3px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; font: 500 0.82rem var(--mono); border: 1px solid var(--line); background: var(--panel); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+  .pill.live .dot { background: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  @media (prefers-reduced-motion: reduce) { .pill.live .dot { animation: none; } }
 
-.readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.readout { background: var(--panel); padding: 10px 14px; display: grid; gap: 4px; align-content: start; }
-.readout b { font: 500 22px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
-.readout b small { font-size: 13px; color: var(--muted); font-weight: 400; }
-.readout .tgt { font: 400 12px/1.2 var(--mono); color: var(--muted); }
-.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 18px/1.1 var(--body); }
-.chip i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+  .brain { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 8px; align-content: start; }
+  .cells { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cells span { font: 500 0.85rem var(--mono); padding: 5px 10px; border-radius: 6px; }
+  .c0 { background: var(--cell-0); color: var(--bad); }
+  .c1 { background: var(--cell-1); color: var(--warn); }
+  .c2 { background: var(--cell-2); color: var(--good); }
+  ol, ul { margin: 0; padding-left: 1.2em; display: grid; gap: 5px; max-width: 72ch; }
 
-.stage { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
-  background: linear-gradient(var(--stage-top), var(--stage-bottom)); aspect-ratio: 16 / 8; max-width: 100%; min-height: 320px; }
-.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-.legend { position: absolute; left: 10px; top: 10px; display: flex; flex-wrap: wrap; gap: 6px 12px; background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 6px 10px; border-radius: 6px; font: 400 12px/1.3 var(--body); max-width: calc(100% - 20px); }
-.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
-.hint { position: absolute; right: 10px; bottom: 8px; left: 10px; text-align: right; font: 400 11px/1.3 var(--mono); color: var(--muted); pointer-events: none; }
-.banner { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); background: var(--bad); color: #fff; font: 600 14px/1.2 var(--body); padding: 8px 14px; border-radius: 6px; max-width: calc(100% - 20px); text-align: center; }
-.loading[hidden], .banner[hidden] { display: none; }
-.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 500 14px var(--mono); }
+  .stage { position: relative; border-radius: 10px; overflow: hidden; background: linear-gradient(var(--stage-top), var(--stage-bottom)); aspect-ratio: 16 / 9; max-width: 100%; min-height: 260px; border: 1px solid var(--line); }
+  .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .stage .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 500 14px var(--mono); }
+  .stage .loading[hidden] { display: none; }
+  .stage .hint { position: absolute; left: 10px; bottom: 8px; right: 10px; font: 400 11px var(--mono); color: var(--muted); pointer-events: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { font: 500 0.82rem var(--body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chips button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+  .btn { font: 600 0.85rem var(--body); padding: 7px 14px; border-radius: 8px; border: 0; background: var(--ink); color: var(--panel); cursor: pointer; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+  .stats div { display: grid; gap: 2px; }
+  .stats b { font: 500 1.05rem var(--mono); font-variant-numeric: tabular-nums; }
+  .stats b.bad { color: var(--bad); }
 
-.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
-.btn { font: 600 14px/1 var(--body); color: var(--panel); background: var(--ink); border: 0; border-radius: 8px; padding: 10px 16px; cursor: pointer; min-width: 84px; }
-.scrub { flex: 1 1 260px; display: flex; align-items: center; gap: 10px; min-width: 0; }
-.scrub input { flex: 1; min-width: 0; accent-color: var(--accent); }
-.time { font: 500 13px var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
-.group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
-.check input { accent-color: var(--accent); }
+  .bar { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .bar > div { height: 100%; background: var(--accent); }
 
-.gait { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px 14px 8px; }
-.gait canvas { width: 100%; height: 180px; display: block; cursor: pointer; }
-.gait p { margin: 4px 0 0; color: var(--muted); font-size: 13px; max-width: 90ch; }
+  figure { margin: 0; display: grid; gap: 8px; min-width: 0; }
+  video { width: 100%; max-width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 10px; display: block; }
+  figcaption { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
-.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-.note { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
-.note p, .note li { max-width: 65ch; }
-.note p { margin: 0 0 8px; }
-.note ul, .note ol { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 6px; }
-.note strong { font-weight: 600; }
-.tbl { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; font: 400 13px/1.3 var(--mono); font-variant-numeric: tabular-nums; }
-th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
-th:first-child, td:first-child { text-align: left; }
-th { font-weight: 500; color: var(--muted); }
-td .tg { color: var(--muted); font-size: 11px; }
-td.bad { color: var(--bad); font-weight: 500; }
-td.ok { color: var(--paw); }
-@media (max-width: 640px) { .stage { aspect-ratio: 1 / 1; } }
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 500 0.72rem var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  td:first-child { font-family: var(--mono); white-space: nowrap; }
+  tr.now td { background: var(--accent-soft); }
 </style>
 
 <div class="wrap">
   <header>
-    <div>
-      <h1>Bolt <span>Gait Lab</span></h1>
-      <p class="sub">The trained brains driving the simulated dog, replayed in 3D from the physics data. Pick a clip, drag to orbit, scroll or pinch to zoom. Paws on the floor light up green. A knee, shin or thigh on the floor while standing or walking turns red.</p>
+    <div style="display:grid;gap:6px">
+      <span class="label">Bolt robot dog · simulator</span>
+      <h1>Bolt Gait Lab</h1>
     </div>
-    <div class="clips" role="group" aria-label="Which clip">
-      <span class="label">Clip</span>
-      <div class="seg" id="clipbar"></div>
-    </div>
+    <span class="pill" id="status"><span class="dot"></span><span id="statusText">Checking…</span></span>
   </header>
 
-  <section class="readouts" aria-label="Live readouts">
-    <div class="readout"><span class="label">Command</span><span class="chip" id="r-cmd">–</span><span class="tgt" id="r-brain"></span></div>
-    <div class="readout"><span class="label">Body height</span><b id="r-height">–</b><span class="tgt" id="t-height"></span></div>
-    <div class="readout"><span class="label">Nose-up tilt</span><b id="r-pitch">–</b><span class="tgt" id="t-pitch"></span></div>
-    <div class="readout"><span class="label">Forward speed</span><b id="r-speed">–</b><span class="tgt" id="t-speed"></span></div>
-    <div class="readout"><span class="label">Lowest knee</span><b id="r-knee">–</b><span class="tgt">above the floor</span></div>
-    <div class="readout"><span class="label">Lower-leg tilt</span><b id="r-tilt">–</b><span class="tgt">0° = upright, like a dog</span></div>
-    <div class="readout"><span class="label">Paws down</span><b id="r-paws">–</b><span class="tgt" id="r-pawlist"></span></div>
+  <section class="panel" aria-labelledby="where">
+    <h2 id="where">Where we are</h2>
+    <p>Bolt has two trained brains that work together: one for standing, sitting and lying, one for walking. Both stand and walk tall like a real dog, with lower legs close to upright and no knees on the floor. Saved in <span class="mono">models/</span>.</p>
+    <div class="two">
+      <div class="brain">
+        <h3>Stand, sit, lie</h3>
+        <span class="muted mono" style="font-size:.82rem">run 9c · 2.5M steps · models/bolt-dog-posture-dog-2.5M</span>
+        <div class="cells"><span class="c2">Stand 100%</span><span class="c2">Sit 100%</span><span class="c2">Lie 100%</span></div>
+        <p class="muted" style="font-size:.9rem">Stands 43 cm tall on four paws. Sits 30° nose-up on all four paws, both sides alike (the old brain sat lopsided with a paw in the air).</p>
+      </div>
+      <div class="brain">
+        <h3>Walk</h3>
+        <span class="muted mono" style="font-size:.82rem">run 8b · 5M steps · models/bolt-dog-walk-dog-5M</span>
+        <div class="cells"><span class="c2">Walk 100%</span><span class="c2">Stand → walk 10/10</span></div>
+        <p class="muted" style="font-size:.9rem">0.41 m/s, level, 44 cm tall, lower legs about 24° from upright. Takes over from the standing brain without a stumble.</p>
+      </div>
+    </div>
+    <div style="display:grid;gap:6px">
+      <span class="label">Next</span>
+      <ol>
+        <li>Make the walk exam hand over from the real standing brain (the 5.5M walk passed the exam but crouched after real hand-overs, so we kept 5M).</li>
+        <li>Teach turning, so Bolt can follow you.</li>
+        <li>Try both brains on the hand-size Bolt.</li>
+      </ol>
+    </div>
   </section>
 
-  <div class="stage" id="stage">
-    <div class="loading" id="loading">Loading the recording…</div>
-    <div class="banner" id="fell" hidden>Fell over: the recording stops here</div>
-    <div class="legend" aria-hidden="true">
-      <span><i style="background:var(--paw)"></i>paw on floor</span>
-      <span><i style="background:var(--rest)"></i>leg resting on floor (sit, lie)</span>
-      <span><i style="background:var(--bad)"></i>knee / shin / thigh on floor</span>
-    </div>
-    <div class="hint">grid = 10 cm · tail, ears and blinking are decoration, the simulated dog has none</div>
-  </div>
-
-  <div class="transport">
-    <button class="btn" id="play" type="button">Pause</button>
-    <div class="scrub">
-      <input id="scrub" type="range" min="0" max="399" value="0" aria-label="Position in the clip">
-      <span class="time" id="time">0.00 s</span>
-    </div>
-    <div class="group" role="group" aria-label="Playback speed">
-      <span class="label">Speed</span>
-      <div class="seg" id="speeds"></div>
-    </div>
-  </div>
-  <div class="transport">
-    <div class="group" role="group" aria-label="Camera">
-      <span class="label">Camera</span>
-      <div class="seg" id="cams"></div>
-    </div>
-    <label class="check"><input type="checkbox" id="follow" checked> Follow the dog</label>
-    <label class="check"><input type="checkbox" id="prints" checked> Pawprints</label>
-    <label class="check"><input type="checkbox" id="physics"> Physics shapes</label>
-    <label class="check"><input type="checkbox" id="xray"> See-through floor</label>
-  </div>
-
-  <section class="gait" aria-label="Footfall chart">
-    <h2>Footfall chart</h2>
-    <canvas id="gait" tabindex="0" aria-label="Commands and floor contacts over time; click to jump, arrow keys to step"></canvas>
-    <p>The top band shows the command being given. Each row below is one leg. A green bar means the paw is on the floor, and a mark under it means that leg's knee, shin or thigh is on the floor too. In a clean trot, front-left steps together with rear-right, and front-right with rear-left. Click anywhere to jump there.</p>
+  <section class="panel" aria-labelledby="now">
+    <h2 id="now">Running now</h2>
+    <div id="running"><p class="muted">Checking…</p></div>
   </section>
 
-  <section class="notes">
-    <div class="note">
-      <h2>Measured in this clip</h2>
-      <div class="tbl"><table id="table"></table></div>
-      <p class="label" style="margin-top:8px">Averages skip the first second after each command (the change-over). Small grey numbers are the measured targets.</p>
+  <section class="panel" aria-labelledby="watch3d">
+    <div style="display:grid;gap:4px">
+      <h2 id="watch3d">Watch it in 3D</h2>
+      <p class="muted">Replayed from the physics data. Drag to turn, scroll or pinch to zoom. Paws on the floor glow green; a knee or shin on the floor turns red.</p>
     </div>
-    <div class="note">
-      <h2>Walk brains compared</h2>
-      <div class="tbl"><table>
-        <thead><tr><th></th><th>run 6</th><th>run 7 (5M)</th><th>run 8 (2.5M)</th></tr></thead>
-        <tbody>
-          <tr><td>body height</td><td>29–30 cm</td><td class="ok">40 cm</td><td class="ok">43.9 cm</td></tr>
-          <tr><td>lowest knee (median)</td><td>6–12 cm</td><td class="ok">18 cm</td><td class="ok">21 cm</td></tr>
-          <tr><td>knee/shin on floor</td><td class="bad">15% (500k)</td><td class="ok">0%</td><td class="ok">0%</td></tr>
-          <tr><td>falls taking over from stand</td><td class="bad">9 of 10 (2M)</td><td class="ok">0 of 10</td><td class="ok">0 of 10</td></tr>
-          <tr><td>speed</td><td>0.40–0.52 m/s</td><td>0.51 m/s</td><td>0.52 m/s</td></tr><tr><td>nose-up lean</td><td>2°</td><td class="ok">1° (was 7° at 500k)</td><td class="ok">0° (level)</td></tr>
-          <tr><td>lower-leg tilt</td><td class="bad">65°, up to 86°</td><td class="bad">38°, up to 41°</td><td class="ok">21°, up to 27°</td></tr>
-        </tbody>
-      </table></div>
-      <ul style="margin-top:12px">
-        <li><strong>Newest pair, ready to use together:</strong> run 9c (stand, sit, lie) and run 8b (walk). In the full routine it stands 43 cm tall on four paws, sits 30° nose-up on four paws, lies down, stands, and walks off level at 0.41 m/s with no knee on the floor.</li>
-        <li><strong>Stand → walk hand-over:</strong> 0 falls in 10 (1 in 10 with random weight, grip and motor strength). It was 8 in 10 until the walk eased in from the dog stance instead of from the standing brain's last motor commands.</li>
-        <li><strong>Sit fixed:</strong> the old brain sat lopsided with one front paw hovering. Run 9c sits with all four paws down, both sides alike.</li>
-        <li><strong>Shins fixed:</strong> lower legs stay about 24° from upright while walking (run 7: 38°, run 6: 65°), knees about 21 cm up.</li>
-      </ul>
-      <p class="label">Run 7 clips are from its 5M-step checkpoint. Training continues in the background.</p>
+    <div class="chips" id="clips" role="group" aria-label="Clip"></div>
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">Loading…</div>
+      <div class="hint">grid = 10 cm · tail and ears are decoration</div>
     </div>
+    <div class="controls">
+      <button class="btn" id="play" type="button">Pause</button>
+      <div class="chips" id="speeds" role="group" aria-label="Speed"></div>
+      <button class="btn" id="reset" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Reset view</button>
+      <span class="mono muted" id="time"></span>
+    </div>
+    <div class="stats">
+      <div><span class="label">Doing</span><b id="sCmd">–</b></div>
+      <div><span class="label">Height</span><b id="sHeight">–</b></div>
+      <div><span class="label">Speed</span><b id="sSpeed">–</b></div>
+      <div><span class="label">Paws down</span><b id="sPaws">–</b></div>
+      <div><span class="label">Knee on floor</span><b id="sKnee">–</b></div>
+    </div>
+  </section>
+
+  <section class="two" aria-label="Simulator videos">
+    <figure>
+      <video src="video/posture.mp4" muted loop playsinline autoplay controls></video>
+      <figcaption><span class="label">Stand, sit, lie · run 9c</span><span class="muted mono">simulator video</span></figcaption>
+    </figure>
+    <figure>
+      <video src="video/walk.mp4" muted loop playsinline autoplay controls></video>
+      <figcaption><span class="label">Walk · run 8b</span><span class="muted mono">simulator video</span></figcaption>
+    </figure>
+  </section>
+
+  <section class="panel" aria-labelledby="history">
+    <h2 id="history">Training runs so far</h2>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Run</th><th>What it tried</th><th>What happened</th></tr></thead>
+      <tbody>
+        <tr><td>1–4</td><td>Learn everything from scratch</td><td>Stand worked; sit and lie never came; walk was weak.</td></tr>
+        <tr><td>2</td><td>Measured poses, stricter rewards</td><td>Stand, sit, lie 100%. Became the base for later posture brains.</td></tr>
+        <tr><td>5–6</td><td>Walk on top of a built-in trot</td><td>Walked, but crouched, dragged a knee, and fell when starting from standing.</td></tr>
+        <tr><td>7</td><td>Taller stance, knee penalty</td><td>No knees down, no falls, but lower legs sloped ~38° (you spotted it).</td></tr>
+        <tr><td>8</td><td>Dog gait: plan each paw's path like a real dog</td><td>Lower legs ~21°, level, 0.52 m/s.</td></tr>
+        <tr><td>9 / 9b</td><td>Teach a tall stand</td><td>Sit and lie kept, stand stalled (outputs stuck at their limits).</td></tr>
+        <tr><td>9c</td><td>Start from run 2's brain; tall stand as resting point; tidier sit</td><td><strong>Stand, sit, lie 100%.</strong> Saved.</td></tr>
+        <tr><td>8b</td><td>Walk practises starting from the tall stand</td><td><strong>Walk 100%, hand-over 10/10 at 5M.</strong> Saved (5.5M was worse after real hand-overs).</td></tr>
+      </tbody>
+    </table></div>
   </section>
 </div>
 
@@ -209,45 +190,46 @@ td.ok { color: var(--paw); }
 <script>
 (() => {
   const CLIPS = [
-    { id: "routine_new", file: "data/routine_new.json", name: "Full routine · newest", note: "run 9c posture + run 8b walk" },
-    { id: "posture9c", file: "data/posture9c.json", name: "Stand, sit, lie · run 9c", note: "tall stand, four-paw sit" },
-    { id: "walk8b", file: "data/walk8b.json", name: "Walk · run 8b", note: "dog gait, 5M steps" },
-    { id: "handover_new", file: "data/handover_new.json", name: "Stand tall → walk", note: "run 9c hands over to 8b" },
-    { id: "routine8", file: "data/routine8.json", name: "Full routine · older", note: "old posture + run 8 walk" },
-    { id: "stand", file: "data/stand.json", name: "Stand", note: "posture brain" },
-    { id: "sit", file: "data/sit.json", name: "Sit", note: "posture brain" },
-    { id: "lie", file: "data/lie.json", name: "Lie down", note: "posture brain" },
-    { id: "walk8", file: "data/walk8.json", name: "Walk · run 8", note: "dog gait, 2.5M steps" },
-    { id: "handover8", file: "data/handover8.json", name: "Stand → walk · run 8", note: "dog gait takes over" },
-    { id: "doggait", file: "data/doggait.json", name: "Dog gait, no brain", note: "the paw paths alone" },
-    { id: "walk7", file: "data/walk7.json", name: "Walk · run 7", note: "tall stance, 5M steps" },
-    { id: "handover7", file: "data/handover7.json", name: "Stand → walk · run 7", note: "tall stance, 5M steps" },
-    { id: "routine7", file: "data/routine7.json", name: "Full routine · run 7", note: "tall stance walk" },
-    { id: "walk", file: "data/walk.json", name: "Old walk", note: "run 6, 2M, crouch" },
-    { id: "walk500k", file: "data/walk-500k.json", name: "Old walk", note: "run 6, 500k, drags knee" },
-    { id: "handover", file: "data/handover.json", name: "Old stand → walk", note: "run 6, 2M, falls" },
+    { id: "routine", file: "data/routine_new.json", name: "Full routine" },
+    { id: "posture", file: "data/posture9c.json", name: "Stand, sit, lie" },
+    { id: "walk", file: "data/walk8b.json", name: "Walk" },
+    { id: "handover", file: "data/handover_new.json", name: "Stand → walk" },
+    { id: "old", file: "data/walk_old.json", name: "Old walk (run 6, for comparison)" },
   ];
-  const BRAIN_NAMES = { posture9c: "posture brain, run 9c (tall dog stand, four-paw sit)", walk8b: "walk brain, run 8b at 5M (dog gait)", posture: "old posture brain, run 2 (crouched stand)", nobrain: "no brain: the planned paw paths alone", walk7: "walk brain, run 7 at 5M steps (tall stance)", walk8: "walk brain, run 8 at 2.5M steps (dog gait)", posture9b: "posture brain, run 9b at 1.5M (learning the tall stand)",
-                        walk2M: "old walk brain, run 6 at 2M (crouch)", walk500k: "old walk brain, run 6 at 500k (crouch)" };
-  const SPEEDS = [0.1, 0.25, 0.5, 1];
-  const CAMS = ["Side", "Front", "Three-quarter", "Below"];
+  const SPEEDS = [0.25, 0.5, 1];
   const LEGS = ["FL", "FR", "RL", "RR"];
-  const LEG_NAMES = { FL: "front left", FR: "front right", RL: "rear left", RR: "rear right" };
-  const RESTING = new Set(["sit", "lie"]);   // legs on the floor are expected in these
-
+  const RESTING = new Set(["sit", "lie"]);
   const $ = (id) => document.getElementById(id);
-  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
-                  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
-  const deg0 = (v) => (Math.abs(v) < 0.5 ? 0 : v).toFixed(0);   // no "-0"
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+  const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 2 : 0).replace(/\.?0+$/, "") + "M" : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(n);
 
-  let rec = null, frame = 0, clock = 0, playing = true, speed = 0.5, cam = "Three-quarter";
-  let clipId = "routine_new";   // open on the newest walk; earlier visits may have remembered an older clip
-  void store;
-  const cache = {};
+  // ---------- what's running (status.json, refreshed every 30 s) ----------
+  async function loadStatus() {
+    try {
+      const s = await (await fetch("status.json", { cache: "no-store" })).json();
+      const live = s.running.length > 0;
+      $("status").className = "pill" + (live ? " live" : "");
+      $("statusText").textContent = live ? `Training now: ${s.running.map((r) => r.title).join(", ")}` : "Nothing training right now";
+      $("running").innerHTML = live ? s.running.map((r) => {
+        const cells = r.exam ? Object.entries(r.exam).map(([k, v]) => `<span class="c${v >= 0.8 ? 2 : v > 0 ? 1 : 0}">${k[0].toUpperCase() + k.slice(1)} ${Math.round(v * 100)}%</span>`).join("") : "";
+        const left = r.fps ? Math.round((r.target - r.steps) / r.fps / 60) : null;
+        return `<div style="display:grid;gap:8px"><h3>${r.title}</h3>
+          <div class="bar"><div style="width:${Math.min(100, r.steps / r.target * 100)}%"></div></div>
+          <div class="stats"><div><span class="label">Steps</span><b>${fmt(r.steps)} / ${fmt(r.target)}</b></div>
+          <div><span class="label">Time left</span><b>${left != null ? "≈ " + left + " min" : "–"}</b></div>
+          <div><span class="label">Auto-restarts</span><b>${r.restarts}</b></div></div>
+          ${cells ? `<span class="label">Latest exam · ${fmt(r.exam_steps)} steps</span><div class="cells">${cells}</div>` : ""}</div>`;
+      }).join("") : `<p class="muted">Nothing is training. The last two runs finished and their best brains are saved (see above).</p>`;
+    } catch (e) {
+      $("statusText").textContent = "Status unavailable";
+      $("running").innerHTML = `<p class="muted">Couldn't load the training status. Reload to try again.</p>`;
+    }
+  }
+  loadStatus();
+  setInterval(loadStatus, 30000);
 
-  // ---------- renderer and lighting (MuJoCo is z-up; keep it that way) ----------
+  // ---------- 3D scene (MuJoCo is z-up; keep it that way) ----------
   const stageEl = $("stage");
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -256,57 +238,39 @@ td.ok { color: var(--paw); }
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
   stageEl.prepend(renderer.domElement);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, 2, 0.01, 60);
+  const camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.01, 60);
   camera.up.set(0, 0, 1);
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.minDistance = 0.25; controls.maxDistance = 6;
-
-  // a soft studio for reflections: a dim room with three light boxes
+  controls.minDistance = 0.3; controls.maxDistance = 5;
   (function studio() {
     const env = new THREE.Scene();
     env.add(new THREE.Mesh(new THREE.BoxGeometry(12, 12, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.22, 0.24, 0.26), side: THREE.BackSide })));
-    const box = (w, h, color, pos, rot) => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
-      m.position.set(...pos); if (rot) m.rotation.set(...rot); env.add(m);
-    };
+    const box = (w, h, color, pos, rot) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })); m.position.set(...pos); if (rot) m.rotation.set(...rot); env.add(m); };
     box(6, 4, new THREE.Color(5, 5, 5), [0, 0, 5.5]);
     box(4, 3, new THREE.Color(1.6, 1.55, 1.5), [5.5, -1, 1.5], [0, Math.PI / 2, 0]);
     box(4, 2, new THREE.Color(0.9, 1.0, 1.15), [-2, 5.5, 1], [Math.PI / 2, 0, 0]);
-    const pm = new THREE.PMREMGenerator(renderer);
-    scene.environment = pm.fromScene(env, 0.04).texture;
+    scene.environment = new THREE.PMREMGenerator(renderer).fromScene(env, 0.04).texture;
   })();
   scene.add(new THREE.HemisphereLight(0xffffff, 0x3a4246, 0.35));
   const sun = new THREE.DirectionalLight(0xfff4e8, 1.5);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.radius = 4;
-  sun.shadow.bias = -0.0004;
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 4; sun.shadow.bias = -0.0004;
   Object.assign(sun.shadow.camera, { left: -1.2, right: 1.2, top: 1.2, bottom: -1.2, near: 0.1, far: 8 });
-  const rim = new THREE.DirectionalLight(0xcfe6ff, 0.6);
-  scene.add(sun, sun.target, rim, rim.target);
-
-  // floor: shadow catcher plus a 10 cm grid, over the CSS stage colour
-  const shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.28 }));
-  shadowFloor.receiveShadow = true;
-  scene.add(shadowFloor);
+  scene.add(sun, sun.target);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.28 }));
+  floor.receiveShadow = true; scene.add(floor);
   let grid = null;
   function makeGrid() {
     if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
     const c = lin(css("--grid"));
-    grid = new THREE.GridHelper(6, 60, c, c);   // follows the dog in 10 cm steps (see show)
-    grid.material.toneMapped = false;
-    grid.material.transparent = true;
-    grid.rotation.x = Math.PI / 2;
-    grid.position.z = 0.0004;
+    grid = new THREE.GridHelper(6, 60, c, c);
+    grid.material.toneMapped = false; grid.rotation.x = Math.PI / 2; grid.position.z = 0.0004;
     scene.add(grid);
-    setXray();
   }
 
-  // ---------- Bolt's body: shaped parts that ride on the simulator's frames ----------
+  // ---------- Bolt's body: shaped parts riding on the simulator's frames ----------
   const M = {
     shell: new THREE.MeshPhysicalMaterial({ color: lin("#f1f0eb"), roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.18 }),
     frame: new THREE.MeshStandardMaterial({ color: lin("#2a2f35"), roughness: 0.42, metalness: 0.45 }),
@@ -315,81 +279,53 @@ td.ok { color: var(--paw); }
     led: new THREE.MeshStandardMaterial({ color: lin("#ff7a1a"), emissive: lin("#ff7a1a"), emissiveIntensity: 1.4, roughness: 0.4 }),
     eye: new THREE.MeshStandardMaterial({ color: lin("#0a1a20"), emissive: lin("#6fe3ff"), emissiveIntensity: 2.2 }),
     earIn: new THREE.MeshStandardMaterial({ color: lin("#3a3f46"), roughness: 0.7 }),
-    phys: new THREE.MeshBasicMaterial({ color: 0xff2bd6, wireframe: true, transparent: true, opacity: 0.55, toneMapped: false }),
   };
-
-  // a rounded box ("superellipsoid"): p = 1 is an ellipsoid, smaller p is boxier
-  function rounded(a, b, c, p = 0.5, taper = 0, seg = 40) {
+  function rounded(a, b, c, p = 0.5, taper = 0, seg = 40) {   // rounded box: p = 1 ellipsoid, smaller p boxier
     const g = new THREE.SphereGeometry(1, seg, Math.round(seg * 0.75));
-    const pos = g.attributes.position, v = new THREE.Vector3();
-    const f = (t) => Math.sign(t) * Math.pow(Math.abs(t), p);
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i);
-      const s = 1 + taper * f(v.x);
-      pos.setXYZ(i, a * f(v.x), b * f(v.y) * s, c * f(v.z) * s);
-    }
-    g.computeVertexNormals();
-    return g;
+    const pos = g.attributes.position, v = new THREE.Vector3(), f = (t) => Math.sign(t) * Math.pow(Math.abs(t), p);
+    for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const s = 1 + taper * f(v.x); pos.setXYZ(i, a * f(v.x), b * f(v.y) * s, c * f(v.z) * s); }
+    g.computeVertexNormals(); return g;
   }
-  // a limb turned on a lathe along local z; profile is [t, radius], t = 0 at the bottom, 1 at the top
-  function limb(profile, len) {
-    const pts = profile.map(([t, r]) => new THREE.Vector2(r, (t - 0.5) * len));
-    const g = new THREE.LatheGeometry(pts, 32);
-    g.rotateX(Math.PI / 2);
-    return g;
+  function limb(profile, len) {   // lathe along local z; profile [t, radius], t = 0 bottom, 1 top
+    const g = new THREE.LatheGeometry(profile.map(([t, r]) => new THREE.Vector2(r, (t - 0.5) * len)), 32);
+    g.rotateX(Math.PI / 2); return g;
   }
-  function mesh(geo, mat, pos, rot) {
-    const m = new THREE.Mesh(geo, mat);
-    if (pos) m.position.set(...pos);
-    if (rot) m.rotation.set(...rot);
-    m.castShadow = true; m.receiveShadow = true;
-    return m;
-  }
-  function between(a, b, r, mat) {   // a rod from point a to point b
-    const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A);
+  function mesh(geo, mat, pos, rot) { const m = new THREE.Mesh(geo, mat); if (pos) m.position.set(...pos); if (rot) m.rotation.set(...rot); m.castShadow = m.receiveShadow = true; return m; }
+  function between(a, b, r, mat) {
+    const A = new THREE.Vector3(...a), d = new THREE.Vector3(...b).sub(A);
     const m = mesh(new THREE.CylinderGeometry(r, r, d.length(), 24), mat);
-    m.position.copy(A).addScaledVector(d, 0.5);
-    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
-    return m;
+    m.position.copy(A).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); return m;
   }
-  function jointHousing(r, len, side, mat) {   // motor housing turning about local y, with a lit ring
+  function jointHousing(r, len, side, mat) {
     const g = new THREE.Group();
     g.add(mesh(new THREE.CylinderGeometry(r, r, len, 32), mat));
     g.add(mesh(new THREE.TorusGeometry(r * 0.72, r * 0.1, 10, 40), M.led, [0, side * len / 2, 0], [Math.PI / 2, 0, 0]));
     g.add(mesh(new THREE.CylinderGeometry(r * 0.6, r * 0.6, 0.004, 32), M.shell, [0, side * (len / 2 + 0.001), 0]));
     return g;
   }
-
   let tail = null, eyes = [];
   function partMesh(g) {
-    // a group in the geom's frame; materials are cloned per part so contacts can tint them
-    const mats = {};
-    const mat = (k) => mats[k] || (mats[k] = M[k].clone());
-    const side = g.leg && g.leg[1] === "L" ? 1 : -1;
-    const grp = new THREE.Group();
+    const mats = {}, mat = (k) => mats[k] || (mats[k] = M[k].clone());
+    const side = g.leg && g.leg[1] === "L" ? 1 : -1, grp = new THREE.Group();
     switch (g.part) {
       case "torso": {
         grp.add(mesh(rounded(0.272, 0.116, 0.072, 0.42, 0.07), mat("shell")));
-        grp.add(mesh(rounded(0.25, 0.104, 0.05, 0.5), mat("frame"), [0, 0, -0.03]));              // dark belly pan
-        grp.add(mesh(rounded(0.15, 0.011, 0.006, 0.4), M.led, [-0.02, 0, 0.072]));                // spine light
-        for (const s of [1, -1]) for (const x of [-0.08, -0.04, 0]) {                               // side vents
-          grp.add(mesh(rounded(0.012, 0.004, 0.026, 0.5), M.frame, [x, s * 0.117, 0.005]));
-        }
-        grp.add(between([0.2, 0, 0.03], [0.31, 0, 0.075], 0.038, mat("frame")));                  // neck
-        tail = new THREE.Group(); tail.position.set(-0.262, 0, 0.035);                              // decoration only
+        grp.add(mesh(rounded(0.25, 0.104, 0.05, 0.5), mat("frame"), [0, 0, -0.03]));
+        grp.add(mesh(rounded(0.15, 0.011, 0.006, 0.4), M.led, [-0.02, 0, 0.072]));
+        for (const s of [1, -1]) for (const x of [-0.08, -0.04, 0]) grp.add(mesh(rounded(0.012, 0.004, 0.026, 0.5), M.frame, [x, s * 0.117, 0.005]));
+        grp.add(between([0.2, 0, 0.03], [0.31, 0, 0.075], 0.038, mat("frame")));
+        tail = new THREE.Group(); tail.position.set(-0.262, 0, 0.035);
         const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.05, 0, 0.04), new THREE.Vector3(-0.08, 0, 0.1), new THREE.Vector3(-0.085, 0, 0.15)]);
         tail.add(mesh(new THREE.TubeGeometry(curve, 24, 0.011, 12, false), M.frame));
         tail.add(mesh(new THREE.SphereGeometry(0.018, 20, 14), M.led, [-0.085, 0, 0.152]));
-        grp.add(tail);
-        break;
+        grp.add(tail); break;
       }
       case "head": {
         grp.add(mesh(rounded(0.084, 0.074, 0.064, 0.5, -0.05), mat("shell")));
-        grp.add(mesh(rounded(0.03, 0.062, 0.046, 0.45), M.visor, [0.062, 0, 0.008]));              // face screen
+        grp.add(mesh(rounded(0.03, 0.062, 0.046, 0.45), M.visor, [0.062, 0, 0.008]));
         eyes = [];
         for (const s of [1, -1]) {
-          const e = mesh(rounded(0.004, 0.014, 0.018, 0.4), M.eye, [0.092, s * 0.03, 0.014]);
-          eyes.push(e); grp.add(e);
+          const e = mesh(rounded(0.004, 0.014, 0.018, 0.4), M.eye, [0.092, s * 0.03, 0.014]); eyes.push(e); grp.add(e);
           const ear = new THREE.Group(); ear.position.set(-0.025, s * 0.05, 0.055); ear.rotation.set(-s * 0.35, -0.15, 0);
           ear.add(mesh(rounded(0.016, 0.03, 0.052, 0.55), M.frame, [0, 0, 0.045]));
           ear.add(mesh(rounded(0.006, 0.02, 0.036, 0.55), M.earIn, [0.012, 0, 0.045]));
@@ -397,391 +333,126 @@ td.ok { color: var(--paw); }
         }
         break;
       }
-      case "snout": {
+      case "snout":
         grp.add(mesh(rounded(0.042, 0.046, 0.032, 0.55, -0.12), mat("shell"), [0.004, 0, -0.004]));
-        grp.add(mesh(rounded(0.012, 0.018, 0.012, 0.6), M.rubber, [0.045, 0, 0.008]));            // nose
-        break;
-      }
-      case "hip joint":
-        grp.add(jointHousing(0.037, 0.06, side, mat("frame")));
-        break;
-      case "thigh":   // +z is the hip end
+        grp.add(mesh(rounded(0.012, 0.018, 0.012, 0.6), M.rubber, [0.045, 0, 0.008])); break;
+      case "hip joint": grp.add(jointHousing(0.037, 0.06, side, mat("frame"))); break;
+      case "thigh":
         grp.add(mesh(limb([[0, 0], [0.02, 0.019], [0.2, 0.023], [0.5, 0.029], [0.78, 0.031], [0.95, 0.026], [1, 0]], 0.2), mat("shell")));
-        grp.add(mesh(limb([[0, 0], [0.02, 0.016], [0.5, 0.02], [0.98, 0.02], [1, 0]], 0.21), mat("frame"), [0, -side * 0.004, 0]));
-        break;
-      case "knee joint":
-        grp.add(jointHousing(0.029, 0.05, side, mat("frame")));
-        break;
+        grp.add(mesh(limb([[0, 0], [0.02, 0.016], [0.5, 0.02], [0.98, 0.02], [1, 0]], 0.21), mat("frame"), [0, -side * 0.004, 0])); break;
+      case "knee joint": grp.add(jointHousing(0.029, 0.05, side, mat("frame"))); break;
       case "shin":
         grp.add(mesh(limb([[0, 0], [0.02, 0.012], [0.4, 0.014], [0.85, 0.019], [0.98, 0.02], [1, 0]], 0.2), mat("frame")));
-        grp.add(mesh(limb([[0.45, 0], [0.47, 0.0185], [0.8, 0.0215], [0.95, 0.021], [0.97, 0]], 0.2), mat("shell")));
-        break;
+        grp.add(mesh(limb([[0.45, 0], [0.47, 0.0185], [0.8, 0.0215], [0.95, 0.021], [0.97, 0]], 0.2), mat("shell"))); break;
       case "foot":
         grp.add(mesh(rounded(0.031, 0.027, 0.024, 0.6), mat("rubber"), [0.006, 0, 0]));
-        grp.add(mesh(new THREE.TorusGeometry(0.026, 0.0035, 8, 32), M.led, [0.004, 0, 0.012]));
-        break;
-      default:
-        return null;   // eyes: drawn on the head instead
+        grp.add(mesh(new THREE.TorusGeometry(0.026, 0.0035, 8, 32), M.led, [0.004, 0, 0.012])); break;
+      default: return null;
     }
     return { grp, tint: Object.values(mats) };
   }
-  function physShape(g) {
-    if (g.part.endsWith("joint") || g.part.startsWith("eye")) return null;   // these don't collide
-    const [a, b] = g.size;
-    if (g.kind === "box") return new THREE.Mesh(new THREE.BoxGeometry(2 * a, 2 * b, 2 * g.size[2]), M.phys);
-    if (g.kind === "sphere") return new THREE.Mesh(new THREE.SphereGeometry(a, 12, 8), M.phys);
-    const geo = new THREE.CylinderGeometry(a, a, 2 * b, 10, 1, true); geo.rotateX(Math.PI / 2);
-    return new THREE.Mesh(geo, M.phys);
-  }
-
-  const dog = new THREE.Group(), physics = new THREE.Group();
-  scene.add(dog, physics);
-  let parts = [];
-  function buildDog() {
-    dog.clear(); physics.clear(); tail = null; eyes = [];
-    parts = rec.geoms.map((g) => {
-      const nice = partMesh(g), ph = physShape(g);
-      if (nice) dog.add(nice.grp);
-      if (ph) physics.add(ph);
-      return { g, nice: nice && nice.grp, tint: nice ? nice.tint : [], ph };
-    });
-  }
-
-  // rings on the floor under each leg: paw down, or the spot where a knee/shin touches
+  const dog = new THREE.Group(); scene.add(dog);
   const ringGeo = new THREE.RingGeometry(0.03, 0.042, 40);
-  const marks = LEGS.map(() => {
-    const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false }));
-    m.renderOrder = 2; scene.add(m); return m;
-  });
-
-  // pawprints: one instanced disc per paw-contact sample
-  const PRINT_MAX = 6000;
-  const prints = new THREE.InstancedMesh(new THREE.CircleGeometry(0.02, 18),
-    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.45, depthWrite: false, toneMapped: false }), PRINT_MAX);
-  prints.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(PRINT_MAX * 3), 3);
-  prints.count = 0; prints.renderOrder = 1;
-  scene.add(prints);
-  let printOffsets = [];
+  const marks = LEGS.map(() => { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false })); m.renderOrder = 2; scene.add(m); return m; });
 
   let C = {};
-  function readColors() {
-    const c = (n) => lin(css(n) || "#888");
-    C = { paw: c("--paw"), rest: c("--rest"), bad: c("--bad") };
-  }
+  function colors() { C = { paw: lin(css("--good")), bad: lin(css("--bad")), rest: lin(css("--warn")) }; }
 
-  // ---------- data ----------
+  // ---------- clips ----------
+  let rec = null, parts = [], frame = 0, clock = 0, playing = true, speed = 0.5, lastTorso = null;
+  const cache = {};
   function prepare(r) {
     const idx = (leg, test) => r.geoms.map((g, i) => (g.leg === leg && test(g) ? i : -1)).filter((i) => i >= 0);
-    r.paw = {}; r.legParts = {}; r.knee = {};
-    LEGS.forEach((L) => {
-      r.paw[L] = idx(L, (g) => g.part === "foot")[0];
-      r.legParts[L] = idx(L, () => true);
-      r.knee[L] = idx(L, (g) => g.part === "knee joint")[0];
-    });
+    r.paw = {}; r.legParts = {};
+    LEGS.forEach((L) => { r.paw[L] = idx(L, (g) => g.part === "foot")[0]; r.legParts[L] = idx(L, () => true); });
     r.torso = r.geoms.findIndex((g) => g.part === "torso");
     r.frames.forEach((f) => { f.floorSet = new Set(f.floor); f.scrapeSet = new Set(f.scrape || []); });
-    r.fell = r.frames.length > 0 && r.frames[r.frames.length - 1].fell;
-    r.segments = [];
-    r.frames.forEach((f, i) => {
-      const s = r.segments[r.segments.length - 1];
-      if (!s || s.cmd !== f.cmd) r.segments.push({ cmd: f.cmd, brain: f.brain, start: i, end: i + 1 });
-      else s.end = i + 1;
-    });
     return r;
   }
-
   async function loadClip(id) {
-    clipId = id; store.set("bolt-clip", id);
-    const clip = CLIPS.find((c) => c.id === id);
-    [...$("clipbar").children].forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === id)));
-    $("loading").hidden = false; $("loading").textContent = "Loading the recording…";
+    [...$("clips").children].forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === id)));
+    $("loading").hidden = false;
     try {
-      if (!cache[id]) {
-        const res = await fetch(clip.file);
-        if (!res.ok) throw new Error(res.status);
-        cache[id] = prepare(await res.json());
-      }
-    } catch (e) {
-      $("loading").textContent = "Couldn't load this clip. Reload the page to try again.";
-      return;
-    }
+      if (!cache[id]) cache[id] = prepare(await (await fetch(CLIPS.find((c) => c.id === id).file)).json());
+    } catch (e) { $("loading").textContent = "Couldn't load this clip. Reload to try again."; return; }
     rec = cache[id];
-    buildDog();
-    $("scrub").max = String(rec.frames.length - 1);
-    frame = 0; clock = 0;
-    $("loading").hidden = true;
-    fillTable();
-    rebuildPrints();
-    setCamera(cam);
-    drawGait();
-    show(0);
+    dog.clear(); tail = null; eyes = [];
+    parts = rec.geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp, tint: n ? n.tint : [] }; });
+    frame = 0; clock = 0; $("loading").hidden = true;
+    resetView(); show(0);
   }
-
-  // ---------- drawing one frame ----------
-  const tmpQ = new THREE.Quaternion();
-  let lastTorso = null;
+  function resetView() {
+    if (!rec) return;
+    const f = rec.frames[frame], t = rec.torso * 7, x = f.p[t], y = f.p[t + 1], yaw = (f.yaw || 0) * Math.PI / 180;
+    const fwd = new THREE.Vector3(Math.cos(yaw), Math.sin(yaw), 0), left = new THREE.Vector3(-Math.sin(yaw), Math.cos(yaw), 0);
+    const target = new THREE.Vector3(x, y, 0.2);
+    camera.position.copy(target).addScaledVector(fwd, 0.7).addScaledVector(left, -1.25).add(new THREE.Vector3(0, 0, 0.35));
+    controls.target.copy(target); controls.update(); lastTorso = { x, y };
+  }
+  const q = new THREE.Quaternion();
   function show(fi) {
     const f = rec.frames[fi], resting = RESTING.has(f.cmd);
     parts.forEach((pt, i) => {
+      if (!pt.obj) return;
       const o = i * 7, p = f.p;
-      tmpQ.set(p[o + 4], p[o + 5], p[o + 6], p[o + 3]);   // MuJoCo w,x,y,z -> three x,y,z,w
-      for (const obj of [pt.nice, pt.ph]) if (obj) { obj.position.set(p[o], p[o + 1], p[o + 2]); obj.quaternion.copy(tmpQ); }
+      pt.obj.position.set(p[o], p[o + 1], p[o + 2]);
+      pt.obj.quaternion.copy(q.set(p[o + 4], p[o + 5], p[o + 6], p[o + 3]));   // MuJoCo w,x,y,z -> three x,y,z,w
       let glow = null;
-      if (f.floorSet.has(i)) {
-        if (pt.g.part === "foot") glow = C.paw;
-        else if (!pt.g.leg || f.scrapeSet.has(i)) glow = resting ? C.rest : C.bad;
-      }
+      if (f.floorSet.has(i)) glow = pt.g.part === "foot" ? C.paw : (!pt.g.leg || f.scrapeSet.has(i)) ? (resting ? C.rest : C.bad) : null;
       pt.tint.forEach((m) => { if (glow) { m.emissive.copy(glow); m.emissiveIntensity = 0.75; } else m.emissive.setRGB(0, 0, 0); });
     });
     LEGS.forEach((L, k) => {
       const paw = rec.paw[L], scr = rec.legParts[L].find((j) => f.scrapeSet.has(j)), ring = marks[k];
-      if (scr !== undefined) {
-        ring.visible = true; ring.material.color.copy(resting ? C.rest : C.bad);
-        ring.position.set(f.p[scr * 7], f.p[scr * 7 + 1], 0.0015); ring.scale.setScalar(1.6);
-      } else if (f.floorSet.has(paw)) {
-        ring.visible = true; ring.material.color.copy(C.paw);
-        ring.position.set(f.p[paw * 7], f.p[paw * 7 + 1], 0.0015); ring.scale.setScalar(1);
-      } else ring.visible = false;
+      const at = scr !== undefined ? scr : f.floorSet.has(paw) ? paw : null;
+      ring.visible = at !== null;
+      if (at !== null) { ring.material.color.copy(scr !== undefined ? (resting ? C.rest : C.bad) : C.paw); ring.position.set(f.p[at * 7], f.p[at * 7 + 1], 0.0015); }
     });
     const t = rec.torso * 7, tx = f.p[t], ty = f.p[t + 1];
-    if ($("follow").checked && lastTorso) {
-      const dx = tx - lastTorso.x, dy = ty - lastTorso.y;
-      camera.position.x += dx; camera.position.y += dy;
-      controls.target.x += dx; controls.target.y += dy;
-    }
+    if (lastTorso) { camera.position.x += tx - lastTorso.x; camera.position.y += ty - lastTorso.y; controls.target.x += tx - lastTorso.x; controls.target.y += ty - lastTorso.y; }
     lastTorso = { x: tx, y: ty };
     if (grid) grid.position.set(Math.round(tx * 10) / 10, Math.round(ty * 10) / 10, 0.0004);
-    sun.position.set(tx + 1.0, ty - 1.4, 2.6); sun.target.position.set(tx, ty, 0);
-    rim.position.set(tx - 1.5, ty + 1.2, 1.2); rim.target.position.set(tx, ty, 0.2);
-    prints.visible = $("prints").checked;
-    prints.count = printOffsets[fi] || 0;
-    readouts(f);
-    $("scrub").value = String(fi);
-    $("time").textContent = `${(fi / rec.fps).toFixed(2)} s / ${(rec.frames.length / rec.fps).toFixed(1)} s`;
-    $("fell").hidden = !(rec.fell && fi >= rec.frames.length - 26);
-    drawPlayhead(fi);
+    sun.position.set(tx + 1, ty - 1.4, 2.6); sun.target.position.set(tx, ty, 0);
+    const paws = LEGS.filter((L) => f.floorSet.has(rec.paw[L])).length;
+    const knee = LEGS.some((L) => rec.legParts[L].some((j) => f.scrapeSet.has(j))) && !resting;
+    $("sCmd").textContent = f.cmd;
+    $("sHeight").textContent = `${(f.h * 100).toFixed(0)} cm`;
+    $("sSpeed").textContent = `${Math.max(0, f.vx).toFixed(2)} m/s`;
+    $("sPaws").textContent = `${paws} of 4`;
+    $("sKnee").textContent = knee ? "yes" : "no";
+    $("sKnee").className = knee ? "bad" : "";
+    $("time").textContent = `${(fi / rec.fps).toFixed(1)} / ${(rec.frames.length / rec.fps).toFixed(0)} s`;
   }
 
-  function readouts(f) {
-    const tg = rec.targets[f.cmd] || {};
-    const knees = LEGS.map((L) => f.p[rec.knee[L] * 7 + 2]);
-    const paws = LEGS.filter((L) => f.floorSet.has(rec.paw[L]));
-    $("r-cmd").innerHTML = `<i style="background:var(--c-${f.cmd})"></i>${f.cmd}`;
-    $("r-brain").textContent = BRAIN_NAMES[f.brain] || f.brain;
-    $("r-height").innerHTML = `${(f.h * 100).toFixed(1)} <small>cm</small>`;
-    $("t-height").textContent = tg.height != null ? `target ${(tg.height * 100).toFixed(1)} cm` : "";
-    $("r-pitch").innerHTML = `${deg0(f.pitch)}<small>°</small>`;
-    $("t-pitch").textContent = tg.pitch != null ? `target ${Math.round(tg.pitch * 180 / Math.PI)}°` : "";
-    $("r-speed").innerHTML = `${f.vx.toFixed(2)} <small>m/s</small>`;
-    $("t-speed").textContent = tg.speed != null ? `target ${tg.speed.toFixed(1)} m/s` : "";
-    $("r-knee").innerHTML = `${(Math.min(...knees) * 100).toFixed(1)} <small>cm</small>`;
-    $("r-paws").textContent = `${paws.length} of 4`;
-    const tilts = LEGS.map((L) => {
-      const k = rec.knee[L] * 7, f0 = rec.paw[L] * 7, p = f.p;
-      const dx = p[k] - p[f0], dy = p[k + 1] - p[f0 + 1], dz = p[k + 2] - p[f0 + 2];
-      return Math.atan2(Math.hypot(dx, dy), dz) * 180 / Math.PI;
-    });
-    $("r-tilt").innerHTML = `${Math.round(tilts.reduce((a, b) => a + b, 0) / 4)}<small>°</small>`;
-    $("r-pawlist").textContent = paws.join(" ") || "none";
-  }
-
-  function rebuildPrints() {
-    const m = new THREE.Matrix4(); let n = 0; printOffsets = [];
-    rec.frames.forEach((f, fi) => {
-      if (fi % 4 === 0) LEGS.forEach((L) => {
-        const i = rec.paw[L];
-        if (n >= PRINT_MAX || !f.floorSet.has(i)) return;
-        m.makeTranslation(f.p[i * 7], f.p[i * 7 + 1], 0.001);
-        prints.setMatrixAt(n, m);
-        prints.setColorAt(n, C.paw);
-        n++;
-      });
-      printOffsets[fi] = n;
-    });
-    prints.instanceMatrix.needsUpdate = true;
-    if (prints.instanceColor) prints.instanceColor.needsUpdate = true;
-  }
-
-  // ---------- cameras ----------
-  function setCamera(name) {
-    cam = name;
-    [...$("cams").children].forEach((b) => b.setAttribute("aria-pressed", String(b.textContent === name)));
-    if (!rec) return;
-    const f = rec.frames[frame], t = rec.torso * 7;
-    const x = f.p[t], y = f.p[t + 1];
-    const yaw = (f.yaw || 0) * Math.PI / 180;
-    const fwd = new THREE.Vector3(Math.cos(yaw), Math.sin(yaw), 0), left = new THREE.Vector3(-Math.sin(yaw), Math.cos(yaw), 0);
-    const target = new THREE.Vector3(x, y, 0.17);
-    const up = (z) => new THREE.Vector3(0, 0, z);
-    let pos;
-    if (name === "Side") pos = target.clone().addScaledVector(left, -1.45).add(up(0.06));
-    else if (name === "Front") pos = target.clone().addScaledVector(fwd, 1.4).add(up(0.12));
-    else if (name === "Below") pos = target.clone().addScaledVector(left, -0.45).add(up(-0.95));
-    else pos = target.clone().addScaledVector(fwd, 0.85).addScaledVector(left, -1.05).add(up(0.5));
-    camera.position.copy(pos); controls.target.copy(target); controls.update();
-    lastTorso = { x, y };
-    $("xray").checked = name === "Below";
-    setXray();
-  }
-  function setXray() {
-    const see = $("xray").checked;
-    shadowFloor.visible = !see;
-    if (grid) grid.material.opacity = see ? 0.35 : 0.9;
-  }
-
-  // ---------- footfall chart ----------
-  const gc = $("gait"), g2 = gc.getContext("2d");
-  const PAD_L = 92, PAD_R = 8, BAND = 24, AXIS = 20;
-  let gaitImage = null;
-  function drawGait() {
-    if (!rec) return;
-    const r = gc.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio, 2);
-    gc.width = Math.round(r.width * dpr); gc.height = Math.round(r.height * dpr);
-    g2.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const W = r.width, H = r.height, n = rec.frames.length, plotW = W - PAD_L - PAD_R;
-    const rowH = (H - BAND - 6 - AXIS) / 4, X = (i) => PAD_L + (i / n) * plotW;
-    g2.clearRect(0, 0, W, H);
-    g2.textBaseline = "middle";
-    g2.font = `500 11px ${css("--mono")}`; g2.fillStyle = css("--muted"); g2.textAlign = "left";
-    g2.fillText("COMMAND", 0, BAND / 2);
-    rec.segments.forEach((s) => {
-      const w = X(s.end) - X(s.start);
-      g2.fillStyle = css(`--c-${s.cmd}`);
-      g2.fillRect(X(s.start), 2, w - 1, BAND - 4);
-      if (w > 34) { g2.fillStyle = "#fff"; g2.font = `600 12px ${css("--body")}`; g2.textAlign = "center"; g2.fillText(s.cmd, X(s.start) + w / 2, BAND / 2 + 1); }
-    });
-    LEGS.forEach((L, k) => {
-      const y0 = BAND + 6 + k * rowH;
-      g2.textAlign = "left"; g2.fillStyle = css("--muted");
-      g2.font = `500 12px ${css("--mono")}`; g2.fillText(L, 0, y0 + rowH * 0.35);
-      g2.font = `400 11px ${css("--body")}`; g2.fillText(LEG_NAMES[L], 0, y0 + rowH * 0.72);
-      g2.fillStyle = css("--bg");
-      g2.fillRect(PAD_L, y0 + 2, plotW, rowH - 4);
-      for (let i = 0; i < n; i++) {
-        const f = rec.frames[i], w = plotW / n + 0.6;
-        if (f.floorSet.has(rec.paw[L])) { g2.fillStyle = css("--paw"); g2.fillRect(X(i), y0 + 4, w, rowH * 0.48); }
-        if (rec.legParts[L].some((j) => f.scrapeSet.has(j))) {
-          g2.fillStyle = css(RESTING.has(f.cmd) ? "--rest" : "--bad");
-          g2.fillRect(X(i), y0 + rowH * 0.6, w, rowH * 0.28);
-        }
-      }
-    });
-    g2.fillStyle = css("--muted"); g2.textAlign = "center"; g2.textBaseline = "alphabetic"; g2.font = `400 11px ${css("--mono")}`;
-    const secs = n / rec.fps, stepS = secs > 14 ? 2 : 1;
-    for (let s = 0; s <= secs + 1e-6; s += stepS) {
-      const x = PAD_L + (s / secs) * plotW;
-      g2.fillRect(x, H - AXIS + 2, 1, 4);
-      g2.fillText(`${s}s`, Math.min(W - 10, Math.max(PAD_L + 6, x)), H - 3);
-    }
-    gaitImage = g2.getImageData(0, 0, gc.width, gc.height);
-    drawPlayhead(frame);
-  }
-  function drawPlayhead(fi) {
-    if (!gaitImage || !rec) return;
-    g2.putImageData(gaitImage, 0, 0);
-    const r = gc.getBoundingClientRect();
-    const x = PAD_L + (fi / rec.frames.length) * (r.width - PAD_L - PAD_R);
-    g2.fillStyle = css("--accent");
-    g2.fillRect(x - 1, 0, 2, r.height - AXIS);
-  }
-  function seekTo(fi) {
-    frame = Math.max(0, Math.min(rec.frames.length - 1, fi)); clock = frame / rec.fps; show(frame);
-  }
-  function seekFromGait(ev) {
-    const r = gc.getBoundingClientRect(), fr = (ev.clientX - r.left - PAD_L) / (r.width - PAD_L - PAD_R);
-    if (rec && fr >= 0 && fr <= 1) seekTo(Math.round(fr * (rec.frames.length - 1)));
-  }
-  let dragging = false;
-  gc.addEventListener("pointerdown", (e) => { dragging = true; gc.setPointerCapture(e.pointerId); seekFromGait(e); });
-  gc.addEventListener("pointermove", (e) => dragging && seekFromGait(e));
-  gc.addEventListener("pointerup", () => (dragging = false));
-  gc.addEventListener("keydown", (e) => {
-    if (rec && (e.key === "ArrowRight" || e.key === "ArrowLeft")) { seekTo(frame + (e.key === "ArrowRight" ? 5 : -5)); e.preventDefault(); }
-  });
-
-  // ---------- table: each command against its measured target ----------
-  function fillTable() {
-    const deg = (rad) => Math.round(rad * 180 / Math.PI);
-    const tag = (v) => `<span class="tg">/${v}</span>`;
-    let html = `<thead><tr><th>command</th><th>height cm</th><th>tilt</th><th>speed m/s</th><th>paws down</th><th>knee etc. down</th></tr></thead><tbody>` +
-      rec.summary.map((s) => {
-        const tg = rec.targets[s.command] || {}, resting = RESTING.has(s.command);
-        const hOk = Math.abs(s.height - tg.height) <= 0.03, scr = s.scrape > 0.01 && !resting;
-        return `<tr><td>${s.command} <span class="tg">${((s.end - s.start) / rec.fps).toFixed(0)}s</span></td>` +
-          `<td class="${hOk ? "ok" : "bad"}">${(s.height * 100).toFixed(1)} ${tag((tg.height * 100).toFixed(1))}</td>` +
-          `<td>${deg0(s.pitch)}° ${tag(deg(tg.pitch) + "°")}</td>` +
-          `<td>${s.speed.toFixed(2)} ${tag(tg.speed.toFixed(1))}</td>` +
-          `<td>${s.paws.toFixed(1)}</td>` +
-          `<td class="${scr ? "bad" : ""}">${resting ? "resting" : Math.round(s.scrape * 100) + "%"}</td></tr>`;
-      }).join("");
-    if (rec.fell) html += `<tr><td class="bad" colspan="6" style="text-align:left">Fell over ${(rec.frames.length / rec.fps).toFixed(1)} s in</td></tr>`;
-    $("table").innerHTML = html + `</tbody>`;
-  }
-
-  // ---------- controls ----------
-  CLIPS.forEach((c) => {
-    const el = document.createElement("button"); el.type = "button"; el.dataset.id = c.id;
-    el.innerHTML = `${c.name}<small>${c.note}</small>`;
-    el.addEventListener("click", () => loadClip(c.id)); $("clipbar").append(el);
-  });
-  SPEEDS.forEach((s) => {
-    const el = document.createElement("button"); el.type = "button"; el.textContent = `${s}×`;
-    el.setAttribute("aria-pressed", String(s === speed));
-    el.addEventListener("click", () => { speed = s; [...$("speeds").children].forEach((b) => b.setAttribute("aria-pressed", String(b === el))); });
-    $("speeds").append(el);
-  });
-  CAMS.forEach((c) => {
-    const el = document.createElement("button"); el.type = "button"; el.textContent = c;
-    el.addEventListener("click", () => setCamera(c)); $("cams").append(el);
-  });
+  CLIPS.forEach((c) => { const b = document.createElement("button"); b.type = "button"; b.dataset.id = c.id; b.textContent = c.name; b.addEventListener("click", () => loadClip(c.id)); $("clips").append(b); });
+  SPEEDS.forEach((s) => { const b = document.createElement("button"); b.type = "button"; b.textContent = `${s}×`; b.setAttribute("aria-pressed", String(s === speed)); b.addEventListener("click", () => { speed = s; [...$("speeds").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("speeds").append(b); });
   $("play").addEventListener("click", () => { playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; });
-  $("scrub").addEventListener("input", (e) => rec && seekTo(+e.target.value));
-  $("xray").addEventListener("change", setXray);
-  $("prints").addEventListener("change", () => rec && show(frame));
-  $("physics").addEventListener("change", () => { physics.visible = $("physics").checked; });
-  physics.visible = false;
-  $("follow").addEventListener("change", () => { if (rec) { const t = rec.torso * 7, f = rec.frames[frame]; lastTorso = { x: f.p[t], y: f.p[t + 1] }; } });
+  $("reset").addEventListener("click", resetView);
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduced) { playing = false; $("play").textContent = "Play"; }
 
-  // ---------- resize / theme ----------
-  function resize() {
-    const r = stageEl.getBoundingClientRect();
-    renderer.setSize(r.width, r.height, false);
-    camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix();
-    drawGait();
-  }
-  function retheme() { readColors(); makeGrid(); if (rec) { rebuildPrints(); drawGait(); show(frame); } }
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
   new ResizeObserver(resize).observe(stageEl);
+  const retheme = () => { colors(); makeGrid(); if (rec) show(frame); };
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
   new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
-  // ---------- loop ----------
   let last = performance.now();
   function tick(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (rec) {
       if (playing) {
         clock += dt * speed;
-        const total = rec.frames.length / rec.fps + (rec.fell ? 1.5 : 0);   // linger on a fall
-        if (clock >= total) { clock = 0; frame = 0; setCamera(cam); show(0); }
+        if (clock >= rec.frames.length / rec.fps) { clock = 0; frame = 0; resetView(); }
         const fi = Math.min(rec.frames.length - 1, Math.floor(clock * rec.fps));
         if (fi !== frame) { frame = fi; show(frame); }
       }
-      // decoration: tail wag and blinking (wall clock, not physics)
       const s = now / 1000, cmd = rec.frames[frame].cmd;
       if (tail && !reduced) tail.rotation.z = (cmd === "lie" ? 0.12 : 0.35) * Math.sin(s * (cmd === "walk" ? 9 : 5));
-      const blink = (s % 3.7) < 0.12 ? 0.12 : 1;
-      eyes.forEach((e) => (e.scale.z = blink));
-      controls.update();
-      renderer.render(scene, camera);
+      eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));
+      controls.update(); renderer.render(scene, camera);
     }
     requestAnimationFrame(tick);
   }
-  readColors();
-  makeGrid();
-  resize();
-  loadClip(clipId);
-  requestAnimationFrame(tick);
+  colors(); makeGrid(); resize(); loadClip("routine"); requestAnimationFrame(tick);
 })();
 </script>

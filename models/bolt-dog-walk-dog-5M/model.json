@@ -1,7 +1,7 @@
 {
-  "name": "bolt-dog-walk-dog-5.5M",
-  "source": "runs/bolt8b/policy.zip",
-  "steps": 5502944,
+  "name": "bolt-dog-walk-dog-5M",
+  "source": "runs/bolt8b/checkpoints/policy_5000000_steps.zip",
+  "steps": 5000000,
   "exam_episodes": 10,
   "packaged": "2026-10-24",
   "rollout_steps": 500,
@@ -182,5 +182,5 @@
     "residual_scale": 0.35,
     "how": "while walking: motor targets = reference_gait.trot(phase, 0.15, 0.3, base=stance_pose) + residual_scale x action_scale x action; eased in from stand_pose over the first 0.5 s of walking; for 'dog' the trot is reference_gait.paw_trot(phase, **PAW_GAIT) instead"
   },
-  "onnx_max_difference": 6.556510925292969e-07
+  "onnx_max_difference": 8.940696716308594e-07
 }
