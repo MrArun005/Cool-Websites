@@ -49,6 +49,8 @@ QUIET = ("squat", "sit", "lie", "jump", "roll")   # no head turning or talking d
 
 
 class SkillEnv(DuckEnv):
+    rise_term_up = 0.4        # sit to stand ends when uprightness drops below this (s2s_swing.py lowers it)
+
     def __init__(self, task=None, practice=True, **kw):
         kw.pop("task_weights", None)
         self.practice = practice          # practice starts in training; exams always start from standing
@@ -214,7 +216,7 @@ class SkillEnv(DuckEnv):
         terminated = bool((info["up"] < 0.3 and self.task in ("stand", "walk", "run", "squat", "jump"))
                           or (info["up"] < 0.0 and self.task == "sit")
                           # rising from the seat: tipping past ~65° is a fall (the first try flipped over)
-                          or (info["up"] < 0.4 and self.task == "sit_to_stand" and self.sit_q is not None))
+                          or (info["up"] < self.rise_term_up and self.task == "sit_to_stand" and self.sit_q is not None))
         if terminated:
             reward = -RISE_FALL if self.task == "sit_to_stand" else 0.0   # tipping over must cost, not end the bill
         truncated = self.t >= self.max_steps
