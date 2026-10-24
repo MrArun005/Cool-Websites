@@ -260,7 +260,7 @@ class DogGaitTest(unittest.TestCase):
             env.reset(seed=0)
             total, window = 0.0, []
             for t in range(250):
-                _, r, fell, _, info = env.step((held - STAND_POSE) / ACTION_SCALE)  # hold the pose, no brain
+                _, r, fell, _, info = env.step((held - env.base_pose()) / ACTION_SCALE)  # hold the pose, no brain
                 self.assertFalse(fell)
                 total += r
                 window.append(info)
@@ -284,6 +284,21 @@ class DogGaitTest(unittest.TestCase):
         self.assertLess(pay[0.346], pay[0.40])
         self.assertLess(pay[0.40], pay[0.436])
         self.assertGreater(pay[0.40] - pay[0.346], 0.02)  # each step up is worth taking
+
+    def test_dog_stand_is_centred_on_the_dog_stance(self):
+        from bolt_env import STANCES
+        env = BoltEnv(randomize=False, gait_generator="dog")
+        env.forced_command = "stand"
+        env.reset(seed=0)
+        np.testing.assert_allclose(env.base_pose(), STANCES["dog"])  # a zero output already stands tall
+        env.set_command("sit")
+        np.testing.assert_allclose(env.base_pose(), STAND_POSE)      # sit and lie keep their centre
+
+    def test_sit_needs_all_four_paws_down(self):
+        good = dict(height=0.208, goal_height=0.208, pitch=0.54, roll=0.0, vx=0.0, vy=0.0, up=0.85,
+                    feet=np.array([1.0, 1.0, 1.0, 1.0]))
+        self.assertTrue(passed("sit", [good] * 80))
+        self.assertFalse(passed("sit", [dict(good, feet=np.array([0.4, 1.0, 1.0, 1.0]))] * 80))  # front-left paw hovering
 
     def test_other_stances_keep_the_old_stand(self):
         self.assertEqual(BoltEnv(gait_generator="tall").targets["stand"], TARGETS["stand"])

@@ -1,0 +1,87 @@
+{
+  "name": "bolt-run9c-posture-dog-stand-sit",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt9c",
+        "--steps",
+        "3500000",
+        "--envs",
+        "8",
+        "--skills",
+        "stand",
+        "sit",
+        "lie",
+        "--gait-generator",
+        "dog",
+        "--resume",
+        "../models/bolt-dog-run2-1M/policy.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt9c",
+        "--steps",
+        "3500000",
+        "--envs",
+        "8",
+        "--skills",
+        "stand",
+        "sit",
+        "lie",
+        "--gait-generator",
+        "dog",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/bolt9c/checkpoints/policy_*_steps.zip",
+      "log": "runs/bolt9c/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/bolt9c/policy.zip",
+        "log_contains": "^done:"
+      }
+    },
+    {
+      "name": "watch",
+      "cmd": [
+        "python",
+        "-u",
+        "watch.py",
+        "runs/bolt9c",
+        "--log",
+        "runs/bolt9c/train.log",
+        "--out",
+        "runs/bolt9c/watch",
+        "--target",
+        "3500000",
+        "--patience",
+        "0",
+        "--skills",
+        "stand",
+        "sit",
+        "lie",
+        "--gait-generator",
+        "dog",
+        "--label",
+        "Run 9c: from run 2's brain; tall dog stand, tidier sit (four paws, symmetric)"
+      ],
+      "log": "runs/bolt9c/watch.log",
+      "done_when": {
+        "log_contains": "^finished"
+      }
+    }
+  ]
+}

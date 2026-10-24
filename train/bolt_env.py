@@ -138,6 +138,12 @@ class BoltEnv(gym.Env):
     def base_pose(self):
         """What the motors do when the brain outputs zero."""
         if not self.walking_on_generator():
+            # The dog-stance stand is centred on that stance. Centred on the crouch, holding it
+            # needed motor commands at the very edge of their range (run 9b's stand pinned its
+            # outputs at ±1.0 and stalled 7 cm short). Sit and lie keep the crouch centre they
+            # were learned with.
+            if self.stance == "dog" and COMMANDS[self.command] == "stand":
+                return STANCES["dog"]
             return STAND_POSE
         q = trot(self.gait_phase(), self.stance)[0]
         if self.stance in ("tall", "dog"):
@@ -327,11 +333,13 @@ class BoltEnv(gym.Env):
             terms = [
                 np.exp(-((p["height"] - goal["height"]) / h_width) ** 2),
                 np.exp(-((p["pitch"] - goal["pitch"]) / 0.25) ** 2) * upright,
-                np.exp(-pose_err / 0.4),
+                # Sit is matched tighter: at 0.4 the brain sat lopsided (hips 25° apart left/right)
+                # with one front paw hovering and still scored well.
+                np.exp(-pose_err / (0.15 if name == "sit" else 0.4)),
                 np.exp(-(speed / 0.15) ** 2),
             ]
-            if name == "stand":
-                terms.append((feet.sum() / 4) ** 4)  # three feet down scores 0.32, four scores 1
+            if name in ("stand", "sit"):
+                terms.append((feet.sum() / 4) ** 4)  # three paws down scores 0.32, four score 1  # three feet down scores 0.32, four scores 1
             progress = 0.0
         reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms) + 0.5 * progress
 

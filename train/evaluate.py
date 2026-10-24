@@ -54,7 +54,7 @@ def passed(command, window):
     speed = np.mean([np.hypot(p["vx"], p["vy"]) for p in window])
     goal_h = window[0].get("goal_height", goal["height"])  # the env's own target (the dog stance stands taller)
     ok = upright and abs(h - goal_h) < 0.03 and abs(pitch - goal["pitch"]) < 0.12 and roll < 0.12 and speed < 0.15
-    if command == "stand":
+    if command in ("stand", "sit"):  # a real dog sits on all four paws too
         ok = ok and feet.min() >= 0.9
     return bool(ok)
 
