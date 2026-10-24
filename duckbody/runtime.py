@@ -40,7 +40,7 @@ SOLES = ["left_foot_bottom_tpu", "right_foot_bottom_tpu"]
 PLANS = {
     "stand": [("stand", None)], "idle": [("stand", None)],
     "walk": [("walk", None)], "run": [("run", None)],
-    "sit": [("sit", None)], "sleep": [("sit", None)],
+    "sit": [("sit", None)], "sleep": [("sit", None)], "squat": [("squat", None)],
     "wake": [("sit_to_stand", 3.0), ("stand", None)],
     "lie": [("lie", None)],
     "get up": [("get_up", 6.0), ("stand", None)],
@@ -49,7 +49,7 @@ PLANS = {
 }
 ALIASES = {"get_up": "get up", "getup": "get up", "wake up": "wake", "lie down": "lie", "sit down": "sit"}
 # The command one-hot each skill brain was trained with (skills_env.TASK_COMMAND).
-OBS_COMMAND = {"stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "sit_to_stand": "stand",
+OBS_COMMAND = {"stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "squat": "sit", "sit_to_stand": "stand",
                "lie": "lie", "get_up": "stand", "jump": "jump", "roll": "roll"}
 
 
@@ -239,7 +239,7 @@ class DuckRuntime:
         name = ALIASES.get(name.lower().strip(), name.lower().strip())
         if name not in PLANS:
             return self._say_log(f"unknown command {name!r}")
-        if name == "wake" and self.skill not in ("sit", "sit_to_stand", "roll"):
+        if name == "wake" and self.skill not in ("sit", "squat", "sit_to_stand", "roll"):
             name = "stand" if self.skill != "lie" else "get up"          # awake already / lying: get up
         if name == "get up" and self.skill in ("sit", "sit_to_stand"):
             name = "wake"
@@ -420,7 +420,9 @@ def parse(clause, L=1.0):
         return "wake", {}
     if re.search(r"\bget up\b|\bstand up\b|^up$", t):
         return "get up", {}
-    if re.search(r"\bsit\b|\bsitting\b|\bcrouch\b", t):
+    if re.search(r"\bsquat\b|\bsquatting\b|\bcrouch\b|\bduck down\b", t):
+        return "squat", {}
+    if re.search(r"\bsit\b|\bsitting\b", t):
         return "sit", {}
     if re.search(r"\b(lie|lay|lying|play dead)\b|^down$|\bget down\b", t):
         return "lie", {}
