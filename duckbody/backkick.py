@@ -18,6 +18,7 @@ back the reward was flat, exactly the failure pollen-robotics/microduck_rl docum
   * no cut-off; success: upright (up > 0.95) at 0.9 x standing height.
 """
 import json
+import os
 from pathlib import Path
 
 import mujoco
@@ -30,6 +31,7 @@ STAGES = [(0, (0.40, 0.40, 0.20, 0.00)), (1_000_000, (0.25, 0.30, 0.35, 0.10)),
           (2_500_000, (0.20, 0.25, 0.30, 0.25)), (4_000_000, (0.15, 0.20, 0.30, 0.35))]
 N_ENVS = 8                                 # train.py --envs: STAGES count total steps across the envs
 SIT_Z = 0.060
+ROLL_W = 0.6
 
 
 def _quat(axis, ang):
@@ -45,6 +47,9 @@ def _qmul(a, b):
 
 class BackKickEnv(SkillEnv):
     local_steps = 0
+    # get_up training steps done before this process started: set GETUP_STEP_OFFSET when resuming so
+    # the start mix does not fall back to the easy stage (local_steps restarts at 0 in a new process).
+    step_offset = int(os.environ.get("GETUP_STEP_OFFSET", "0"))
 
     def __init__(self, task=None, **kw):
         kw.setdefault("max_seconds", 6)
@@ -54,7 +59,7 @@ class BackKickEnv(SkillEnv):
         self.start_kind = "stand"
 
     def _mix(self):
-        steps = self.local_steps * N_ENVS
+        steps = self.step_offset + self.local_steps * N_ENVS
         mix = STAGES[0][1]
         for s, m in STAGES:
             if steps >= s:
@@ -68,6 +73,7 @@ class BackKickEnv(SkillEnv):
         m, d, r = self.model, self.data, self.rng
         mix = self._mix() if self.practice else (0.0, 0.0, 0.5, 0.5)       # exams: face-down or face-up
         kind = ("stand", "sit", "front", "back")[int(r.choice(4, p=np.array(mix) / sum(mix)))]
+        kind = (options or {}).get("kind") or kind                          # getup_eval.py forces a start
         self.start_kind = kind
         q = self.home_q.copy()
         yaw = _quat([0, 0, 1], r.uniform(-np.pi, np.pi))
@@ -92,7 +98,9 @@ class BackKickEnv(SkillEnv):
         mujoco.mj_resetData(m, d)
         d.qpos[:] = q
         mujoco.mj_forward(m, d)
-        low = min(self._sole_bottom(g) if g in self.sole_ids else d.geom_xpos[g][2] - m.geom_rbound[g]
+        # Exact lowest point (mesh vertices; v2 used bounding spheres for non-sole geoms, which dropped the
+        # standing and perch starts from ~4 cm up: stand starts began at 0.149 m vs 0.111 m standing).
+        low = min(self._geom_bottom(g)
                   for g in range(m.ngeom) if m.geom_bodyid[g] > 0 and m.geom_contype[g] + m.geom_conaffinity[g] > 0)
         d.qpos[2] -= low - z_lift
         d.ctrl[:] = q[self.qadr]
@@ -122,7 +130,12 @@ class BackKickEnv(SkillEnv):
         legs = self.qadr[self.legs]
         rms = float(np.sqrt(np.mean((d.qpos[legs] - self.home_q[legs]) ** 2)))
         composite = np.exp(-((h - self.stand_height) / 0.04) ** 2) * np.exp(-(tilt / 0.4) ** 2) * np.exp(-(rms / 0.4) ** 2)
-        reward = (1.5 * up + 0.75 * rise + 1.5 * np.exp(-(tilt / 0.3) ** 2) * smooth + 3.75 * composite
+        # Roll-over term (v3): cos(tilt) is ~0 on the back, on the side and on the belly alike (the flat
+        # supine -> prone landscape Microduck documents). Pay for facing the floor while lying: trunk forward
+        # axis pointing down (x_z = -1, belly down) = 1, on the side 0.5, on the back 0; fades out as it rises.
+        x_z = float(d.xmat[self.trunk].reshape(3, 3)[2, 0])
+        roll_over = 0.5 * (1.0 - x_z) * (1.0 - max(up, 0.0))
+        reward = (1.5 * up + ROLL_W * roll_over + 0.75 * rise + 1.5 * np.exp(-(tilt / 0.3) ** 2) * smooth + 3.75 * composite
                   - 0.005 * abs(float(d.qacc[2])))
         return float(reward) * self.dt, dict(h_ref=self.stand_height, up_ref=1.0, start=self.start_kind, **p)
 
