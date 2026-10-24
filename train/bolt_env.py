@@ -58,41 +58,29 @@ WALK_HEIGHT = {None: TARGETS["walk"]["height"], "crouch": TARGETS["walk"]["heigh
 PAW_GAIT = dict(step=0.125, lift=0.06, height=0.385)  # m: stride length, paw lift, paw depth below the hip
 
 
-def trot(phase, stance="crouch", turn=0.0, step=None, spin=0.0):
+def trot(phase, stance="crouch", turn=0.0, step=None, spin=0.0, lift=None):
     from reference_gait import paw_trot, trot as reference_trot  # imported late: reference_gait imports this module
     if stance == "dog":
-        return paw_trot(phase, **dict(PAW_GAIT, **({"step": step} if step is not None else {})), turn=turn, spin=spin)
+        gait = dict(PAW_GAIT, **({"step": step} if step is not None else {}), **({"lift": lift} if lift is not None else {}))
+        return paw_trot(phase, **gait, turn=turn, spin=spin)
     return reference_trot(phase, hip_swing=0.15, knee_lift=0.3, base=STANCES[stance])
 FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 
-# A bounding jump, the way dogs clear a hurdle: crouch, front legs spring and tuck, rear legs spring a
-# moment later, everything tucks, then the legs reach for the ground in the dog stance. Each entry is
-# (front-leg pose, rear-leg pose, control steps at 50 Hz). Open-loop from a 0.7 m/s trot, starting
-# 0.5 m before a 12 cm hurdle, this cleared it cleanly 3 times in 4 (a four-legged hop: 0 in 4).
-_CROUCH, _TUCK, _SPRING = pose(1.0, 2.0, 1.0, 2.0), pose(1.0, 2.1, 1.1, 2.2), pose(-0.6, 0.3, 0.6, 0.3)
-JUMP_PLAN = [(_CROUCH, _CROUCH, 6), (_SPRING, _CROUCH, 6), (_TUCK, _SPRING, 4), (_TUCK, _TUCK, 10),
-             (STANCES["dog"], STANCES["dog"], 8)]
-JUMP_STEPS = sum(n for *_, n in JUMP_PLAN)
+# Hurdles: a bar across the path (a box sunk into the floor to show any height). Bolt steps over it
+# instead of leaping: its belly is ~36 cm up, so only the legs have to clear a bar up to ~25 cm, and
+# near a bar the trot lifts each paw to the bar's height plus 7 cm. With the 12M walk brain unchanged,
+# that cleared 15 and 25 cm bars 48 times in 48 at 0.3-1.0 m/s on randomised physics. (A hand-made
+# bounding leap, run 14, reared up and tipped over backwards in every variant tried.)
 HURDLE_XML = '<geom name="hurdle" type="box" size="0.025 0.6 0.15" pos="100 0 0" rgba="0.89 0.38 0.04 1"/>'
-
-
-def jump_pose(k):
-    """Motor targets k control steps into the bounding jump."""
-    for front, rear, n in JUMP_PLAN:
-        if k < n:
-            q = front.copy()
-            q[6:] = rear[6:]
-            return q
-        k -= n
-    return STANCES["dog"].copy()
-
+HURDLE_MARGIN = 0.07        # m of paw clearance over the bar
+HURDLE_ZONE = (-0.7, 1.0)   # m: high steps from 1.0 m before the bar until the body is 0.7 m past it
 
 class BoltEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
 
     def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
                  skills=None, gait_generator=False, turning=False, handover_brain=None, speed_control=False,
-                 sharp_turns=False, getting_up=False, jumping=False):
+                 sharp_turns=False, getting_up=False, hurdles=False):
         # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
         # brain only adds corrections on top (residual control, as in "policies modulating trajectory
         # generators"). The legs are coordinated from the first step instead of having to discover it.
@@ -114,7 +102,7 @@ class BoltEnv(gym.Env):
         # policy observes and is scored on is converted back to full-size units, so the same brain
         # can drive any size.
         self.s, self.ts = scale, np.sqrt(scale)  # length and time scale
-        if scale == 1.0 and jumping:  # the same robot, plus a hurdle to jump (parked far away when unused)
+        if scale == 1.0 and hurdles:  # the same robot, plus a hurdle (parked far away until placed)
             xml = MODEL.read_text().replace('<geom name="floor"', HURDLE_XML + '\n    <geom name="floor"', 1)
             self.model = mujoco.MjModel.from_xml_string(xml)
         elif scale == 1.0:
@@ -176,17 +164,11 @@ class BoltEnv(gym.Env):
         # without spinning. The 2.5M posture brain fell 4 times in 12 standing straight up from a sit,
         # twisting at up to 3 rad/s on the way up.
         self.getting_up = getting_up
-        # jumping=True (sharp-turn walk brains): hurdles in the world, and a 55th input that says how far
-        # into a bounding jump the dog is (0 when not jumping). The jump starts by itself 0.5 m before a
-        # hurdle; the brain corrects the jump and the landing, as it corrects the trot.
-        assert not jumping or sharp_turns, "jumping builds on the sharp-turn walk"
-        self.jumping, self.jump_t, self.hurdle_run = jumping, -1, False
-        self.practise_hurdles = True  # exams switch this off and set their own hurdles
+        # hurdles=True (dog gait): a hurdle in the world, which the trot steps over (see HURDLE_XML)
+        assert not hurdles or self.stance == "dog", "hurdles are for the dog gait"
+        self.hurdles = hurdles
         self.hurdle_at, self.hurdle_dir, self.hurdle_h = np.array([100.0, 0.0]), np.array([1.0, 0.0]), 0.0
-        # one jump per hurdle (landing short is a refusal, not another try), and a bonus for clearing
-        # it cleanly: run 14's first try learned to hover in front of the bar, hopping in place
-        self.hurdle_jumped = self.hurdle_touched = self.hurdle_cleared = False
-        self.observation_space = gym.spaces.Box(-np.inf, np.inf, (52 + turning + speed_control + jumping,), np.float32)
+        self.observation_space = gym.spaces.Box(-np.inf, np.inf, (52 + turning + speed_control,), np.float32)
 
     # ---------- helpers ----------
     RESIDUAL_SCALE = 0.35  # with the gait generator on, the brain's corrections are this fraction of normal
@@ -214,15 +196,12 @@ class BoltEnv(gym.Env):
             return None
         return float(np.clip(self.speed_cmd / (2.15 * self.gait_freq()), 0.0, 0.2))
 
-    JUMP_AT = 0.5  # m: the jump starts when the hurdle is this far ahead of the body's centre
-
     def place_hurdle(self, ahead, height):
         """Put a hurdle `ahead` m in front of the dog, across its path, `height` m tall."""
         R = self._rotation()
         fwd = R[:2, 0] / np.linalg.norm(R[:2, 0])
         self.hurdle_dir, self.hurdle_h = fwd, height
         self.hurdle_at = self.data.qpos[:2] + fwd * ahead
-        self.hurdle_jumped = self.hurdle_touched = self.hurdle_cleared = False
         g = self.model.geom("hurdle").id
         self.model.geom_pos[g] = [self.hurdle_at[0], self.hurdle_at[1], height - 0.15]  # a 30 cm box, sunk to show `height`
         yaw = np.arctan2(fwd[1], fwd[0])
@@ -238,31 +217,14 @@ class BoltEnv(gym.Env):
         g = self.model.geom("hurdle").id
         return sum(g in (c.geom1, c.geom2) for c in self.data.contact[:self.data.ncon])
 
-    def jump_progress(self):
-        return (self.jump_t + 1) / JUMP_STEPS if self.jump_t >= 0 else 0.0
-
-    def _jump_bookkeeping(self):
-        """Start a jump near a hurdle, end it after the plan, and set the next hurdle on hurdle runs."""
-        if self.jump_t >= 0:
-            self.jump_t += 1
-            if self.jump_t >= JUMP_STEPS:  # landed: ease back into the trot from the dog stance
-                self.jump_t = -1
-                self.walk_from, self.walk_since = STANCES["dog"].copy(), self.t
-        elif COMMANDS[self.command] == "walk" and 0 < self.hurdle_ahead() < self.JUMP_AT and not self.hurdle_jumped:
-            self.jump_t, self.hurdle_jumped = 0, True
-        refused = self.hurdle_jumped and self.jump_t < 0 and self.hurdle_ahead() > 0 and self.t - self.walk_since > 100
-        if self.hurdle_run and self.jump_t < 0 and (self.hurdle_ahead() < -1.0 or refused):
-            self.place_hurdle(self.rng.uniform(1.8, 3.0), self._new_hurdle_height())  # the next one (after 2 s stuck: move on)
-
-    def _new_hurdle_height(self):
-        """Hurdles get taller as training goes on: up to 10 cm at first, up to 20 cm after 2M steps (8 envs)."""
-        top = 0.10 + 0.10 * min(1.0, self.env_steps * 8 / 2e6)
-        return float(self.rng.uniform(0.05, top))
+    def gait_lift(self):
+        """Paw lift for the trot: higher while stepping over a hurdle (None: the usual lift)."""
+        if self.hurdles and HURDLE_ZONE[0] < self.hurdle_ahead() < HURDLE_ZONE[1]:
+            return self.hurdle_h + HURDLE_MARGIN
+        return None
 
     def base_pose(self):
         """What the motors do when the brain outputs zero."""
-        if self.jumping and self.jump_t >= 0:
-            return jump_pose(self.jump_t)
         if not self.walking_on_generator():
             # The dog-stance stand is centred on that stance. Centred on the crouch, holding it
             # needed motor commands at the very edge of their range (run 9b's stand pinned its
@@ -271,7 +233,7 @@ class BoltEnv(gym.Env):
             if self.stance == "dog" and COMMANDS[self.command] == "stand":
                 return STANCES["dog"]
             return STAND_POSE
-        q = trot(self.gait_phase(), self.stance, self.gait_turn(), self.gait_stride(), self.gait_spin())[0]
+        q = trot(self.gait_phase(), self.stance, self.gait_turn(), self.gait_stride(), self.gait_spin(), self.gait_lift())[0]
         if self.stance in ("tall", "dog"):
             # Ease into the trot over half a second from walk_from (see _switch); runs 5-6 jumped
             # straight in and the 2M brain fell 9 times in 10 when taking over from standing.
@@ -413,8 +375,7 @@ class BoltEnv(gym.Env):
             gravity, d.qvel[3:6] * self.ts * 0.25, v_body, [d.qpos[2] / self.s],
             d.qpos[7:] - STAND_POSE, d.qvel[6:] * self.ts * 0.1, self.last_action,
             cmd, [np.sin(clock), np.cos(clock)],
-        ] + ([[self.yaw_cmd]] if self.turning else []) + ([[self.speed_cmd]] if self.speed_control else [])
-          + ([[self.jump_progress()]] if self.jumping else []))
+        ] + ([[self.yaw_cmd]] if self.turning else []) + ([[self.speed_cmd]] if self.speed_control else []))
         if self.randomize:
             obs += self.rng.normal(0, 0.01, obs.shape)  # sensors are noisy
         return obs.astype(np.float32)
@@ -468,23 +429,12 @@ class BoltEnv(gym.Env):
             self.speed_cmd = self._new_speed()
         self.yaw_cmd = self._new_turn() if self.turning and not self.forced_turn_set else self.yaw_cmd
         self.phase = self.phase0
-        if self.jumping:
-            self.jump_t, self.hurdle_run = -1, False
+        if self.hurdles:  # park the hurdle until someone places it
             self.hurdle_at = np.array([100.0, 0.0])
             self.model.geom_pos[self.model.geom("hurdle").id] = [100.0, 0.0, -1.0]
-            # Most randomized walk episodes are hurdle runs: straight ahead at 0.6-1.0 m/s over hurdle
-            # after hurdle. The rest are ordinary walks, so turning and speed changes aren't forgotten.
-            if self.practise_hurdles and self.randomize and COMMANDS[self.command] == "walk" and self.rng.random() < 0.7:
-                self.hurdle_run = True
-                if not self.forced_speed_set:
-                    self.speed_cmd = float(self.rng.uniform(0.6, 1.0))
-                if not self.forced_turn_set:
-                    self.yaw_cmd = 0.0
         if (self.handover_brain and self.randomize and COMMANDS[self.command] == "walk" and not start_lying
                 and self.rng.random() < 0.5):
             self._stand_then_hand_over(int(self.rng.integers(60, 150)))
-        if self.hurdle_run:
-            self.place_hurdle(self.rng.uniform(1.5, 2.5), self._new_hurdle_height())
         return self._obs(), {}
 
     def _stand_then_hand_over(self, steps):
@@ -507,8 +457,6 @@ class BoltEnv(gym.Env):
         self.env_steps += 1
         if self.speed_control:
             self.phase += 2 * np.pi * self.gait_freq() * self.dt / self.ts
-        if self.jumping:
-            self._jump_bookkeeping()
         self.total_steps += 8  # 8 parallel envs share the curriculum clock (train.py default)
 
         reward, info = self._reward(action)
@@ -521,9 +469,9 @@ class BoltEnv(gym.Env):
                 self._switch(COMMANDS.index("stand"))     # get up (practised more: see getting_up)
             else:
                 self._switch(self.rng.choice(self.skills))  # new command, like a real owner would give
-        if self.speed_control and not self.forced_speed_set and self.t % 150 == 0 and not self.hurdle_run:
-            self.speed_cmd = self._new_speed()  # a new speed every 3 s (hurdle runs keep theirs)
-        if self.turning and not self.forced_turn_set and self.t % 150 == 0 and not self.hurdle_run:
+        if self.speed_control and not self.forced_speed_set and self.t % 150 == 0:
+            self.speed_cmd = self._new_speed()  # a new speed every 3 s
+        if self.turning and not self.forced_turn_set and self.t % 150 == 0:
             self.yaw_cmd = self._new_turn()  # and a new turn (sharp turns depend on the speed)
         truncated = self.t >= self.max_steps
         return self._obs(), float(reward), bool(fell), bool(truncated), info
@@ -541,28 +489,11 @@ class BoltEnv(gym.Env):
         feet = self.feet_on_ground()
         upright = np.exp(-(p["roll"] / 0.15) ** 2)
 
-        hits = self.hurdle_hits() if self.jumping else 0
-        self.hurdle_touched |= hits > 0
-        cleared = False
-        if self.jumping and self.hurdle_jumped and not self.hurdle_cleared and self.hurdle_ahead() < -0.4:
-            self.hurdle_cleared = cleared = not self.hurdle_touched  # over it, without touching it
-        if name == "walk" and self.jump_t >= 0:
-            # Mid-jump: stay upright (looser on pitch: a bound tips nose-up, then nose-down), don't touch
-            # the hurdle, keep going forward, keep knees off the floor, and roughly follow the jump plan.
-            follow = np.exp(-np.mean((self.data.qpos[7:] - jump_pose(self.jump_t)) ** 2) / 0.5)
-            terms = [
-                np.exp(-(p["roll"] / 0.3) ** 2) * np.exp(-(p["pitch"] / 0.6) ** 2),
-                np.exp(-3.0 * hits),
-                np.exp(-((p["vx"] - self.speed_cmd) / 0.6) ** 2),
-                np.exp(-scrapes),
-                0.5 + 0.5 * follow,
-            ]
-            progress = np.clip(p["vx"] / max(self.speed_cmd, 0.2), -1.0, 1.0)
-        elif name == "walk":
-            # Imitate the reference trot (reference_gait.py): match its joint angles and its
+        hits = self.hurdle_hits() if self.hurdles else 0
+        if name == "walk":            # Imitate the reference trot (reference_gait.py): match its joint angles and its
             # foot contacts at this moment of the stride. Following an example is far faster to
             # learn than discovering walking from scratch (Disney BDX, Open Duck Mini).
-            q_ref, stance_ref = trot(self.gait_phase(), self.stance or "crouch", self.gait_turn(), self.gait_stride(), self.gait_spin())  # same clock as the obs
+            q_ref, stance_ref = trot(self.gait_phase(), self.stance or "crouch", self.gait_turn(), self.gait_stride(), self.gait_spin(), self.gait_lift())  # same clock as the obs
             gait = np.mean(feet == stance_ref)
             # Width matters: at 0.05 a dog halfway to the trot scored ~0, so there was no
             # "warmer, warmer" signal. At 0.3, halfway earns about a third.
@@ -605,7 +536,7 @@ class BoltEnv(gym.Env):
             if self.getting_up:
                 terms.append(np.exp(-(p["yaw_rate"] / 0.6) ** 2))  # no spinning while changing posture
             progress = 0.0
-        reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms) + 0.5 * progress + (6.0 if cleared else 0.0)
+        reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms) + 0.5 * progress
 
         torque = self.data.actuator_force / self.s ** 4  # full-size units
         reward -= 0.02 * np.sum((action - self.last_action) ** 2)  # smooth, not twitchy
@@ -613,7 +544,7 @@ class BoltEnv(gym.Env):
         reward -= 1e-4 * np.sum((self.data.qvel[6:] * self.ts) ** 2)
         return reward * 0.5, dict(command=name, feet=feet, scrape=scrapes, shin_tilt=tilt, walk_height=self.walk_height, yaw_cmd=self.yaw_cmd, turning=self.turning,
                                   speed_cmd=self.speed_cmd if self.speed_control else None,
-                                  goal_height=goal["height"], hurdle_hits=hits, jumping=self.jump_t >= 0, **p)
+                                  goal_height=goal["height"], hurdle_hits=hits, **p)
 
     def render(self):
         if self.renderer is None:

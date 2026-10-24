@@ -26,6 +26,7 @@ export const STATIONS = {
   bridge: { title: "Narrow bridge", say: "SLOWLY…", how: "Cross the 4 m plank without stepping off or rushing" },
   sit: { title: "Sit box", say: "SIT!", how: "Stop in the box and sit for 2 s" },
   lie: { title: "Lie-down mat", say: "LIE DOWN!", how: "Stop on the mat and lie down for 2 s" },
+  hurdles: { title: "Hurdles", say: "OVER!", how: "Get over 3 bars without touching them" },
   gate: { title: "Castle gate", say: "HOME!", how: "Reach the castle" },
 };
 export const SHOUTS = { sit: "SIT!", lie: "LIE DOWN!", still: "FREEZE!" };
@@ -44,7 +45,7 @@ export function rng(seed) {
 
 // The course, in course coordinates: x forward from Bolt's start, y to its left.
 export function buildCastle(seed) {
-  const r = rng(seed), kinds = ["sprint", "slalom", "bridge", "sit", "lie"];
+  const r = rng(seed), kinds = ["sprint", "slalom", "bridge", "sit", "lie", "hurdles"];
   for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
   kinds.push("gate");
   let x = 2.5, y = 0;
@@ -53,6 +54,10 @@ export function buildCastle(seed) {
     let s;
     if (kind === "sprint") s = { kind, start: [x, y], end: [x + 6, y], limit: 7 };
     else if (kind === "bridge") s = { kind, start: [x, y], end: [x + 4, y], halfWidth: 0.3, maxSpeed: 0.6 };
+    else if (kind === "hurdles") {   // three bars 3 m apart, 15-25 cm high (the trot steps over them)
+      s = { kind, bars: [0, 1, 2].map((k) => [x + 1.5 + 3 * k, y, Math.round((0.15 + 0.1 * r()) * 100) / 100]) };
+      s.start = [x, y]; s.end = [x + 8.5, y];
+    }
     else if (kind === "slalom") {
       const side = r() < 0.5 ? 1 : -1;
       s = { kind, gates: [0, 1, 2, 3].map((k) => [x + 1 + 2.5 * k, y + side * (k % 2 ? -0.9 : 0.9)]) };
@@ -95,6 +100,7 @@ export class Game {
     this.cmd = { command: "stand", turn: 0, speed: 0.2 };
     this.pendingShouts = this.castle.shouts.slice();
   }
+  raise([x, y, h]) { this.bolt.setHurdle(this.world([x, y]), this.yaw0, h); }   // a bar at a course spot, across the course
   // course <-> world coordinates
   world([x, y]) {
     const c = Math.cos(this.yaw0), s = Math.sin(this.yaw0);
@@ -234,6 +240,18 @@ export class Game {
       if (k.stage !== "done" && here[0] > s.end[0]) { k.stage = "done"; k.passed = true; k.note = ""; }
       return;
     }
+    if (s.kind === "hurdles") {
+      // the simulator has one bar: it stands wherever the next bar is, and moves on once Bolt is past
+      if (k.bar === undefined) { k.bar = 0; k.touched = 0; k.hit = false; this.raise(s.bars[0]); }
+      this.cmd = this.driver.toward(this.world([s.end[0] + 1.5, s.end[1]]), 0.7, false, dt);
+      if (!k.hit && this.bolt.hurdleHits() > 0) { k.hit = true; k.touched += 1; this.say(`Bar ${k.bar + 1} touched!`, "bad"); }
+      if (here[0] > s.bars[k.bar][0] + 0.8) {
+        k.bar += 1; k.hit = false;
+        if (k.bar < s.bars.length) this.raise(s.bars[k.bar]);
+        else { this.bolt.setHurdle([1e3, 0], 0, 0.1); k.stage = "done"; k.passed = k.touched === 0; k.note = k.touched ? `Touched ${k.touched} of 3 bars.` : "Clean over all 3 bars."; }
+      }
+      return;
+    }
     if (s.kind === "gate") {
       this.cmd = this.driver.toward(this.world(s.end), 1.0, true, dt);
       if (this.cmd.dist < 0.5) { k.stage = "done"; k.passed = true; k.note = ""; }
@@ -272,7 +290,9 @@ export class Game {
       sh.rise += dt;
       this.cmd = { command: rise(sh.cmd, sh.rise), turn: 0, speed: 0.2 };
       if (sh.rise > (sh.cmd === "still" ? 0.2 : riseTime(sh.cmd))) {
-        if (this.task && this.task.timer !== null && this.task.timer !== undefined) this.task.timer += this.t - sh.since;  // the sprint clock pauses for a shout
+        // station clocks pause for a shout: the sprint timer, and the time allowed to sit or lie down
+        if (this.task && this.task.timer !== null && this.task.timer !== undefined) this.task.timer += this.t - sh.since;
+        if (this.task && this.task.posedAt !== undefined) { this.task.posedAt += this.t - sh.since; this.task.held = 0; }
         this.shout = null;
         this.driver.speed = 0.2;
         if (this.task && ["brake", "settle"].includes(this.task.stage)) this.task.settle = 0;

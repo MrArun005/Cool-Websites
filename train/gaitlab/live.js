@@ -78,6 +78,7 @@ export class Bolt {
     const r = this.model.actuator_ctrlrange;
     this.lo = Array.from({ length: 12 }, (_, i) => r[2 * i]); this.hi = Array.from({ length: 12 }, (_, i) => r[2 * i + 1]);
     this.torso = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_BODY.value, "torso");
+    this.hurdle = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_GEOM.value, "hurdle");   // -1 in bundles without one
     this.dt = this.c.dt;
   }
   // swap in another walk brain (agility competitors), with the gait it was trained on
@@ -92,6 +93,35 @@ export class Bolt {
     mj.mj_forward(m, d);
     this.t = 0; this.command = "stand"; this.walkSince = 0; this.walkFrom = this.c.stand_pose.slice();
     this.lastAction = new Float64Array(12); this.yawCmd = 0; this.speedCmd = 0.4; this.phase = 0;
+    this.hurdleAt = [100, 0]; this.hurdleDir = [1, 0]; this.hurdleH = 0;
+    if (this.hurdle >= 0) { this.model.geom_pos.set([100, 0, -1], 3 * this.hurdle); mj.mj_forward(m, d); }
+  }
+  // Hurdles (BoltEnv.place_hurdle): a bar `ahead` m in front, across Bolt's path, `height` m tall. The
+  // trot steps over it, lifting the paws to the bar's height plus a margin while near it.
+  placeHurdle(ahead, height) {
+    const w = this.where(), f = [Math.cos(w.yaw), Math.sin(w.yaw)];
+    this.setHurdle([w.x + f[0] * ahead, w.y + f[1] * ahead], w.yaw, height);
+  }
+  setHurdle([x, y], yaw, height) {   // put the bar at a spot on the course, across the direction `yaw`
+    const r = this.model.geom_quat, n = Math.hypot(Math.cos(yaw), Math.sin(yaw));
+    this.hurdleAt = [x, y]; this.hurdleDir = [Math.cos(yaw) / n, Math.sin(yaw) / n]; this.hurdleH = height;
+    this.model.geom_pos.set([x, y, height - 0.15], 3 * this.hurdle);
+    r.set([Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], 4 * this.hurdle);
+    this.mj.mj_forward(this.model, this.data);
+  }
+  hurdleAhead() {
+    const q = this.data.qpos;
+    return (this.hurdleAt[0] - q[0]) * this.hurdleDir[0] + (this.hurdleAt[1] - q[1]) * this.hurdleDir[1];
+  }
+  hurdleHits() {
+    if (this.hurdle < 0) return 0;
+    const cs = this.data.contact; let n = 0;
+    for (let k = 0; k < this.data.ncon; k++) { const c = cs.get(k); if (c.geom1 === this.hurdle || c.geom2 === this.hurdle) n++; c.delete(); }
+    cs.delete(); return n;
+  }
+  lift() {
+    const z = this.c.hurdle_zone, a = this.hurdleAhead();
+    return this.hurdle >= 0 && z && a > z[0] && a < z[1] ? this.hurdleH + this.c.hurdle_margin : this.c.paw_gait.lift;
   }
   setCommand(name) {
     if (name !== this.command && name === "walk") {
@@ -114,7 +144,7 @@ export class Bolt {
   maxTurn(v) { return this.c.sharp_turns ? clamp(this.c.sharp_turn - 1.25 * Math.max(0, v - 0.4), 1, this.c.sharp_turn) : this.c.max_turn; }
   basePose() {
     if (this.command !== "walk") return this.command === "stand" ? this.c.dog_pose : this.c.stand_pose;
-    const g = this.c.paw_gait, q = pawTrot(this.phase, this.stride(), g.lift, g.height, this.turn(), this.spin(), this.c.hip_x, this.c.hip_y);
+    const g = this.c.paw_gait, q = pawTrot(this.phase, this.stride(), this.lift(), g.height, this.turn(), this.spin(), this.c.hip_x, this.c.hip_y);
     const a = Math.min(1, (this.t - this.walkSince) / 25);
     return Array.from(q, (v, i) => this.walkFrom[i] + a * (v - this.walkFrom[i]));
   }

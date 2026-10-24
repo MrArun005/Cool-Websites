@@ -17,7 +17,7 @@
   <header style="display:grid;gap:6px">
     <span class="label">Bolt robot dog · a competition on the live simulator</span>
     <h1>Bolt Agility Cup</h1>
-    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through all eight poles, take the tunnel from the right end, and lie on the pause table for the judge's count of five. The judge counts 5 faults for a missed pole or a wrong tunnel entry, and 1 fault per second over the standard course time. The fewest faults wins, then the fastest time. A fall is elimination. Everything runs in your browser, in the same physics as training.</p>
+    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through all eight poles, take the tunnel from the right end, clear the hurdles without knocking a bar, and lie on the pause table for the judge's count of five. The judge counts 5 faults for a missed pole, a wrong tunnel entry or a knocked bar, and 1 fault per second over the standard course time. The fewest faults wins, then the fastest time. A fall is elimination. Everything runs in your browser, in the same physics as training.</p>
   </header>
 
   <section class="panel" aria-labelledby="ring">
@@ -117,9 +117,9 @@
     } else if (o.kind === "table") {
       g.add(box(1.0, 1.0, 0.04, std("#e3620b", { roughness: 0.95 }), 0, 0, 0.02));
       for (const [x, y] of [[0.47, 0.47], [0.47, -0.47], [-0.47, 0.47], [-0.47, -0.47]]) g.add(box(0.06, 0.06, 0.045, std("#7b5229"), x, y, 0.0225));
-    } else if (o.kind === "jump") {
-      for (const y of [0.65, -0.65]) g.add(post(0.03, 0.6, white, 0, y));
-      g.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.2, 16), red, [0, 0, 0.15]));
+    } else if (o.kind === "jump") {   // a striped bar on wing posts, at the height Bolt is judged on
+      for (const y of [0.65, -0.65]) { g.add(post(0.03, 0.6, white, 0, y)); g.add(box(0.04, 0.3, 0.5, std("#2f6fb5"), 0, y + Math.sign(y) * 0.18, 0.25)); }
+      for (let k = 0; k < 4; k++) g.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 16), k % 2 ? white : red, [0, -0.45 + 0.3 * k, agility.BAR]));
     }
     const sign = label(String(o.n), "#ffffff", "#191b1a");   // the judge's number for this obstacle
     sign.position.set(-0.6, 0.75, 1.05); g.add(sign, post(0.012, 0.9, std("#9aa19c"), -0.6, 0.75));

@@ -15,7 +15,7 @@ export const OBSTACLES = {
   weave: { title: "Weave poles", how: "Weave through all 8 poles, first pole on the left shoulder" },
   tunnel: { title: "Tunnel", how: "Run through the tunnel, in at the near end" },
   table: { title: "Pause table", how: "Lie down on the table while the judge counts 5" },
-  jump: { title: "Hurdle", how: "Jump the bar without knocking it" },
+  jump: { title: "Hurdle", how: "Get over the 20 cm bar without knocking it" },
 };
 // m: Bolt's body is rigid, so the poles are wider apart than a real 60 cm weave. Bolt follows a smooth
 // wave through them (side: how far it swings out at each pole), at most ~1.4 rad/s of turning.
@@ -25,15 +25,18 @@ export function setWeaveSpeed(v) { WEAVE_SPEED = v; }
 
 // The course: obstacles along a winding path from the start line (course coordinates: x ahead of
 // Bolt at the start, y to its left). Each obstacle has an entry point, a heading and a length.
-export function buildAgility(seed, { jumps = false } = {}) {
+export const BAR = 0.2;   // m: hurdle height (Bolt steps over it with a high trot)
+export function buildAgility(seed, { jumps = true } = {}) {
   const r = rng(seed);
-  const kinds = ["weave", "tunnel", "table", "tunnel"].concat(jumps ? ["jump", "jump", "jump"] : []);
+  const kinds = ["weave", "tunnel", "table", "tunnel"].concat(jumps ? ["jump", "jump"] : []);
   for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
   if (kinds[0] === "table") kinds.push(kinds.shift());              // a course never opens with the table
   let x = 0.5, y = 0, h = 0;
   const obstacles = kinds.map((kind, n) => {
-    h += n === 0 ? (r() * 2 - 1) * 0.3 : (r() * 2 - 1) * 0.9;        // up to ~50° between obstacles
-    const gap = kind === "weave" ? 2.6 : 2.2, L = kind === "weave" ? WEAVE.spacing * (WEAVE.poles - 1) : kind === "tunnel" ? 3.0 : 0;
+    // up to ~50° between obstacles; a hurdle gets a straighter, longer run-up (high-stepping while
+    // turning hard tipped Bolt over: 2 falls in 24 rounds before this)
+    h += n === 0 ? (r() * 2 - 1) * 0.3 : (r() * 2 - 1) * (kind === "jump" ? 0.5 : 0.9);
+    const gap = kind === "weave" ? 2.6 : kind === "jump" ? 3.0 : 2.2, L = kind === "weave" ? WEAVE.spacing * (WEAVE.poles - 1) : kind === "tunnel" ? 3.0 : 0;
     const entry = [x + gap * Math.cos(h), y + gap * Math.sin(h)];
     const exit = [entry[0] + L * Math.cos(h), entry[1] + L * Math.sin(h)];
     x = exit[0]; y = exit[1];
@@ -95,6 +98,9 @@ export class Round {
     const o = this.obstacle;
     this.task = o ? { stage: "approach", wp: 0, held: 0, settle: 0, checked: 0, missed: false } : { stage: "finish" };
     if (o) this.say(`${o.n}. ${o.title}`, "station");
+    // the simulator has one bar: it stands at the next hurdle, and is parked away otherwise
+    if (o && o.kind === "jump") this.bolt.setHurdle(this.world(o.entry), this.yaw0 + o.h, BAR);
+    else if (this.bolt.hurdle >= 0) this.bolt.setHurdle([1e3, 0], 0, 0.1);
   }
   next(note) {
     if (note) this.say(note, "good");
@@ -134,6 +140,7 @@ export class Round {
       target = [a, a > end ? 0 : -WEAVE.side * Math.cos(Math.PI * Math.max(0, a) / WEAVE.spacing)];
     }
     this.cmd = this.driver.toward(this.world(this.at(o, target[0], target[1])), k.wp === 0 ? 0.9 : cruise, false, dt, weaving ? 1 : 2);
+    if (this.bolt.lift() > this.bolt.c.paw_gait.lift + 0.01) this.cmd.turn = clamp(this.cmd.turn, -0.5, 0.5);   // stepping over a bar: steer gently
     // move on to the next waypoint once level with this one
     if (along >= target[0] - (o.kind === "weave" ? 0.05 : 0.2) && (k.wp > 0 || Math.abs(side) < 0.6)) k.wp += 1;
     if (o.kind === "weave") {      // judge each pole as Bolt passes it: pole k must be on the right side

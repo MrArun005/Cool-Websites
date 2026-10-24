@@ -443,31 +443,21 @@ class DogGaitTest(unittest.TestCase):
         self.assertTrue(passed("walk", [good] * 80))
         self.assertFalse(passed("walk", [dict(good, yaw_rate=0.6)] * 80))  # the old top turn rate fails
 
-    def test_jump_starts_before_a_hurdle_and_ends_in_the_trot(self):
-        from bolt_env import JUMP_STEPS
+    def test_trot_steps_high_over_a_hurdle(self):
+        from bolt_env import HURDLE_MARGIN
         env = BoltEnv(randomize=False, max_steps=10_000, skills=["walk"], gait_generator="dog",
-                      turning=True, speed_control=True, sharp_turns=True, jumping=True)
+                      turning=True, speed_control=True, sharp_turns=True, hurdles=True)
         env.forced_command = "walk"
         env.reset(seed=1)
-        self.assertEqual(env._obs().shape, (55,))
+        self.assertEqual(env._obs().shape, (54,))                       # same inputs as without hurdles
+        self.assertIsNone(env.gait_lift())                              # parked far away: the usual trot
         env.set_turn(0.0); env.set_speed(0.7)
-        env.place_hurdle(1.5, 0.10)
-        started = ended = None
-        for t in range(200):
-            _, _, fell, _, info = env.step(np.zeros(12))
-            if started is None and info["jumping"]:
-                started = t
-                self.assertLess(env.hurdle_ahead(), env.JUMP_AT + 0.05)  # jumps just before the hurdle
-                self.assertGreater(env._obs()[54], 0)                    # and the brain is told
-            if started is not None and ended is None and not info["jumping"]:
-                ended = t
-        self.assertIsNotNone(started)
-        self.assertEqual(ended - started, JUMP_STEPS)
-        self.assertEqual(env.walk_since, ended + 1)                      # eases back into the trot
+        env.place_hurdle(0.5, 0.20)
+        self.assertAlmostEqual(env.gait_lift(), 0.20 + HURDLE_MARGIN)   # near the bar: paws lift over it
 
     def test_walking_into_a_hurdle_counts_as_a_hit(self):
         env = BoltEnv(randomize=False, max_steps=10_000, skills=["walk"], gait_generator="dog",
-                      turning=True, speed_control=True, sharp_turns=True, jumping=True)
+                      turning=True, speed_control=True, sharp_turns=True, hurdles=True)
         env.forced_command = "stand"
         env.reset(seed=1)
         env.place_hurdle(0.12, 0.25)                                     # right under the chest

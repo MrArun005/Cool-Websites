@@ -11,8 +11,9 @@ const bolt = new Bolt(mj, bundle);
 bolt.reset(ref.start);
 const maxDiff = (a, b) => a.reduce((m, v, i) => Math.max(m, Math.abs(v - b[i])), 0);
 let k = 0, worstObs = 0, worstBrain = 0;
-for (const [command, n, turn, speed] of ref.script) {
+for (const [command, n, turn, speed, hurdle] of ref.script) {
   bolt.setCommand(command); bolt.setTurn(turn); bolt.setSpeed(speed);
+  if (hurdle !== undefined) bolt.placeHurdle(1.5, hurdle);
   for (let i = 0; i < n; i++, k++) {
     const r = ref.steps[k], obs = bolt.obs();
     const brain = command === "walk" ? bolt.brains.walk : bolt.brains.posture;

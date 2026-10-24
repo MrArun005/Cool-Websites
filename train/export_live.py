@@ -24,14 +24,15 @@ import numpy as np
 import torch
 from stable_baselines3 import PPO
 
-from bolt_env import ACTION_SCALE, MODEL, PAW_GAIT, STAND_POSE, STANCES, BoltEnv
+from bolt_env import ACTION_SCALE, HURDLE_MARGIN, HURDLE_XML, HURDLE_ZONE, MODEL, PAW_GAIT, STAND_POSE, STANCES, BoltEnv
 from evaluate import Policy, reset_standing
 from record3d import describe
 from reference_gait import HIP_X, HIP_Y
 
-# The reference run: (command, steps, turn rad/s, speed m/s): sit, lie, walk, run, turn sharply, brake, stand
+# The reference run: (command, steps, turn rad/s, speed m/s[, hurdle height placed 1.5 m ahead]): sit, lie,
+# walk, step over a hurdle, run, turn sharply, brake, stand
 SCRIPT = [("stand", 100, 0.0, 0.4), ("sit", 150, 0.0, 0.4), ("stand", 100, 0.0, 0.4), ("lie", 150, 0.0, 0.4),
-          ("stand", 125, 0.0, 0.4), ("walk", 150, 0.0, 0.4), ("walk", 150, 0.4, 0.7), ("walk", 150, -0.3, 1.0),
+          ("stand", 125, 0.0, 0.4), ("walk", 150, 0.0, 0.4), ("walk", 175, 0.0, 0.7, 0.2), ("walk", 150, 0.4, 0.7), ("walk", 150, -0.3, 1.0),
           ("walk", 100, 1.5, 0.3), ("walk", 50, 0.0, 0.2), ("stand", 100, 0.0, 0.2)]
 
 
@@ -60,17 +61,19 @@ def brain(folder):
 def reference(posture, walk):
     """A run in Python with no randomness, recorded step by step for checking the JavaScript port."""
     env = BoltEnv(randomize=False, max_steps=10**6, gait_generator="dog", turning=True, speed_control=True,
-                  sharp_turns=walk.sharp_turns)
+                  sharp_turns=walk.sharp_turns, hurdles=True)
     env.forced_command = "stand"
     reset_standing(env, 0)
     d = env.data
     start = dict(qpos=d.qpos.tolist(), qvel=d.qvel.tolist(), ctrl=d.ctrl.tolist())
     steps = []
-    for command, n, turn, speed in SCRIPT:
+    for command, n, turn, speed, *hurdle in SCRIPT:
         env.forced_command = command
         env.set_command(command)
         env.set_turn(turn)
         env.set_speed(speed)
+        if hurdle:
+            env.place_hurdle(1.5, hurdle[0])
         for _ in range(n):
             obs = env._obs()
             action = (walk if command == "walk" else posture).act(obs)
@@ -90,14 +93,16 @@ def main():
     args = ap.parse_args()
     walk = Policy(args.walk)
     start, ref = reference(Policy(args.posture), walk)
-    env = BoltEnv(randomize=False, gait_generator="dog", turning=True, speed_control=True, sharp_turns=walk.sharp_turns)
+    env = BoltEnv(randomize=False, gait_generator="dog", turning=True, speed_control=True, sharp_turns=walk.sharp_turns,
+                  hurdles=True)
     m = env.model
-    bundle = dict(
-        xml=MODEL.read_text(), geoms=describe(m),
+    bundle = dict(   # the robot plus one hurdle, which the page moves to whichever bar comes next
+        xml=MODEL.read_text().replace('<geom name="floor"', HURDLE_XML + '\n    <geom name="floor"', 1), geoms=describe(m),
         constants=dict(stand_pose=STAND_POSE.tolist(), dog_pose=STANCES["dog"].tolist(), action_scale=ACTION_SCALE.tolist(),
                        residual_scale=env.RESIDUAL_SCALE, frame_skip=env.frame_skip, dt=env.dt, paw_gait=PAW_GAIT,
                        turn_gain=env.TURN_GAIN, max_turn=env.MAX_TURN, max_speed=env.MAX_SPEED, speed_ref=env.SPEED_REF,
                        sharp_turns=env.sharp_turns, sharp_turn=env.SHARP_TURN,
+                       hurdle_margin=HURDLE_MARGIN, hurdle_zone=list(HURDLE_ZONE),
                        hip_x=HIP_X.tolist(), hip_y=HIP_Y.tolist(),
                        commands=["stand", "sit", "lie", "walk"]),
         brains=dict(posture=dict(brain(args.posture), source=Path(args.posture).name),
