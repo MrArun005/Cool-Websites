@@ -119,7 +119,8 @@
     <div style="display:grid;gap:6px">
       <span class="label">Next</span>
       <ol>
-        <li>Follow a person: turn toward a target and walk to it (needs a "where is the target" input next).</li>
+        <li><strong>Now training (run 11): running.</strong> The walk gets a speed command from a slow walk (0.2 m/s) to a run (1.2 m/s), so Bolt can keep up with a person who runs. With no brain the gait already reaches 1.17 m/s with upright lower legs.</li>
+        <li>Follow a person: a steering layer turns toward them and sets the speed from their distance, using the walk-and-run brain. Then a simulator test with a person who walks, turns and runs.</li>
         <li>Try both brains on the hand-size Bolt.</li>
         <li>Connect the brains to voice commands ("sit", "come here").</li>
       </ol>
@@ -154,6 +155,7 @@
       <div><span class="label">Paws down</span><b id="sPaws">–</b></div>
       <div><span class="label">Knee on floor</span><b id="sKnee">–</b></div>
       <div><span class="label">Turn asked · doing</span><b id="sTurn">–</b></div>
+      <div><span class="label">Person is</span><b id="sPerson">–</b></div>
     </div>
   </section>
 
@@ -183,6 +185,7 @@
         <tr><td>8b</td><td>Walk practises starting from the tall stand</td><td><strong>Walk 100%, hand-over 10/10 at 5M.</strong> Saved (5.5M was worse after real hand-overs).</td></tr>
         <tr><td>10</td><td>Turning: a turn command, longer strides on the outside of the turn</td><td>Turn left/right 100% at 6M. But hand-overs from the real standing brain fell 4 in 10.</td></tr>
         <tr><td>10b</td><td>Practise and test hand-overs from the real standing brain</td><td><strong>Walk, turn left, turn right 100%; 40/40 clean hand-overs at 7M.</strong> Saved.</td></tr>
+        <tr class="now"><td>11</td><td>Speed command: slow walk to a run (0.2–1.2 m/s)</td><td>Training now.</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -356,6 +359,15 @@
     return { grp, tint: Object.values(mats) };
   }
   const dog = new THREE.Group(); scene.add(dog);
+  // the person Bolt follows (only in follow clips): a simple figure, 1.7 m tall
+  const person = new THREE.Group();
+  { const skin = new THREE.MeshStandardMaterial({ color: lin("#e3620b"), roughness: 0.6 }), dark = new THREE.MeshStandardMaterial({ color: lin("#2a2f35"), roughness: 0.7 });
+    const body = mesh(new THREE.CylinderGeometry(0.17, 0.14, 0.62, 24), skin, [0, 0, 1.15], [Math.PI / 2, 0, 0]);
+    const head = mesh(new THREE.SphereGeometry(0.11, 24, 16), skin, [0, 0, 1.6]);
+    const legL = mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.84, 12), dark, [0, 0.08, 0.42], [Math.PI / 2, 0, 0]);
+    const legR = mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.84, 12), dark, [0, -0.08, 0.42], [Math.PI / 2, 0, 0]);
+    person.add(body, head, legL, legR); person.userData.legs = [legL, legR]; }
+  person.visible = false; scene.add(person);
   const ringGeo = new THREE.RingGeometry(0.03, 0.042, 40);
   const marks = LEGS.map(() => { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false })); m.renderOrder = 2; scene.add(m); return m; });
 
@@ -416,6 +428,12 @@
     lastTorso = { x: tx, y: ty };
     if (grid) grid.position.set(Math.round(tx * 10) / 10, Math.round(ty * 10) / 10, 0.0004);
     sun.position.set(tx + 1, ty - 1.4, 2.6); sun.target.position.set(tx, ty, 0);
+    person.visible = !!f.person;
+    if (f.person) {
+      person.position.set(f.person[0], f.person[1], 0); person.rotation.set(0, 0, f.person[2]);
+      const swing = f.person[3] > 0.05 ? 0.5 * Math.sin(fi / rec.fps * (f.person[3] > 0.8 ? 14 : 9)) : 0;
+      person.userData.legs[0].rotation.set(Math.PI / 2 + swing, 0, 0); person.userData.legs[1].rotation.set(Math.PI / 2 - swing, 0, 0);
+    }
     const paws = LEGS.filter((L) => f.floorSet.has(rec.paw[L])).length;
     const knee = LEGS.some((L) => rec.legParts[L].some((j) => f.scrapeSet.has(j))) && !resting;
     $("sCmd").textContent = f.cmd;
@@ -427,6 +445,7 @@
     $("time").textContent = `${(fi / rec.fps).toFixed(1)} / ${(rec.frames.length / rec.fps).toFixed(0)} s`;
     const deg = (r) => `${r > 0.03 ? "left " : r < -0.03 ? "right " : ""}${Math.abs(Math.round(r * 180 / Math.PI))}°/s`;
     $("sTurn").textContent = f.turn !== undefined && f.cmd === "walk" ? `${deg(f.turn)} · ${deg(f.yawr)}` : "–";
+    $("sPerson").textContent = f.person ? `${f.dist.toFixed(1)} m away, ${f.person[3] > 0.8 ? "running" : f.person[3] > 0.05 ? "walking" : "standing"}` : "–";
   }
 
   CLIPS.forEach((c) => { const b = document.createElement("button"); b.type = "button"; b.dataset.id = c.id; b.textContent = c.name; b.addEventListener("click", () => loadClip(c.id)); $("clips").append(b); });

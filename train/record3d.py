@@ -56,18 +56,47 @@ def describe(m):
     return geoms
 
 
+def capture(env, geoms, index, **extra):
+    """One frame: where every part is, what touches the floor, and the body's motion."""
+    m, d = env.model, env.data
+    floor = m.geom("floor").id
+    quat = np.zeros(4)
+    pose = []
+    for g in geoms:
+        mujoco.mju_mat2Quat(quat, d.geom_xmat[g["id"]])
+        pose += [round(float(v), 4) for v in d.geom_xpos[g["id"]]]
+        pose += [round(float(v), 4) for v in quat]
+    on_floor, scrape, rubbing = set(), set(), set()
+    for c in d.contact[:d.ncon]:
+        if floor in (c.geom1, c.geom2):
+            other = c.geom2 if c.geom1 == floor else c.geom1
+            on_floor.add(index[other])
+            g = geoms[index[other]]
+            # The paw sinks a few mm into the soft floor, so the shin's bottom tip (just above
+            # the paw) touches too. Only contact more than 3 cm from the paw is a real scrape.
+            if g["leg"] and g["part"] != "foot":
+                paw = d.geom_xpos[m.geom(f"{g['leg']}_foot").id]
+                if np.linalg.norm(c.pos - paw) > 0.03:
+                    scrape.add(index[other])
+        elif c.geom1 in index and c.geom2 in index:
+            rubbing.add(tuple(sorted((index[c.geom1], index[c.geom2]))))
+    R = d.xmat[1].reshape(3, 3)
+    return dict(extra, yawr=round(float(d.qvel[5]), 3), p=pose, floor=sorted(on_floor), scrape=sorted(scrape),
+                rub=[list(r) for r in sorted(rubbing)],
+                vx=round(float(d.qvel[:3] @ R[:, 0]), 3), h=round(float(d.qpos[2]), 3),
+                pitch=round(float(np.degrees(np.arcsin(R[2, 0]))), 1),  # nose up is positive
+                yaw=round(float(np.degrees(np.arctan2(R[1, 0], R[0, 0]))), 1))
+
+
 def record(brains, script, seed, gait_generator):
     turning = any(getattr(b, "turning", False) for b in brains.values())
     speed = any(getattr(b, "speed_control", False) for b in brains.values())
     env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator, turning=turning, speed_control=speed)
     env.forced_command = script[0][0]
     obs, _ = env.reset(seed=seed)
-    m, d = env.model, env.data
-    floor = m.geom("floor").id
-    geoms = describe(m)
+    geoms = describe(env.model)
     index = {g["id"]: i for i, g in enumerate(geoms)}
     frames = []
-    quat = np.zeros(4)
     for command, seconds, brain, turn, v in script:
         env.forced_command = command
         env.set_command(command)
@@ -77,31 +106,7 @@ def record(brains, script, seed, gait_generator):
             env.set_speed(v)
         for _ in range(int(seconds * 50)):
             obs, _, fell, _, _ = env.step(brains[brain].act(obs))
-            pose = []
-            for g in geoms:
-                mujoco.mju_mat2Quat(quat, d.geom_xmat[g["id"]])
-                pose += [round(float(v), 4) for v in d.geom_xpos[g["id"]]]
-                pose += [round(float(v), 4) for v in quat]
-            on_floor, scrape, rubbing = set(), set(), set()
-            for c in d.contact[:d.ncon]:
-                if floor in (c.geom1, c.geom2):
-                    other = c.geom2 if c.geom1 == floor else c.geom1
-                    on_floor.add(index[other])
-                    g = geoms[index[other]]
-                    # The paw sinks a few mm into the soft floor, so the shin's bottom tip (just above
-                    # the paw) touches too. Only contact more than 3 cm from the paw is a real scrape.
-                    if g["leg"] and g["part"] != "foot":
-                        paw = d.geom_xpos[m.geom(f"{g['leg']}_foot").id]
-                        if np.linalg.norm(c.pos - paw) > 0.03:
-                            scrape.add(index[other])
-                elif c.geom1 in index and c.geom2 in index:
-                    rubbing.add(tuple(sorted((index[c.geom1], index[c.geom2]))))
-            R = d.xmat[1].reshape(3, 3)
-            frames.append(dict(cmd=command, brain=brain, turn=turn, speed=v, yawr=round(float(d.qvel[5]), 3), p=pose, floor=sorted(on_floor), scrape=sorted(scrape),
-                               rub=[list(r) for r in sorted(rubbing)],
-                               vx=round(float(d.qvel[:3] @ R[:, 0]), 3), h=round(float(d.qpos[2]), 3),
-                               pitch=round(float(np.degrees(np.arcsin(R[2, 0]))), 1),  # nose up is positive
-                               yaw=round(float(np.degrees(np.arctan2(R[1, 0], R[0, 0]))), 1), fell=bool(fell)))
+            frames.append(capture(env, geoms, index, cmd=command, brain=brain, turn=turn, speed=v, fell=bool(fell)))
             if fell:
                 env.close()
                 return geoms, frames
