@@ -420,7 +420,9 @@
         if (this.gaitOn && this.canStep && !S.recover) { this.startStep(1 - S.swing); return; }
         // Recovering from a push: keep stepping until the feet can hold the capture point.
         const box = this.supportBox(this.feet);
-        const xiNow = [this.c[0] + this.cv[0] / w, this.c[1] + this.cv[1] / w];
+        // (w here is the slowed-down rate under the ankle; the capture point uses the real one)
+        const w0 = Math.sqrt(G / Math.max(0.06, this.h + 0.015));
+        const xiNow = [this.c[0] + this.cv[0] / w0, this.c[1] + this.cv[1] / w0];
         if (this.outside(box, xiNow) > 0.004 || Math.hypot(this.cv[0], this.cv[1]) > 0.25) this.startStep(1 - S.swing);
       }
     }
