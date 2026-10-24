@@ -9,7 +9,13 @@ Writes into --out:
                        learned (no exploration noise; pass --noise to see it the
                        way it acts while practising)
 Step 0 is an untrained dog: random motor twitches.
+
+Early stopping: every checkpoint gets a score (average pass rate over the commands).
+The best one is copied to <run>/best/. If no new best appears for --patience checkpoints
+in a row, the watcher writes <run>/STOP and train.py stops, so a run that has stopped
+improving doesn't waste hours. Package <run>/best/ afterwards, not the last checkpoint.
 """
+import shutil
 import argparse
 import datetime as dt
 import json
@@ -105,6 +111,8 @@ def main():
     ap.add_argument("--episodes", type=int, default=10, help="exam episodes per command")
     ap.add_argument("--label", default="", help="name of this run, shown on the progress page")
     ap.add_argument("--noise", action="store_true", help="film with exploration noise, as while practising")
+    ap.add_argument("--patience", type=int, default=4,
+                    help="stop training after this many checkpoints in a row without a new best (0 = never)")
     args = ap.parse_args()
 
     run, out, log = Path(args.run), Path(args.out), Path(args.log)
@@ -120,7 +128,32 @@ def main():
                     updated=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"))
         write_json(data_path, data)
 
-    def process(steps, policy):
+    def score(exam):
+        return float(np.mean([exam[c] for c in COMMANDS]))
+
+    def keep_best(steps, exam, zip_path=None, stats=None):
+        """Remember the best checkpoint; ask training to stop when it stops improving."""
+        s_now = score(exam)
+        best = data.get("best")
+        if best is None or s_now > best["score"]:
+            data["best"] = dict(steps=steps, score=round(s_now, 3))
+            data["since_best"] = 0
+            if zip_path is not None:
+                (run / "best").mkdir(exist_ok=True)
+                shutil.copy(zip_path, run / "best" / "policy.zip")
+                shutil.copy(stats, run / "best" / "vecnormalize.pkl")
+                (run / "best" / "best.json").write_text(json.dumps(dict(steps=steps, exam=exam, score=s_now), indent=2))
+            print(f"new best at {steps}: score {s_now:.2f}", flush=True)
+        elif steps > 0:
+            data["since_best"] = data.get("since_best", 0) + 1
+            if args.patience and data["since_best"] >= args.patience and not (run / "STOP").exists():
+                reason = (f"no new best for {data['since_best']} checkpoints "
+                          f"(best {data['best']['score']:.2f} at {data['best']['steps']:,} steps)")
+                (run / "STOP").write_text(reason + "\n")
+                data["stopped"] = reason
+                print("early stop: " + reason, flush=True)
+
+    def process(steps, policy, zip_path=None, stats=None):
         label = "untrained" if steps == 0 else f"after {steps:,} practice steps"
         clip = f"clips/{steps:010d}.mp4"
         falls = film(policy, out / clip, label, noise=args.noise)
@@ -129,6 +162,7 @@ def main():
                                         clip=clip, falls_in_clip=falls))
         data["checkpoints"].sort(key=lambda c: c["steps"])
         done.add(steps)
+        keep_best(steps, exam, zip_path, stats)
         save("training")
         print(f"checkpoint {steps} ready: {exam}", flush=True)
 
@@ -143,11 +177,11 @@ def main():
                 tmp.mkdir(exist_ok=True)
                 (tmp / "policy.zip").write_bytes(zip_path.read_bytes())
                 (tmp / "vecnormalize.pkl").write_bytes(stats.read_bytes())
-                process(steps, Policy(tmp))
+                process(steps, Policy(tmp), zip_path, stats)
         final = run / "policy.zip"
         if final.exists() and (run / "vecnormalize.pkl").exists():
             steps = max(args.target, max(done))
-            if steps not in done:
+            if steps not in done and not (run / "STOP").exists():  # an early-stopped run keeps its best instead
                 process(steps, Policy(run))
             save("finished")
             print("finished", flush=True)

@@ -66,7 +66,16 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
 - Resuming the same task keeps its curriculum progress; starting a new task from another task's
   brain should restart the curriculum.
 
-## 6. Reading a run
+## 6. When to stop a run (our rule)
+- **Keep the best checkpoint, not the last one.** Learning wobbles: a skill can appear and then
+  be lost again (our run 2 stood on four feet at 1M steps and lost it by 1.5M).
+- **Stop when there's no new best for 4 checkpoints in a row** (2M steps here), then fix the cause
+  and train again. Don't stop at the first dip; scores naturally go up and down a little.
+- This is automatic: `watch.py --patience 4` scores every checkpoint, copies the best to
+  `runs/<name>/best/`, and writes `runs/<name>/STOP`, which makes `train.py` stop.
+  Then package `runs/<name>/best/`.
+
+## 7. Reading a run
 - Total reward can rise from side terms while the actual trick never happens: watch the main
   task term itself.
 - **Measure before theorizing.** When a run "fails", test the actual checkpoint headless (exam,
@@ -75,7 +84,7 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
 - **Watch the video.** Numbers can pass while the motion looks wrong.
 - Report what the rollouts show ("rolls but face-plants 1 in 3"), not "it works".
 
-## 7. Hardware choices that small robots converge on
+## 8. Hardware choices that small robots converge on
 - **Smart serial bus servos** (Feetech STS3215, Dynamixel XL330) over plain hobby servos: one wire
   for all motors, position and load feedback, tunable stiffness. That feedback is what the brain
   observes.
@@ -89,9 +98,17 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
 - **Physics sets the pace.** A 25 cm robot naturally tumbles at 3.5–5.5 rad/s; don't cap speeds
   with human intuitions, punish impacts and thrashing instead.
 
-## 8. Our own experience so far (Bolt dog, `models/bolt-dog-3M`)
+## 9. Our own experience so far
 - 4 CPU cores trained stand and walk in ~3M steps (~1 h); sit and lie never emerged (see the
   reward-composition lesson above).
 - Learning wobbles: walk was 100% at 3M, 80% with more falls at 3.5M. Keep every checkpoint and
   pick by exam, not by "latest".
 - Filming and testing every checkpoint (`train/watch.py`) made progress and regressions obvious.
+- Run 2 (measured poses, multiplied reward, honest exam): sit and lie at 100% from 500k steps,
+  stand on four feet at 1M, then lost; walk never appeared because the walk speed term was so
+  strict that standing still and trying to move both scored zero (fixed for run 3).
+  Best saved as `models/bolt-dog-run2-1M`.
+- The run-2 brain drives a hand-size (19 cm, 188 g) copy of the dog with no retraining when the
+  body is scaled by the physics rules (`scale_robot.py`, `BoltEnv(scale=0.25)`).
+- On 4 CPU cores we get ~6M steps an hour; GPU teams train a walk with ~100M steps. Walking from
+  scratch is slow here; imitating a reference gait is the next tool if run 3 doesn't walk.

@@ -15,11 +15,25 @@ from pathlib import Path
 
 import torch
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback, CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 from bolt_env import BoltEnv
+
+
+class StopFile(BaseCallback):
+    """Stop training when watch.py decides the run has stopped improving (it writes <run>/STOP)."""
+
+    def __init__(self, path, every=2048):
+        super().__init__()
+        self.path, self.every = path, every
+
+    def _on_step(self):
+        if self.n_calls % self.every == 0 and self.path.exists():
+            print(f"stopping early: {self.path.read_text().strip()}")
+            return False
+        return True
 
 
 def main():
@@ -61,11 +75,12 @@ def main():
 
     start = time.time()
     remaining = args.steps - model.num_timesteps
-    model.learn(total_timesteps=remaining, callback=ckpt, tb_log_name=args.name,
+    stop = StopFile(out / "STOP")
+    model.learn(total_timesteps=remaining, callback=CallbackList([ckpt, stop]), tb_log_name=args.name,
                 reset_num_timesteps=not args.resume, progress_bar=False)
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))
-    print(f"done: {args.steps:,} steps in {(time.time() - start) / 60:.1f} min -> {out}")
+    print(f"done: {model.num_timesteps:,} steps in {(time.time() - start) / 60:.1f} min -> {out}")
 
 
 if __name__ == "__main__":
