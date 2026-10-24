@@ -1,0 +1,81 @@
+{
+  "name": "bolt-run8b-walk-from-tall-stand",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt8b",
+        "--steps",
+        "5500000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--resume",
+        "runs/bolt8/checkpoints/policy_3500000_steps.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt8b",
+        "--steps",
+        "5500000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/bolt8b/checkpoints/policy_*_steps.zip",
+      "log": "runs/bolt8b/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/bolt8b/policy.zip",
+        "log_contains": "^done:"
+      }
+    },
+    {
+      "name": "watch",
+      "cmd": [
+        "python",
+        "-u",
+        "watch.py",
+        "runs/bolt8b",
+        "--log",
+        "runs/bolt8b/train.log",
+        "--out",
+        "runs/bolt8b/watch",
+        "--target",
+        "5500000",
+        "--patience",
+        "0",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--label",
+        "Run 8b: dog-gait walk, practising starts from the tall stand"
+      ],
+      "log": "runs/bolt8b/watch.log",
+      "done_when": {
+        "log_contains": "^finished"
+      }
+    }
+  ]
+}

@@ -300,6 +300,18 @@ class DogGaitTest(unittest.TestCase):
         self.assertTrue(passed("sit", [good] * 80))
         self.assertFalse(passed("sit", [dict(good, feet=np.array([0.4, 1.0, 1.0, 1.0]))] * 80))  # front-left paw hovering
 
+    def test_walk_eases_in_from_the_tall_stand_without_a_dip(self):
+        from bolt_env import STANCES
+        env = BoltEnv(randomize=False, gait_generator="dog")
+        env.forced_command = "stand"
+        env.reset(seed=0)
+        for _ in range(60):
+            env.step(np.zeros(12))                       # standing tall
+        env.set_command("walk")
+        np.testing.assert_allclose(env.base_pose(), STANCES["dog"], atol=1e-6)  # starts where it stood
+        lowest = min(env.step(np.zeros(12))[4]["height"] for _ in range(40))
+        self.assertGreater(lowest, 0.40)                 # never sags toward the old 31 cm crouch
+
     def test_other_stances_keep_the_old_stand(self):
         self.assertEqual(BoltEnv(gait_generator="tall").targets["stand"], TARGETS["stand"])
 

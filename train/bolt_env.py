@@ -109,6 +109,7 @@ class BoltEnv(gym.Env):
         self.rng = np.random.default_rng(seed)
         self.total_steps = 0  # this env's steps across all episodes (drives the walk curriculum)
         self.t, self.command, self.walk_since, self.phase0 = 0, 0, 0, 0.0
+        self.walk_from = STAND_POSE.copy()  # motor targets the walk eases in from
 
         m = self.model
         self.lo, self.hi = m.actuator_ctrlrange[:, 0].copy(), m.actuator_ctrlrange[:, 1].copy()
@@ -147,10 +148,11 @@ class BoltEnv(gym.Env):
             return STAND_POSE
         q = trot(self.gait_phase(), self.stance)[0]
         if self.stance in ("tall", "dog"):
-            # Ease from the standing pose into the trot over half a second, so a walk can start
-            # from whatever the standing brain left behind (runs 5-6 jumped straight in and the
-            # 2M brain fell 9 times in 10 when taking over from the standing brain).
-            q = STAND_POSE + min(1.0, (self.t - self.walk_since) / 25) * (q - STAND_POSE)
+            # Ease into the trot over half a second from wherever the motors were aiming when the
+            # walk began (runs 5-6 jumped straight in and the 2M brain fell 9 times in 10 when
+            # taking over from the standing brain). Easing from the fixed crouch instead pulled a
+            # dog standing tall down toward the crouch first: run 8 fell 3 in 10 that way.
+            q = self.walk_from + min(1.0, (self.t - self.walk_since) / 25) * (q - self.walk_from)
         return q
 
     def action_scale(self):
@@ -170,6 +172,7 @@ class BoltEnv(gym.Env):
     def _switch(self, command):
         if command != self.command and COMMANDS[command] == "walk":
             self.walk_since = self.t
+            self.walk_from = self.data.ctrl.copy() if self.t > 0 else STAND_POSE.copy()
         self.command = command
 
     def shin_tilt(self):
@@ -246,6 +249,12 @@ class BoltEnv(gym.Env):
         start_lying = self.randomize and self.rng.random() < 0.25
         pose = LIE_POSE if start_lying else STAND_POSE
         d.qpos[2] = (0.14 if start_lying else 0.33) * self.s
+        # With the dog stance the dog normally stands tall, so half the episodes start that way:
+        # run 8's walk only ever practised starting from the crouch and fell 3-5 times in 10
+        # when it took over from the tall stand.
+        if self.stance == "dog" and not start_lying and self.randomize and self.rng.random() < 0.5:
+            pose = STANCES["dog"]
+            d.qpos[2] = 0.45 * self.s
         yaw = self.rng.uniform(-np.pi, np.pi)
         d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
         self.phase0 = 0.0
@@ -266,6 +275,7 @@ class BoltEnv(gym.Env):
         self.last_action = np.zeros(12)
         self.command = COMMANDS.index(self.forced_command) if self.forced_command else self.rng.choice(self.skills)
         self.walk_since = 0
+        self.walk_from = STAND_POSE.copy()  # episodes start from the standing pose
         return self._obs(), {}
 
     def step(self, action):
