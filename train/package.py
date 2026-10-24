@@ -105,6 +105,13 @@ def record_rollouts(policy, episodes_per_command, steps=250, seed=2000, commands
 
 def model_card(name, facts, exam, curve, onnx_err):
     last = curve[-1] if curve else None
+    gait_note = ""
+    if facts.get("gait_generator", {}).get("used"):
+        g = facts["gait_generator"]
+        gait_note = (f"\n**This brain walks on top of a built-in trot.** While walking, motor targets are\n"
+                     f"`reference_gait.trot(phase, hip_swing=0.15, knee_lift=0.3)` + {g['residual_scale']} × action_scale × action,\n"
+                     f"where phase = 2π × 2 Hz × time: the same clock the brain sees in its last two inputs (sin, cos).\n"
+                     f"Without the trot underneath, this brain will not walk.\n")
     skills = facts.get("skills") or COMMANDS
     rows = "\n".join(f"| {c} | {exam[c]:.0%} |" for c in skills)
     learned = [c for c in skills if exam[c] >= 0.8]
@@ -141,7 +148,7 @@ Packaged {facts['packaged']} from `{facts['source']}` after **{facts['steps']:,}
 
 Every 1/50 s: build the 52 inputs in the order listed in `model.json`, run the model, then set
 motor targets `stand_pose + action_scale × action` (both in `model.json`), clipped to the joint limits.
-
+{gait_note}
 ```python
 import onnxruntime as ort
 brain = ort.InferenceSession("policy.onnx")
