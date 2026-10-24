@@ -1,0 +1,10 @@
+{
+ "steps": null,
+ "note": "trained as the first \"sit\" (a held crouch); stopped at ~1.2M steps: 5/5 at 1M",
+ "exam": {
+  "squat": {
+   "success": 1.0,
+   "mean_reward": 182.8
+  }
+ }
+}

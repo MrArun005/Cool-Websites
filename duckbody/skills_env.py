@@ -7,8 +7,10 @@ Tasks (start → command):
   stand          standing → stand      idle: shoves, head looking around, talking
   walk           standing → walk       any direction and turn rate (10%: walk in place)
   run            standing → run        fast forward, 2.6 Hz gait clock
-  sit            standing → sit        fold down to the deepest crouch and stay still (sleep pose)
-  sit_to_stand   crouched → stand      wake up and stand
+  squat          standing → sit        fold into the deepest crouch on its feet and hold it
+  sit            standing → sit        really sit: settle back onto belly and thighs and rest there
+                                       (sleep pose); measured by poses.py, stored in model/poses_<size>.json
+  sit_to_stand   sitting → stand       wake up and stand
   lie            standing → lie        lower the body onto the floor on its belly, gently
   get_up         lying anywhere → stand
   jump           standing → jump       hop: both feet off the floor, land on them, again
@@ -18,6 +20,8 @@ Rewards keep DuckEnv's rules: products of terms, references that move at a fixed
 nothing for being low or fallen unless being low is the task, and contact/orientation checks for
 the tricks. An aerial flip is not a task: it needs ~10x the leg power of these servos.
 """
+import json
+
 import mujoco
 import numpy as np
 
@@ -25,15 +29,15 @@ import env as base
 from env import CTRL_HZ, DuckEnv
 
 SKILL_COMMANDS = ["stand", "walk", "run", "sit", "lie", "jump", "roll"]
-SKILL_TASKS = ["stand", "walk", "run", "sit", "sit_to_stand", "lie", "get_up", "jump", "roll"]
-TASK_COMMAND = {"stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "sit_to_stand": "stand",
+SKILL_TASKS = ["stand", "walk", "run", "squat", "sit", "sit_to_stand", "lie", "get_up", "jump", "roll"]
+TASK_COMMAND = {"stand": "stand", "walk": "walk", "run": "run", "squat": "sit", "sit": "sit", "sit_to_stand": "stand",
                 "lie": "lie", "get_up": "stand", "jump": "jump", "roll": "roll"}
-START = {"stand": "stand", "walk": "stand", "run": "stand", "sit": "stand", "sit_to_stand": "sit_to_stand",
-         "lie": "stand", "get_up": "get_up", "jump": "stand", "roll": "sit_to_stand"}
-SECONDS = {"stand": 10, "walk": 10, "run": 8, "sit": 6, "sit_to_stand": 5, "lie": 6, "get_up": 6,
+START = {"stand": "stand", "walk": "stand", "run": "stand", "squat": "stand", "sit": "stand",
+         "sit_to_stand": "seated", "lie": "stand", "get_up": "get_up", "jump": "stand", "roll": "crouched"}
+SECONDS = {"stand": 10, "walk": 10, "run": 8, "squat": 6, "sit": 6, "sit_to_stand": 5, "lie": 6, "get_up": 6,
            "jump": 6, "roll": 4}
 GAIT_HZ = {"walk": 1.8, "run": 2.6}
-QUIET = ("lie", "jump", "roll")          # no head turning or talking during these
+QUIET = ("squat", "sit", "lie", "jump", "roll")   # no head turning or talking during these (calm head)
 
 
 class SkillEnv(DuckEnv):
@@ -54,6 +58,17 @@ class SkillEnv(DuckEnv):
         low = min(self._geom_bottom(g) for g in self.trunk_geoms)
         self.lie_height = 1.0 - low + 0.002
         self.sit_height = self.crouch_height
+        self.belly_geoms = self.trunk_geoms
+        self.thigh_geoms = [g for g in range(m.ngeom) if m.body(m.geom_bodyid[g]).name in ("knee_and_ankle_assembly", "knee_and_ankle_assembly_3")
+                            and m.geom_contype[g] + m.geom_conaffinity[g] > 0]
+        self.sit_q = None
+        poses = base.Path(str(kw.get("model_path") or base.MODEL)).with_name(
+            "poses_" + base.Path(str(kw.get("model_path") or base.MODEL)).stem.replace("duck_", "") + ".json")
+        if poses.exists() and "sit" in json.loads(poses.read_text()):
+            # Sitting means resting on belly and thighs, not holding a crouch (measured pose, poses.py).
+            sit = json.loads(poses.read_text())["sit"]
+            self.sit_q = np.array(sit["qpos"])
+            self.sit_height, self.sit_up = float(self.sit_q[2]), float(sit["up"])   # already settled when measured
 
     def _geom_bottom(self, g):
         m, d = self.model, self.data
@@ -69,7 +84,18 @@ class SkillEnv(DuckEnv):
             self.rng = np.random.default_rng(seed)
         r = self.rng
         task = (options or {}).get("task") or self.forced_skill or SKILL_TASKS[r.integers(len(SKILL_TASKS))]
-        super().reset(options={"task": START[task]})
+        super().reset(options={"task": {"seated": "sit_to_stand", "crouched": "sit_to_stand"}.get(START[task], START[task])})
+        if START[task] == "seated" and self.sit_q is not None:
+            # Start seated on the thighs exactly as measured (DuckEnv would rest it on the soles).
+            m, d = self.model, self.data
+            q = self.sit_q.copy()
+            q[self.qadr] = np.clip(q[self.qadr] + r.normal(0, 0.02, m.nu), self.lo, self.hi)
+            yaw = r.uniform(-np.pi, np.pi)
+            q[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+            mujoco.mj_resetData(m, d)
+            d.qpos[:] = q
+            d.ctrl[:] = q[self.qadr]
+            mujoco.mj_forward(m, d)
         self.task, self.command = task, TASK_COMMAND[task]
         self.vel_cmd = np.zeros(3)
         if task == "walk" and r.random() > 0.1:
@@ -131,7 +157,7 @@ class SkillEnv(DuckEnv):
             v = self.vel_cmd
             err = abs(info["vx"] - v[0]) + abs(info["vy"] - v[1]) + 0.2 * self.L * abs(info["yaw_rate"] - v[2])
             self.vx_err = 0.98 * self.vx_err + 0.02 * err
-        terminated = bool(info["up"] < 0.3 and self.task in ("stand", "walk", "run", "sit", "jump"))
+        terminated = bool(info["up"] < 0.3 and self.task in ("stand", "walk", "run", "squat", "sit", "jump"))
         if terminated:
             reward = 0.0
         truncated = self.t >= self.max_steps
@@ -144,6 +170,16 @@ class SkillEnv(DuckEnv):
         d = self.data
         for c in d.contact[:d.ncon]:
             if self.floor in (c.geom[0], c.geom[1]) and (c.geom[0] in self.trunk_geoms or c.geom[1] in self.trunk_geoms):
+                return True
+        return False
+
+    def _seated(self):
+        return self._trunk_on_floor() and self._thighs_down()
+
+    def _thighs_down(self):
+        d = self.data
+        for c in d.contact[:d.ncon]:
+            if self.floor in (c.geom[0], c.geom[1]) and (c.geom[0] in self.thigh_geoms or c.geom[1] in self.thigh_geoms):
                 return True
         return False
 
@@ -167,10 +203,21 @@ class SkillEnv(DuckEnv):
             h_ref = self.stand_height
             r_h = np.exp(-((p["height"] - h_ref) / (2 * sh if cmd == "walk" else 3 * sh)) ** 2)
             reward = up_at(0.85) * r_h * (0.6 * r_track + 0.4 * progress)
-        elif cmd == "sit":
-            h_ref = max(self.sit_height, self.start_height - 0.10 * L * s)
+        elif cmd == "sit" and (self.task == "squat" or self.sit_q is None):
+            h_ref = max(self.crouch_height, self.start_height - 0.10 * L * s)
             r_h = np.exp(-((p["height"] - h_ref) / sh) ** 2)
             reward = up_at(0.9) * r_h * still
+        elif cmd == "sit":
+            # Settle back onto belly and thighs at a fixed rate (no flopping down), then rest.
+            h_ref = max(self.sit_height, self.start_height - 0.08 * L * s)
+            r_h = np.exp(-((p["height"] - h_ref) / sh) ** 2)
+            up_ref = max(self.sit_up, 1.0 - (1.0 - self.sit_up) * min(1.0, s / 1.5))
+            r_up = np.exp(-((p["up"] - up_ref) / 0.12) ** 2)
+            legs = self.qadr[self.legs]
+            r_pose = np.exp(-np.sum((self.data.qpos[legs] - self.sit_q[legs]) ** 2) / 0.5)
+            gentle = np.exp(-(max(0.0, -self.data.qvel[2]) / (0.3 * L)) ** 2)
+            seated = 1.0 if h_ref > self.sit_height + 0.005 else (1.0 if self._seated() else 0.4)
+            reward = r_up * r_h * still * gentle * (0.5 + 0.5 * r_pose) * seated
         elif cmd == "lie":
             h_ref = max(self.lie_height, self.start_height - 0.08 * L * s)
             r_h = np.exp(-((p["height"] - h_ref) / sh) ** 2)
@@ -215,8 +262,10 @@ class SkillEnv(DuckEnv):
             return super().success(info)
         if cmd in GAIT_HZ:
             return bool(info["up"] > 0.9 and self.vx_err < (0.06 if cmd == "walk" else 0.1) * L)
+        if cmd == "sit" and (self.task == "squat" or self.sit_q is None):
+            return bool(info["up"] > 0.9 and abs(info["height"] - self.crouch_height) < 0.02 * L)
         if cmd == "sit":
-            return bool(info["up"] > 0.9 and abs(info["height"] - self.sit_height) < 0.02 * L)
+            return bool(self._seated() and abs(info["up"] - self.sit_up) < 0.1 and abs(info["vx"]) < 0.05 * L)
         if cmd == "lie":
             return bool(info["up"] > 0.6 and self._trunk_on_floor() and abs(info["vx"]) < 0.05 * L)
         if cmd == "jump":
