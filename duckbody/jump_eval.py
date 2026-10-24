@@ -20,7 +20,9 @@ import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
-from jump_env import SHOCK_FREE, JumpEnv
+from jump_env import JumpEnv
+
+HARD, VERY_HARD = 2.5, 3.5    # landing limits for the real robot, × body weight
 
 HERE = Path(__file__).resolve().parent
 
@@ -33,17 +35,32 @@ def stats_for(ckpt):
     return ckpt.with_name(f"policy_vecnormalize_{n}_steps.pkl")
 
 
-def evaluate(ckpt, episodes=5, seed=100, model=HERE / "model" / "duck_mid.xml"):
+def load(ckpt, env):
     policy = PPO.load(str(ckpt), device="cpu")
+    venv = VecNormalize.load(str(stats_for(ckpt)), DummyVecEnv([lambda: env]))
+    venv.training = False
+    return lambda obs: policy.predict(venv.normalize_obs(obs[None]), deterministic=True)[0][0]
+
+
+def evaluate(ckpt, episodes=5, seed=100, model=HERE / "model" / "duck_mid.xml", back_emf=True, single=None,
+             stand=HERE.parent / "models" / "mid-stand" / "policy.zip"):
+    """single: hop once on command: run the jump brain until `single` s after the first touchdown
+    (foot switches), then hand over to the stand brain (command one-hot switched to stand)."""
     rows = []
     for ep in range(episodes):
         env = JumpEnv(task="jump", randomize=True, seed=seed + ep, model_path=str(model), practice=False)
-        venv = VecNormalize.load(str(stats_for(ckpt)), DummyVecEnv([lambda: env]))
-        venv.training = False
+        env.back_emf = back_emf
+        brain = load(ckpt, env)
+        stand_brain = load(stand, env) if single is not None else None
         obs, _ = env.reset(seed=seed + ep)
         done, total, air, best_air, clear, peaks, landing_peak, was_air = False, 0.0, 0, 0, 0.0, [], None, False
+        first_down, switched = None, False
         while not done:
-            a = policy.predict(venv.normalize_obs(obs[None]), deterministic=True)[0][0]
+            if single is not None and first_down is not None and not switched and env.t >= first_down + int(single * 50):
+                switched = True
+                env.command = "stand"
+                obs = env._obs()
+            a = (stand_brain if switched else brain)(obs)
             obs, r, term, trunc, info = env.step(a)
             total += r
             done = term or trunc
@@ -55,6 +72,7 @@ def evaluate(ckpt, episodes=5, seed=100, model=HERE / "model" / "duck_mid.xml"):
                     was_air = True
             else:
                 if was_air:
+                    first_down = env.t if first_down is None else first_down
                     landing_peak = 0                       # measure the next 5 steps after touchdown
                     was_air = False
                 air = 0
@@ -67,9 +85,10 @@ def evaluate(ckpt, episodes=5, seed=100, model=HERE / "model" / "duck_mid.xml"):
         peaks = np.array(peaks) if peaks else np.zeros(0)
         rows.append(dict(hops=env.hops, air_ms=best_air * 20, clear_mm=1000 * clear, rise_cm=100 * env.best_hop,
                          peak_fw=env.peak_fw, mean_land_fw=float(peaks.mean()) if len(peaks) else 0.0,
-                         hard=float((peaks > SHOCK_FREE).mean()) if len(peaks) else 0.0,
-                         very_hard=float((peaks > 3.5).mean()) if len(peaks) else 0.0,
-                         ok=bool(info["success"]), fell=bool(term), reward=total, up=info["up"]))
+                         hard=float((peaks > HARD).mean()) if len(peaks) else 0.0,
+                         very_hard=float((peaks > VERY_HARD).mean()) if len(peaks) else 0.0,
+                         ok=bool(env.best_hop > 0.015 * env.L and info["up"] > 0.9), fell=bool(term),
+                         landings=[round(float(x), 2) for x in peaks][:8] if single is not None else len(peaks), reward=total, up=info["up"]))
     return rows
 
 
@@ -77,9 +96,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("ckpts", nargs="+")
     ap.add_argument("--episodes", type=int, default=5)
+    ap.add_argument("--no-back-emf", action="store_true", help="servos without the torque–speed limit (v1 physics)")
+    ap.add_argument("--single", type=float, default=None, metavar="S",
+                    help="hop once: hand over to the stand brain S seconds after the first touchdown")
     a = ap.parse_args()
     for c in a.ckpts:
-        rows = evaluate(c, a.episodes)
+        rows = evaluate(c, a.episodes, back_emf=not a.no_back_emf, single=a.single)
         m = lambda k: np.mean([r[k] for r in rows])
         print(f"{Path(c).parent.name}/{Path(c).name}: success {sum(r['ok'] for r in rows)}/{len(rows)}, fell {sum(r['fell'] for r in rows)}, "
               f"hops/ep {m('hops'):.1f}, air {m('air_ms'):.0f} ms, clear {m('clear_mm'):.1f} mm, rise {m('rise_cm'):.2f} cm, "

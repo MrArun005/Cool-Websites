@@ -33,17 +33,37 @@ import numpy as np
 from poses import leg_q
 from skills_env import SkillEnv
 
-SHOCK_FREE = 2.5          # × body weight over a 20 ms step that a landing may use for free
-SHOCK_LIN, SHOCK_SQ = 0.5, 0.7
+SHOCK_FREE = 2.0          # × body weight over a 20 ms step that a landing may use for free
+SHOCK_LIN, SHOCK_SQ = 1.0, 2.0   # v1 (2.5, 0.5, 0.7): 71% of landings > 2.5 W, peaks 3.8 W
+SHOCK_HARD, SHOCK_HARD_W = 3.5, 5.0   # extra, per body weight beyond 3.5 W: never land that hard
+OMEGA_FREE = 10.8         # rad/s, XL330 no-load speed at 5 V (back-EMF)
+OMEGA_RANGE = (9.0, 11.0) # drawn per episode in training (battery sag, servo spread)
 CLEAR_FULL = 0.006        # m of sole clearance for full flight credit
 PUSH_V = 0.4              # m/s upward CoM speed for full push-off credit
 READY = 0.1
 
 
 class JumpEnv(SkillEnv):
+    back_emf = True
+
+    def _back_emf(self):
+        """Servo torque–speed limit: a DC motor's available torque falls linearly with speed,
+        τ ≤ τ_stall·(1 − ω/ω0). With the position loop saturating at τ_stall that is exactly a joint
+        damping of τ_stall/ω0 outside the actuator clip (MuJoCo applies dof damping as a passive force,
+        after forcerange). The model's own damping (0.053) is kept where it is already larger."""
+        m, r = self.model, self.rng
+        w0 = r.uniform(*OMEGA_RANGE) if self.randomize else OMEGA_FREE
+        base_damp = m.dof_damping[self.dadr] if self.randomize else self.nominal["damping"][self.dadr]
+        m.dof_damping[self.dadr] = np.maximum(base_damp, np.abs(m.actuator_forcerange[:, 1]) / w0)
+        self.omega0 = w0
+
     def reset(self, seed=None, options=None):
         obs, info = super().reset(seed=seed, options=options)
         m, d, r = self.model, self.data, self.rng
+        if self.back_emf:
+            self._back_emf()
+        elif not self.randomize:
+            m.dof_damping[:] = self.nominal["damping"]
         if self.task == "jump" and self.practice:
             u = r.random()
             if u < 0.4:
@@ -87,7 +107,7 @@ class JumpEnv(SkillEnv):
         fw = 1.0 + (vz - self.com_vz) / self.dt / 9.81          # mean ground force / body weight this step
         self.com_vz = vz
         x = max(0.0, fw - SHOCK_FREE)
-        shock = SHOCK_LIN * x + SHOCK_SQ * x * x
+        shock = SHOCK_LIN * x + SHOCK_SQ * x * x + SHOCK_HARD_W * max(0.0, fw - SHOCK_HARD)
         self.peak_fw = max(self.peak_fw, fw)
         self.shock_sum += shock
 
