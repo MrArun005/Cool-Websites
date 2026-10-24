@@ -70,9 +70,11 @@ class WalkEnv(SkillEnv):
             if self.practice and self.task == "walk":
                 self.vel_cmd = self.vel_cmd * self.curriculum()
             elif self.practice and self.task == "run":
-                # run: from a fast walk up to the full run range
-                lo = self.vel_cmd[0] * self.curriculum()
-                self.vel_cmd = np.array([max(lo, 0.25 * self.L), 0.0, self.vel_cmd[2]])
+                # run: from a fast walk up to the full run range; the speed floor ramps too (a fixed 0.25 L floor
+                # from the walk brain fell 8/8 at the first checkpoint)
+                c = self.curriculum()
+                lo = self.vel_cmd[0] * c
+                self.vel_cmd = np.array([max(lo, (0.12 + 0.13 * c) * self.L), 0.0, self.vel_cmd[2]])
             self.table = self.ref[self.command].fast_table(self.vel_cmd, GAIT_HZ[self.command])
             obs = self._obs()
         self.v_avg = np.zeros(3)
