@@ -42,6 +42,8 @@ PLANS = {
     "walk": [("walk", None)], "run": [("run", None)],
     # sit is chained: squat first, then settle back onto belly and thighs (how it was trained)
     "sit": [("squat", 2.0), ("sit", None)], "sleep": [("squat", 2.0), ("sit", None)], "squat": [("squat", None)],
+    # saved poses: get down like sit, then glide into the pose and hold it (statically stable)
+    "swag": [("squat", 2.0), ("sit", 3.0), ("pose:swag", None)],
     "wake": [("sit_to_stand", 3.0), ("stand", None)],
     "lie": [("lie", None)],
     "get up": [("get_up", 6.0), ("stand", None)],
@@ -50,6 +52,26 @@ PLANS = {
 }
 ALIASES = {"get_up": "get up", "getup": "get up", "wake up": "wake", "lie down": "lie", "sit down": "sit"}
 # The command one-hot each skill brain was trained with (skills_env.TASK_COMMAND).
+POSES = HERE / "model" / "poses_mid.json"
+
+
+class PoseBrain:
+    """Holds a saved pose: glides the servo targets there over `glide` s, then holds them."""
+
+    def __init__(self, ctrl, rt, glide=1.5):
+        self.goal = np.clip((np.asarray(ctrl)[rt.pol] - rt.home[rt.pol]) / rt.scale, -1, 1)
+        self.rt, self.n, self.start = rt, max(1, int(glide * rt.hz)), None
+
+    def begin(self):
+        self.start = self.rt.last_action.copy()
+
+    def __call__(self, obs):
+        if self.start is None:
+            return self.goal
+        f = min(1.0, (self.rt.plan_t + 1) / self.n)
+        return self.start + (self.goal - self.start) * f
+
+
 OBS_COMMAND = {"stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "squat": "sit", "sit_to_stand": "stand",
                "lie": "lie", "get_up": "stand", "jump": "jump", "roll": "roll"}
 
@@ -232,6 +254,11 @@ class DuckRuntime:
         self.jaw_pos = 0.0
         self.targets = self.home.copy()
         self.mode = "stand"
+        if POSES.exists():
+            for k, v in json.loads(POSES.read_text()).items():
+                if "ctrl" in v and k != "sit":
+                    self.brains[f"pose:{k}"] = PoseBrain(v["ctrl"], self)
+                    self.quiet.add(f"pose:{k}")
         self._start("stand")
 
     # ---------- personality inputs ----------
@@ -348,7 +375,9 @@ class DuckRuntime:
             msg = f"no {skill} brain yet, holding stand instead"
             skill = "stand"
             self.plan = [("stand", None)]
-        new_cmd = OBS_COMMAND[skill]
+        new_cmd = OBS_COMMAND.get(skill, "sit" if skill.startswith("pose:") else None)
+        if isinstance(self.brains.get(skill), PoseBrain):
+            self.brains[skill].begin()
         if new_cmd != self.obs_command:
             self.gait_t = 0                              # gait clock starts with the gait, as in training
         if new_cmd not in self.gait_hz:
@@ -421,6 +450,8 @@ def parse(clause, L=1.0):
         return "wake", {}
     if re.search(r"\bget up\b|\bstand up\b|^up$", t):
         return "get up", {}
+    if re.search(r"\bswag\b|\bchill\b|\brelax\b|\blean back\b", t):
+        return "swag", {}
     if re.search(r"\bsquat\b|\bsquatting\b|\bcrouch\b|\bduck down\b", t):
         return "squat", {}
     if re.search(r"\bsit\b|\bsitting\b", t):
