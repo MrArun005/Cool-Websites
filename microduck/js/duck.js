@@ -352,9 +352,21 @@
       return d[0] > d[1] ? 0 : 1;
     }
 
+    // Step timing follows the speed the body actually has, not just the button:
+    // switching to slow walking steps while still moving at running speed would
+    // need steps longer than the legs, so the duck keeps short running steps
+    // until it has slowed down.
+    stepGait() {
+      if (this.cmd.gait === 'run') return 'run';
+      const speed = Math.max(Math.abs(this.vd), Math.hypot(this.cv[0], this.cv[1]));
+      if (speed > DUCK.walk.vmax * 1.05) return 'run';
+      if (this.stepping && this.stepping.gait === 'run' && speed > DUCK.walk.vmax * 0.8) return 'run';
+      return 'walk';
+    }
+
     startStep(swing) {
       const f = this.feet[swing];
-      const gait = this.cmd.gait;
+      const gait = this.stepGait();
       const recover = !(this.gaitOn && this.canStep);
       this.stepping = { swing, gait, recover, t: 0, T: recover ? 0.2 : DUCK[gait].T, from: this.soleCentre(f), fromYaw: f.yaw, target: this.soleCentre(f) };
       f.contact = false;
@@ -734,16 +746,32 @@
 
     stop() { this.cmd.v = 0; this.cmd.turn = 0; return true; }
 
+    // Turn 90°. Standing still it turns on the spot; when it is already moving
+    // it eases off to a slow walk for the turn (never stopping dead, which at
+    // running speed would need a step longer than its legs), then picks its
+    // old speed and gait back up.
     turn(dir) {
       if (this.mode !== 'balance' || !this.isUp) return this.standUp();
+      const was = this.gaitOn && this.cmd.v > 0.02 ? { v: this.cmd.v, gait: this.cmd.gait } : null;
       this.run('turning', async tok => {
         const start = this.yaw, goal = Math.PI / 2;
-        this.cmd.gait = 'walk'; this.cmd.v = 0; this.cmd.turn = dir * 1.3;
+        // Keep the step rhythm it already has; only the speed comes down.
+        this.cmd.gait = was ? was.gait : 'walk';
+        this.cmd.v = was ? Math.min(was.v, 0.6 * DUCK.walk.vmax) : 0;
+        // Ease into the turn while still fast; full turn rate once slowed down.
+        this.cmd.turn = dir * 0.5;
         this.autoGaze = false;
         this.gaze = { mode: 'look', yaw: start + dir * goal, pitch: -0.05, point: null };
+        await this.until(() => this.vd < DUCK.walk.vmax * 0.8, tok, 3);
+        this.cmd.turn = dir * 1.3;
         await this.until(() => Math.abs(wrapAngle(this.yaw - start)) > goal - 0.12, tok, 6);
         this.cmd.turn = 0;
-        await this.until(() => Math.abs(this.yawRate) < 0.05 && !this.stepping, tok, 3);
+        if (was) {
+          this.cmd.gait = was.gait; this.cmd.v = was.v;
+          await this.until(() => Math.abs(this.yawRate) < 0.05, tok, 2);
+        } else {
+          await this.until(() => Math.abs(this.yawRate) < 0.05 && !this.stepping, tok, 3);
+        }
         this.autoGaze = true;
         this.activity = 'idle';
       });
