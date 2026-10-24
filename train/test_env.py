@@ -387,6 +387,17 @@ class DogGaitTest(unittest.TestCase):
         self.assertTrue(passed("walk", [good] * 80))
         self.assertFalse(passed("walk", [dict(good, vx=0.5)] * 80))  # asked to run, walked
 
+    def test_felt_speed_is_relative_to_the_asked_speed(self):
+        env = BoltEnv(randomize=False, gait_generator="dog", turning=True, speed_control=True)
+        env.forced_command = "walk"
+        env.reset(seed=0)
+        env.set_speed(env.SPEED_REF)
+        at_ref = env._obs()
+        env.set_speed(1.0)
+        fast = env._obs()
+        self.assertAlmostEqual(at_ref[6] - fast[6], 1.0 - env.SPEED_REF, places=5)  # forward speed input shifted
+        np.testing.assert_allclose(np.delete(at_ref, [6, 53]), np.delete(fast, [6, 53]), atol=1e-6)
+
     def test_other_stances_keep_the_old_stand(self):
         self.assertEqual(BoltEnv(gait_generator="tall").targets["stand"], TARGETS["stand"])
 

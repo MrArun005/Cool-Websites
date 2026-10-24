@@ -111,6 +111,7 @@ class BoltEnv(gym.Env):
         self.t, self.command, self.walk_since, self.phase0 = 0, 0, 0, 0.0
         self.forced_turn_set = False
         self.forced_speed_set = False
+        self.env_steps = 0  # steps this env has taken since it was created (drives the speed ramp)
         self.walk_from = STAND_POSE.copy()  # motor targets the walk eases in from
 
         m = self.model
@@ -155,6 +156,7 @@ class BoltEnv(gym.Env):
         return 2 * np.pi * 2.0 * self.t * self.dt / self.ts + self.phase0  # 2 Hz gait clock in full-size time
 
     MAX_SPEED = 1.2  # m/s, a trot-run: 3 steps/s with 20 cm strides
+    SPEED_REF = 0.4  # m/s, the pace the walk brain learned before it had a speed command
 
     def gait_freq(self):
         """Steps per second for each leg pair: 2 at a walk, up to 3 when running."""
@@ -196,8 +198,13 @@ class BoltEnv(gym.Env):
         return float(np.clip(self.TURN_GAIN * self.yaw_cmd, -limit, limit))
 
     def _new_speed(self):
-        """A speed command: often a normal walk, otherwise anything from slow to running."""
-        return 0.4 if self.rng.random() < 0.2 else float(self.rng.uniform(0.2, self.MAX_SPEED))
+        """A speed command: often a normal walk, otherwise anything from slow to running.
+
+        The fastest speed practised rises from 0.7 to 1.2 m/s over the first 1.5M steps of a
+        training run (8 envs), so it learns to balance at each speed before going faster.
+        """
+        top = 0.7 + (self.MAX_SPEED - 0.7) * min(1.0, self.env_steps * 8 / 1.5e6)
+        return 0.4 if self.rng.random() < 0.2 else float(self.rng.uniform(0.2, top))
 
     def set_speed(self, v):
         """Ask for a forward speed in m/s; stays until changed."""
@@ -282,6 +289,11 @@ class BoltEnv(gym.Env):
         d, R = self.data, self._rotation()
         gravity = R.T @ np.array([0, 0, -1.0])
         v_body = R.T @ d.qvel[0:3] / self.ts
+        if self.speed_control and COMMANDS[self.command] == "walk":
+            # The walk brain learned a reflex to hold ~0.4 m/s and brakes anything faster (run 11
+            # ignored speed commands for 1M steps). So it feels its speed relative to the asked
+            # speed: holding its usual pace now means holding the asked pace.
+            v_body = v_body - np.array([self.speed_cmd - self.SPEED_REF, 0.0, 0.0])
         clock = self.gait_phase()  # 2 Hz gait clock (full-size time)
         cmd = np.zeros(len(COMMANDS)); cmd[self.command] = 1
         obs = np.concatenate([
@@ -364,6 +376,7 @@ class BoltEnv(gym.Env):
         self.data.ctrl[:] = np.clip(self.base_pose() + self.action_scale() * action, self.lo, self.hi)
         mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
         self.t += 1
+        self.env_steps += 1
         if self.speed_control:
             self.phase += 2 * np.pi * self.gait_freq() * self.dt / self.ts
         self.total_steps += 8  # 8 parallel envs share the curriculum clock (train.py default)

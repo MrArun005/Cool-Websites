@@ -1,0 +1,91 @@
+{
+  "name": "bolt-run11b-running-relative-speed",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt11b",
+        "--steps",
+        "10000000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--turning",
+        "--speed-control",
+        "--handover-brain",
+        "../models/bolt-dog-posture-dog-2.5M",
+        "--resume",
+        "runs/run_start/policy.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt11b",
+        "--steps",
+        "10000000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--turning",
+        "--speed-control",
+        "--handover-brain",
+        "../models/bolt-dog-posture-dog-2.5M",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/bolt11b/checkpoints/policy_*_steps.zip",
+      "log": "runs/bolt11b/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/bolt11b/policy.zip",
+        "log_contains": "^done:"
+      }
+    },
+    {
+      "name": "watch",
+      "cmd": [
+        "python",
+        "-u",
+        "watch.py",
+        "runs/bolt11b",
+        "--log",
+        "runs/bolt11b/train.log",
+        "--out",
+        "runs/bolt11b/watch",
+        "--target",
+        "10000000",
+        "--patience",
+        "0",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--handover-brain",
+        "../models/bolt-dog-posture-dog-2.5M",
+        "--label",
+        "Run 11b: walk, turn and run at any asked speed (speed felt relative to the asked speed)"
+      ],
+      "log": "runs/bolt11b/watch.log",
+      "done_when": {
+        "log_contains": "^finished"
+      }
+    }
+  ]
+}
