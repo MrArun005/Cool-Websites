@@ -83,6 +83,7 @@ class TestRuntime(unittest.TestCase):
         stub = Stub()
         brains.update(sit=stub, swag_sit=stub, sit_to_stand=stub, walk=stub)
         brains.pop("lie", None)
+        brains.pop("jump", None)
         rt = rtm.DuckRuntime(rtm.SimBackend(cfg["servo_names"], model=env.model, data=env.data),
                              brains=brains, config=cfg, log=None)
         self.assertEqual(rt.skill, "stand")
@@ -106,10 +107,10 @@ class TestRuntime(unittest.TestCase):
         np.testing.assert_allclose(o[56:58], [0, 1], atol=1e-6)   # gait clock starts at 0
         rt.command("walk", vx=5.0)                            # clipped to the trained range
         self.assertLessEqual(rt.vel_cmd[0], 0.25 * rt.L + 1e-9)
-        msg = rt.command("run")                               # no brain: stand, and say so
+        msg = rt.command("jump")                              # no brain: stand, and say so
         self.assertEqual(rt.skill, "stand")
-        self.assertIn("no run brain", msg)
-        self.assertIn("run", rt.fallbacks)
+        self.assertIn("no jump brain", msg)
+        self.assertIn("jump", rt.fallbacks)
         np.testing.assert_allclose(rt.observe()[53:58], 0)    # standing: no velocity, no clock
         rt.command("idle")
         self.assertEqual(rt.skill, "stand")

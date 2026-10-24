@@ -39,7 +39,9 @@ SOLES = ["left_foot_bottom_tpu", "right_foot_bottom_tpu"]
 # What the personality can ask for → the skill brains to run, in order: (skill, seconds or None = stay).
 PLANS = {
     "stand": [("stand", None)], "idle": [("stand", None)],
-    "walk": [("walk", None)], "run": [("run", None)],
+    # run = the fast walk: the walk brain (trained up to ~0.31 m/s, walk_env.py WALK_FAST) at a higher speed;
+    # the separate run gait fell at once on this body
+    "walk": [("walk", None)], "run": [("walk", None)],
     # sit is chained: squat first, then settle back onto belly and thighs (how it was trained)
     # this body sits stably as swag (one leg out); the symmetric sit rolled it onto its back
     # sit: squat, then MoveBrain down into the perch (deep crouch on the soles; s2s_roundtrip.py: 20/20 sat and
@@ -410,7 +412,7 @@ class DuckRuntime:
         if name == "get up" and not fallen and self.skill in ("stand", "walk", "run", "jump"):
             name = "stand"
         self.mode = name
-        self.vel_cmd = self._velocity(PLANS[name][0][0], vx, vy, yaw)
+        self.vel_cmd = self._velocity("run" if name == "run" else PLANS[name][0][0], vx, vy, yaw)
         self.plan = list(PLANS[name])
         self.plan_all = list(PLANS[name])
         return self._next_in_plan()
@@ -516,7 +518,7 @@ class DuckRuntime:
         if skill == "walk":
             return np.array([np.clip(vx, -0.1 * L, 0.25 * L), np.clip(vy, -0.1 * L, 0.1 * L), np.clip(yaw, -0.6, 0.6)])
         if skill == "run":
-            return np.array([np.clip(vx or 0.4 * L, 0.3 * L, 0.55 * L), 0.0, np.clip(yaw, -0.3, 0.3)])
+            return np.array([np.clip(vx or 0.4 * L, 0.3 * L, 0.45 * L), 0.0, np.clip(yaw, -0.3, 0.3)])
         return np.zeros(3)
 
     def _next_in_plan(self):
