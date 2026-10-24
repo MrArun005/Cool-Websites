@@ -46,7 +46,7 @@ def exam(model, venv, tasks, episodes=4, seed=123, model_path=None, env_cls=Duck
     out = {}
     for task in tasks:
         env = env_cls(task=task, randomize=True, seed=seed, model_path=model_path,
-                      **(dict(practice=False) if env_cls is SkillEnv else {}))
+                      **(dict(practice=False) if issubclass(env_cls, SkillEnv) else {}))
         wins, rewards = 0, []
         for ep in range(episodes):
             obs, _ = env.reset(seed=seed + ep)
@@ -69,6 +69,7 @@ def main():
     ap.add_argument("--envs", type=int, default=8)
     ap.add_argument("--task", choices=sorted(set(TASKS) | set(SKILL_TASKS)), help="train one task only (default: all, mixed)")
     ap.add_argument("--skills", action="store_true", help="all-skills layout (skills_env.py): run, sit, lie, jump, roll …")
+    ap.add_argument("--env", help="module:Class of a SkillEnv subclass (same obs/action layout), e.g. walk_env:WalkEnv")
     ap.add_argument("--name", default="duck")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--smooth-after", type=int, default=None, help="step at which smoothness penalties start")
@@ -88,6 +89,11 @@ def main():
     kw = dict(task=a.task, model_path=model_path)
     vec_cls = DummyVecEnv if a.quick else SubprocVecEnv
     env_cls = SkillEnv if a.skills else DuckEnv
+    if a.env:
+        import importlib
+        mod, cls = a.env.split(":")
+        env_cls = getattr(importlib.import_module(mod), cls)
+        assert issubclass(env_cls, SkillEnv), "--env must subclass SkillEnv (shared input layout)"
     venv = make_vec_env(env_cls, n_envs=a.envs, seed=a.seed, vec_env_cls=vec_cls, env_kwargs=kw)
     if a.resume:
         ckpt = Path(a.resume)
