@@ -25,8 +25,8 @@ class Policy:
         self.norm = VecNormalize.load(str(run_dir / "vecnormalize.pkl"), DummyVecEnv([BoltEnv]))
         self.norm.training = False
 
-    def act(self, obs):
-        action, _ = self.model.predict(self.norm.normalize_obs(obs), deterministic=True)
+    def act(self, obs, deterministic=True):
+        action, _ = self.model.predict(self.norm.normalize_obs(obs), deterministic=deterministic)
         return action
 
 

@@ -27,7 +27,10 @@ python -m unittest test_env.py               # model + environment sanity checks
 python train.py --steps 6000000              # ~55 min on 4 CPU cores
 python evaluate.py runs/bolt --video bolt.mp4
 tensorboard --logdir runs                     # watch the reward climb
+python watch.py runs/bolt --log train.log --out runs/bolt/watch   # film + test every checkpoint
 ```
+
+`watch.py` runs next to training (send train.py's output to `train.log`). Each time a checkpoint is saved, it films the dog obeying commands while still practising (exploration noise included, so you see it wobble and fall) and gives it a quick exam. It writes `data.json` and `clips/*.mp4` for a progress page.
 
 On Linux without a display, set `MUJOCO_GL=osmesa` (install `libosmesa6`) for the video.
 
