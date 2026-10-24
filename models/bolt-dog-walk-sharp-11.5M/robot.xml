@@ -1,0 +1,141 @@
+<!--
+  Bolt, the robot dog, as a full rigid-body model for MuJoCo.
+
+  Same size and weight as the browser sim (pet/js/physics.js): 0.56 m body,
+  0.2 m thigh + 0.2 m shin, ~12 kg total. Unlike the browser sim, every force
+  here is real: motors produce limited torque, feet touch the floor through
+  contacts with friction, and nothing is scripted.
+
+  Frame: +x forward, +y left, +z up. Hips sit 3 cm further out than in the
+  browser sim so the thighs clear the body (self-collision is on here).
+  Each leg has 3 motors: abd (swing the leg sideways), hip and knee.
+  Front knees point backward (like a dog's elbow), rear knees point forward.
+  Motors are position servos with a 17 N·m torque limit, about what a
+  quasi-direct-drive brushless leg motor gives (MIT Mini Cheetah class).
+-->
+<mujoco model="bolt">
+  <compiler angle="radian" autolimits="true"/>
+  <option timestep="0.002" integrator="implicitfast"/>
+
+  <default>
+    <joint damping="0.05" armature="0.01" frictionloss="0.02"/>
+    <geom friction="1.0 0.02 0.01" condim="3" rgba="0.72 0.75 0.8 1"/>
+    <position kp="45" kv="1.2" forcerange="-17 17"/>
+    <default class="thigh"><geom type="capsule" size="0.024"/></default>
+    <default class="shin"><geom type="capsule" size="0.019"/></default>
+    <default class="foot"><geom type="sphere" size="0.025" rgba="0.21 0.23 0.27 1" friction="1.0 0.02 0.01"/></default>
+    <default class="joint"><geom type="sphere" size="0.034" rgba="1 0.48 0.1 1" contype="0" conaffinity="0"/></default>
+  </default>
+
+  <visual>
+    <headlight ambient="0.3 0.3 0.3" diffuse="0.35 0.35 0.35" specular="0.1 0.1 0.1"/>
+    <global offwidth="960" offheight="540"/>
+  </visual>
+
+  <asset>
+    <texture name="sky" type="skybox" builtin="gradient" rgb1="0.82 0.86 0.9" rgb2="0.98 0.98 0.97" width="256" height="256"/>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.78 0.77 0.73" rgb2="0.7 0.69 0.65" width="512" height="512"/>
+    <material name="grid" texture="grid" texrepeat="12 12" reflectance="0.05"/>
+  </asset>
+
+  <worldbody>
+    <light pos="1 1 3" dir="-0.3 -0.3 -1" directional="true" castshadow="true" diffuse="0.6 0.6 0.6"/>
+    <geom name="floor" type="plane" size="20 20 0.1" material="grid"/>
+
+    <body name="torso" pos="0 0 0.36">
+      <freejoint name="root"/>
+      <camera name="track" mode="trackcom" pos="0.9 -2.0 0.7" xyaxes="0.92 0.4 0 -0.12 0.27 0.95"/>
+      <site name="imu" pos="0 0 0"/>
+      <geom name="torso" type="box" size="0.28 0.12 0.075" mass="8.0"/>
+      <geom name="head" type="box" pos="0.34 0 0.09" size="0.085 0.075 0.065" mass="0.8"/>
+      <geom name="snout" type="box" pos="0.44 0 0.065" size="0.04 0.05 0.035" mass="0.2"/>
+      <geom name="eyeL" type="box" pos="0.426 0.04 0.11" size="0.003 0.012 0.016" rgba="0.49 0.83 1 1" contype="0" conaffinity="0" mass="0"/>
+      <geom name="eyeR" type="box" pos="0.426 -0.04 0.11" size="0.003 0.012 0.016" rgba="0.49 0.83 1 1" contype="0" conaffinity="0" mass="0"/>
+
+      <!-- front left -->
+      <body name="FL_hip" pos="0.22 0.15 -0.03">
+        <joint name="FL_abd" axis="1 0 0" range="-0.5 0.5"/>
+        <geom class="joint" mass="0.1"/>
+        <body name="FL_thigh">
+          <joint name="FL_hip" axis="0 1 0" range="-1.2 2.6"/>
+          <geom class="thigh" fromto="0 0 0 0 0 -0.2" mass="0.35"/>
+          <body name="FL_shin" pos="0 0 -0.2">
+            <joint name="FL_knee" axis="0 1 0" range="-2.75 -0.2"/>
+            <geom class="joint" size="0.03" mass="0"/>
+            <geom class="shin" fromto="0 0 0 0 0 -0.2" mass="0.25"/>
+            <geom name="FL_foot" class="foot" pos="0 0 -0.2" mass="0.05"/>
+          </body>
+        </body>
+      </body>
+
+      <!-- front right -->
+      <body name="FR_hip" pos="0.22 -0.15 -0.03">
+        <joint name="FR_abd" axis="1 0 0" range="-0.5 0.5"/>
+        <geom class="joint" mass="0.1"/>
+        <body name="FR_thigh">
+          <joint name="FR_hip" axis="0 1 0" range="-1.2 2.6"/>
+          <geom class="thigh" fromto="0 0 0 0 0 -0.2" mass="0.35"/>
+          <body name="FR_shin" pos="0 0 -0.2">
+            <joint name="FR_knee" axis="0 1 0" range="-2.75 -0.2"/>
+            <geom class="joint" size="0.03" mass="0"/>
+            <geom class="shin" fromto="0 0 0 0 0 -0.2" mass="0.25"/>
+            <geom name="FR_foot" class="foot" pos="0 0 -0.2" mass="0.05"/>
+          </body>
+        </body>
+      </body>
+
+      <!-- rear left -->
+      <body name="RL_hip" pos="-0.22 0.15 -0.03">
+        <joint name="RL_abd" axis="1 0 0" range="-0.5 0.5"/>
+        <geom class="joint" mass="0.1"/>
+        <body name="RL_thigh">
+          <joint name="RL_hip" axis="0 1 0" range="-2.6 1.2"/>
+          <geom class="thigh" fromto="0 0 0 0 0 -0.2" mass="0.35"/>
+          <body name="RL_shin" pos="0 0 -0.2">
+            <joint name="RL_knee" axis="0 1 0" range="0.2 2.75"/>
+            <geom class="joint" size="0.03" mass="0"/>
+            <geom class="shin" fromto="0 0 0 0 0 -0.2" mass="0.25"/>
+            <geom name="RL_foot" class="foot" pos="0 0 -0.2" mass="0.05"/>
+          </body>
+        </body>
+      </body>
+
+      <!-- rear right -->
+      <body name="RR_hip" pos="-0.22 -0.15 -0.03">
+        <joint name="RR_abd" axis="1 0 0" range="-0.5 0.5"/>
+        <geom class="joint" mass="0.1"/>
+        <body name="RR_thigh">
+          <joint name="RR_hip" axis="0 1 0" range="-2.6 1.2"/>
+          <geom class="thigh" fromto="0 0 0 0 0 -0.2" mass="0.35"/>
+          <body name="RR_shin" pos="0 0 -0.2">
+            <joint name="RR_knee" axis="0 1 0" range="0.2 2.75"/>
+            <geom class="joint" size="0.03" mass="0"/>
+            <geom class="shin" fromto="0 0 0 0 0 -0.2" mass="0.25"/>
+            <geom name="RR_foot" class="foot" pos="0 0 -0.2" mass="0.05"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="FL_abd" joint="FL_abd" ctrlrange="-0.5 0.5"/>
+    <position name="FL_hip" joint="FL_hip" ctrlrange="-1.2 2.6"/>
+    <position name="FL_knee" joint="FL_knee" ctrlrange="-2.75 -0.2"/>
+    <position name="FR_abd" joint="FR_abd" ctrlrange="-0.5 0.5"/>
+    <position name="FR_hip" joint="FR_hip" ctrlrange="-1.2 2.6"/>
+    <position name="FR_knee" joint="FR_knee" ctrlrange="-2.75 -0.2"/>
+    <position name="RL_abd" joint="RL_abd" ctrlrange="-0.5 0.5"/>
+    <position name="RL_hip" joint="RL_hip" ctrlrange="-2.6 1.2"/>
+    <position name="RL_knee" joint="RL_knee" ctrlrange="0.2 2.75"/>
+    <position name="RR_abd" joint="RR_abd" ctrlrange="-0.5 0.5"/>
+    <position name="RR_hip" joint="RR_hip" ctrlrange="-2.6 1.2"/>
+    <position name="RR_knee" joint="RR_knee" ctrlrange="0.2 2.75"/>
+  </actuator>
+
+  <sensor>
+    <framequat name="orientation" objtype="site" objname="imu"/>
+    <gyro name="gyro" site="imu"/>
+    <accelerometer name="accel" site="imu"/>
+  </sensor>
+</mujoco>

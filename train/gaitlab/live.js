@@ -168,6 +168,7 @@ export class Follow {
   constructor(maxTurn = () => 0.6, sharp = false) {
     this.KEEP = 1.0; this.TOP = 1.0; this.UP = 0.6; this.DOWN = 1.0;  // m, m/s, m/s per s
     this.GAIN = sharp ? 2.5 : 1.5; this.CAP = sharp ? 1.5 : Infinity; this.maxTurn = maxTurn;
+    if (sharp) this.TOP = 1.2;   // the sharp-turn brain runs 1.2 m/s steadily (0 falls in 8; 0 in 80 min following)
     this.standing = true; this.speed = 0.2; this.slowSteps = 0;
   }
   decide(dist, bearing, dt) {
