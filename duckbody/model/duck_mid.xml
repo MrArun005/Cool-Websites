@@ -134,7 +134,7 @@
               <geom name="knee_and_ankle_assembly_left_cache_col10" pos="0.011242 0.0455 0.076405" quat="0.707107 -0.707107 0 0" type="mesh" contype="2" conaffinity="3" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="left_cache" />
               <body name="knee_and_ankle_assembly_2" pos="0 -0.055055 7e-05">
                 <inertial pos="3.51301e-06 -0.0404225 0.0126795" quat="0.708422 0.705789 1.07944e-05 0.00022447" mass="0.0274036" diaginertia="9.24117e-06 7.84198e-06 3.46413e-06" />
-                <joint name="left_knee" class="sts3215" range="-1.65806 1.65806" />
+                <joint name="left_knee" class="sts3215" range="-1.65806 2.26893" />
                 <geom class="visual" pos="0.011242 0.100555 0.076475" quat="0.707107 -0.707107 0 0" material="leg_spacer_material" mesh="leg_spacer" />
                 <geom class="visual" pos="0.011242 0.100555 0.076405" quat="0.707107 -0.707107 0 0" material="left_knee_to_ankle_right_sheet_material" mesh="left_knee_to_ankle_right_sheet" />
                 <geom class="visual" pos="0.011242 0.100555 0.076405" quat="0.707107 -0.707107 0 0" material="left_knee_to_ankle_left_sheet_material" mesh="left_knee_to_ankle_left_sheet" />
@@ -207,7 +207,7 @@
               <geom name="knee_and_ankle_assembly_3_right_cache_col11" pos="0.011242 -0.0455 0.07644" quat="0.707107 0.707107 0 0" type="mesh" contype="2" conaffinity="3" group="3" friction="0.6" rgba="0.9 0.3 0.2 0.35" density="0" mesh="right_cache" />
               <body name="knee_and_ankle_assembly_4" pos="0 0.055055 0.0259" quat="0 1 0 0">
                 <inertial pos="3.51301e-06 -0.0404225 0.0126795" quat="0.708422 0.705789 1.07944e-05 0.00022447" mass="0.0274036" diaginertia="9.24117e-06 7.84198e-06 3.46413e-06" />
-                <joint name="right_knee" class="sts3215" range="-1.65806 1.65806" />
+                <joint name="right_knee" class="sts3215" range="-1.65806 2.26893" />
                 <geom class="visual" pos="0.011242 0.100555 0.076475" quat="0.707107 -0.707107 0 0" material="leg_spacer_material" mesh="leg_spacer" />
                 <geom class="visual" pos="0.011242 0.100555 0.076405" quat="0.707107 -0.707107 0 0" material="left_knee_to_ankle_right_sheet_material" mesh="left_knee_to_ankle_right_sheet" />
                 <geom class="visual" pos="0.011242 0.100555 0.076405" quat="0.707107 -0.707107 0 0" material="left_knee_to_ankle_left_sheet_material" mesh="left_knee_to_ankle_left_sheet" />
@@ -241,14 +241,14 @@
     <general name="left_hip_yaw" class="sts3215" joint="left_hip_yaw" ctrlrange="-0.523599 0.523599" ctrllimited="true" />
     <general name="left_hip_roll" class="sts3215" joint="left_hip_roll" ctrlrange="-0.436332 0.436332" ctrllimited="true" />
     <general name="left_hip_pitch" class="sts3215" joint="left_hip_pitch" ctrlrange="-1.22173 0.523599" ctrllimited="true" />
-    <general name="left_knee" class="sts3215" joint="left_knee" ctrlrange="-1.5708 1.5708" ctrllimited="true" />
+    <general name="left_knee" class="sts3215" joint="left_knee" ctrlrange="-1.5708 2.18166" ctrllimited="true" />
     <general name="left_ankle" class="sts3215" joint="left_ankle" ctrlrange="-1.5708 1.5708" ctrllimited="true" />
     <general name="head_pitch" class="sts3215" joint="head_pitch" ctrlrange="-0.785398 0.785398" ctrllimited="true" />
     <general name="head_yaw" class="sts3215" joint="head_yaw" ctrlrange="-3.14159 3.14159" ctrllimited="true" />
     <general name="right_hip_yaw" class="sts3215" joint="right_hip_yaw" ctrlrange="-0.523599 0.523599" ctrllimited="true" />
     <general name="right_hip_roll" class="sts3215" joint="right_hip_roll" ctrlrange="-0.436332 0.436332" ctrllimited="true" />
     <general name="right_hip_pitch" class="sts3215" joint="right_hip_pitch" ctrlrange="-0.523599 1.22173" ctrllimited="true" />
-    <general name="right_knee" class="sts3215" joint="right_knee" ctrlrange="-1.5708 1.5708" ctrllimited="true" />
+    <general name="right_knee" class="sts3215" joint="right_knee" ctrlrange="-1.5708 2.18166" ctrllimited="true" />
     <general name="right_ankle" class="sts3215" joint="right_ankle" ctrlrange="-1.5708 1.5708" ctrllimited="true" />
   <position name="jaw" joint="jaw" kp="2.0" ctrlrange="0 0.61" forcerange="-0.2 0.2" /></actuator>
 

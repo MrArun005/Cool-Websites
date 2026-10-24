@@ -22,6 +22,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 
 from env import TASKS, DuckEnv
+from skills_env import SKILL_TASKS, SkillEnv
 
 HERE = Path(__file__).resolve().parent
 
@@ -40,11 +41,11 @@ class SmoothCurriculum(BaseCallback):
         return True
 
 
-def exam(model, venv, tasks, episodes=4, seed=123, model_path=None):
+def exam(model, venv, tasks, episodes=4, seed=123, model_path=None, env_cls=DuckEnv):
     """Deterministic rollouts per task: success rate at the end of the episode, mean reward."""
     out = {}
     for task in tasks:
-        env = DuckEnv(task=task, randomize=True, seed=seed, model_path=model_path)
+        env = env_cls(task=task, randomize=True, seed=seed, model_path=model_path)
         wins, rewards = 0, []
         for ep in range(episodes):
             obs, _ = env.reset(seed=seed + ep)
@@ -65,7 +66,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=60_000_000)
     ap.add_argument("--envs", type=int, default=8)
-    ap.add_argument("--task", choices=TASKS, help="train one task only (default: all four, mixed)")
+    ap.add_argument("--task", choices=sorted(set(TASKS) | set(SKILL_TASKS)), help="train one task only (default: all, mixed)")
+    ap.add_argument("--skills", action="store_true", help="all-skills layout (skills_env.py): run, sit, lie, jump, roll …")
     ap.add_argument("--name", default="duck")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--smooth-after", type=int, default=None, help="step at which smoothness penalties start")
@@ -83,7 +85,8 @@ def main():
     model_path = str((Path.cwd() / a.model).resolve()) if a.model else None
     kw = dict(task=a.task, model_path=model_path)
     vec_cls = DummyVecEnv if a.quick else SubprocVecEnv
-    venv = make_vec_env(DuckEnv, n_envs=a.envs, seed=a.seed, vec_env_cls=vec_cls, env_kwargs=kw)
+    env_cls = SkillEnv if a.skills else DuckEnv
+    venv = make_vec_env(env_cls, n_envs=a.envs, seed=a.seed, vec_env_cls=vec_cls, env_kwargs=kw)
     if a.resume:
         ckpt = Path(a.resume)
         stats = ckpt.with_name("vecnormalize.pkl")
@@ -108,10 +111,10 @@ def main():
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))
     venv.training = False
-    tasks = [a.task] if a.task else TASKS
+    tasks = [a.task] if a.task else (SKILL_TASKS if a.skills else TASKS)
     res = dict(steps=int(model.num_timesteps), seconds=secs, steps_per_s=model.num_timesteps / secs,
                model=a.model or "model/duck.xml",
-               exam=exam(model, venv, tasks, episodes=1 if a.quick else 8, model_path=model_path))
+               exam=exam(model, venv, tasks, episodes=1 if a.quick else 8, model_path=model_path, env_cls=env_cls))
     (out / "summary.json").write_text(json.dumps(res, indent=1))
     print(json.dumps(res, indent=1))
 

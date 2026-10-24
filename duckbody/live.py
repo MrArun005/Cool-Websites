@@ -154,10 +154,11 @@ def curve(log):
     return pts
 
 
-def snap(model_path, run, log, out, seconds=10.0, fps=25):
+def snap(model_path, run, log, out, seconds=None, fps=25, task="stand", skills=False):
     from stable_baselines3 import PPO
     from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
     from env import DuckEnv
+    from skills_env import SECONDS, SkillEnv
 
     ckpts = sorted((run / "checkpoints").glob("policy_*_steps.zip"), key=lambda p: int(re.findall(r"\d+", p.name)[0]))
     final = run / "policy.zip"
@@ -170,7 +171,8 @@ def snap(model_path, run, log, out, seconds=10.0, fps=25):
     else:
         ckpt = None
 
-    env = DuckEnv(task="stand", randomize=True, seed=7, model_path=str(model_path), max_seconds=seconds)
+    cls = SkillEnv if skills else DuckEnv
+    env = cls(task=task, randomize=True, seed=7, model_path=str(model_path), max_seconds=seconds or SECONDS.get(task, 10))
     m, d = env.model, env.data
     obs, _ = env.reset(seed=7)
     if ckpt:
@@ -190,7 +192,8 @@ def snap(model_path, run, log, out, seconds=10.0, fps=25):
             frames.append(np.concatenate([d.xpos[1:], d.xquat[1:]], 1).round(5).ravel().tolist())
         t += 1
         done = term or trunc
-    res = dict(fps=fps, seconds=t / 50, fell=bool(term), steps=steps if ckpt else 0,
+    res = dict(fps=fps, seconds=t / 50, fell=bool(term), steps=steps if ckpt else 0, task=task,
+               success=bool(info.get("success")),
                checkpoint=ckpt.name if ckpt else None, frames=frames,
                bodies=[m.body(b).name for b in range(1, m.nbody)],
                curve=curve(log) if log and Path(log).exists() else [])
@@ -205,6 +208,8 @@ if __name__ == "__main__":
     ap.add_argument("--run", default="runs/mid_stand")
     ap.add_argument("--log", default="mid_stand.log")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--task", default="stand")
+    ap.add_argument("--skills", action="store_true")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -214,5 +219,5 @@ if __name__ == "__main__":
     elif a.what == "mesh":
         print(len(mesh(model, out)), "bodies")
     else:
-        r = snap(model, (Path.cwd() / a.run).resolve(), a.log, out)
+        r = snap(model, (Path.cwd() / a.run).resolve(), a.log, out, task=a.task, skills=a.skills)
         print(r["checkpoint"], "fell" if r["fell"] else "stayed up", len(r["frames"]), "frames", len(r["curve"]), "curve points")

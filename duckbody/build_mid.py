@@ -4,7 +4,7 @@
 
 Starts from model/duck_v3_upload.xml (the owner's v3: head yaw ±180°, passive spring neck pitch and
 head roll, jaw servo) and:
-  0. Neck: spring 4x stiffer (see NECK_SPRING_X).
+  0. Neck: spring 4x stiffer (see NECK_SPRING_X). Knees fold to 125° (sit, sleep, lie).
   1. Mouth: replaces the flat plate that stuck out of the face with a duck bill. A fixed upper bill on
      the lower front of the head, and a lower jaw hinged 9 mm inside the face at the bottom of the
      head, so it closes flush under the upper bill and opens downward (0-35°) on a small servo.
@@ -42,6 +42,9 @@ BILL_RGBA = "1 0.62 0.1 1"
 # the yaw axis, so at 90° the neck tips 25° and at 180° the whole duck falls over (check_mid.py).
 # 4x stiffer keeps the neck within ±4° at any head angle, at both sizes.
 NECK_SPRING_X = 4.0
+# Knees: ±90° only allows a 12 mm crouch; sit, sleep and lie need them folded. Nothing collides up to
+# 126° (REVIEW.md #6), so allow 125°, rigid stop 5° beyond. Check on the real leg before trusting it.
+KNEE_MAX_DEG = 125
 
 
 def fmt(v):
@@ -66,6 +69,18 @@ def stiffen_neck(root):
         if j.get("name") == "neck_pitch":
             j.set("stiffness", f"{float(j.get('stiffness')) * NECK_SPRING_X:.4g}")
             j.set("damping", f"{float(j.get('damping')) * 2:.4g}")
+
+
+def open_knees(root):
+    hi = np.radians(KNEE_MAX_DEG)
+    for j in root.iter("joint"):
+        if j.get("name") in ("left_knee", "right_knee"):
+            lo = float(j.get("range").split()[0])
+            j.set("range", f"{lo:.6g} {hi + np.radians(5):.6g}")
+    for a in root.find("actuator"):
+        if a.get("name") in ("left_knee", "right_knee"):
+            lo = float(a.get("ctrlrange").split()[0])
+            a.set("ctrlrange", f"{lo:.6g} {hi:.6g}")
 
 
 def fix_mouth(root):
@@ -145,6 +160,7 @@ def main():
     root = tree.getroot()
     fix_mouth(root)
     stiffen_neck(root)
+    open_knees(root)
     tree.write(FULL)
     mid = copy.deepcopy(root)
     k = make_mid(mid)
