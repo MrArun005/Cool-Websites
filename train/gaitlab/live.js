@@ -163,7 +163,8 @@ export class Bolt {
 export class Follow {
   // maxTurn(v): the fastest turn the walk brain practised at speed v (Bolt.maxTurn). Sharp-turn brains
   // turn harder toward the person (gain 2.5 instead of 1.5), but at most 1.5 rad/s: spinning round at
-  // 2 rad/s tipped run 12's first brain over 3 times in 80 simulated minutes, 1.5 rad/s none.
+  // 2 rad/s tipped run 12's 10.5M brain over 3 times in 80 simulated minutes, 1.5 rad/s none. The 11.5M
+  // brain fell at neither, and followed just as closely at both, so the margin stays.
   constructor(maxTurn = () => 0.6, sharp = false) {
     this.KEEP = 1.0; this.TOP = 1.0; this.UP = 0.6; this.DOWN = 1.0;  // m, m/s, m/s per s
     this.GAIN = sharp ? 2.5 : 1.5; this.CAP = sharp ? 1.5 : Infinity; this.maxTurn = maxTurn;

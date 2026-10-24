@@ -112,9 +112,9 @@
         <p class="muted" style="font-size:.9rem">Stands 43 cm tall on four paws. Sits 30° nose-up on all four paws, both sides alike (the old brain sat lopsided with a paw in the air).</p>
       </div>
       <div class="brain">
-        <h3>Walk, turn and run</h3>
-        <span class="muted mono" style="font-size:.82rem">run 11b · 10M steps · models/bolt-dog-walk-run-10M</span>
-        <div class="cells"><span class="c2">Walk 100%</span><span class="c2">Turn left 100%</span><span class="c2">Turn right 100%</span><span class="c2">Run 1.0 m/s 100%</span><span class="c2">Slow 0.2 m/s 100%</span></div>
+        <h3>Walk, run and turn sharply</h3>
+        <span class="muted mono" style="font-size:.82rem">run 12 · 11.5M steps · models/bolt-dog-walk-sharp-11.5M</span>
+        <div class="cells"><span class="c2">Walk 100%</span><span class="c2">Turn left 100%</span><span class="c2">Turn right 100%</span><span class="c2">Sharp turns 100%</span><span class="c2">Run 1.0 m/s 100%</span><span class="c2">Slow 0.2 m/s 100%</span></div>
         <p class="muted" style="font-size:.9rem">Goes the speed it is asked, from a slow walk to a run: 0.2, 0.4, 0.7, 1.0 and 1.2 m/s asked give 0.22, 0.41, 0.70, 0.99 and 1.18 m/s on bumpy, randomised physics, with no knees on the floor. Turns on command and takes over from the standing brain. Following a person, it ran at up to 1.19 m/s and never fell behind more than 1.9 m (the old walk brain fell 6 m behind).</p>
       </div>
     </div>
@@ -123,7 +123,7 @@
       <ol>
         <li><strong>New: live follow.</strong> Pick "Live" below. Bolt runs in your browser with the same physics and brains as in training, and follows whichever of five wandering people you pick. Switch at any moment. Testing it found two ways to fall, both now fixed: stopping dead from a run (it now slows down first) and speeding up while turning round (it now turns first). After the fixes, 0 falls in 80 simulated minutes.</li>
         <li><strong>Done: follow a person.</strong> A steering layer turns Bolt toward the person, speeds up when they pull away and stands when they stop. In the simulator it followed someone who walks, turns, jogs at 1.1 m/s and stops: no falls, on average 1.4 m behind, never more than 1.9 m. Watch "Follow a person" below.</li>
-        <li><strong>Sharp turns (run 12), on the live page now.</strong> Bolt turned at most 34°/s, so turning round to follow someone took over 5 s. Real dogs turn sharply by stepping sideways: front paws one way, rear paws the other. The trot now does that too. After 0.5M steps of practice Bolt turns 57°/s exactly when asked, and up to 94°/s at a slow walk, without losing any running speed. Following people it now stays 1.75 m behind instead of 2.6 m, with 0 falls in 80 simulated minutes. Training continues to 12.5M; the sharpest turns at speed still fall sometimes.</li>
+        <li><strong>Sharp turns (run 12), on the live page now.</strong> Bolt turned at most 34°/s, so turning round to follow someone took over 5 s. Real dogs turn sharply by stepping sideways: front paws one way, rear paws the other. The trot now does that too. The 11.5M brain turns at the rate it is asked: up to 111°/s at a slow walk, 86°/s at 0.7 m/s, and 58°/s while running at 1.0 m/s, with no falls on bumpy, randomised physics, except 1 in 6 at the very sharpest (115°/s at 0.4 m/s). Running holds 0.96 and 1.15 m/s when asked 1.0 and 1.2, 0 falls in 8. Following people it stays 1.7 m behind (was 2.6 m), 0 falls in 80 simulated minutes.</li>
                 <li>Try both brains on the hand-size Bolt.</li>
         <li>Connect the brains to voice commands ("sit", "come here").</li>
       </ol>
@@ -195,7 +195,8 @@
         <tr><td>10</td><td>Turning: a turn command, longer strides on the outside of the turn</td><td>Turn left/right 100% at 6M. But hand-overs from the real standing brain fell 4 in 10.</td></tr>
         <tr><td>10b</td><td>Practise and test hand-overs from the real standing brain</td><td><strong>Walk, turn left, turn right 100%; 40/40 clean hand-overs at 7M.</strong> Saved.</td></tr>
         <tr><td>11</td><td>Speed command: slow walk to a run (0.2–1.2 m/s)</td><td>Stopped at 8M: walked at 0.4 m/s whatever speed it was asked.</td></tr>
-        <tr><td>11b</td><td>Same, but speed is felt relative to the asked speed; practice speeds ramp up to 1.2 m/s</td><td><strong>Walk, turns, run 1.0 m/s, slow 0.2 m/s: all 100% at 8.5M.</strong> Saved. Holds 0.2–0.7 m/s exactly; 1.2 m/s not steady yet.</td></tr>
+        <tr><td>11b</td><td>Same, but speed is felt relative to the asked speed; practice speeds ramp up to 1.2 m/s</td><td><strong>Walk, turns, run 1.0 m/s, slow 0.2 m/s: all 100%.</strong> 10M saved: holds 0.2–1.2 m/s as asked.</td></tr>
+        <tr class="now"><td>12</td><td>Sharp turns: step sideways like a dog, practise up to 115°/s</td><td><strong>All tests 100% incl. sharp turns at 11.5M.</strong> Saved, on the live page. Training to 12.5M.</td></tr>
       </tbody>
     </table></div>
   </section>
