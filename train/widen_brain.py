@@ -2,6 +2,7 @@
 
     python widen_brain.py ../models/bolt-dog-walk-dog-5M runs/turn_start                      # 52 -> 53 inputs
     python widen_brain.py ../models/bolt-dog-walk-turn-7M runs/run_start --speed-control     # 53 -> 54 inputs
+    python widen_brain.py ../models/bolt-dog-walk-sharp-12M runs/jump_start --jumping        # 54 -> 55 inputs
 
 The network's first layers get the extra inputs with weights that start at zero, and the input
 normalizer gets a matching entry (mean 0, spread 1). The widened brain reads its old inputs exactly
@@ -19,12 +20,13 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from bolt_env import BoltEnv
 
 
-def widen(src, out, gait_generator="dog", speed_control=False):
+def widen(src, out, gait_generator="dog", speed_control=False, jumping=False):
     src, out = Path(src), Path(out)
     out.mkdir(parents=True, exist_ok=True)
     old = PPO.load(src / "policy.zip", device="cpu")
     n_old = old.observation_space.shape[0]
-    env = DummyVecEnv([lambda: BoltEnv(skills=["walk"], gait_generator=gait_generator, turning=True, speed_control=speed_control)])
+    env = DummyVecEnv([lambda: BoltEnv(skills=["walk"], gait_generator=gait_generator, turning=True,
+                                       speed_control=speed_control or jumping, sharp_turns=jumping, jumping=jumping)])
     n_new = env.observation_space.shape[0]
     new = PPO("MlpPolicy", env, device="cpu", policy_kwargs=old.policy_kwargs, learning_rate=old.learning_rate,
               n_steps=old.n_steps, batch_size=old.batch_size, n_epochs=old.n_epochs, gamma=old.gamma,
@@ -42,13 +44,15 @@ def widen(src, out, gait_generator="dog", speed_control=False):
     new.num_timesteps = old.num_timesteps
     new.save(out / "policy.zip")
 
-    old_env = BoltEnv(gait_generator=gait_generator, turning=n_old >= 53)
+    old_env = BoltEnv(gait_generator=gait_generator, turning=n_old >= 53, speed_control=n_old >= 54)
     norm = VecNormalize.load(str(src / "vecnormalize.pkl"), DummyVecEnv([lambda: old_env]))
     rms = norm.obs_rms
     rms.mean = np.concatenate([rms.mean, np.zeros(n_new - n_old)])
     rms.var = np.concatenate([rms.var, np.ones(n_new - n_old)])
     norm.observation_space = env.observation_space
     norm.save(str(out / "vecnormalize.pkl"))
+    if (src / "gait.json").exists():  # sharp-turn brains keep their gait
+        (out / "gait.json").write_bytes((src / "gait.json").read_bytes())
     print(f"{src.name}: {n_old} -> {n_new} inputs, {old.num_timesteps:,} steps -> {out}")
 
 
@@ -57,5 +61,6 @@ if __name__ == "__main__":
     ap.add_argument("src")
     ap.add_argument("out")
     ap.add_argument("--speed-control", action="store_true", help="also add the speed command (54 inputs)")
+    ap.add_argument("--jumping", action="store_true", help="also add the jump signal (55 inputs; sharp-turn brains)")
     args = ap.parse_args()
-    widen(args.src, args.out, speed_control=args.speed_control)
+    widen(args.src, args.out, speed_control=args.speed_control, jumping=args.jumping)

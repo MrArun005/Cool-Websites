@@ -37,7 +37,7 @@ const rise = () => "stand";
 const riseTime = () => 1.0;
 
 // A seeded random number generator, so a castle can be replayed.
-function rng(seed) {
+export function rng(seed) {
   let s = seed >>> 0;
   return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
 }
@@ -67,7 +67,7 @@ export function buildCastle(seed) {
 }
 
 // Drives Bolt to points: turn toward the point first, then speed up; brake before stopping.
-class Driver {
+export class Driver {
   constructor(bolt) { this.bolt = bolt; this.speed = 0.2; this.slow = 0; }
   // returns {command, turn, speed}; stop: come to a halt at the point (true) or drive through it
   toward(p, cruise, stop, dt) {

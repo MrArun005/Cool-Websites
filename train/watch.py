@@ -67,7 +67,8 @@ def film(policy, path, steps_label, noise=False, script=SCRIPT, gait_generator=F
     except OSError:
         big = small = ImageFont.load_default()
     env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator, turning=getattr(policy, "turning", False),
-                  speed_control=getattr(policy, "speed_control", False), sharp_turns=getattr(policy, "sharp_turns", False))
+                  speed_control=getattr(policy, "speed_control", False),
+                  sharp_turns=getattr(policy, "sharp_turns", False) or getattr(policy, "jumping", False), jumping=getattr(policy, "jumping", False))
     env.forced_command = "stand"
     obs, _ = env.reset(seed=7)
     falls, fallen_for = 0, 0
@@ -138,7 +139,7 @@ def main():
         write_json(data_path, data)
 
     def score(exam):
-        keys = list(args.skills or COMMANDS) + [k for k in ("turn_left", "turn_right", "sharp_left", "sharp_right", "run", "slow", "get_up") if k in exam]
+        keys = list(args.skills or COMMANDS) + [k for k in ("turn_left", "turn_right", "sharp_left", "sharp_right", "run", "slow", "get_up", "hurdle_10", "hurdle_15") if k in exam]
         return float(np.mean([exam[c] for c in keys]))
 
     def keep_best(steps, exam, zip_path=None, stats=None):

@@ -68,7 +68,7 @@ def check_onnx(policy, path, samples=200, gait_generator=False):
     import onnxruntime as ort
     session = ort.InferenceSession(str(path))
     env = BoltEnv(randomize=True, gait_generator=gait_generator, turning=policy.turning, speed_control=policy.speed_control,
-                  sharp_turns=policy.sharp_turns)
+                  sharp_turns=policy.sharp_turns or policy.jumping, jumping=policy.jumping)
     obs, _ = env.reset(seed=5)
     worst = 0.0
     for _ in range(samples):
@@ -81,7 +81,7 @@ def check_onnx(policy, path, samples=200, gait_generator=False):
 
 def record_rollouts(policy, episodes_per_command, steps=250, seed=2000, commands=COMMANDS, gait_generator=False):
     env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=policy.turning,
-                  speed_control=policy.speed_control, sharp_turns=policy.sharp_turns)
+                  speed_control=policy.speed_control, sharp_turns=policy.sharp_turns or policy.jumping, jumping=policy.jumping)
     keys = ("obs", "action", "reward", "command", "height", "pitch", "roll", "vx", "fell", "episode")
     data = {k: [] for k in keys}
     episode = 0

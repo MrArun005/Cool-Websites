@@ -443,6 +443,42 @@ class DogGaitTest(unittest.TestCase):
         self.assertTrue(passed("walk", [good] * 80))
         self.assertFalse(passed("walk", [dict(good, yaw_rate=0.6)] * 80))  # the old top turn rate fails
 
+    def test_jump_starts_before_a_hurdle_and_ends_in_the_trot(self):
+        from bolt_env import JUMP_STEPS
+        env = BoltEnv(randomize=False, max_steps=10_000, skills=["walk"], gait_generator="dog",
+                      turning=True, speed_control=True, sharp_turns=True, jumping=True)
+        env.forced_command = "walk"
+        env.reset(seed=1)
+        self.assertEqual(env._obs().shape, (55,))
+        env.set_turn(0.0); env.set_speed(0.7)
+        env.place_hurdle(1.5, 0.10)
+        started = ended = None
+        for t in range(200):
+            _, _, fell, _, info = env.step(np.zeros(12))
+            if started is None and info["jumping"]:
+                started = t
+                self.assertLess(env.hurdle_ahead(), env.JUMP_AT + 0.05)  # jumps just before the hurdle
+                self.assertGreater(env._obs()[54], 0)                    # and the brain is told
+            if started is not None and ended is None and not info["jumping"]:
+                ended = t
+        self.assertIsNotNone(started)
+        self.assertEqual(ended - started, JUMP_STEPS)
+        self.assertEqual(env.walk_since, ended + 1)                      # eases back into the trot
+
+    def test_walking_into_a_hurdle_counts_as_a_hit(self):
+        env = BoltEnv(randomize=False, max_steps=10_000, skills=["walk"], gait_generator="dog",
+                      turning=True, speed_control=True, sharp_turns=True, jumping=True)
+        env.forced_command = "stand"
+        env.reset(seed=1)
+        env.place_hurdle(0.12, 0.25)                                     # right under the chest
+        hits = sum(env.step(np.zeros(12))[4]["hurdle_hits"] for _ in range(20))
+        self.assertGreater(hits, 0)
+
+    def test_old_brains_have_no_hurdle(self):
+        env = BoltEnv(gait_generator="dog", turning=True, speed_control=True)
+        self.assertEqual(env.observation_space.shape, (54,))
+        self.assertEqual(sum(env.model.geom(i).name == "hurdle" for i in range(env.model.ngeom)), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,12 +24,13 @@ class Policy:
         self.model = PPO.load(run_dir / "policy.zip", device="cpu")
         # brains that can turn have a 53rd input (the turn command); build a matching env
         n_inputs = self.model.observation_space.shape[0]
-        self.turning, self.speed_control = n_inputs >= 53, n_inputs >= 54
+        self.turning, self.speed_control, self.jumping = n_inputs >= 53, n_inputs >= 54, n_inputs >= 55
         # sharp-turn brains (sideways-stepping turns) have the same inputs, so their folder says so
         gait = run_dir / "gait.json"
         self.sharp_turns = bool(json.loads(gait.read_text()).get("sharp_turns")) if gait.exists() else False
-        self.norm = VecNormalize.load(str(run_dir / "vecnormalize.pkl"),
-                                      DummyVecEnv([lambda: BoltEnv(turning=self.turning, speed_control=self.speed_control)]))
+        self.norm = VecNormalize.load(str(run_dir / "vecnormalize.pkl"), DummyVecEnv([lambda: BoltEnv(
+            turning=self.turning, speed_control=self.speed_control, gait_generator="dog" if self.jumping else False,
+            sharp_turns=self.jumping, jumping=self.jumping)]))
         self.norm.training = False
 
     def act(self, obs, deterministic=True):
@@ -101,8 +102,10 @@ def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turnin
     turning = getattr(policy, "turning", False) if turning is None else turning
     speed = getattr(policy, "speed_control", False)
     sharp = getattr(policy, "sharp_turns", False)
+    jumping = getattr(policy, "jumping", False)
     env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=turning, speed_control=speed,
-                  sharp_turns=sharp)
+                  sharp_turns=sharp or jumping, jumping=jumping)
+    env.practise_hurdles = False  # the exam sets its own hurdles
     if speed:
         env.set_speed(0.4)  # the walk and turn parts of the exam walk at 0.4 m/s
     results = {}
@@ -158,6 +161,30 @@ def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turnin
             results[name] = wins / episodes
         env.set_speed(0.4)
         env.forced_speed_set = False
+
+    if jumping and "walk" in (skills or COMMANDS):
+        # Hurdles: trot at 0.7 m/s at a 10 or 15 cm hurdle 2 m ahead; the jump starts by itself. Pass:
+        # cleared without touching it, no fall, and trotting properly again afterwards.
+        for name, h in (("hurdle_10", 0.10), ("hurdle_15", 0.15)):
+            wins = 0
+            for k in range(episodes):
+                env.forced_command = "walk"
+                env.reset(seed=seed + 1300 + k)
+                env.hurdle_run = False
+                env.set_turn(0.0); env.set_speed(0.7)
+                env.place_hurdle(2.0, h)
+                hits, fell, window = 0, False, []
+                for _ in range(250):
+                    _, _, fell, _, info = env.step(policy.act(env._obs()))
+                    hits += info["hurdle_hits"]
+                    window.append(info)
+                    if fell:
+                        break
+                wins += (not fell and hits == 0 and env.hurdle_ahead() < -0.5
+                         and passed("walk", window[-60:]))
+            results[name] = wins / episodes
+        env.set_speed(0.4)
+        env.forced_speed_set = env.forced_turn_set = False
 
     if {"stand", "sit"} <= set(skills or COMMANDS):
         # Getting up: sit, then stand straight up. Half the tries on nominal physics, where the 2.5M

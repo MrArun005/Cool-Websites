@@ -38,7 +38,7 @@ def describe(m):
     for g in range(m.ngeom):
         body = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, m.geom_bodyid[g]) or ""
         name = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_GEOM, g) or ""
-        if name == "floor":
+        if name in ("floor", "hurdle"):  # the world, not the dog
             continue
         kind = {int(mujoco.mjtGeom.mjGEOM_BOX): "box", int(mujoco.mjtGeom.mjGEOM_CAPSULE): "capsule",
                 int(mujoco.mjtGeom.mjGEOM_SPHERE): "sphere"}[int(m.geom_type[g])]
