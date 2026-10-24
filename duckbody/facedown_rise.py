@@ -7,7 +7,7 @@ in the real runtime, from a face-down start (nose down 90 deg, dropped and settl
   tuck   glide the legs to (hip, knee, ankle) over g s, hold 0.5 s           (limbs aligned under the body)
   lift   MoveBrain(goal = perch servo targets, lean, t1 = 0.5, t2, sign)    (body picks up into the sit)
   hold   1 s in the perch, then "wake" -> perch rise -> stand brain
-Reached the perch = up > 0.85, height < 0.65 x stand, soles on the floor. Stood = up > 0.9, height > 0.9 x stand.
+Reached the perch = up > 0.85, height < 0.8 x stand (perch or squat height), soles on the floor. Stood = up > 0.9, height > 0.9 x stand.
 The best scripts are re-run on randomized bodies (mass +-10%, friction 0.4-1.0, random heading).
 """
 import argparse
@@ -80,7 +80,7 @@ def episode(args):
     rt.run(g + 0.5 + 0.5 + t2 + 1.0 + 0.2)
     p = be.posture()
     feet = be.read().feet.sum() == 2
-    perched = bool(p["up"] > 0.85 and p["height"] < 0.65 * STAND_H and feet)
+    perched = bool(p["up"] > 0.85 and p["height"] < 0.8 * STAND_H and feet)     # perch or squat height: the perch rise works from both
     best_up = p["up"]
     stood = False
     if perched:
