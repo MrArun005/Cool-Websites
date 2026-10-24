@@ -65,6 +65,8 @@
   .stage .loading[hidden] { display: none; }
   .stage .hint { position: absolute; left: 10px; bottom: 8px; right: 10px; font: 400 11px var(--mono); color: var(--muted); pointer-events: none; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .live-bar { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--accent-soft); }
+  .live-bar[hidden] { display: none; }
   .chips button { font: 500 0.82rem var(--body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
   .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .chips button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -119,8 +121,9 @@
     <div style="display:grid;gap:6px">
       <span class="label">Next</span>
       <ol>
+        <li><strong>New: live follow.</strong> Pick "Live" below. Bolt runs in your browser with the same physics and brains as in training, and follows whichever of five wandering people you pick. Switch at any moment. Testing it found two ways to fall, both now fixed: stopping dead from a run (it now slows down first) and speeding up while turning round (it now turns first). After the fixes, 0 falls in 80 simulated minutes.</li>
         <li><strong>Done: follow a person.</strong> A steering layer turns Bolt toward the person, speeds up when they pull away and stands when they stop. In the simulator it followed someone who walks, turns, jogs at 1.1 m/s and stops: no falls, on average 1.4 m behind, never more than 1.9 m. Watch "Follow a person" below.</li>
-        <li><strong>Still training (run 11b): faster running.</strong> The walk gets a speed command from a slow walk (0.2 m/s) to a run (1.2 m/s), so Bolt can keep up with a person who runs. Run 11 kept walking at 0.4 m/s whatever it was asked, so now the brain feels its speed compared to the asked speed. Practice speeds go up step by step to a full run. The 8.5M brain is saved and passes every test. Training continues to 10M to try to make 1.0–1.2 m/s solid on bumpy ground. Asked for 1.2 m/s, it still falls in 2 of 6 tries. A later checkpoint replaces the saved one only if it does better.</li>
+        <li><strong>Run 11b finished (10M).</strong> Checking whether the 9M–10M brains run 1.0–1.2 m/s better than the saved 8.5M one.</li>
                 <li>Try both brains on the hand-size Bolt.</li>
         <li>Connect the brains to voice commands ("sit", "come here").</li>
       </ol>
@@ -135,17 +138,23 @@
   <section class="panel" aria-labelledby="watch3d">
     <div style="display:grid;gap:4px">
       <h2 id="watch3d">Watch it in 3D</h2>
-      <p class="muted">Replayed from the physics data. Drag to turn, scroll or pinch to zoom. Paws on the floor glow green; a knee or shin on the floor turns red.</p>
+      <p class="muted">"Live" runs the simulation in your browser. The other clips are replays of recorded physics. Drag to turn, scroll or pinch to zoom. Paws on the floor glow green; a knee or shin on the floor turns red.</p>
     </div>
     <div class="chips" id="clips" role="group" aria-label="Clip"></div>
+    <div class="live-bar" id="liveBar" hidden>
+      <span class="label">Bolt follows</span>
+      <div class="chips" id="people" role="group" aria-label="Who Bolt follows"></div>
+      <p class="muted" style="font-size:.88rem;margin:0">Running live in your browser: the same physics engine and the same trained brains as in training. Tap a person, or a button, to switch at any moment.</p>
+    </div>
     <div class="stage" id="stage">
       <div class="loading" id="loading">Loading…</div>
-      <div class="hint">grid = 10 cm · tail and ears are decoration</div>
+      <div class="hint"><span id="gridNote">grid = 10 cm</span> · tail and ears are decoration</div>
     </div>
     <div class="controls">
       <button class="btn" id="play" type="button">Pause</button>
       <div class="chips" id="speeds" role="group" aria-label="Speed"></div>
       <button class="btn" id="reset" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Reset view</button>
+      <button class="btn" id="restart" type="button" hidden style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Restart</button>
       <span class="mono muted" id="time"></span>
     </div>
     <div class="stats">
@@ -186,7 +195,7 @@
         <tr><td>10</td><td>Turning: a turn command, longer strides on the outside of the turn</td><td>Turn left/right 100% at 6M. But hand-overs from the real standing brain fell 4 in 10.</td></tr>
         <tr><td>10b</td><td>Practise and test hand-overs from the real standing brain</td><td><strong>Walk, turn left, turn right 100%; 40/40 clean hand-overs at 7M.</strong> Saved.</td></tr>
         <tr><td>11</td><td>Speed command: slow walk to a run (0.2–1.2 m/s)</td><td>Stopped at 8M: walked at 0.4 m/s whatever speed it was asked.</td></tr>
-        <tr class="now"><td>11b</td><td>Same, but speed is felt relative to the asked speed; practice speeds ramp up to 1.2 m/s</td><td>Training now.</td></tr>
+        <tr><td>11b</td><td>Same, but speed is felt relative to the asked speed; practice speeds ramp up to 1.2 m/s</td><td><strong>Walk, turns, run 1.0 m/s, slow 0.2 m/s: all 100% at 8.5M.</strong> Saved. Holds 0.2–0.7 m/s exactly; 1.2 m/s not steady yet.</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -197,7 +206,8 @@
 <script>
 (() => {
   const CLIPS = [
-    { id: "follow", file: "data/follow.json", name: "Follow a person (runs)" },
+    { id: "live", name: "Live: pick who Bolt follows", live: true },
+    { id: "follow", file: "data/follow.json", name: "Follow a person (replay)" },
     { id: "routine", file: "data/routine_new.json", name: "Full routine" },
     { id: "posture", file: "data/posture9c.json", name: "Stand, sit, lie" },
     { id: "walk", file: "data/walk8b.json", name: "Walk straight" },
@@ -268,13 +278,20 @@
   sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 4; sun.shadow.bias = -0.0004;
   Object.assign(sun.shadow.camera, { left: -1.2, right: 1.2, top: 1.2, bottom: -1.2, near: 0.1, far: 8 });
   scene.add(sun, sun.target);
+  function setReach(r) {   // how far around Bolt shadows are drawn
+    sunReach = r;
+    Object.assign(sun.shadow.camera, { left: -1.2 * r, right: 1.2 * r, top: 1.2 * r, bottom: -1.2 * r, far: 8 * r });
+    sun.shadow.camera.updateProjectionMatrix();
+  }
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.28 }));
   floor.receiveShadow = true; scene.add(floor);
-  let grid = null;
-  function makeGrid() {
+  let grid = null, gridSize = 6, gridCell = 0.1, sunReach = 1;
+  function makeGrid(size = gridSize, cell = gridCell) {
+    gridSize = size; gridCell = cell;
     if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
     const c = lin(css("--grid"));
-    grid = new THREE.GridHelper(6, 60, c, c);
+    grid = new THREE.GridHelper(size, Math.round(size / cell), c, c);
+    $("gridNote").textContent = `grid = ${Math.round(cell * 100)} cm`;
     grid.material.toneMapped = false; grid.rotation.x = Math.PI / 2; grid.position.z = 0.0004;
     scene.add(grid);
   }
@@ -361,15 +378,23 @@
     return { grp, tint: Object.values(mats) };
   }
   const dog = new THREE.Group(); scene.add(dog);
-  // the person Bolt follows (only in follow clips): a simple figure, 1.7 m tall
-  const person = new THREE.Group();
-  { const skin = new THREE.MeshStandardMaterial({ color: lin("#e3620b"), roughness: 0.6 }), dark = new THREE.MeshStandardMaterial({ color: lin("#2a2f35"), roughness: 0.7 });
-    const body = mesh(new THREE.CylinderGeometry(0.17, 0.14, 0.62, 24), skin, [0, 0, 1.15], [Math.PI / 2, 0, 0]);
-    const head = mesh(new THREE.SphereGeometry(0.11, 24, 16), skin, [0, 0, 1.6]);
-    const hip = (side) => { const g = new THREE.Group(); g.position.set(0, side, 0.84);
-      g.add(mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.84, 12), dark, [0, 0, -0.42], [Math.PI / 2, 0, 0])); return g; };
+  // a person for Bolt to follow: a simple figure, 1.7 m tall
+  const SKIN = new THREE.MeshStandardMaterial({ color: lin("#e3620b"), roughness: 0.6 }), PANTS = new THREE.MeshStandardMaterial({ color: lin("#2a2f35"), roughness: 0.7 });
+  function figure() {
+    const g = new THREE.Group();
+    const body = mesh(new THREE.CylinderGeometry(0.17, 0.14, 0.62, 24), SKIN, [0, 0, 1.15], [Math.PI / 2, 0, 0]);
+    const head = mesh(new THREE.SphereGeometry(0.11, 24, 16), SKIN, [0, 0, 1.6]);
+    const hip = (side) => { const h = new THREE.Group(); h.position.set(0, side, 0.84);
+      h.add(mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.84, 12), PANTS, [0, 0, -0.42], [Math.PI / 2, 0, 0])); return h; };
     const legL = hip(0.08), legR = hip(-0.08);
-    person.add(body, head, legL, legR); person.userData.legs = [legL, legR]; }
+    g.add(body, head, legL, legR); g.userData.legs = [legL, legR];
+    return g;
+  }
+  function stride(fig, v, t) {   // swing the legs at the person's pace (t: seconds of walking)
+    const swing = v > 0.05 ? (v > 0.8 ? 0.5 : 0.3) * Math.sin(t * (v > 0.8 ? 14 : 9)) : 0;
+    fig.userData.legs[0].rotation.set(0, swing, 0); fig.userData.legs[1].rotation.set(0, -swing, 0);
+  }
+  const person = figure();
   person.visible = false; scene.add(person);
   const ringGeo = new THREE.RingGeometry(0.03, 0.042, 40);
   const marks = LEGS.map(() => { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false })); m.renderOrder = 2; scene.add(m); return m; });
@@ -388,19 +413,32 @@
     r.frames.forEach((f) => { f.floorSet = new Set(f.floor); f.scrapeSet = new Set(f.scrape || []); });
     return r;
   }
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp, tint: n ? n.tint : [] }; });
+  }
   async function loadClip(id) {
     [...$("clips").children].forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === id)));
-    $("loading").hidden = false;
+    if (CLIPS.find((c) => c.id === id).live) return startLive();
+    stopLive();
+    $("loading").hidden = false; $("loading").textContent = "Loading…";
     try {
       if (!cache[id]) cache[id] = prepare(await (await fetch(CLIPS.find((c) => c.id === id).file)).json());
     } catch (e) { $("loading").textContent = "Couldn't load this clip. Reload to try again."; return; }
+    if (live.on) return;   // switched to live while this was loading
     rec = cache[id];
-    dog.clear(); tail = null; eyes = [];
-    parts = rec.geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp, tint: n ? n.tint : [] }; });
+    buildDog(rec.geoms);
     frame = 0; clock = 0; $("loading").hidden = true;
     resetView(); show(0);
   }
   function resetView() {
+    if (live.on) {   // live: a raised chase view, wide enough to see the people around Bolt
+      if (!live.bolt || !live.crowd) return;
+      const w = live.bolt.where(), fwd = new THREE.Vector3(Math.cos(w.yaw), Math.sin(w.yaw), 0), left = new THREE.Vector3(-Math.sin(w.yaw), Math.cos(w.yaw), 0);
+      const target = new THREE.Vector3(w.x, w.y, 0.6).addScaledVector(fwd, 1.5);
+      camera.position.copy(target).addScaledVector(fwd, -6.5).addScaledVector(left, -3.0).add(new THREE.Vector3(0, 0, 4.6));
+      controls.target.copy(target); controls.update(); lastTorso = { x: w.x, y: w.y }; return;
+    }
     if (!rec) return;
     const f = rec.frames[frame], t = rec.torso * 7, x = f.p[t], y = f.p[t + 1], yaw = (f.yaw || 0) * Math.PI / 180;
     const fwd = new THREE.Vector3(Math.cos(yaw), Math.sin(yaw), 0), left = new THREE.Vector3(-Math.sin(yaw), Math.cos(yaw), 0);
@@ -414,8 +452,9 @@
     controls.target.copy(target); controls.update(); lastTorso = { x, y };
   }
   const q = new THREE.Quaternion();
-  function show(fi) {
-    const f = rec.frames[fi], resting = RESTING.has(f.cmd);
+  function show(fi) { draw(rec.frames[fi], fi); }
+  function draw(f, fi) {
+    const r = f.live ? live.rec : rec, resting = RESTING.has(f.cmd);
     parts.forEach((pt, i) => {
       if (!pt.obj) return;
       const o = i * 7, p = f.p;
@@ -426,38 +465,176 @@
       pt.tint.forEach((m) => { if (glow) { m.emissive.copy(glow); m.emissiveIntensity = 0.75; } else m.emissive.setRGB(0, 0, 0); });
     });
     LEGS.forEach((L, k) => {
-      const paw = rec.paw[L], scr = rec.legParts[L].find((j) => f.scrapeSet.has(j)), ring = marks[k];
+      const paw = r.paw[L], scr = r.legParts[L].find((j) => f.scrapeSet.has(j)), ring = marks[k];
       const at = scr !== undefined ? scr : f.floorSet.has(paw) ? paw : null;
       ring.visible = at !== null;
       if (at !== null) { ring.material.color.copy(scr !== undefined ? (resting ? C.rest : C.bad) : C.paw); ring.position.set(f.p[at * 7], f.p[at * 7 + 1], 0.0015); }
     });
-    const t = rec.torso * 7, tx = f.p[t], ty = f.p[t + 1];
+    const t = r.torso * 7, tx = f.p[t], ty = f.p[t + 1];
     if (lastTorso) { camera.position.x += tx - lastTorso.x; camera.position.y += ty - lastTorso.y; controls.target.x += tx - lastTorso.x; controls.target.y += ty - lastTorso.y; }
     lastTorso = { x: tx, y: ty };
-    if (grid) grid.position.set(Math.round(tx * 10) / 10, Math.round(ty * 10) / 10, 0.0004);
-    sun.position.set(tx + 1, ty - 1.4, 2.6); sun.target.position.set(tx, ty, 0);
+    if (grid) grid.position.set(Math.round(tx / gridCell) * gridCell, Math.round(ty / gridCell) * gridCell, 0.0004);
+    sun.position.set(tx + 1 * sunReach, ty - 1.4 * sunReach, 2.6 * sunReach); sun.target.position.set(tx, ty, 0);
     person.visible = !!f.person;
     if (f.person) {
       person.position.set(f.person[0], f.person[1], 0); person.rotation.set(0, 0, f.person[2]);
-      const swing = f.person[3] > 0.05 ? (f.person[3] > 0.8 ? 0.5 : 0.3) * Math.sin(fi / rec.fps * (f.person[3] > 0.8 ? 14 : 9)) : 0;
-      person.userData.legs[0].rotation.set(0, swing, 0); person.userData.legs[1].rotation.set(0, -swing, 0);
+      stride(person, f.person[3], fi / rec.fps);
     }
-    const paws = LEGS.filter((L) => f.floorSet.has(rec.paw[L])).length;
-    const knee = LEGS.some((L) => rec.legParts[L].some((j) => f.scrapeSet.has(j))) && !resting;
+    const paws = LEGS.filter((L) => f.floorSet.has(r.paw[L])).length;
+    const knee = LEGS.some((L) => r.legParts[L].some((j) => f.scrapeSet.has(j))) && !resting;
     $("sCmd").textContent = f.cmd;
     $("sHeight").textContent = `${(f.h * 100).toFixed(0)} cm`;
     $("sSpeed").textContent = `${Math.max(0, f.vx).toFixed(2)} m/s`;
     $("sPaws").textContent = `${paws} of 4`;
     $("sKnee").textContent = knee ? "yes" : "no";
     $("sKnee").className = knee ? "bad" : "";
-    $("time").textContent = `${(fi / rec.fps).toFixed(1)} / ${(rec.frames.length / rec.fps).toFixed(0)} s`;
+    $("time").textContent = f.live ? `${f.t.toFixed(0)} s live` : `${(fi / rec.fps).toFixed(1)} / ${(rec.frames.length / rec.fps).toFixed(0)} s`;
     const deg = (r) => `${r > 0.03 ? "left " : r < -0.03 ? "right " : ""}${Math.abs(Math.round(r * 180 / Math.PI))}°/s`;
     $("sTurn").textContent = f.turn !== undefined && f.cmd === "walk" ? `${deg(f.turn)} · ${deg(f.yawr)}` : "–";
-    $("sPerson").textContent = f.person ? `${f.dist.toFixed(1)} m away, ${f.person[3] > 0.8 ? "running" : f.person[3] > 0.05 ? "walking" : "standing"}` : "–";
+    const pace = (v) => (v > 0.8 ? "jogging" : v > 0.05 ? "walking" : "standing");
+    $("sPerson").textContent = f.live ? `#${f.target + 1}, ${f.dist.toFixed(1)} m away, ${pace(f.pv)}`
+      : f.person ? `${f.dist.toFixed(1)} m away, ${pace(f.person[3])}` : "–";
   }
 
+  // ---------- live: Bolt simulated right here, following the person you pick ----------
+  // MuJoCo's official WebAssembly build (the same version as training) and the trained brains run in
+  // this page (live.js, checked step by step against the Python simulator). Five people wander about;
+  // Bolt follows whoever is picked, and the pick can change at any moment.
+  const DT = 0.02, PEOPLE = 5;
+  const live = { on: false, loading: null, lib: null, bundle: null, bolt: null, crowd: null, follow: null, rec: null,
+                 target: 0, acc: 0, t: 0, fell: false, last: null, floor: -1 };
+  const crowdGroup = new THREE.Group(); crowdGroup.visible = false; scene.add(crowdGroup);
+  function badge(n, on) {   // the number over a person's head
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const g = c.getContext("2d");
+    g.beginPath(); g.arc(64, 64, 56, 0, 2 * Math.PI); g.fillStyle = on ? css("--accent") : "#ffffff"; g.fill();
+    g.lineWidth = 8; g.strokeStyle = on ? "#ffffff" : "#2a2f35"; g.stroke();
+    g.fillStyle = on ? "#ffffff" : "#2a2f35"; g.font = "700 72px Archivo, Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(n), 64, 68);
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; return tex;
+  }
+  const figures = Array.from({ length: PEOPLE }, (_, i) => {
+    const f = figure();
+    const tags = [badge(i + 1, false), badge(i + 1, true)];
+    const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tags[0], depthTest: false, toneMapped: false }));
+    tag.scale.set(0.34, 0.34, 1); tag.position.set(0, 0, 2.0); tag.renderOrder = 3;
+    f.add(tag); f.userData.tag = tag; f.userData.tags = tags; f.userData.index = i;
+    f.traverse((o) => (o.userData.index = i));
+    crowdGroup.add(f); return f;
+  });
+  const pick = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.44, 48), new THREE.MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0.95, depthWrite: false }));
+  pick.renderOrder = 2; crowdGroup.add(pick);
+  for (let i = 0; i < PEOPLE; i++) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = `Person ${i + 1}`;
+    b.addEventListener("click", () => choose(i)); $("people").append(b);
+  }
+  function choose(i) {
+    live.target = i;
+    [...$("people").children].forEach((b, k) => b.setAttribute("aria-pressed", String(k === i)));
+    figures.forEach((f, k) => (f.userData.tag.material.map = f.userData.tags[k === i ? 1 : 0]));
+  }
+  async function startLive() {
+    live.on = true; rec = null;
+    $("liveBar").hidden = false; $("restart").hidden = false; crowdGroup.visible = true; person.visible = false;
+    controls.maxDistance = 20; makeGrid(24, 0.5); setReach(5); setSpeed(1);
+    if (!live.bolt) {
+      $("loading").hidden = false; $("loading").textContent = "Loading the physics engine (about 11 MB)…";
+      try {
+        live.loading = live.loading || Promise.all([import("./live.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_live.json").then((r) => r.json())])
+          .then(async ([lib, mujoco, bundle]) => {
+            const mj = await mujoco.default();
+            live.lib = lib; live.bundle = bundle; live.bolt = new lib.Bolt(mj, bundle);
+            live.floor = mj.mj_name2id(live.bolt.model, mj.mjtObj.mjOBJ_GEOM.value, "floor");
+            live.rec = prepare({ geoms: bundle.geoms, frames: [] });
+            live.rec.index = {}; bundle.geoms.forEach((g, i) => (live.rec.index[g.id] = i));
+          });
+        await live.loading;
+      } catch (e) {
+        console.error(e); live.loading = null;
+        $("loading").textContent = "The live simulator couldn't start in this browser. The replays below still work.";
+        return;
+      }
+    }
+    if (!live.on) return;   // switched to a replay while loading
+    buildDog(live.bundle.geoms);
+    restartLive();
+    $("loading").hidden = true;
+  }
+  function stopLive() {
+    if (!live.on) return;
+    live.on = false; $("liveBar").hidden = true; $("restart").hidden = true; crowdGroup.visible = false;
+    controls.maxDistance = 5; makeGrid(6, 0.1); setReach(1); setSpeed(0.5);
+  }
+  function restartLive() {
+    live.bolt.reset(live.bundle.start);
+    live.crowd = new live.lib.Crowd(PEOPLE, (Math.random() * 1e9) >>> 0);
+    live.follow = new live.lib.Follow();
+    live.t = 0; live.acc = 0; live.fell = false; live.last = null;
+    choose(live.target); $("loading").hidden = true;
+    lastTorso = null; resetView();
+  }
+  function stepLive() {
+    live.last = live.lib.followStep(live.bolt, live.crowd, live.follow, live.target);
+    live.t += DT;
+    if (live.bolt.fell()) {
+      live.fell = true;
+      $("loading").hidden = false; $("loading").textContent = "Bolt fell over. Press Restart to try again.";
+    }
+  }
+  const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion();
+  function liveFrame() {   // the same frame shape the replays use, read from the live simulator
+    const r = live.rec, b = live.bolt, d = b.data, xp = d.geom_xpos, xm = d.geom_xmat, p = [];
+    for (const g of r.geoms) {
+      const i = g.id, k = 9 * i;
+      m4.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      q4.setFromRotationMatrix(m4);
+      p.push(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2], q4.w, q4.x, q4.y, q4.z);
+    }
+    const floorSet = new Set(), scrapeSet = new Set(), cs = d.contact;
+    for (let k = 0; k < d.ncon; k++) {
+      const c = cs.get(k), a = c.geom1, z = c.geom2;
+      if (a === live.floor || z === live.floor) {
+        const j = r.index[a === live.floor ? z : a];
+        if (j !== undefined) {
+          floorSet.add(j);
+          const g = r.geoms[j];
+          if (g.leg && g.part !== "foot") {   // a knee, shin or thigh on the floor, away from the paw
+            const paw = r.geoms[r.paw[g.leg]].id, cp = c.pos;
+            if (Math.hypot(cp[0] - xp[3 * paw], cp[1] - xp[3 * paw + 1], cp[2] - xp[3 * paw + 2]) > 0.03) scrapeSet.add(j);
+          }
+        }
+      }
+      c.delete();
+    }
+    cs.delete();
+    const w = b.where(), v = d.qvel, R = w.R, last = live.last || { command: "stand", turn: 0, dist: 0 };
+    const pv = live.crowd.people[live.target];
+    return { live: true, t: live.t, target: live.target, dist: last.dist, pv: pv.v, cmd: last.command, turn: last.turn,
+             yawr: v[5], h: d.qpos[2], vx: R[0] * v[0] + R[3] * v[1] + R[6] * v[2], yaw: w.yaw * 180 / Math.PI, p, floorSet, scrapeSet };
+  }
+  function drawCrowd() {
+    live.crowd.people.forEach((pp, i) => {
+      const f = figures[i];
+      f.position.set(pp.x, pp.y, 0); f.rotation.set(0, 0, pp.heading); stride(f, pp.v, live.t + i * 0.37);
+    });
+    const tp = live.crowd.people[live.target];
+    pick.position.set(tp.x, tp.y, 0.002); pick.material.color.copy(lin(css("--accent")));
+  }
+  // tap or click a person to pick them (a drag turns the view instead)
+  let down = null;
+  renderer.domElement.addEventListener("pointerdown", (e) => (down = { x: e.clientX, y: e.clientY }));
+  renderer.domElement.addEventListener("pointerup", (e) => {
+    if (!live.on || !down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
+    const r = renderer.domElement.getBoundingClientRect(), ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    const hit = ray.intersectObjects(figures, true)[0];
+    if (hit) choose(hit.object.userData.index);
+  });
+  $("restart").addEventListener("click", () => { if (live.bolt) restartLive(); });
+
   CLIPS.forEach((c) => { const b = document.createElement("button"); b.type = "button"; b.dataset.id = c.id; b.textContent = c.name; b.addEventListener("click", () => loadClip(c.id)); $("clips").append(b); });
-  SPEEDS.forEach((s) => { const b = document.createElement("button"); b.type = "button"; b.textContent = `${s}×`; b.setAttribute("aria-pressed", String(s === speed)); b.addEventListener("click", () => { speed = s; [...$("speeds").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("speeds").append(b); });
+  function setSpeed(s) { speed = s; [...$("speeds").children].forEach((x, i) => x.setAttribute("aria-pressed", String(SPEEDS[i] === s))); }
+  SPEEDS.forEach((s) => { const b = document.createElement("button"); b.type = "button"; b.textContent = `${s}×`; b.addEventListener("click", () => setSpeed(s)); $("speeds").append(b); });
+  setSpeed(speed);
   $("play").addEventListener("click", () => { playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; });
   $("reset").addEventListener("click", resetView);
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -472,7 +649,19 @@
   let last = performance.now();
   function tick(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    if (rec) {
+    if (live.on && live.bolt && live.crowd) {
+      if (playing && !live.fell) {
+        live.acc += dt * speed;
+        let n = 0;
+        while (live.acc >= DT && n < 20 && !live.fell) { stepLive(); live.acc -= DT; n++; }
+        if (n === 20) live.acc = 0;   // a slow device runs the simulation slower than real time
+      }
+      draw(liveFrame(), 0); drawCrowd();
+      const s = now / 1000, cmd = live.last ? live.last.command : "stand";
+      if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (cmd === "walk" ? 9 : 5));
+      eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));
+      controls.update(); renderer.render(scene, camera);
+    } else if (rec) {
       if (playing) {
         clock += dt * speed;
         if (clock >= rec.frames.length / rec.fps) { clock = 0; frame = 0; resetView(); }
@@ -486,6 +675,6 @@
     }
     requestAnimationFrame(tick);
   }
-  colors(); makeGrid(); resize(); loadClip("routine"); requestAnimationFrame(tick);
+  colors(); makeGrid(); resize(); loadClip("live"); requestAnimationFrame(tick);
 })();
 </script>
