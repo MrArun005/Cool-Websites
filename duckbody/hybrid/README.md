@@ -1,5 +1,71 @@
 # Hybrid duck: Microduck body + the owner's duck head
 
+## Main robot: every skill, through one runtime (`runtime_hybrid.py`)
+
+The hybrid is now the main robot. `runtime_hybrid.py` turns commands ("walk", "run", "squat", "sit", "swag",
+"sleep", "wake", "lie down", "get up", "hop", "jump", "roll", "idle", `say(text)`, `look(yaw, pitch)`) into plans of
+brains: Microduck's ONNX policies (unchanged) and scripted moves (`moves_hybrid.py`, parameters in
+`moves_hybrid.json` from the cross-entropy searches in `search_moves.py`). It picks the transition from where the duck
+is (seated -> stand up with alpha_sitstand first, squatting -> rise first, walking -> stop first, fallen -> velstand
+gets up), keeps last_action across brain switches like Microduck's daemon, slews the head command, and drives the
+mouth servo from speech (syllables of the text, or `say_audio()` loudness through `../mouth.py`'s MouthSync).
+
+**Results: `test_skills_hybrid.py`, every skill through the runtime on 10 randomized bodies** (seeds 0-9; per body:
+mass and inertia x0.95-1.05 per part, trunk and head CoM +-3 mm, floor friction x0.7-1.3, servo kp x0.85-1.15,
+battery 6.5-8.2 V, command delay 3-6 physics steps, Microduck's observation noise; `harness.MicroduckSim(randomize=True)`).
+Body: `scene_hybrid_allcollisions_noantenna.xml` (every part collides; antennas drawn only). Raw numbers:
+`results_skills_hybrid.json`.
+
+| skill | how | passed | key numbers (median) |
+|---|---|---|---|
+| idle: stand, look around, talk | velstand + head command (new gaze every 1-2.5 s), jaw from the words | **10/10** | head yaw sweeps 1.4 rad, jaw opens to 0.65 rad (37 deg), tilt < 1.5 deg |
+| walk | velstand, command 0.4 + IMU heading hold | **10/10** | **0.17 m/s** straight, 0.01 m/s sideways |
+| run | velstand at command **1.35** (trained up to 0.4) + heading hold, 1 s ramp | **10/10** | **0.49 m/s** (1.5: 8/10 at 0.50) |
+| squat | scripted: leg IK (soles flat), ankle + hip IMU balance; velstand rises | **10/10** | trunk 5.0 cm down, tilt 5 deg |
+| sit, then stand (wake) | alpha_sitstand (flag 1 / 0), then velstand | **10/10** | seat at 6.2 cm |
+| swag sit | alpha_sitstand seated + leg offsets (knees splayed, left knee open), head cocked, beak a little open | **10/10** | left knee opens 0.72 rad; stands up after |
+| sleep, wake | alpha_sitstand seated, head drooped (neck -0.9 command), slow breathing nod; "wake" stands | **10/10** | neck droops 0.58 rad |
+| lie down, get up | settle, squat, searched keyframes fold it forward onto bill, chest and knees; velstand gets up | **10/10** | rests at ~67 deg, gets up in 0.24 s |
+| get up, face down | velstand | **10/10** | 0.24 s |
+| get up, from its back | velstand | **10/10** | 0.92 s |
+| hop / jump (hop after hop) | scripted, searched: crouch, push, release on the knee encoder, legs snap up, land in a crouch | **10/10** | **1.0 hop/s**, both feet off the floor 85 ms per hop (~6 mm), landing ~4 x body weight, tilt < 11 deg |
+| forward roll | roulade until it has turned 300 deg and is upright (max 2 s), then velstand | **10/10** | 358 deg, upright after |
+
+Notes, honestly:
+- **Walk speed was a measuring problem, not a harness problem.** velstand drifts in yaw (+0.1-0.2 rad/s) so the earlier
+  "distance along the start heading" undercounted. Measured along the heading it does 0.18 m/s at 0.4, matching
+  Pollen's 0.17. The runtime holds the heading with wz = -1.5 x (IMU-integrated yaw), so it now also walks straight.
+- **Run is velstand past its training range** (commands up to 1.35 vs 0.4 trained). It is a fast walk (no flight phase),
+  10/10 in sim; on the robot start with 1.2 (0.46 m/s, also 10/10 here, less tilt) before 1.35.
+- **Squat**: Microduck's own body_pose z command is not learned by velstand (Pollen's docs: <= 1 mm for -2 cm), so the
+  squat is scripted. Holding Microduck's home pose without a brain falls forward in ~1 s, so every scripted leg move
+  has IMU balance: ankle += 3 x pitch + 0.1 x pitch rate, hip += pitch (the hip term took the squat from 8/10 to 10/10).
+- **Hop**: the XL330 legs can hop, but only with the right timing. A time-based push never left the floor (the knee
+  slows down near straight); releasing on the knee encoder and snapping the legs up gives 55-90 ms flights. The search
+  (`search_moves.py hop`, 14 generations x 24 candidates x 4 bodies) scored flight time, upright landing and landing
+  force. Hops chain from the landing crouch, about 1 per second. Landing peaks are 2-6 x body weight (short contact
+  spikes); that is the "soft" we have, there is no compliant landing brain.
+- **Swag sit** is the sit brain plus fixed servo offsets, so the brain keeps the balance. Without help 4/10 bodies slowly
+  leaned back past 20 deg and fell over when standing up; a guard fades the offsets when the IMU says it leans back
+  past 6 deg (they stay at about 90 %).
+- **Lie down** ends belly-down resting on the bill, chest and knees at ~67 deg (this head is 14 cm long, the trunk can't
+  get flat). The IMU sees peaks of ~3 g in the fold (median), and velstand's face-down get-up takes it from there.
+- Microduck's other downloaded brains (ball_kick_left/right, alpha_ground_pick, roller, roller_crouch) are in
+  `../microduck_port/policies/` but not used: kicks need a ball, roller ones need the roller feet.
+- No new policy was trained: every skill works with Microduck's brains plus scripted moves.
+
+Run:
+```
+PY=/home/user/cool-websites/.venv/bin/python
+$PY duckbody/hybrid/runtime_hybrid.py --script "say hello; walk; run; squat; stand; sit; swag; stand; sleep; wake; lie down; get up; jump; roll"
+$PY duckbody/hybrid/test_runtime_hybrid.py                 # unit tests, ~10 s
+$PY duckbody/hybrid/test_skills_hybrid.py [--skills hop,roll] [--page DIR]   # 10 bodies per skill, ~3 min per group of 4
+$PY duckbody/hybrid/search_moves.py hop|swag|lie_down       # the searches (3 processes, 15-25 min each)
+$PY duckbody/hybrid/page_data.py DIR                        # live page data from results_skills_hybrid.json
+```
+
+## Microduck's brains on the hybrid head (first study)
+
 **What this is.** A simulated duck built from Pollen Robotics' **Microduck** (legs, hips, trunk, neck, all
 14 joints, joint ranges, XL330 servo model, IMU, default pose) with **the owner's duck head on top**: the v3
 head shell, bottom sheet, antennas and holders (Open Duck Mini v2 parts at the owner's 0.7 "mid" scale, the

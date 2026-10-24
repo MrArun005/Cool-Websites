@@ -1,9 +1,11 @@
-"""Data for the hybrid's live page: its mesh (per body, like duckbody/live.py's duck_mesh.json) and one replay per skill,
-all with Microduck's own brains on the hybrid (owner's head, antennas drawn but not colliding: hybrid_noantenna).
+"""Data for the hybrid's live page: its mesh (per body, like duckbody/live.py's duck_mesh.json), the test table
+and the skill queue, from test_skills_hybrid.py (every skill through runtime_hybrid.py, 10 randomized bodies).
 
-    MUJOCO_GL=osmesa .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR
+    .venv/bin/python duckbody/hybrid/test_skills_hybrid.py --page OUT_DIR     # results + one replay per skill
+    .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR [--mesh]           # tests.json, queue.json, skills.json
 
-Writes OUT_DIR/duck_mesh.json, OUT_DIR/rollout_<skill>.json and OUT_DIR/skills.json (per skill: success, note).
+Writes OUT_DIR/duck_mesh.json (if missing, or with --mesh), tests.json, queue.json, skills.json and rollout.json
+(= the first skill's replay, what the page shows first).
 """
 import json
 import math
@@ -70,8 +72,9 @@ def stepper(sim, frames, pol, n, cmd=None):
             frames.append(sim.frame())
 
 
-def main():
-    out = Path(sys.argv[1])
+def main_old(out):
+    """The first page (Microduck's brains only, six skills). Kept for reference; main() now builds the page from
+    test_skills_hybrid.py's results and replays."""
     out.mkdir(parents=True, exist_ok=True)
     vel, sit, roll = Policy("velstand"), Policy("alpha_sitstand"), Policy("roulade")
     full, ground = BODIES[BODY]
@@ -83,44 +86,77 @@ def main():
 
     def walk(sim, fr):
         sim.place("standing"); stepper(sim, fr, vel, 450, cmd=lambda t: 0.3 if t >= 50 else 0.0)
-        return upright(sim), "walk command 0.3 m/s (in sim it covers ~0.1 m/s and drifts; same on Microduck's own body)"
+        return upright(sim), "walk command 0.3 m/s"
 
-    def getup_down(sim, fr):
-        sim.place("face_down"); stepper(sim, fr, vel, 300)
-        return upright(sim), "face down -> standing (velstand)"
-
-    def getup_back(sim, fr):
-        sim.place("face_up"); stepper(sim, fr, vel, 300)
-        return upright(sim), "on its back -> standing (velstand)"
-
-    def sitstand(sim, fr):
-        sim.place("standing"); stepper(sim, fr, sit, 400, cmd=lambda t: 1.0 if 50 <= t < 250 else 0.0)
-        return upright(sim), "sit at 1 s, stand at 5 s (alpha_sitstand)"
-
-    def roulade(sim, fr):
-        sim.place("standing"); stepper(sim, fr, vel, 75)
-        sim.last_action[:] = 0
-        rot = 0.0
-        for t in range(int(5.0 * 50)):
-            sim.step(roll if t < 100 else vel)
-            rot += float(sim.d.sensordata[sim.gyro_adr][1]) * 0.02
-            if t % 2 == 0:
-                fr.append(sim.frame())
-        return upright(sim) and abs(rot) > math.radians(300), f"forward roll (roulade brain, 2 s slot), rotated {abs(math.degrees(rot)):.0f} deg, then velstand"
-
-    for name, fn, scene in (("stand", stand, full), ("walk", walk, full), ("getup_face_down", getup_down, full),
-                            ("getup_back", getup_back, full), ("sit_stand", sitstand, ground), ("roll", roulade, ground)):
-        for seed in range(6):
-            sim = MicroduckSim(scene, seed=seed)
-            r = record(sim, fn)
-            if r["success"] or seed == 5:
-                break
+    for name, fn, scene in (("stand", stand, full), ("walk", walk, full)):
+        sim = MicroduckSim(scene, seed=0)
+        r = record(sim, fn)
         (out / f"rollout_{name}.json").write_text(json.dumps(dict(r, task=name), separators=(",", ":")))
-        skills[name] = dict(success=r["success"], note=r["note"], seed=seed)
-        print(name, r["success"], r["note"], flush=True)
+        skills[name] = dict(success=r["success"], note=r["note"], seed=0)
         if name == "stand":
             mesh(sim.m, out)
     (out / "skills.json").write_text(json.dumps(skills, indent=1))
+
+
+# skill -> (short metric for the table) from results_skills_hybrid.json runs
+def metric(name, runs):
+    ok = [r for r in runs if r["success"]] or runs
+    med = lambda k: float(np.median([r[k] for r in ok if r.get(k) is not None])) if any(r.get(k) is not None for r in ok) else None
+    if name in ("walk", "run"):
+        return f"{med('speed_mps'):.2f} m/s"
+    if name == "squat":
+        return f"{100 * med('drop_m'):.1f} cm down"
+    if name == "idle":
+        return f"head {med('head_yaw_range_rad'):.1f} rad, jaw {med('jaw_max_rad'):.2f} rad"
+    if name.startswith("getup"):
+        return f"up in {med('t_up_s'):.2f} s"
+    if name == "hop":
+        return f"{med('hops_per_s'):.2f} hops/s, flight {med('flight_ms_med'):.0f} ms" if med('flight_ms_med') else f"{med('hops_per_s'):.2f} hops/s"
+    if name == "roll":
+        return f"{med('rotation_deg'):.0f} deg"
+    if name == "lie_down":
+        return f"landing {med('peak_g'):.1f} g"
+    if name == "swag":
+        return f"left knee opens {med('knee_open_rad'):.2f} rad"
+    if name == "sleep_wake":
+        return f"head droop {med('neck_droop_rad'):.2f} rad"
+    if name == "sit_stand":
+        return f"seat at {100 * med('seat_z'):.1f} cm"
+    return "-"
+
+
+BRAIN = {"idle": "velstand + head command; jaw from speech", "walk": "velstand 0.4 + heading hold",
+         "run": "velstand 1.35 (past training) + heading hold", "squat": "scripted, IMU balance; velstand up",
+         "sit_stand": "alpha_sitstand", "swag": "alpha_sitstand + leg offsets, head cocked",
+         "sleep_wake": "alpha_sitstand, head drooped", "lie_down": "scripted, searched; velstand up",
+         "getup_face_down": "velstand", "getup_back": "velstand", "hop": "scripted, searched; ~1 per s",
+         "roll": "roulade, then velstand"}
+ORDER = ["idle", "walk", "run", "squat", "sit_stand", "swag", "sleep_wake", "lie_down", "getup_face_down", "getup_back",
+         "hop", "roll"]
+
+
+def main():
+    out = Path(sys.argv[1])
+    out.mkdir(parents=True, exist_ok=True)
+    if "--mesh" in sys.argv or not (out / "duck_mesh.json").exists():
+        mesh(MicroduckSim(str(HERE / "scene_hybrid_allcollisions_noantenna.xml"), seed=0).m, out)
+    res = json.loads((HERE / "results_skills_hybrid.json").read_text())
+    tests, queue, skills = {}, [], {}
+    for name in ORDER:
+        if name not in res:
+            continue
+        r = res[name]
+        tests[name] = dict(success=r["success"] / r["n"], episodes=r["n"], mean_reward=metric(name, r["runs"]),
+                           brain=BRAIN.get(name, ""), layout="hybrid")
+        queue.append(dict(task=name, steps=1, state="done", exam={name: dict(success=r["success"] / r["n"])}))
+        skills[name] = dict(success=r["success"], n=r["n"], note=r["desc"])
+    (out / "tests.json").write_text(json.dumps(tests))
+    (out / "queue.json").write_text(json.dumps(queue))
+    (out / "skills.json").write_text(json.dumps(skills, indent=1))
+    first = out / f"rollout_{ORDER[0]}.json"
+    if first.exists():
+        (out / "rollout.json").write_text(first.read_text())
+    print(json.dumps(tests, indent=1))
 
 
 if __name__ == "__main__":

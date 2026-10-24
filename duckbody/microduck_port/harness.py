@@ -115,7 +115,7 @@ def _axis_quat(axis, ang):
 
 class MicroduckSim:
     def __init__(self, scene: str = SCENE_FULL, vin: float = BAM_VIN, delay: bool = True, obs_noise: bool = True,
-                 seed: int = 0):
+                 seed: int = 0, randomize: bool = False):
         from bam.model import load_model
         from bam.mujoco import MujocoController
 
@@ -160,16 +160,47 @@ class MicroduckSim:
         self.gyro_adr = slice(s.adr[0], s.adr[0] + 3)
         self.delay = delay
         self.obs_noise = obs_noise
+        self.randomize = randomize
+        self._dr0 = dict(mass=self.m.body_mass.copy(), inertia=self.m.body_inertia.copy(), ipos=self.m.body_ipos.copy(),
+                         friction=self.m.geom_friction.copy(), kp=bam.actuator.kp, vin=bam.actuator.vin)
+        self.dr = {}
         self.reset_state()
 
     # --- state ---------------------------------------------------------------------------------
+    def randomize_body(self):
+        """A new random body, with microduck_velocity_env_cfg's domain-randomization ranges (non-accumulating):
+        per-body mass and inertia x U(0.95, 1.05), trunk CoM +-3 mm and head CoM +-3 mm, contact friction
+        x U(0.7, 1.3) (their foot_friction range, applied to every geom), servo kp_fw x U(0.85, 1.15), supply
+        voltage U(6.5, 8.2) V (BAM's training range). The 3-6 physics-step command delay is drawn in reset_state."""
+        r, m, d0 = self.rng, self.m, self._dr0
+        k = r.uniform(0.95, 1.05, m.nbody)
+        m.body_mass[:] = d0["mass"] * k
+        m.body_inertia[:] = d0["inertia"] * k[:, None]
+        m.body_ipos[:] = d0["ipos"]
+        for name in ("trunk_base", "jaw_soft"):
+            try:
+                m.body_ipos[m.body(name).id] += r.uniform(-0.003, 0.003, 3)
+            except KeyError:
+                pass
+        m.geom_friction[:] = d0["friction"]
+        m.geom_friction[:, 0] *= r.uniform(0.7, 1.3)
+        act = self.bam.model.actuator
+        act.kp = d0["kp"] * r.uniform(0.85, 1.15)
+        act.vin = r.uniform(6.5, 8.2)
+        self.dr = dict(mass_scale_mean=round(float(k.mean()), 3), friction=round(float(m.geom_friction[0, 0]), 3),
+                       kp=round(float(act.kp), 1), vin=round(float(act.vin), 2))
+        mujoco.mj_setConst(m, self.d)
+
     def reset_state(self):
+        if self.randomize:
+            self.randomize_body()
         mujoco.mj_resetData(self.m, self.d)
         self.last_action = np.zeros(14, np.float32)
         self.command = np.zeros(13, np.float32)
         self.lag = int(self.rng.integers(DELAY_LAG[0], DELAY_LAG[1] + 1)) if self.delay else 0
         self.target_hist = []
         self.bam.last_ts = self.d.time
+        self.dr["lag"] = self.lag
 
     def place(self, kind: str, joint_noise: float = 0.05, random_joints: bool = False):
         """Starts mirroring microduck_rl's reset events (set_random_prone_orientation etc.)."""
@@ -232,7 +263,7 @@ class MicroduckSim:
         return o
 
     # --- acting ---------------------------------------------------------------------------------
-    def step(self, policy: Policy):
+    def step(self, policy: Policy, on_substep=None):
         action = policy(self.obs())
         self.last_action = action.astype(np.float32)
         target = DEFAULT_POSE + action * policy.action_scale
@@ -243,6 +274,8 @@ class MicroduckSim:
             self.bam.q_target[:] = self.target_hist[0]
             self.bam.update()
             mujoco.mj_step(self.m, self.d)
+            if on_substep is not None:
+                on_substep(self)
         return action
 
     def frame(self):
