@@ -60,7 +60,7 @@ class FollowController:
 
 def run(posture, walk, seed=0):
     env = BoltEnv(randomize=False, max_steps=10**6, gait_generator="dog", turning=True,
-                  speed_control=getattr(walk, "speed_control", False))
+                  speed_control=getattr(walk, "speed_control", False), sharp_turns=getattr(walk, "sharp_turns", False))
     env.forced_command = "stand"
     obs = reset_standing(env, seed)
     for _ in range(100):                                      # stand up first

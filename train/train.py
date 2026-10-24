@@ -10,6 +10,7 @@ runs/<name>/vecnormalize.pkl. Watch progress with:
     tensorboard --logdir runs
 """
 import argparse
+import json
 import time
 from pathlib import Path
 
@@ -50,6 +51,7 @@ def main():
     ap.add_argument("--turning", action="store_true", help="the walk also gets a turn command (53 inputs; see widen_brain.py)")
     ap.add_argument("--handover-brain", help="posture brain folder: half the walk episodes start with it standing the dog up")
     ap.add_argument("--speed-control", action="store_true", help="the walk also gets a speed command, up to a run (54 inputs)")
+    ap.add_argument("--sharp-turns", action="store_true", help="turn by stepping sideways, up to 2 rad/s (dog gait with speed control)")
     args = ap.parse_args()
 
     out = Path(__file__).with_name("runs") / args.name
@@ -58,7 +60,10 @@ def main():
 
     venv = make_vec_env(BoltEnv, n_envs=args.envs, seed=args.seed, vec_env_cls=SubprocVecEnv,
                         env_kwargs=dict(skills=args.skills, gait_generator=args.gait_generator, turning=args.turning,
-                                        handover_brain=args.handover_brain, speed_control=args.speed_control))
+                                        handover_brain=args.handover_brain, speed_control=args.speed_control,
+                                        sharp_turns=args.sharp_turns))
+    if args.sharp_turns:  # same inputs as other speed brains, so the run folder records the gait
+        (out / "gait.json").write_text(json.dumps(dict(sharp_turns=True)))
     if args.resume:
         ckpt_zip = Path(args.resume)
         stats = ckpt_zip.with_name("vecnormalize.pkl")  # packaged model folder (models/<name>/)

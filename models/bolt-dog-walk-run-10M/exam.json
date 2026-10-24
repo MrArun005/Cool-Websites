@@ -1,0 +1,7 @@
+{
+  "walk": 1.0,
+  "turn_left": 1.0,
+  "turn_right": 1.0,
+  "run": 1.0,
+  "slow": 1.0
+}

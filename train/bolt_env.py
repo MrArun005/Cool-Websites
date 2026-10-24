@@ -58,10 +58,10 @@ WALK_HEIGHT = {None: TARGETS["walk"]["height"], "crouch": TARGETS["walk"]["heigh
 PAW_GAIT = dict(step=0.125, lift=0.06, height=0.385)  # m: stride length, paw lift, paw depth below the hip
 
 
-def trot(phase, stance="crouch", turn=0.0, step=None):
+def trot(phase, stance="crouch", turn=0.0, step=None, spin=0.0):
     from reference_gait import paw_trot, trot as reference_trot  # imported late: reference_gait imports this module
     if stance == "dog":
-        return paw_trot(phase, **dict(PAW_GAIT, **({"step": step} if step is not None else {})), turn=turn)
+        return paw_trot(phase, **dict(PAW_GAIT, **({"step": step} if step is not None else {})), turn=turn, spin=spin)
     return reference_trot(phase, hip_swing=0.15, knee_lift=0.3, base=STANCES[stance])
 FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 
@@ -70,7 +70,8 @@ class BoltEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
 
     def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
-                 skills=None, gait_generator=False, turning=False, handover_brain=None, speed_control=False):
+                 skills=None, gait_generator=False, turning=False, handover_brain=None, speed_control=False,
+                 sharp_turns=False):
         # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
         # brain only adds corrections on top (residual control, as in "policies modulating trajectory
         # generators"). The legs are coordinated from the first step instead of having to discover it.
@@ -142,6 +143,11 @@ class BoltEnv(gym.Env):
         # 1.29 m/s at 3 steps/s and 20 cm strides, well inside the motors' force limit (measured).
         assert turning or not speed_control, "speed control comes after the turn command in the input layout"
         self.speed_control, self.speed_cmd, self.phase = speed_control, 0.4, 0.0
+        # sharp_turns=True (dog gait with speed control): turn by stepping sideways (paw_trot's spin),
+        # up to 2 rad/s at a walk instead of 0.6. Same inputs as before, so it is marked in the brain's
+        # folder (gait.json) rather than by the input count.
+        assert not sharp_turns or (speed_control and self.stance == "dog"), "sharp turns are for the dog gait with speed control"
+        self.sharp_turns = sharp_turns
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (52 + turning + speed_control,), np.float32)
 
     # ---------- helpers ----------
@@ -180,7 +186,7 @@ class BoltEnv(gym.Env):
             if self.stance == "dog" and COMMANDS[self.command] == "stand":
                 return STANCES["dog"]
             return STAND_POSE
-        q = trot(self.gait_phase(), self.stance, self.gait_turn(), self.gait_stride())[0]
+        q = trot(self.gait_phase(), self.stance, self.gait_turn(), self.gait_stride(), self.gait_spin())[0]
         if self.stance in ("tall", "dog"):
             # Ease into the trot over half a second from walk_from (see _switch); runs 5-6 jumped
             # straight in and the 2M brain fell 9 times in 10 when taking over from standing.
@@ -190,8 +196,23 @@ class BoltEnv(gym.Env):
     TURN_GAIN = 0.075  # m of extra stride on the outside per rad/s of turn (measured: 0.04 m -> ~0.56 rad/s)
     MAX_TURN = 0.6     # rad/s (~35°/s): strides stay within what the paw-path gait handled without a brain
 
+    SHARP_TURN = 2.0  # rad/s (~115°/s): the fastest turn asked of sharp_turns brains, at a walk
+
+    def max_turn(self, speed=None):
+        """Fastest turn practised at this speed: sharp turns get gentler as the dog runs faster."""
+        if not self.sharp_turns:
+            return self.MAX_TURN
+        v = self.speed_cmd if speed is None else speed
+        return float(np.clip(self.SHARP_TURN - 1.25 * max(0.0, v - 0.4), 1.0, self.SHARP_TURN))
+
+    def gait_spin(self):
+        """Radians to turn during one stance (sharp_turns): the asked turn rate times the stance time."""
+        if not self.sharp_turns:
+            return 0.0
+        return float(np.clip(self.yaw_cmd, -self.SHARP_TURN, self.SHARP_TURN)) * 0.5 / self.gait_freq()
+
     def gait_turn(self):
-        if not self.turning:
+        if not self.turning or self.sharp_turns:  # sharp turns steer with spin instead
             return 0.0
         stride = self.gait_stride()
         limit = 0.05 if stride is None else min(0.05, max(0.0, 0.22 - stride))  # the outside stride stays <= 22 cm
@@ -212,8 +233,15 @@ class BoltEnv(gym.Env):
         self.forced_speed_set = True
 
     def _new_turn(self):
-        """A turn command like an owner would give: often straight, otherwise left or right."""
-        return 0.0 if self.rng.random() < 0.3 else float(self.rng.uniform(-self.MAX_TURN, self.MAX_TURN))
+        """A turn command like an owner would give: often straight, otherwise left or right.
+
+        Sharp-turn brains practise up to max_turn(), and the sharpest turn practised rises from 0.6
+        to 2 rad/s over the first 1M steps of a run (8 envs), like the speed ramp.
+        """
+        top = self.MAX_TURN
+        if self.sharp_turns:
+            top = min(self.max_turn(), self.MAX_TURN + (self.SHARP_TURN - self.MAX_TURN) * min(1.0, self.env_steps * 8 / 1e6))
+        return 0.0 if self.rng.random() < 0.3 else float(self.rng.uniform(-top, top))
 
     def set_turn(self, rate):
         """Ask for a turn rate in rad/s (+ is left); stays until changed."""
@@ -350,9 +378,9 @@ class BoltEnv(gym.Env):
         self.command = COMMANDS.index(self.forced_command) if self.forced_command else self.rng.choice(self.skills)
         self.walk_since = 0
         self.walk_from = STAND_POSE.copy()  # episodes start from the standing pose
-        self.yaw_cmd = self._new_turn() if self.turning and not self.forced_turn_set else self.yaw_cmd
         if self.speed_control and not self.forced_speed_set:
             self.speed_cmd = self._new_speed()
+        self.yaw_cmd = self._new_turn() if self.turning and not self.forced_turn_set else self.yaw_cmd
         self.phase = self.phase0
         if (self.handover_brain and self.randomize and COMMANDS[self.command] == "walk" and not start_lying
                 and self.rng.random() < 0.5):
@@ -388,10 +416,10 @@ class BoltEnv(gym.Env):
             reward -= 5.0  # falling ends the attempt; a huge penalty made "never try anything" win
         if self.forced_command is None and self.t % self.command_period == 0:
             self._switch(self.rng.choice(self.skills))  # new command, like a real owner would give
-        if self.turning and not self.forced_turn_set and self.t % 150 == 0:
-            self.yaw_cmd = self._new_turn()  # a new turn every 3 s
         if self.speed_control and not self.forced_speed_set and self.t % 150 == 0:
-            self.speed_cmd = self._new_speed()  # and a new speed
+            self.speed_cmd = self._new_speed()  # a new speed every 3 s
+        if self.turning and not self.forced_turn_set and self.t % 150 == 0:
+            self.yaw_cmd = self._new_turn()  # and a new turn (sharp turns depend on the speed)
         truncated = self.t >= self.max_steps
         return self._obs(), float(reward), bool(fell), bool(truncated), info
 
@@ -412,7 +440,7 @@ class BoltEnv(gym.Env):
             # Imitate the reference trot (reference_gait.py): match its joint angles and its
             # foot contacts at this moment of the stride. Following an example is far faster to
             # learn than discovering walking from scratch (Disney BDX, Open Duck Mini).
-            q_ref, stance_ref = trot(self.gait_phase(), self.stance or "crouch", self.gait_turn(), self.gait_stride())  # same clock as the obs
+            q_ref, stance_ref = trot(self.gait_phase(), self.stance or "crouch", self.gait_turn(), self.gait_stride(), self.gait_spin())  # same clock as the obs
             gait = np.mean(feet == stance_ref)
             # Width matters: at 0.05 a dog halfway to the trot scored ~0, so there was no
             # "warmer, warmer" signal. At 0.3, halfway earns about a third.
@@ -425,7 +453,7 @@ class BoltEnv(gym.Env):
                 np.exp(-((p["vx"] - target) / v_width) ** 2) * np.exp(-(p["vy"] / 0.25) ** 2),
                 np.exp(-((p["height"] - self.walk_height) / 0.06) ** 2),
                 np.exp(-(p["pitch"] / 0.25) ** 2) * upright,
-                np.exp(-((p["yaw_rate"] - self.yaw_cmd) / (0.3 if self.turning else 0.6)) ** 2),  # turn as asked (0 = straight)
+                np.exp(-((p["yaw_rate"] - self.yaw_cmd) / ((0.3 + 0.15 * abs(self.yaw_cmd)) if self.sharp_turns else 0.3 if self.turning else 0.6)) ** 2),  # turn as asked (0 = straight)
                 np.exp(-scrapes),  # each leg with a knee, shin or thigh on the floor costs ~2/3
                 # "dog" gait only: lower legs sloping past 30° cost more and more
                 np.clip(1 - max(0.0, tilt - 30) / 30, 0.2, 1.0) if self.stance == "dog" else 1.0,

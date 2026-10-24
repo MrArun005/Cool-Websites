@@ -91,7 +91,9 @@ def capture(env, geoms, index, **extra):
 def record(brains, script, seed, gait_generator):
     turning = any(getattr(b, "turning", False) for b in brains.values())
     speed = any(getattr(b, "speed_control", False) for b in brains.values())
-    env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator, turning=turning, speed_control=speed)
+    sharp = any(getattr(b, "sharp_turns", False) for b in brains.values())
+    env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator, turning=turning, speed_control=speed,
+                  sharp_turns=sharp)
     env.forced_command = script[0][0]
     obs, _ = env.reset(seed=seed)
     geoms = describe(env.model)

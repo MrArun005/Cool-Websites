@@ -67,7 +67,7 @@ def film(policy, path, steps_label, noise=False, script=SCRIPT, gait_generator=F
     except OSError:
         big = small = ImageFont.load_default()
     env = BoltEnv(randomize=False, max_steps=100_000, gait_generator=gait_generator, turning=getattr(policy, "turning", False),
-                  speed_control=getattr(policy, "speed_control", False))
+                  speed_control=getattr(policy, "speed_control", False), sharp_turns=getattr(policy, "sharp_turns", False))
     env.forced_command = "stand"
     obs, _ = env.reset(seed=7)
     falls, fallen_for = 0, 0
@@ -138,7 +138,7 @@ def main():
         write_json(data_path, data)
 
     def score(exam):
-        keys = list(args.skills or COMMANDS) + [k for k in ("turn_left", "turn_right", "run", "slow") if k in exam]
+        keys = list(args.skills or COMMANDS) + [k for k in ("turn_left", "turn_right", "sharp_left", "sharp_right", "run", "slow") if k in exam]
         return float(np.mean([exam[c] for c in keys]))
 
     def keep_best(steps, exam, zip_path=None, stats=None):
@@ -171,6 +171,8 @@ def main():
             script = [("walk", 150, 0.0), ("walk", 150, 0.4), ("walk", 150, -0.4)]  # straight, left, right
         if getattr(policy, "speed_control", False):
             script = [("walk", 125, 0.0, 0.4), ("walk", 125, 0.0, 1.0), ("walk", 125, 0.4, 0.7), ("walk", 125, -0.4, 0.7)]
+        if getattr(policy, "sharp_turns", False):
+            script = [("walk", 125, 0.0, 0.4), ("walk", 125, 0.0, 1.0), ("walk", 125, 1.5, 0.4), ("walk", 125, -1.5, 0.4)]
         falls = film(policy, out / clip, label, noise=args.noise, script=script, gait_generator=args.gait_generator)
         exam = evaluate(policy, args.episodes, seed=1000, skills=args.skills, gait_generator=args.gait_generator,
                         handover=handover)
@@ -193,6 +195,8 @@ def main():
                 tmp.mkdir(exist_ok=True)
                 (tmp / "policy.zip").write_bytes(zip_path.read_bytes())
                 (tmp / "vecnormalize.pkl").write_bytes(stats.read_bytes())
+                if (run / "gait.json").exists():  # sharp-turn brains: the gait goes with the brain
+                    (tmp / "gait.json").write_bytes((run / "gait.json").read_bytes())
                 process(steps, Policy(tmp), zip_path, stats)
         final = run / "policy.zip"
         if final.exists() and (run / "vecnormalize.pkl").exists():

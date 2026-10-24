@@ -407,6 +407,42 @@ class DogGaitTest(unittest.TestCase):
         self.assertTrue(passed("walk", [good] * 80))
         self.assertFalse(passed("walk", [dict(good, shin_tilt=38.0)] * 80))  # like run 7
 
+    def test_sharp_turns_step_sideways(self):
+        from reference_gait import paw_trot
+        straight = paw_trot(1.0)[0]
+        np.testing.assert_allclose(paw_trot(1.0, spin=0.0)[0], straight)  # no spin: the same gait as before
+        self.assertTrue(np.all(straight[0::3] == 0))                       # and the sideways joints stay still
+        q = paw_trot(1.0, spin=0.3)[0]
+        self.assertGreater(np.abs(q[0::3]).max(), 0.02)                     # spinning rolls the legs out
+        self.assertLess(np.abs(q[0::3]).max(), 0.5)                         # within the joints' range
+
+    def test_sharp_turns_turn_fast_without_a_brain(self):
+        env = BoltEnv(randomize=False, max_steps=10_000, skills=["walk"], gait_generator="dog",
+                      turning=True, speed_control=True, sharp_turns=True)
+        env.forced_command = "walk"
+        env.reset(seed=1)
+        env.set_speed(0.2)
+        env.set_turn(1.5)
+        yaw = []
+        for t in range(200):
+            _, _, fell, _, info = env.step(np.zeros(12))
+            self.assertFalse(fell)
+            if t > 50:
+                yaw.append(info["yaw_rate"])
+        self.assertGreater(np.mean(yaw), 0.8)  # stride-length turning managed ~0.5 rad/s at most
+
+    def test_sharp_turn_practice_gets_gentler_when_running(self):
+        env = BoltEnv(gait_generator="dog", turning=True, speed_control=True, sharp_turns=True)
+        self.assertEqual(env.max_turn(0.4), env.SHARP_TURN)
+        self.assertEqual(env.max_turn(1.2), 1.0)
+        self.assertEqual(BoltEnv(gait_generator="dog", turning=True, speed_control=True).max_turn(0.4), BoltEnv.MAX_TURN)
+
+    def test_exam_allows_a_little_more_error_on_sharp_turns(self):
+        good = dict(height=0.435, walk_height=0.435, pitch=0.0, roll=0.0, vx=0.4, vy=0.0, up=1.0, feet=np.array([0.5] * 4),
+                    scrape=0, shin_tilt=23.0, yaw_rate=1.25, yaw_cmd=1.5, turning=True, speed_cmd=0.4)
+        self.assertTrue(passed("walk", [good] * 80))
+        self.assertFalse(passed("walk", [dict(good, yaw_rate=0.6)] * 80))  # the old top turn rate fails
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,93 @@
+{
+  "name": "bolt-run12-sharp-turns",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt12",
+        "--steps",
+        "12500000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--turning",
+        "--speed-control",
+        "--sharp-turns",
+        "--handover-brain",
+        "../models/bolt-dog-posture-dog-2.5M",
+        "--resume",
+        "../models/bolt-dog-walk-run-10M/policy.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train.py",
+        "--name",
+        "bolt12",
+        "--steps",
+        "12500000",
+        "--envs",
+        "8",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--turning",
+        "--speed-control",
+        "--sharp-turns",
+        "--handover-brain",
+        "../models/bolt-dog-posture-dog-2.5M",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/bolt12/checkpoints/policy_*_steps.zip",
+      "log": "runs/bolt12/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/bolt12/policy.zip",
+        "log_contains": "^done:"
+      }
+    },
+    {
+      "name": "watch",
+      "cmd": [
+        "python",
+        "-u",
+        "watch.py",
+        "runs/bolt12",
+        "--log",
+        "runs/bolt12/train.log",
+        "--out",
+        "runs/bolt12/watch",
+        "--target",
+        "12500000",
+        "--patience",
+        "0",
+        "--skills",
+        "walk",
+        "--gait-generator",
+        "dog",
+        "--handover-brain",
+        "../models/bolt-dog-posture-dog-2.5M",
+        "--label",
+        "Run 12: sharp turns (step sideways), up to 2 rad/s"
+      ],
+      "log": "runs/bolt12/watch.log",
+      "done_when": {
+        "log_contains": "^finished"
+      }
+    }
+  ]
+}

@@ -25,6 +25,9 @@ class Policy:
         # brains that can turn have a 53rd input (the turn command); build a matching env
         n_inputs = self.model.observation_space.shape[0]
         self.turning, self.speed_control = n_inputs >= 53, n_inputs >= 54
+        # sharp-turn brains (sideways-stepping turns) have the same inputs, so their folder says so
+        gait = run_dir / "gait.json"
+        self.sharp_turns = bool(json.loads(gait.read_text()).get("sharp_turns")) if gait.exists() else False
         self.norm = VecNormalize.load(str(run_dir / "vecnormalize.pkl"),
                                       DummyVecEnv([lambda: BoltEnv(turning=self.turning, speed_control=self.speed_control)]))
         self.norm.training = False
@@ -59,7 +62,7 @@ def passed(command, window):
         turned_right = True
         if window[0].get("turning"):
             yaw = np.mean([p["yaw_rate"] for p in window])
-            turned_right = abs(yaw - window[0]["yaw_cmd"]) < 0.2
+            turned_right = abs(yaw - window[0]["yaw_cmd"]) < max(0.2, 0.25 * abs(window[0]["yaw_cmd"]))
         scraping = np.mean([p.get("scrape", 0) > 0 for p in window])
         tall_enough = abs(h - window[0].get("walk_height", goal["height"])) < 0.05
         # lower legs near upright, like a real dog's (a "dog" walk with no brain: ~20°)
@@ -97,7 +100,9 @@ def reset_standing(env, seed):
 def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turning=None, handover=None):
     turning = getattr(policy, "turning", False) if turning is None else turning
     speed = getattr(policy, "speed_control", False)
-    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=turning, speed_control=speed)
+    sharp = getattr(policy, "sharp_turns", False)
+    env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=turning, speed_control=speed,
+                  sharp_turns=sharp)
     if speed:
         env.set_speed(0.4)  # the walk and turn parts of the exam walk at 0.4 m/s
     results = {}
@@ -123,8 +128,10 @@ def evaluate(policy, episodes, seed=0, skills=None, gait_generator=False, turnin
         results[command] = wins / episodes
 
     if env.turning and "walk" in (skills or COMMANDS):
-        # Turning: walk while asked to turn left or right at 0.4 rad/s (~23°/s).
-        for name, rate in (("turn_left", 0.4), ("turn_right", -0.4)):
+        # Turning: walk while asked to turn left or right at 0.4 rad/s (~23°/s); sharp-turn brains
+        # also at 1.5 rad/s (~86°/s).
+        turns = (("turn_left", 0.4), ("turn_right", -0.4)) + ((("sharp_left", 1.5), ("sharp_right", -1.5)) if sharp else ())
+        for name, rate in turns:
             wins = 0
             for k in range(episodes):
                 env.forced_command = "walk"

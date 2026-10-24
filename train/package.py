@@ -67,7 +67,8 @@ def check_onnx(policy, path, samples=200, gait_generator=False):
     """Run the ONNX file next to the original policy on real observations; they must agree."""
     import onnxruntime as ort
     session = ort.InferenceSession(str(path))
-    env = BoltEnv(randomize=True, gait_generator=gait_generator, turning=policy.turning, speed_control=policy.speed_control)
+    env = BoltEnv(randomize=True, gait_generator=gait_generator, turning=policy.turning, speed_control=policy.speed_control,
+                  sharp_turns=policy.sharp_turns)
     obs, _ = env.reset(seed=5)
     worst = 0.0
     for _ in range(samples):
@@ -80,7 +81,7 @@ def check_onnx(policy, path, samples=200, gait_generator=False):
 
 def record_rollouts(policy, episodes_per_command, steps=250, seed=2000, commands=COMMANDS, gait_generator=False):
     env = BoltEnv(randomize=True, max_steps=10_000, gait_generator=gait_generator, turning=policy.turning,
-                  speed_control=policy.speed_control)
+                  speed_control=policy.speed_control, sharp_turns=policy.sharp_turns)
     keys = ("obs", "action", "reward", "command", "height", "pitch", "roll", "vx", "fell", "episode")
     data = {k: [] for k in keys}
     episode = 0
@@ -183,6 +184,8 @@ def main():
     shutil.copy(ckpt, out / "policy.zip")
     shutil.copy(stats, out / "vecnormalize.pkl")
     shutil.copy(MODEL, out / "robot.xml")
+    if (run / "gait.json").exists():  # sharp-turn brains: the gait they were trained on goes with them
+        shutil.copy(run / "gait.json", out / "gait.json")
 
     policy = Policy(out)
     steps = steps or int(policy.model.num_timesteps)
@@ -220,7 +223,7 @@ def main():
                                 + ("; eased in from stand_pose over the first 0.5 s of walking" if args.gait_generator in ("tall", "dog") else "")
                                 + ("; for 'dog' the trot is reference_gait.paw_trot(phase, **PAW_GAIT) instead" if args.gait_generator == "dog" else ""))
         if args.gait_generator else dict(used=False),
-        onnx_max_difference=onnx_err,
+        onnx_max_difference=onnx_err, sharp_turns=policy.sharp_turns,
     )
     (out / "model.json").write_text(json.dumps(facts, indent=2))
     (out / "MODEL.md").write_text(model_card(args.name, facts, exam, curve, onnx_err))
