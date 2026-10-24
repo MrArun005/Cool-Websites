@@ -120,6 +120,20 @@ class WalkRewardTest(unittest.TestCase):
             totals[mode] = total
         self.assertGreater(totals["copy trot"], totals["stand still"] * 1.3, totals)
 
+    def test_getting_closer_to_the_trot_pays_gradually(self):
+        """No cliff: halfway to the reference trot must already earn a visible share."""
+        from bolt_env import trot
+        env = BoltEnv(randomize=False, max_steps=10_000)
+        env.forced_command = "walk"
+        env.reset(seed=0)
+        q_ref = trot(0.0)[0]
+        crouch = q_ref + 0.6  # far from the trot, like run 4's crouch (~0.6 rad away)
+        half = q_ref + 0.3
+        imit = lambda q: np.exp(-np.mean((q - q_ref) ** 2) / 0.3)
+        self.assertGreater(imit(half), 0.5)
+        self.assertGreater(imit(crouch), 0.2)
+        self.assertGreater(imit(half) - imit(crouch), 0.2)
+
 
 if __name__ == "__main__":
     unittest.main()

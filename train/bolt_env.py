@@ -173,7 +173,7 @@ class BoltEnv(gym.Env):
         self.last_action = action
         fell = info["up"] < 0.2
         if fell:
-            reward -= 20.0
+            reward -= 5.0  # falling ends the attempt; a huge penalty made "never try anything" win
         if self.forced_command is None and self.t % self.command_period == 0:
             self.command = self.rng.choice(self.skills)  # new command, like a real owner would give
         truncated = self.t >= self.max_steps
@@ -198,7 +198,9 @@ class BoltEnv(gym.Env):
             phase = 2 * np.pi * 2.0 * self.t * self.dt / self.ts  # 2 Hz gait clock, same as the obs
             q_ref, stance_ref = trot(phase)
             gait = np.mean(feet == stance_ref)
-            imitation = np.exp(-np.mean((self.data.qpos[7:] - q_ref) ** 2) / 0.05)
+            # Width matters: at 0.05 a dog halfway to the trot scored ~0, so there was no
+            # "warmer, warmer" signal. At 0.3, halfway earns about a third.
+            imitation = np.exp(-np.mean((self.data.qpos[7:] - q_ref) ** 2) / 0.3)
             # Wide enough that standing still still scores a little: a too-strict speed term makes
             # the whole product zero, and then nothing rewards starting to move.
             target = self.walk_speed()
