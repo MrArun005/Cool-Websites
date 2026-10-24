@@ -148,10 +148,8 @@ class BoltEnv(gym.Env):
             return STAND_POSE
         q = trot(self.gait_phase(), self.stance)[0]
         if self.stance in ("tall", "dog"):
-            # Ease into the trot over half a second from wherever the motors were aiming when the
-            # walk began (runs 5-6 jumped straight in and the 2M brain fell 9 times in 10 when
-            # taking over from the standing brain). Easing from the fixed crouch instead pulled a
-            # dog standing tall down toward the crouch first: run 8 fell 3 in 10 that way.
+            # Ease into the trot over half a second from walk_from (see _switch); runs 5-6 jumped
+            # straight in and the 2M brain fell 9 times in 10 when taking over from standing.
             q = self.walk_from + min(1.0, (self.t - self.walk_since) / 25) * (q - self.walk_from)
         return q
 
@@ -172,7 +170,11 @@ class BoltEnv(gym.Env):
     def _switch(self, command):
         if command != self.command and COMMANDS[command] == "walk":
             self.walk_since = self.t
-            self.walk_from = self.data.ctrl.copy() if self.t > 0 else STAND_POSE.copy()
+            # Ease in from this stance's standing pose, whichever brain was standing before: the
+            # pose the walk practised and is examined on. Easing from the standing brain's last
+            # motor targets (which push past the legs to hold the weight) fell 8 times in 10, and
+            # from the sagging actual leg angles 9 in 10; from the dog stance, 0 in 10.
+            self.walk_from = (STANCES["dog"] if self.stance == "dog" else STAND_POSE).copy() if self.t > 0 else STAND_POSE.copy()
         self.command = command
 
     def shin_tilt(self):
