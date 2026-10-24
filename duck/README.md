@@ -10,6 +10,14 @@ run on the robot" approach. Everything is 3D-printed and fully documented.
 **Personality (this repo):** talking, memory, humor, reacting to praise, following you, from
 `pet/js/brain.js` and later Phase 3 of `pet/ROADMAP.md`.
 
+## Build kit
+
+Everything for the physical build is in [`build/`](build/):
+- [SHOPPING.md](build/SHOPPING.md): every part to buy, with quantities and prices (about €432 with the pet package)
+- [PRINT.md](build/PRINT.md): all 51 printed pieces with sizes and materials (needs a 200 × 200 mm printer bed)
+- [CHECKLIST.md](build/CHECKLIST.md): the build, step by step, with a test at the end of each stage
+- [get_parts.sh](build/get_parts.sh): downloads the print files and official guides into `duck/parts/`
+
 ## What you build
 
 | | |

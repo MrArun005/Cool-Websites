@@ -4,3 +4,4 @@ __pycache__/
 train/runs/
 *.mp4
 hardware/mini/cad/stl/
+duck/parts/
