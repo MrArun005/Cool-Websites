@@ -38,6 +38,11 @@ START = {"stand": "stand", "walk": "stand", "run": "stand", "squat": "stand", "s
 SECONDS = {"stand": 10, "walk": 10, "run": 8, "squat": 6, "sit": 6, "sit_to_stand": 5, "lie": 6, "get_up": 6,
            "jump": 6, "roll": 4}
 GAIT_HZ = {"walk": 1.8, "run": 2.6}
+# Gentle landing, Microduck's sitstand recipe (scaled to our ~1/step reward): a per-step cap on
+# how fast the body may go down, and a penalty on vertical shocks, both always on.
+GENTLE = ("sit", "sit_to_stand", "lie", "get_up")
+MAX_DESCENT = 0.05          # m/s
+DESCENT_W, SHOCK_W = 1.5, 0.007
 QUIET = ("squat", "sit", "lie", "jump", "roll")   # no head turning or talking during these (calm head)
 
 
@@ -48,6 +53,10 @@ class SkillEnv(DuckEnv):
         super().__init__(task=None, task_weights=(1, 1, 1, 1), **kw)
         self.forced_skill = task
         m, d = self.model, self.data
+        if task in GENTLE:
+            # Seated/lying contacts need a real contact solve (Microduck sitstand: iterations 30/50).
+            # With 1 iteration the belly contact spiked to 140x body weight.
+            m.opt.iterations, m.opt.ls_iterations = 30, 50
         n = len(SKILL_COMMANDS) - len(base.COMMANDS)
         self.obs_size += n
         self.observation_space = base.gym.spaces.Box(-np.inf, np.inf, (self.obs_size,), np.float32)
@@ -287,6 +296,10 @@ class SkillEnv(DuckEnv):
             h_ref = self.crouch_height
         else:
             return super()._reward(action)
+        if self.task in GENTLE:
+            vz = self.data.qvel[2]
+            az = self.data.qacc[2]
+            reward -= DESCENT_W * max(0.0, -vz - MAX_DESCENT) + SHOCK_W * abs(az)
         if self.smooth_weight:
             torque = self.data.actuator_force
             pen = (0.5 * np.mean((action - self.last_action) ** 2)
