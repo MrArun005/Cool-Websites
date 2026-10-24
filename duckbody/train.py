@@ -4,6 +4,7 @@
     python duckbody/train.py --task stand --steps 5000000  # one skill
     python duckbody/train.py --steps 60000000 --smooth-after 20000000   # all four tasks
     python duckbody/train.py --resume runs/duck/checkpoints/policy_5000000_steps.zip
+    python duckbody/train.py --model model/duck_mid.xml --task stand --name mid_stand   # the 0.7x v3 duck
 
 Saves runs/<name>/policy.zip + vecnormalize.pkl (bake the normalizer into the ONNX export:
 LESSONS.md §3). Watch: tensorboard --logdir duckbody/runs
@@ -39,11 +40,11 @@ class SmoothCurriculum(BaseCallback):
         return True
 
 
-def exam(model, venv, tasks, episodes=4, seed=123):
+def exam(model, venv, tasks, episodes=4, seed=123, model_path=None):
     """Deterministic rollouts per task: success rate at the end of the episode, mean reward."""
     out = {}
     for task in tasks:
-        env = DuckEnv(task=task, randomize=True, seed=seed)
+        env = DuckEnv(task=task, randomize=True, seed=seed, model_path=model_path)
         wins, rewards = 0, []
         for ep in range(episodes):
             obs, _ = env.reset(seed=seed + ep)
@@ -70,6 +71,7 @@ def main():
     ap.add_argument("--smooth-after", type=int, default=None, help="step at which smoothness penalties start")
     ap.add_argument("--quick", action="store_true", help="smoke test: 4096 steps, 2 envs, tiny exam")
     ap.add_argument("--resume")
+    ap.add_argument("--model", help="model XML (default model/duck.xml), e.g. model/duck_mid.xml")
     a = ap.parse_args()
     if a.quick:
         a.steps, a.envs, a.name = 4096, 2, a.name + "_smoke"
@@ -77,7 +79,8 @@ def main():
     out = HERE / "runs" / a.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
-    kw = dict(task=a.task)
+    model_path = str((Path.cwd() / a.model).resolve()) if a.model else None
+    kw = dict(task=a.task, model_path=model_path)
     vec_cls = DummyVecEnv if a.quick else SubprocVecEnv
     venv = make_vec_env(DuckEnv, n_envs=a.envs, seed=a.seed, vec_env_cls=vec_cls, env_kwargs=kw)
     if a.resume:
@@ -106,7 +109,8 @@ def main():
     venv.training = False
     tasks = [a.task] if a.task else TASKS
     res = dict(steps=int(model.num_timesteps), seconds=secs, steps_per_s=model.num_timesteps / secs,
-               exam=exam(model, venv, tasks, episodes=1 if a.quick else 8))
+               model=a.model or "model/duck.xml",
+               exam=exam(model, venv, tasks, episodes=1 if a.quick else 8, model_path=model_path))
     (out / "summary.json").write_text(json.dumps(res, indent=1))
     print(json.dumps(res, indent=1))
 
