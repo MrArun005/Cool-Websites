@@ -174,5 +174,23 @@ class TestRuntime(unittest.TestCase):
         self.assertGreater(min(ups), 0.9)
 
 
+class TestCelebrate(unittest.TestCase):
+    def test_right_answer_triggers_swag(self):
+        env = SkillEnv(task="stand", randomize=False, model_path=str(rtm.ROBOT_XML))
+        env.reset(seed=0)
+        brains, cfg = rtm.load_brains()
+        rt = rtm.DuckRuntime(rtm.SimBackend(cfg["servo_names"], model=env.model, data=env.data),
+                             brains=brains, config=cfg, log=None)
+        self.assertIn("pose:swag", rt.brains)
+        rt.answered(False)
+        rt.run(1.5)
+        self.assertEqual(rt.mode, "stand")                    # wrong answer: no swag
+        rt.answered(True)
+        self.assertTrue(rt.speaking)                          # it says so first (mouth moves)
+        rt.run(1.3)
+        self.assertEqual(rt.mode, "swag")
+        self.assertEqual(rtm.parse("that's right!")[0], "celebrate")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

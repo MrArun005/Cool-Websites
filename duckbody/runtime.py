@@ -399,6 +399,16 @@ class DuckRuntime:
                     head_yaw=self.head_pos, jaw=self.jaw_pos, speaking=self.speaking, brains=sorted(self.brains))
 
     # ---------- words ----------
+    def answered(self, correct=True, speech_seconds=1.2):
+        """The conversation layer calls this after the duck answers a question. A right answer earns
+        the celebration: it says so (mouth moving) and drops into the swag pose."""
+        if not correct:
+            return self._say_log("answer was wrong: no swag this time")
+        words, _ = demo_voice(seconds=speech_seconds, seed=7)       # stand-in for "Nailed it!" via text-to-speech
+        self.say(words, 22050)
+        self.after(speech_seconds, lambda: self.command("swag"))
+        return self._say_log("right answer! celebrating with the swag pose")
+
     def hear(self, text, hold=3.0):
         """Plain-language commands, like the pet's brain.js: "go to sleep", "walk forward then turn left".
         Clauses run one after another, `hold` seconds apart. Returns what was understood."""
@@ -413,6 +423,8 @@ class DuckRuntime:
         if kind == "look":
             for dt_, yaw in args["script"]:
                 self.after(dt_, lambda y=yaw: self.look(y))
+        elif kind == "celebrate":
+            self.answered(True)
         elif kind == "say":
             words = max(1, len(args["text"].split()))
             audio, _ = demo_voice(seconds=0.4 + 0.3 * words, seed=len(args["text"]))  # stand-in for text-to-speech
@@ -450,6 +462,8 @@ def parse(clause, L=1.0):
         return "wake", {}
     if re.search(r"\bget up\b|\bstand up\b|^up$", t):
         return "get up", {}
+    if re.search(r"\b(correct|that'?s right|right answer|you got it|nailed it|well done)\b", t):
+        return "celebrate", {}
     if re.search(r"\bswag\b|\bchill\b|\brelax\b|\blean back\b", t):
         return "swag", {}
     if re.search(r"\bsquat\b|\bsquatting\b|\bcrouch\b|\bduck down\b", t):
