@@ -91,5 +91,21 @@ class TargetTest(unittest.TestCase):
         self.assertLess(env._reward(np.zeros(12))[0], four * 0.75)
 
 
+class WalkRewardTest(unittest.TestCase):
+    def test_moving_forward_pays_more_than_standing_still(self):
+        env = BoltEnv(randomize=False)
+        env.forced_command = "walk"
+        env.reset(seed=0)
+        env.total_steps = env.walk_ramp_steps  # end of the curriculum: target 0.5 m/s
+        base = env.posture()
+        pay = {}
+        for vx in (0.0, 0.2, 0.4):
+            env.posture = lambda vx=vx: dict(base, vx=vx, height=0.29, pitch=0.0, roll=0.0)
+            pay[vx] = env._reward(np.zeros(12))[0]
+        self.assertLess(pay[0.0], pay[0.2])
+        self.assertLess(pay[0.2], pay[0.4])
+        self.assertGreater(pay[0.2] - pay[0.0], 0.2)  # a clear signal to start moving
+
+
 if __name__ == "__main__":
     unittest.main()

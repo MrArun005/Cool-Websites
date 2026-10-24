@@ -70,6 +70,7 @@ class BoltEnv(gym.Env):
         self.renderer = None
         self.forced_command = None
         self.rng = np.random.default_rng(seed)
+        self.total_steps = 0  # this env's steps across all episodes (drives the walk curriculum)
 
         m = self.model
         self.lo, self.hi = m.actuator_ctrlrange[:, 0].copy(), m.actuator_ctrlrange[:, 1].copy()
@@ -83,6 +84,13 @@ class BoltEnv(gym.Env):
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (52,), np.float32)
 
     # ---------- helpers ----------
+    walk_ramp_steps = 2_000_000  # total env steps over which the walk target rises 0.2 -> 0.5 m/s
+
+    def walk_speed(self):
+        """Walk target speed: starts easy and rises as training goes on (a curriculum)."""
+        done = min(1.0, self.total_steps / self.walk_ramp_steps)
+        return 0.2 + (TARGETS["walk"]["speed"] - 0.2) * done
+
     def set_command(self, name):
         """Give the dog a command, e.g. env.set_command("sit")."""
         self.command = COMMANDS.index(name)
@@ -151,6 +159,7 @@ class BoltEnv(gym.Env):
         self.data.ctrl[:] = np.clip(STAND_POSE + ACTION_SCALE * action, self.lo, self.hi)
         mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
         self.t += 1
+        self.total_steps += 8  # 8 parallel envs share the curriculum clock (train.py default)
 
         reward, info = self._reward(action)
         self.last_action = action
@@ -177,13 +186,17 @@ class BoltEnv(gym.Env):
         if name == "walk":
             stance_a = np.sin(2 * np.pi * 2.0 * self.t * self.dt / self.ts) > 0  # trot rhythm, 2 Hz clock
             gait = np.mean(feet == (TROT if stance_a else 1 - TROT))
+            # Wide enough that standing still still scores a little: a too-strict speed term makes
+            # the whole product zero, and then nothing rewards starting to move.
+            target = self.walk_speed()
             terms = [
-                np.exp(-((p["vx"] - goal["speed"]) / 0.15) ** 2) * np.exp(-(p["vy"] / 0.2) ** 2),
+                np.exp(-((p["vx"] - target) / 0.35) ** 2) * np.exp(-(p["vy"] / 0.25) ** 2),
                 np.exp(-((p["height"] - goal["height"]) / 0.06) ** 2),
                 np.exp(-(p["pitch"] / 0.25) ** 2) * upright,
                 np.exp(-(p["yaw_rate"] / 0.6) ** 2),
                 0.3 + 0.7 * gait,
             ]
+            progress = np.clip(p["vx"] / target, -1.0, 1.0)  # every bit of forward speed pays
         else:
             pose_err = np.mean((self.data.qpos[7:] - np.asarray(goal["pose"])) ** 2)
             speed = np.hypot(p["vx"], p["vy"])
@@ -194,8 +207,9 @@ class BoltEnv(gym.Env):
                 np.exp(-(speed / 0.15) ** 2),
             ]
             if name == "stand":
-                terms.append((feet.sum() / 4) ** 2)  # three feet down scores 0.56, four scores 1
-        reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms)
+                terms.append((feet.sum() / 4) ** 4)  # three feet down scores 0.32, four scores 1
+            progress = 0.0
+        reward = 2.0 * np.prod(terms) + 0.3 * np.mean(terms) + 0.5 * progress
 
         torque = self.data.actuator_force / self.s ** 4  # full-size units
         reward -= 0.02 * np.sum((action - self.last_action) ** 2)  # smooth, not twitchy
