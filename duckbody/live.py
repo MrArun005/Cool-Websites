@@ -230,10 +230,13 @@ def test_all(out, episodes=5, only=None):
             cls, model_path, layout = DuckEnv, HERE / "model" / "duck_mid_knee90.xml", "first stand layout"
         else:
             cls, model_path, layout = SkillEnv, HERE / "model" / "duck_mid.xml", "skills layout"
+            if task in ("walk", "run"):           # judged on the gait-cycle-averaged speed, as walk_eval.py does
+                from walk_env import WalkEnv
+                cls = WalkEnv
         wins, rewards, frames_ep = 0, [], None
         policy = PPO.load(ckpt, device="cpu") if ckpt else None
         for ep in range(episodes):
-            kw = dict(practice=False) if cls is SkillEnv else {}
+            kw = dict(practice=False) if issubclass(cls, SkillEnv) else {}
             env = cls(task=task, randomize=True, seed=100 + ep, model_path=str(model_path), max_seconds=SECONDS[task], **kw)
             m, d = env.model, env.data
             obs, _ = env.reset(seed=100 + ep)
