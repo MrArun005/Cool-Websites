@@ -37,8 +37,10 @@ def load(ckpt):
     return PPO.load(ckpt, device="cpu"), vn
 
 
-def run(model, vn, task, seed, cmd=None, seconds=None):
-    env = WalkEnv(task=task, randomize=True, seed=seed, model_path=MODEL, practice=False, max_seconds=seconds)
+def run(model, vn, task, seed, cmd=None, seconds=None, film=None):
+    env = WalkEnv(task=task, randomize=True, seed=seed, model_path=MODEL, practice=False, max_seconds=seconds,
+                  render_mode="rgb_array" if film else None)
+    frames = []
     obs, _ = env.reset(seed=seed)
     if cmd is not None:
         env.vel_cmd = np.array(cmd, dtype=float)
@@ -59,10 +61,21 @@ def run(model, vn, task, seed, cmd=None, seconds=None):
                 lifts[i] += 1
                 order.append(i)
         prev = f
+        if film and env.t % 10 == 0:
+            frames.append(env.render())
         if env.t * env.dt > 1.0:
             vx.append(info["vx"]); vy.append(info["vy"]); wz.append(info["yaw_rate"])
         ups.append(info["up"])
         done = term or trunc
+    if film and frames:
+        from PIL import Image
+        frames = frames[:40]
+        h, w = frames[0].shape[:2]
+        cols = 8
+        sheet = Image.new("RGB", (cols * w // 2, ((len(frames) + cols - 1) // cols) * h // 2))
+        for k, fr in enumerate(frames):
+            sheet.paste(Image.fromarray(fr[h // 4: 3 * h // 4, w // 4: 3 * w // 4]), ((k % cols) * w // 2, (k // cols) * h // 2))
+        sheet.save(film)
     alt = float(np.mean([order[k] != order[k - 1] for k in range(1, len(order))])) if len(order) > 1 else 0.0
     m = lambda x: round(float(np.mean(x)), 3) if x else 0.0
     return dict(cmd=[round(float(c), 3) for c in env.vel_cmd], vx=m(vx), vy=m(vy), wz=m(wz), lifts=lifts.astype(int).tolist(),
@@ -90,7 +103,15 @@ if __name__ == "__main__":
     ap.add_argument("--task", default="walk")
     ap.add_argument("--out")
     ap.add_argument("--eps", type=int, default=8)
+    ap.add_argument("--film", help="only film one rollout (vx,vy,wz) into a contact sheet PNG, e.g. 0.12,0,0")
     a = ap.parse_args()
+    if a.film:
+        model, vn = load(a.ckpt)
+        cmd = [float(x) for x in a.film.split(",")]
+        Path(a.out or ".").mkdir(parents=True, exist_ok=True)
+        out = Path(a.out or ".") / f"{Path(a.ckpt).stem}_{a.film}.png"
+        print(run(model, vn, a.task, 1000, cmd, seconds=8, film=str(out)), out)
+        raise SystemExit
     res = evaluate(a.ckpt, a.task, a.eps)
     for r in res["fixed"]:
         print("fixed", r)
