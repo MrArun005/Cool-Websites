@@ -1,0 +1,294 @@
+<title>Bolt's Castle</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+  /* Layout: the course in 3D with the score on top, the guard's shout buttons under it, then the
+     course list and what the announcer said. Same look as the Gait Lab. */
+  .stage { aspect-ratio: 16 / 10; min-height: 320px; }
+  .hud { position: absolute; display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--panel) 82%, transparent); border: 1px solid var(--line); pointer-events: none; max-width: min(60%, 340px); }
+  .hud b { font: 700 1.05rem var(--display); }
+  .hud .muted { font-size: 0.82rem; line-height: 1.35; }
+  .hud.tl { left: 10px; top: 10px; }
+  .hud.tr { right: 10px; top: 10px; text-align: right; grid-template-columns: auto auto; column-gap: 10px; align-items: baseline; }
+  .hud.tr b { font: 500 1.05rem var(--mono); font-variant-numeric: tabular-nums; }
+  .banner { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0.9); font: 800 clamp(2rem, 7vw, 4.2rem)/1 var(--display); letter-spacing: 0.02em; color: #fff; padding: 12px 26px; border-radius: 14px; background: var(--accent); opacity: 0; pointer-events: none; white-space: nowrap; transition: opacity 0.18s, transform 0.18s; text-align: center; }
+  .banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .banner.good { background: var(--good); }
+  .banner.bad { background: var(--bad); }
+  .result { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+  .result[hidden] { display: none; }
+  .result .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: grid; gap: 10px; width: min(92%, 380px); text-align: center; }
+  .result h2 { font-size: 1.6rem; font-weight: 800; }
+  .result ul { list-style: none; padding: 0; text-align: left; gap: 4px; }
+  .course { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; max-width: none; }
+  .course li { font: 500 0.82rem var(--body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+  .course li.now { border-color: var(--accent); background: var(--accent-soft); }
+  .course li.pass { background: var(--cell-2); color: var(--good); border-color: transparent; }
+  .course li.fail { background: var(--cell-0); color: var(--bad); border-color: transparent; }
+  .log { list-style: none; padding: 0; max-width: none; font-size: 0.9rem; }
+  .log li { display: flex; gap: 10px; }
+  .log time { font: 400 0.82rem var(--mono); color: var(--muted); min-width: 4.5em; }
+  .log .good { color: var(--good); } .log .bad { color: var(--bad); } .log .shout { color: var(--accent); font-weight: 600; }
+  .shouts button { font-weight: 600; }
+  .btn[disabled], .chips button[disabled] { opacity: 0.45; cursor: default; }
+  .muted { color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .banner { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="label">Bolt robot dog · a game on the live simulator</span>
+    <h1>Bolt's Castle</h1>
+    <p class="muted" style="margin:0;max-width:72ch">Like Takeshi's Castle: every game builds a new course, and Bolt has to get through it. Sprint, weave through the poles, cross the narrow bridge without falling in the water, sit in the box, lie on the mat and reach the castle. The guard shouts orders at any moment, and so can you. One fall and Bolt is out. Bolt plays it with its own trained brains, in the same physics as in training, running in your browser.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="play">
+    <h2 id="play" class="label" style="font-size:.72rem">Play</h2>
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">Loading…</div>
+      <div class="hud tl"><span class="label">Station</span><b id="hStation">–</b><span class="muted" id="hHow"></span></div>
+      <div class="hud tr"><span class="label">Score</span><b id="hScore">0</b><span class="label">Time</span><b id="hTime">0.0 s</b><span class="label">Doing</span><b id="hDoing">–</b></div>
+      <div class="banner" id="banner" aria-live="polite"></div>
+      <div class="result" id="result" hidden><div class="card"><span class="label" id="rLabel"></span><h2 id="rTitle"></h2><b class="mono" id="rScore"></b><ul id="rList"></ul><button class="btn" type="button" id="again">New castle</button></div></div>
+      <div class="hint"><span id="gridNote">grid = 50 cm</span> · drag to turn the view, scroll or pinch to zoom</div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="new" type="button">New castle</button>
+      <button class="btn" id="pause" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Pause</button>
+      <span class="label">Shout</span>
+      <div class="chips shouts" id="shouts" role="group" aria-label="Shout a command"></div>
+    </div>
+    <ul class="course" id="course" aria-label="The course"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="said">
+    <h2 id="said">The announcer</h2>
+    <ul class="log" id="log"><li class="muted">Waiting for the first game…</li></ul>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+{{SCENE_JS}}
+  controls.maxDistance = 20;
+  let C = {};
+  function colors() { C = { accent: lin(css("--accent")) }; }
+
+  // ---------- Bolt: the same body as the Gait Lab, posed from the live simulator ----------
+  let parts = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp }; });
+  }
+  const m4 = new THREE.Matrix4();
+  function drawBolt() {
+    const d = bolt.data, xp = d.geom_xpos, xm = d.geom_xmat;
+    for (const pt of parts) {
+      if (!pt.obj) continue;
+      const i = pt.g.id, k = 9 * i;
+      m4.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.obj.position.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.obj.quaternion.setFromRotationMatrix(m4);
+    }
+  }
+
+  // ---------- the course: built in course coordinates (x ahead from the start line, y to the left) ----------
+  const course = new THREE.Group(); scene.add(course);
+  const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.75, ...extra });
+  function box(w, d, h, mat, x, y, z) { return mesh(new THREE.BoxGeometry(w, d, h), mat, [x, y, z]); }
+  function post(r, h, mat, x, y) { const m = mesh(new THREE.CylinderGeometry(r, r, h, 20), mat, [x, y, h / 2], [Math.PI / 2, 0, 0]); return m; }
+  function decal(text, w, h, color = "#ffffff") {   // text painted on the floor, reading toward the castle
+    const c = document.createElement("canvas"); c.width = 512; c.height = Math.round(512 * h / w);
+    const g = c.getContext("2d");
+    g.fillStyle = color; g.font = `800 ${Math.round(c.height * 0.72)}px Archivo, Arial, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(text, c.width / 2, c.height / 2 + c.height * 0.04);
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
+    m.rotation.z = -Math.PI / 2; m.renderOrder = 1; return m;
+  }
+  const at = (obj, x, y, z = 0.003) => { obj.position.set(x, y, z); return obj; };
+  function station(s) {
+    const g = new THREE.Group(), white = std("#f4f4f0"), orange = std("#e3620b"), paint = std("#f4f4f0", { roughness: 0.9 });
+    if (s.kind === "sprint") {
+      const len = s.end[0] - s.start[0], cx = (s.start[0] + s.end[0]) / 2;
+      g.add(box(len, 0.05, 0.006, paint, cx, s.start[1] + 0.5, 0.003), box(len, 0.05, 0.006, paint, cx, s.start[1] - 0.5, 0.003));
+      g.add(box(0.08, 1.0, 0.006, std("#2f8a4c"), s.start[0], s.start[1], 0.004), box(0.08, 1.0, 0.006, std("#c4372f"), s.end[0], s.end[1], 0.004));
+      g.add(at(decal("RUN", 0.9, 0.45, "#e3620b"), s.start[0] - 0.55, s.start[1]));
+      for (const y of [0.5, -0.5]) { g.add(post(0.025, 0.7, orange, s.end[0], s.end[1] + y)); }
+    } else if (s.kind === "slalom") {
+      s.gates.forEach(([x, y], k) => {
+        for (const side of [0.55, -0.55]) {
+          g.add(post(0.03, 1.1, k % 2 ? white : orange, x, y + side));
+          g.add(at(mesh(new THREE.SphereGeometry(0.05, 16, 12), k % 2 ? orange : white), x, y + side, 1.12));
+        }
+      });
+      g.add(at(decal("WEAVE", 1.2, 0.4, "#e3620b"), s.gates[0][0] - 1.0, s.gates[0][1]));
+    } else if (s.kind === "bridge") {
+      const len = s.end[0] - s.start[0], cx = (s.start[0] + s.end[0]) / 2;
+      g.add(at(mesh(new THREE.PlaneGeometry(len + 0.6, 2.6), std("#1f6fc4", { transparent: true, opacity: 0.95, roughness: 0.12, metalness: 0.15 })), cx, s.start[1], 0.002));
+      g.add(box(len + 0.6, 0.6, 0.008, std("#a0703c", { roughness: 0.9 }), cx, s.start[1], 0.005));
+      for (let k = 0; k <= len + 0.6; k += 0.4) g.add(box(0.015, 0.6, 0.009, std("#7b5229"), s.start[0] - 0.3 + k, s.start[1], 0.0052));
+      g.add(at(decal("SLOWLY", 1.2, 0.4, "#3d8fd6"), s.start[0] - 0.9, s.start[1]));
+    } else if (s.kind === "sit" || s.kind === "lie") {
+      const [x, y] = s.end, col = s.kind === "sit" ? "#e3620b" : "#2f6fb5";
+      if (s.kind === "lie") g.add(box(1.1, 0.8, 0.01, std(col, { roughness: 0.95 }), x, y, 0.005));
+      else for (const [dx, dy, w, d] of [[0, 0.5, 1.04, 0.05], [0, -0.5, 1.04, 0.05], [0.5, 0, 0.05, 1.0], [-0.5, 0, 0.05, 1.0]]) g.add(box(w, d, 0.006, std(col), x + dx, y + dy, 0.003));
+      g.add(at(decal(s.kind === "sit" ? "SIT" : "LIE", 0.8, 0.4, col), x - 0.95, y));
+    } else if (s.kind === "gate") {
+      const [x, y] = s.end, stone = std("#d8d2c4", { roughness: 0.9 }), dark = std("#b9b1a1", { roughness: 0.9 }), roof = std("#c4372f");
+      const X = x + 1.0;
+      for (const side of [1.25, -1.25]) {
+        g.add(post(0.42, 2.6, stone, X, y + side));
+        for (let a = 0; a < 8; a++) g.add(box(0.14, 0.14, 0.18, dark, X + 0.38 * Math.cos(a * Math.PI / 4), y + side + 0.38 * Math.sin(a * Math.PI / 4), 2.68));
+        g.add(at(mesh(new THREE.ConeGeometry(0.5, 0.7, 24), roof, null, [Math.PI / 2, 0, 0]), X, y + side, 3.1));
+        const flag = mesh(new THREE.PlaneGeometry(0.42, 0.26), std("#e3620b", { side: THREE.DoubleSide }), [X + 0.22, y + side, 3.88], [Math.PI / 2, 0, 0]);
+        g.add(flag, at(post(0.015, 0.7, dark, 0, 0), X, y + side, 3.65));
+      }
+      g.add(box(0.4, 0.9, 2.0, stone, X, y + 0.75, 1.0), box(0.4, 0.9, 2.0, stone, X, y - 0.75, 1.0), box(0.4, 0.6, 0.7, stone, X, y, 1.65));
+      for (let k = -1; k <= 1; k++) g.add(box(0.36, 0.2, 0.2, dark, X, y + k * 0.8, 2.1));
+      g.add(at(decal("HOME", 1.0, 0.4, "#c4372f"), x - 0.9, y));
+    }
+    g.scale.set(1, 1, 0.001); g.visible = false; g.userData.kind = s.kind;
+    g.userData.x0 = s.kind === "slalom" ? s.gates[0][0] : s.start[0];
+    return g;
+  }
+  let stationGroups = [];
+  function buildCourse() {
+    while (course.children.length) course.remove(course.children[0]);
+    course.position.set(game.origin[0], game.origin[1], 0); course.rotation.set(0, 0, game.yaw0);
+    course.add(box(0.06, 1.2, 0.006, std("#f4f4f0"), 0.6, 0, 0.003), at(decal("START", 1.1, 0.42, "#2f8a4c"), 0.0, 0));
+    stationGroups = game.castle.stations.map((s) => { const g = station(s); course.add(g); return g; });
+  }
+  function growCourse(dt) {   // each station builds itself out of the ground as Bolt comes near
+    const x = game.local()[0];
+    for (const g of stationGroups) {
+      if (!g.visible && g.userData.x0 - x < 7.5) { g.visible = true; g.userData.t = 0; }
+      if (g.visible && g.scale.z < 1) { g.userData.t += dt; g.scale.z = reduced ? 1 : Math.min(1, 0.001 + g.userData.t / 0.7); }
+    }
+  }
+
+  // ---------- the game ----------
+  let lib, rules, bundle, bolt = null, game = null, acc = 0, playing = true, seen = 0, bannerUntil = 0, ended = false;
+  const SHOUT_BUTTONS = [["sit", "Sit!"], ["lie", "Lie down!"], ["still", "Freeze!"]];
+  SHOUT_BUTTONS.forEach(([cmd, label]) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.dataset.cmd = cmd;
+    b.addEventListener("click", () => { if (game && game.phase === "run") game.shoutNow(cmd); });
+    $("shouts").append(b);
+  });
+  function banner(text, kind) {
+    const el = $("banner"); el.textContent = text; el.className = `banner show ${kind === "good" ? "good" : kind === "bad" ? "bad" : ""}`;
+    bannerUntil = performance.now() + (kind === "shout" ? 1600 : 1300);
+  }
+  function renderCourse() {
+    const items = game.castle.stations.map((s, i) => {
+      const r = game.results.filter((x) => x.kind !== "shout")[i];
+      const cls = r ? (r.passed ? "pass" : "fail") : i === game.index && !game.over ? "now" : "";
+      return `<li class="${cls}">${r ? (r.passed ? "✓ " : "✗ ") : ""}${s.title}</li>`;
+    });
+    $("course").innerHTML = items.join("");
+  }
+  function log(e) {
+    const li = document.createElement("li");
+    li.innerHTML = `<time>${e.t.toFixed(1)} s</time><span class="${e.kind}"></span>`;
+    li.lastChild.textContent = e.text;
+    const list = $("log"); if (list.firstElementChild && list.firstElementChild.classList.contains("muted")) list.innerHTML = "";
+    list.prepend(li); while (list.children.length > 12) list.lastChild.remove();
+  }
+  function newGame() {
+    game = new rules.Game(bolt, (Math.random() * 1e9) >>> 0, bundle.start);
+    buildCourse(); seen = 0; acc = 0; ended = false; playing = true; $("pause").textContent = "Pause";
+    $("result").hidden = true; $("log").innerHTML = ""; renderCourse(); resetView();
+    banner("READY…", "info");
+  }
+  function endCard() {
+    const won = game.phase === "finished";
+    $("rLabel").textContent = won ? "Castle reached" : "Out!";
+    $("rTitle").textContent = won ? "BOLT MADE IT!" : "ELIMINATED!";
+    $("rScore").textContent = `${game.score} points · ${game.t.toFixed(0)} s`;
+    $("rList").innerHTML = game.results.map((r) => `<li class="${r.passed ? "" : "muted"}">${r.passed ? "✓" : "✗"} ${r.title}${r.note ? " · " + r.note : ""}</li>`).join("")
+      + (won ? "" : `<li class="muted">Fell during: ${game.shout ? "a shout" : game.station.title}</li>`);
+    $("result").hidden = false;
+  }
+  function resetView() {
+    const w = bolt.where(), c = Math.cos(game.yaw0), s = Math.sin(game.yaw0);
+    const target = new THREE.Vector3(w.x + 1.6 * c, w.y + 1.6 * s, 0.5);
+    camera.position.set(target.x - 5.2 * c + 2.6 * s, target.y - 5.2 * s - 2.6 * c, 3.4);
+    controls.target.copy(target); controls.update(); lastBolt = { x: w.x, y: w.y };
+  }
+  let lastBolt = null;
+  function follow() {   // keep the view on Bolt, whatever angle the viewer turned it to
+    const w = bolt.where();
+    if (lastBolt) { const dx = w.x - lastBolt.x, dy = w.y - lastBolt.y; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy; }
+    lastBolt = { x: w.x, y: w.y };
+    if (grid) grid.position.set(Math.round(w.x / 0.5) * 0.5, Math.round(w.y / 0.5) * 0.5, 0.0004);
+    sun.position.set(w.x + 4, w.y - 5.6, 10.4); sun.target.position.set(w.x, w.y, 0);
+  }
+  const DOING = { stand: "standing", walk: "walking", sit: "sitting", lie: "lying" };
+  function hud() {
+    const s = game.shout ? { title: `Guard: ${rules.SHOUTS[game.shout.cmd]}`, how: "Obey within 5 s and hold it for 2 s" } : game.over ? null : game.station;
+    $("hStation").textContent = game.phase === "ready" ? "Get ready" : s ? s.title : game.phase === "finished" ? "Castle reached!" : "Out!";
+    $("hHow").textContent = game.phase === "ready" ? "The course is being built…" : s ? s.how : "";
+    $("hScore").textContent = String(game.score);
+    $("hTime").textContent = `${game.t.toFixed(1)} s`;
+    const v = bolt.data.qvel, c = game.cmd.command;
+    $("hDoing").textContent = c === "walk" ? `${Math.hypot(v[0], v[1]) > 0.8 ? "running" : "walking"} ${Math.hypot(v[0], v[1]).toFixed(1)} m/s` : DOING[c];
+    for (const b of $("shouts").children) b.disabled = game.phase !== "run" || !!game.shout || game.over;
+  }
+  async function boot() {
+    try {
+      const [l, r, m, b] = await Promise.all([import("./live.js"), import("./game.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_live.json").then((x) => x.json())]);
+      lib = l; rules = r; bundle = b;
+      bolt = new lib.Bolt(await m.default(), bundle);
+    } catch (e) {
+      console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
+    }
+    buildDog(bundle.geoms); newGame(); $("loading").hidden = true;
+  }
+  $("new").addEventListener("click", () => bolt && newGame());
+  $("again").addEventListener("click", () => bolt && newGame());
+  $("pause").addEventListener("click", () => { playing = !playing; $("pause").textContent = playing ? "Pause" : "Play"; });
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stageEl);
+  const retheme = () => { colors(); makeGrid(); };
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (game) {
+      const wasReady = game.phase === "ready";
+      if (playing && !game.over) {
+        acc += dt;
+        let n = 0;
+        while (acc >= bolt.dt && n < 20 && !game.over) { game.step(); acc -= bolt.dt; n++; }
+        if (n === 20) acc = 0;
+      }
+      if (wasReady && game.phase === "run") banner("GO!", "good");
+      while (seen < game.events.length) {
+        const e = game.events[seen++]; log(e);
+        if (e.kind !== "station") banner(e.text.length > 22 ? e.text.split(":")[0].split("!")[0] + (e.kind === "bad" ? "" : "!") : e.text, e.kind);
+        renderCourse();
+      }
+      if (game.over && !ended) { ended = true; renderCourse(); setTimeout(endCard, 1400); }
+      if (now > bannerUntil) $("banner").classList.remove("show");
+      growCourse(dt); drawBolt(); follow(); hud();
+      const s = now / 1000, cmd = game.cmd.command;
+      if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (cmd === "walk" ? 9 : 5));
+      eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));
+    }
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  colors(); makeGrid(24, 0.5); setReach(5); resize(); requestAnimationFrame(tick); boot();
+})();
+</script>
