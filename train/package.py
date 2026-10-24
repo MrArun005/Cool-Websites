@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from bolt_env import ACTION_SCALE, COMMANDS, MODEL, STAND_POSE, TARGETS, BoltEnv
+from bolt_env import ACTION_SCALE, COMMANDS, MODEL, STANCES, STAND_POSE, TARGETS, BoltEnv
 from evaluate import Policy, evaluate
 from watch import read_curve
 
@@ -109,7 +109,7 @@ def model_card(name, facts, exam, curve, onnx_err):
     if facts.get("gait_generator", {}).get("used"):
         g = facts["gait_generator"]
         gait_note = (f"\n**This brain walks on top of a built-in trot.** While walking, motor targets are\n"
-                     f"`reference_gait.trot(phase, hip_swing=0.15, knee_lift=0.3)` + {g['residual_scale']} × action_scale × action,\n"
+                     f"`reference_gait.trot(phase, hip_swing=0.15, knee_lift=0.3, base=<{g.get('stance') or 'crouch'} stance>)` + {g['residual_scale']} × action_scale × action,\n"
                      f"where phase = 2π × 2 Hz × time: the same clock the brain sees in its last two inputs (sin, cos).\n"
                      f"Without the trot underneath, this brain will not walk.\n")
     skills = facts.get("skills") or COMMANDS
@@ -167,7 +167,7 @@ def main():
     ap.add_argument("--episodes", type=int, default=20, help="exam tries per command")
     ap.add_argument("--rollouts", type=int, default=5, help="recorded episodes per command")
     ap.add_argument("--skills", nargs="+", help="the commands this brain was trained for")
-    ap.add_argument("--gait-generator", action="store_true", help="the brain was trained on top of the reference trot")
+    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
     args = ap.parse_args()
 
     run, out = Path(args.run), Path(args.out) / args.name
@@ -209,8 +209,12 @@ def main():
         obs_layout=[{"name": n, "size": s} for n, s in OBS_LAYOUT],
         joints=JOINTS, stand_pose=STAND_POSE.round(4).tolist(), action_scale=ACTION_SCALE.tolist(),
         commands=COMMANDS, command_targets=TARGETS, skills=args.skills or COMMANDS,
-        gait_generator=dict(used=bool(args.gait_generator), residual_scale=BoltEnv.RESIDUAL_SCALE,
-                            how="while walking: motor targets = reference_gait.trot(phase, 0.15, 0.3) + residual_scale x action_scale x action")
+        gait_generator=dict(used=bool(args.gait_generator), stance=args.gait_generator,
+                            stance_pose=STANCES[args.gait_generator].round(4).tolist() if args.gait_generator else None,
+                            residual_scale=BoltEnv.RESIDUAL_SCALE,
+                            how="while walking: motor targets = reference_gait.trot(phase, 0.15, 0.3, base=stance_pose) "
+                                "+ residual_scale x action_scale x action"
+                                + ("; eased in from stand_pose over the first 0.5 s of walking" if args.gait_generator == "tall" else ""))
         if args.gait_generator else dict(used=False),
         onnx_max_difference=onnx_err,
     )

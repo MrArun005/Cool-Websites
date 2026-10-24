@@ -112,3 +112,15 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   body is scaled by the physics rules (`scale_robot.py`, `BoltEnv(scale=0.25)`).
 - On 4 CPU cores we get ~6M steps an hour; GPU teams train a walk with ~100M steps. Walking from
   scratch is slow here; imitating a reference gait is the next tool if run 3 doesn't walk.
+- Runs 5-6 (walk on the built-in trot): legs coordinated from the first step and the exam said
+  100% from 500k steps, but the 3D replay (`train/gaitlab/`) showed what the exam missed: the
+  walk was a Z-shaped crouch, the 500k brain put a knee on the floor ~15% of the time, and the
+  2M brain fell 9 times in 10 when it took over from the standing brain. **An exam that a bad
+  walk can pass is the real bug; fix the exam before training more.**
+- Run 7 fixes: a taller, dog-like stance under the trot (front legs straighter than rear; held
+  open-loop: body 40 cm, knees 19 cm up, no scrapes, faster, less motor force than the crouch),
+  a reward cost per leg with a knee/shin/thigh on the floor, an eased start from the standing
+  pose at a random point in the stride, and an exam that fails knee contact, crouching, and
+  half its walks start as a hand-over from standing. `supervise.sh` keeps the run going
+  (restarts from the latest checkpoint after any crash) with early stopping turned off at the
+  owner's request; the best checkpoint is still kept in `runs/<name>/best/`.

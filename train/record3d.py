@@ -121,7 +121,7 @@ def main():
                     help="name=folder with policy.zip + vecnormalize.pkl (packaged model or run folder)")
     ap.add_argument("--script", nargs="+", required=True, help="command:seconds:brain steps, played in order")
     ap.add_argument("--seed", type=int, default=50)
-    ap.add_argument("--gait-generator", action="store_true", help="the walk brain runs on the built-in trot")
+    ap.add_argument("--gait-generator", nargs="?", const="crouch", default=None, choices=["crouch", "tall"], help="the walk runs on the built-in trot, around this stance (no value = crouch, as in runs 5-6)")
     ap.add_argument("--label", default="")
     ap.add_argument("-o", "--out", required=True)
     args = ap.parse_args()

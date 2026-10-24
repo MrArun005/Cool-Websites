@@ -23,9 +23,12 @@ PAIR = np.array([0, 1, 1, 0])   # FL, FR, RL, RR: which half of the cycle each l
 KNEE_SIGN = np.array([-1, -1, 1, 1])  # bending more means more negative on front knees
 
 
-def trot(phase, hip_swing=0.25, knee_lift=0.45):
-    """Joint targets and planned foot contacts at a gait phase (radians, 2π per cycle)."""
-    q = STAND_POSE.copy()
+def trot(phase, hip_swing=0.25, knee_lift=0.45, base=None):
+    """Joint targets and planned foot contacts at a gait phase (radians, 2π per cycle).
+
+    base: the stance the legs swing around (default: the standing pose).
+    """
+    q = (STAND_POSE if base is None else base).copy()
     stance = np.zeros(4)
     for leg in range(4):
         p = phase + np.pi * PAIR[leg]

@@ -44,10 +44,18 @@ TARGETS = {
 }
 ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)  # radians per unit action: abd, hip, knee
 
+# What the built-in trot is built around (gait_generator="crouch" or "tall"). "crouch" is the
+# standing pose, a Z-shaped crouch with knees ~14 cm up: the walk looked like crawling and the
+# brain pushed knees onto the floor (runs 5-6). "tall" is a dog-like stance, front legs straighter
+# than rear; held open-loop it carries the body at ~40 cm with knees ~19 cm up, trots faster
+# with less motor force, and scrapes nothing (measured, see docs/LESSONS.md).
+STANCES = {"crouch": STAND_POSE, "tall": pose(0.35, 0.7, 0.55, 1.1)}
+WALK_HEIGHT = {None: TARGETS["walk"]["height"], "crouch": TARGETS["walk"]["height"], "tall": 0.40}
 
-def trot(phase):
+
+def trot(phase, stance="crouch"):
     from reference_gait import trot as reference_trot  # imported late: reference_gait imports this module
-    return reference_trot(phase, hip_swing=0.15, knee_lift=0.3)
+    return reference_trot(phase, hip_swing=0.15, knee_lift=0.3, base=STANCES[stance])
 FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 
 
@@ -59,7 +67,10 @@ class BoltEnv(gym.Env):
         # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
         # brain only adds corrections on top (residual control, as in "policies modulating trajectory
         # generators"). The legs are coordinated from the first step instead of having to discover it.
-        self.gait_generator = gait_generator
+        # True means "crouch", the stance runs 5-6 were trained on; new brains use "tall".
+        self.stance = "crouch" if gait_generator is True else (gait_generator or None)
+        self.gait_generator = bool(self.stance)
+        self.walk_height = WALK_HEIGHT[self.stance]
         # skills: which commands this brain practises, e.g. ["walk"] for a walk-only brain. The
         # observation layout always keeps all commands, so every brain can be swapped in instantly.
         self.skills = [COMMANDS.index(c) for c in (skills or COMMANDS)]
@@ -83,6 +94,7 @@ class BoltEnv(gym.Env):
         self.forced_command = None
         self.rng = np.random.default_rng(seed)
         self.total_steps = 0  # this env's steps across all episodes (drives the walk curriculum)
+        self.t, self.command, self.walk_since, self.phase0 = 0, 0, 0, 0.0
 
         m = self.model
         self.lo, self.hi = m.actuator_ctrlrange[:, 0].copy(), m.actuator_ctrlrange[:, 1].copy()
@@ -91,6 +103,11 @@ class BoltEnv(gym.Env):
         self.nominal_friction = m.geom_friction[:, 0].copy()
         self.torso = m.body("torso").id
         self.foot_ids = [m.geom(f).id for f in FEET]
+        self.floor = m.geom("floor").id
+        # which leg each geom belongs to (0-3), or -1 for the body (torso, head, snout)
+        names = [mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, b) or "" for b in m.geom_bodyid]
+        self.geom_leg = np.array([["FL", "FR", "RL", "RR"].index(n[:2]) if n[:2] in ("FL", "FR", "RL", "RR") else -1
+                                  for n in names])
 
         self.action_space = gym.spaces.Box(-1.0, 1.0, (12,), np.float32)
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (52,), np.float32)
@@ -102,11 +119,19 @@ class BoltEnv(gym.Env):
         return self.gait_generator and COMMANDS[self.command] == "walk"
 
     def gait_phase(self):
-        return 2 * np.pi * 2.0 * self.t * self.dt / self.ts  # 2 Hz gait clock in full-size time
+        return 2 * np.pi * 2.0 * self.t * self.dt / self.ts + self.phase0  # 2 Hz gait clock in full-size time
 
     def base_pose(self):
         """What the motors do when the brain outputs zero."""
-        return trot(self.gait_phase())[0] if self.walking_on_generator() else STAND_POSE
+        if not self.walking_on_generator():
+            return STAND_POSE
+        q = trot(self.gait_phase(), self.stance)[0]
+        if self.stance == "tall":
+            # Ease from the standing pose into the trot over half a second, so a walk can start
+            # from whatever the standing brain left behind (runs 5-6 jumped straight in and the
+            # 2M brain fell 9 times in 10 when taking over from the standing brain).
+            q = STAND_POSE + min(1.0, (self.t - self.walk_since) / 25) * (q - STAND_POSE)
+        return q
 
     def action_scale(self):
         return ACTION_SCALE * (self.RESIDUAL_SCALE if self.walking_on_generator() else 1.0)
@@ -120,7 +145,30 @@ class BoltEnv(gym.Env):
 
     def set_command(self, name):
         """Give the dog a command, e.g. env.set_command("sit")."""
-        self.command = COMMANDS.index(name)
+        self._switch(COMMANDS.index(name))
+
+    def _switch(self, command):
+        if command != self.command and COMMANDS[command] == "walk":
+            self.walk_since = self.t
+        self.command = command
+
+    def leg_scrapes(self):
+        """How many legs have a knee, shin or thigh on the floor (body on the floor counts as one).
+
+        The paw is a ball that sinks a few mm into the soft floor, so the shin's tip right above it
+        touches too; only contact more than 3 cm from the paw counts.
+        """
+        d, legs = self.data, set()
+        for c in d.contact[:d.ncon]:
+            if self.floor not in (c.geom1, c.geom2):
+                continue
+            g = c.geom2 if c.geom1 == self.floor else c.geom1
+            leg = self.geom_leg[g]
+            if leg < 0:
+                legs.add("body")
+            elif g != self.foot_ids[leg] and np.linalg.norm(c.pos - d.geom_xpos[self.foot_ids[leg]]) > 0.03 * self.s:
+                legs.add(leg)
+        return len(legs)
 
     def _rotation(self):
         return self.data.xmat[self.torso].reshape(3, 3)
@@ -141,7 +189,7 @@ class BoltEnv(gym.Env):
         d, R = self.data, self._rotation()
         gravity = R.T @ np.array([0, 0, -1.0])
         v_body = R.T @ d.qvel[0:3] / self.ts
-        clock = 2 * np.pi * 2.0 * self.t * self.dt / self.ts  # 2 Hz gait clock (full-size time)
+        clock = self.gait_phase()  # 2 Hz gait clock (full-size time)
         cmd = np.zeros(len(COMMANDS)); cmd[self.command] = 1
         obs = np.concatenate([
             gravity, d.qvel[3:6] * self.ts * 0.25, v_body, [d.qpos[2] / self.s],
@@ -172,6 +220,16 @@ class BoltEnv(gym.Env):
         d.qpos[2] = (0.14 if start_lying else 0.33) * self.s
         yaw = self.rng.uniform(-np.pi, np.pi)
         d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+        self.phase0 = 0.0
+        if self.stance == "tall" and self.randomize:
+            # start anywhere in the stride, slightly tipped, like a hand-over from another brain
+            self.phase0 = self.rng.uniform(0, 2 * np.pi)
+            tip = self.rng.normal(0, 0.04, 2)
+            q = np.array([np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)])
+            for axis, angle in ((1, tip[0]), (2, tip[1])):  # small roll and pitch
+                r = np.zeros(4); r[0] = np.cos(angle / 2); r[axis] = np.sin(angle / 2)
+                out = np.zeros(4); mujoco.mju_mulQuat(out, q, r); q = out
+            d.qpos[3:7] = q
         d.qpos[7:] = np.clip(pose + self.rng.normal(0, 0.05, 12), self.lo, self.hi)
         d.ctrl[:] = d.qpos[7:]
         mujoco.mj_forward(m, d)
@@ -179,6 +237,7 @@ class BoltEnv(gym.Env):
         self.t = 0
         self.last_action = np.zeros(12)
         self.command = COMMANDS.index(self.forced_command) if self.forced_command else self.rng.choice(self.skills)
+        self.walk_since = 0
         return self._obs(), {}
 
     def step(self, action):
@@ -194,7 +253,7 @@ class BoltEnv(gym.Env):
         if fell:
             reward -= 5.0  # falling ends the attempt; a huge penalty made "never try anything" win
         if self.forced_command is None and self.t % self.command_period == 0:
-            self.command = self.rng.choice(self.skills)  # new command, like a real owner would give
+            self._switch(self.rng.choice(self.skills))  # new command, like a real owner would give
         truncated = self.t >= self.max_steps
         return self._obs(), float(reward), bool(fell), bool(truncated), info
 
@@ -207,6 +266,7 @@ class BoltEnv(gym.Env):
         """
         name = COMMANDS[self.command]
         goal, p = TARGETS[name], self.posture()
+        scrapes = self.leg_scrapes()
         feet = self.feet_on_ground()
         upright = np.exp(-(p["roll"] / 0.15) ** 2)
 
@@ -214,8 +274,7 @@ class BoltEnv(gym.Env):
             # Imitate the reference trot (reference_gait.py): match its joint angles and its
             # foot contacts at this moment of the stride. Following an example is far faster to
             # learn than discovering walking from scratch (Disney BDX, Open Duck Mini).
-            phase = 2 * np.pi * 2.0 * self.t * self.dt / self.ts  # 2 Hz gait clock, same as the obs
-            q_ref, stance_ref = trot(phase)
+            q_ref, stance_ref = trot(self.gait_phase(), self.stance or "crouch")  # same clock as the obs
             gait = np.mean(feet == stance_ref)
             # Width matters: at 0.05 a dog halfway to the trot scored ~0, so there was no
             # "warmer, warmer" signal. At 0.3, halfway earns about a third.
@@ -225,9 +284,10 @@ class BoltEnv(gym.Env):
             target = self.walk_speed()
             terms = [
                 np.exp(-((p["vx"] - target) / 0.35) ** 2) * np.exp(-(p["vy"] / 0.25) ** 2),
-                np.exp(-((p["height"] - goal["height"]) / 0.06) ** 2),
+                np.exp(-((p["height"] - self.walk_height) / 0.06) ** 2),
                 np.exp(-(p["pitch"] / 0.25) ** 2) * upright,
                 np.exp(-(p["yaw_rate"] / 0.6) ** 2),
+                np.exp(-scrapes),  # each leg with a knee, shin or thigh on the floor costs ~2/3
                 0.3 + 0.7 * gait,
                 0.2 + 0.8 * imitation,
             ]
@@ -251,7 +311,7 @@ class BoltEnv(gym.Env):
         reward -= 0.02 * np.sum((action - self.last_action) ** 2)  # smooth, not twitchy
         reward -= 2e-4 * np.sum(torque ** 2)                        # don't waste energy
         reward -= 1e-4 * np.sum((self.data.qvel[6:] * self.ts) ** 2)
-        return reward * 0.5, dict(command=name, feet=feet, **p)
+        return reward * 0.5, dict(command=name, feet=feet, scrape=scrapes, walk_height=self.walk_height, **p)
 
     def render(self):
         if self.renderer is None:

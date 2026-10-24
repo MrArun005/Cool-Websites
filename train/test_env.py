@@ -160,5 +160,64 @@ class GaitGeneratorTest(unittest.TestCase):
         np.testing.assert_allclose(env.action_scale(), ACTION_SCALE)
 
 
+
+class TallWalkTest(unittest.TestCase):
+    """Run 7 fixes: tall stance, no knees on the floor, hand-over from the standing brain."""
+
+    def test_do_nothing_brain_trots_tall_without_scraping(self):
+        for seed in range(3):
+            env = BoltEnv(randomize=True, max_steps=10_000, skills=["walk"], gait_generator="tall")
+            env.forced_command = "walk"
+            env.reset(seed=seed)
+            hs = []
+            for t in range(300):
+                _, _, fell, _, info = env.step(np.zeros(12))
+                self.assertFalse(fell)
+                if t >= 25:  # after landing from the slightly tipped start
+                    self.assertEqual(info["scrape"], 0)
+                if t > 100:
+                    hs.append(info["height"])
+            self.assertAlmostEqual(np.mean(hs), info["walk_height"], delta=0.02)
+
+    def test_knee_on_the_floor_is_detected(self):
+        env = BoltEnv(randomize=False)
+        env.reset(seed=0)
+        self.assertEqual(env.leg_scrapes(), 0)  # standing on paws
+        env.data.qpos[2] = 0.12                  # body dropped: knees and thighs into the floor
+        mujoco.mj_forward(env.model, env.data)
+        self.assertGreater(env.leg_scrapes(), 0)
+
+    def test_knee_on_the_floor_pays_less(self):
+        env = BoltEnv(randomize=False, gait_generator="tall")
+        env.forced_command = "walk"
+        env.reset(seed=0)
+        env.total_steps = env.walk_ramp_steps
+        base = env.posture()
+        env.posture = lambda: dict(base, vx=0.5, vy=0.0, height=0.4, pitch=0.0, roll=0.0, yaw_rate=0.0)
+        clean = env._reward(np.zeros(12))[0]      # walking well, all paws clean
+        env.leg_scrapes = lambda: 1
+        scraped = env._reward(np.zeros(12))[0]
+        self.assertLess(scraped, clean - 0.1, (clean, scraped))
+
+    def test_exam_fails_a_walk_that_drags_a_knee(self):
+        good = dict(height=0.4, walk_height=0.4, pitch=0.0, roll=0.0, vx=0.5, vy=0.0, up=1.0,
+                    feet=np.array([0.5, 0.5, 0.5, 0.5]), scrape=0)
+        self.assertTrue(passed("walk", [good] * 80))
+        self.assertFalse(passed("walk", [good] * 70 + [dict(good, scrape=1)] * 10))
+        self.assertFalse(passed("walk", [dict(good, height=0.3)] * 80))  # crawling in a crouch
+
+    def test_walk_eases_in_from_standing(self):
+        env = BoltEnv(randomize=False, gait_generator="tall")
+        env.forced_command = "stand"
+        env.reset(seed=0)
+        for _ in range(30):
+            env.step(np.zeros(12))
+        env.set_command("walk")
+        np.testing.assert_allclose(env.base_pose(), STAND_POSE)  # no jump at the hand-over
+        for _ in range(30):
+            env.step(np.zeros(12))
+        self.assertGreater(np.abs(env.base_pose() - STAND_POSE).max(), 0.3)  # fully into the tall trot
+
+
 if __name__ == "__main__":
     unittest.main()
