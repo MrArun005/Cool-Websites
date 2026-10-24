@@ -86,7 +86,9 @@ class TestRuntime(unittest.TestCase):
         rt = rtm.DuckRuntime(rtm.SimBackend(cfg["servo_names"], model=env.model, data=env.data),
                              brains=brains, config=cfg, log=None)
         self.assertEqual(rt.skill, "stand")
-        rt.command("sleep")
+        rt.command("sleep")                                   # squat first, then sit back after 2 s
+        self.assertEqual((rt.skill, rt.obs_command), ("squat", "sit"))
+        rt.run(2.1)
         self.assertEqual((rt.skill, rt.obs_command), ("sit", "sit"))
         rt.tick()
         rt.command("wake")                                    # sit_to_stand, then stand after 3 s

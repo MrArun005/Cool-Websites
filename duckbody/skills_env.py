@@ -8,7 +8,8 @@ Tasks (start → command):
   walk           standing → walk       any direction and turn rate (10%: walk in place)
   run            standing → run        fast forward, 2.6 Hz gait clock
   squat          standing → sit        fold into the deepest crouch on its feet and hold it
-  sit            standing → sit        really sit: settle back onto belly and thighs and rest there
+  sit            squatting → sit       really sit: settle back onto belly and thighs and rest there
+                                       (chained after squat on the robot)
                                        (sleep pose); measured by poses.py, stored in model/poses_<size>.json
   sit_to_stand   sitting → stand       wake up and stand
   lie            standing → lie        lower the body onto the floor on its belly, gently
@@ -103,11 +104,13 @@ class SkillEnv(DuckEnv):
             d.qpos[:] = q
             d.ctrl[:] = q[self.qadr]
             mujoco.mj_forward(m, d)
-        if task == "sit" and self.sit_q is not None and self.practice:
-            # Practise the hard end of the trick too (LESSONS §5): 30% of episodes start squatting,
-            # 20% already seated (learn to stay put without rolling onto its back).
-            u = r.random()
-            start = self.crouch_q if u < 0.3 else (self.sit_q if u < 0.5 else None)
+        if task == "sit" and self.sit_q is not None:
+            # Sit is chained after squat (the robot runs the squat brain, then this one): episodes
+            # start squatting; in training 30% start already seated, to learn to stay put without
+            # rolling onto its back. (From standing, standing still was the safe choice it never left.)
+            u = r.random() if self.practice else 0.0
+            start = self.crouch_q if u < 0.7 else self.sit_q
+            u = 0.0 if u < 0.7 else 0.5
             if start is not None:
                 m, d = self.model, self.data
                 q = start.copy()

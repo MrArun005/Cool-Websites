@@ -40,7 +40,8 @@ SOLES = ["left_foot_bottom_tpu", "right_foot_bottom_tpu"]
 PLANS = {
     "stand": [("stand", None)], "idle": [("stand", None)],
     "walk": [("walk", None)], "run": [("run", None)],
-    "sit": [("sit", None)], "sleep": [("sit", None)], "squat": [("squat", None)],
+    # sit is chained: squat first, then settle back onto belly and thighs (how it was trained)
+    "sit": [("squat", 2.0), ("sit", None)], "sleep": [("squat", 2.0), ("sit", None)], "squat": [("squat", None)],
     "wake": [("sit_to_stand", 3.0), ("stand", None)],
     "lie": [("lie", None)],
     "get up": [("get_up", 6.0), ("stand", None)],
