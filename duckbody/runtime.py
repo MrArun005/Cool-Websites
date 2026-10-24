@@ -42,7 +42,10 @@ PLANS = {
     "walk": [("walk", None)], "run": [("run", None)],
     # sit is chained: squat first, then settle back onto belly and thighs (how it was trained)
     # this body sits stably as swag (one leg out); the symmetric sit rolled it onto its back
-    "sit": [("squat", 2.0), ("swag_sit", None)], "squat": [("squat", None)],
+    # sit: squat, then MoveBrain down into the perch (deep crouch on the soles; s2s_roundtrip.py: 20/20 sat and
+    # 20/20 stood back up on randomized bodies). The floor seats (swag, sit) cannot be stood up from.
+    "sit": [("squat", 2.0), ("pose:perch", None)], "squat": [("squat", None)],
+    "perch rise": [("pose:perch_rise", 2.3), ("stand", None)],
     # sleep in the squat: from the floor seat this body cannot stand back up (every push from the seat tips
     # it onto its back: the tail is on the floor, the weight behind the feet), from the squat it can
     "sleep": [("squat", None)],
@@ -85,6 +88,46 @@ class PoseBrain:
             return self.goal
         f = min(1.0, (self.rt.plan_t + 1) / self.n)
         return self.start + (self.goal - self.start) * f
+
+
+class MoveBrain(PoseBrain):
+    """Two-phase leg move with the soles kept flat (s2s_move.py, owner's design): lean the hips to `lean`
+    first (t1 s, knees kept), then move hips and knees to `goal` (t2 s); the ankles follow the flat-sole rule
+    (home rule + trunk pitch from the IMU gravity, sign -1) the whole time. Hip pitch is mirrored L/R: `lean`
+    is the LEFT value, the right hip gets the mirrored offset. Sit-down into the perch and the stand-up from it
+    both use it (s2s_roundtrip.py: 20/20 seated and 20/20 stood on randomized bodies)."""
+
+    def __init__(self, goal, rt, lean, t1, t2, sign=-1):
+        self.rt, self.goal, self.lean, self.t1, self.t2, self.sign = rt, np.asarray(goal, float), lean, t1, t2, sign
+        n = rt.names
+        self.leg = {k: [i for i, x in enumerate(n) if x.endswith(k)] for k in ("hip_pitch", "knee", "ankle")}
+        h, hp0 = rt.home, self.leg["hip_pitch"][0]
+        self.mirror = {i: (1.0 if j == 0 else float(np.sign(h[i] * h[hp0]) or 1.0)) for j, i in enumerate(self.leg["hip_pitch"])}
+        self.t0 = self.start = None
+
+    def begin(self):
+        self.t0, self.start = self.rt.steps, self.rt.targets.copy()
+
+    def __call__(self, obs):
+        rt, h = self.rt, self.rt.home
+        if self.t0 is None:
+            self.begin()
+        t = (rt.steps - self.t0) * rt.dt
+        g = obs[:3]
+        tilt = float(np.arctan2(g[0], -g[2]))
+        tgt = self.goal.copy() if t >= self.t1 + self.t2 else self.start.copy()
+        hp0 = self.leg["hip_pitch"][0]
+        for hp, kn, an in zip(self.leg["hip_pitch"], self.leg["knee"], self.leg["ankle"]):
+            h0, k0 = self.start[hp], self.start[kn]
+            hl = h[hp] + self.mirror[hp] * (self.lean - h[hp0])
+            if t < self.t1:
+                f = t / self.t1
+                tgt[hp], tgt[kn] = h0 + (hl - h0) * f, k0
+            elif t < self.t1 + self.t2:
+                f = (t - self.t1) / self.t2
+                tgt[hp], tgt[kn] = hl + (self.goal[hp] - hl) * f, k0 + (self.goal[kn] - k0) * f
+            tgt[an] = h[an] - self.mirror[hp] * (tgt[hp] - h[hp]) - (tgt[kn] - h[kn]) + self.sign * tilt
+        return np.clip((tgt[rt.pol] - h[rt.pol]) / rt.scale, -1, 1)
 
 
 OBS_COMMAND = {"swag_sit": "sit", "stand": "stand", "walk": "walk", "run": "run", "sit": "sit", "squat": "sit", "sit_to_stand": "stand",
@@ -276,6 +319,11 @@ class DuckRuntime:
                 if "ctrl" in v and k != "sit":
                     self.brains[f"pose:{k}"] = PoseBrain(v["ctrl"], self)
                     self.quiet.add(f"pose:{k}")
+                if k == "perch" and "sit" in v and "rise" in v:   # sit-down into the perch and the stand-up from it
+                    self.brains["pose:perch"] = MoveBrain(v["ctrl"], self, **v["sit"])
+                    r = dict(v["rise"])
+                    self.brains["pose:perch_rise"] = MoveBrain(self.home, self, r.pop("lean"), r.pop("t1"), r.pop("t2"), **r)
+                    self.quiet.add("pose:perch_rise")
         self.brains["pose:rise"] = PoseBrain(self.home, self, glide=1.0)
         self._start("stand")
 
@@ -287,6 +335,8 @@ class DuckRuntime:
             return self._say_log(f"unknown command {name!r}")
         if name == "wake" and self.mode in ("sleep", "squat"):
             name = "rise"
+        if name == "wake" and self.skill == "pose:perch" and "pose:perch_rise" in self.brains:
+            name = "perch rise"
         if name == "wake" and self.skill not in ("sit", "swag_sit", "squat", "sit_to_stand", "roll") and not self.skill.startswith("pose:"):
             name = "stand" if self.skill != "lie" else "get up"          # awake already / lying: get up
         if name == "get up" and (self.skill in ("sit", "swag_sit", "sit_to_stand") or self.skill.startswith("pose:")):
