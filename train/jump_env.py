@@ -116,6 +116,13 @@ class JumpEnv(BoltEnv):
             reward += 15.0 * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
             self.best_past = max(self.best_past, past.min())
             reward += 0.5 * np.clip(p["vx"], -0.5, 2.0) * upright
+            # tuck: a paw passing over the bar (within 12 cm of it) should be above it, with 3 cm to spare.
+            # At 4-5M it cleared and landed 11 times in 12 at 10-12 cm, but the trailing rear legs clipped
+            # the bar, so clean jumps stayed rare and the practice bar stuck at 10-12 cm.
+            over = np.abs(past) < 0.12
+            if over.any():
+                z = np.array([self.data.geom_xpos[f][2] for f in self.foot_ids])
+                reward += 3.0 * np.sum(np.clip(z[over] - (self.hurdle_h + 0.03), -0.1, 0.1))
             if past.min() > 0.08:  # all four paws past the bar: a little now, the rest for landing
                 self.cleared = just_cleared = True
                 self.clear_t = self.t
