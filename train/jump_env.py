@@ -16,7 +16,8 @@ Run 15b (paid for standing upright before the jump, bars from 20 cm) learned to 
 place: staying put paid steadily, trying risked touch and fall penalties. Run 15c's first 1M steps
 learned to launch (all paws up to 22 cm, 0.4 s in the air) but dived over and crashed every time: the
 clear bonus beat the fall penalty. So most of the bonus now waits for a landing: still upright 0.5 s
-after clearing.
+after clearing. By 2.5M it cleared 25 cm bars and landed, but touched the bar every time (sliding over
+its top), so touching now costs 5 at once and 1 per step, and only clean jumps earn the big bonuses.
 """
 import gymnasium as gym
 import mujoco
@@ -94,10 +95,11 @@ class JumpEnv(BoltEnv):
         d, R = self.data, self._rotation()
         p = self.posture()
         hits = self.hurdle_hits()
+        first_touch = hits > 0 and not self.touched
         self.touched |= hits > 0
         past = self.paws_past()
         upright = np.exp(-(p["roll"] / 0.4) ** 2) * np.exp(-(p["pitch"] / 0.6) ** 2)
-        reward = -0.3 * (hits > 0)
+        reward = -1.0 * (hits > 0) - 5.0 * first_touch   # touching the bar is a knocked bar
         just_cleared = False
         if not self.cleared:
             reward -= 0.1  # every moment still in front of the bar costs a little
@@ -107,11 +109,11 @@ class JumpEnv(BoltEnv):
             if past.min() > 0.08:  # all four paws past the bar: a little now, the rest for landing
                 self.cleared = just_cleared = True
                 self.clear_t = self.t
-                reward += 5.0 if not self.touched else 2.0
+                reward += 5.0 if not self.touched else 1.0
         else:  # landed: stand tall and still
             if not self.landed and self.t - self.clear_t >= 25 and R[2, 2] > 0.85 and p["height"] > 0.3:
                 self.landed = True   # still on its feet half a second after clearing: the real prize
-                reward += 12.0 if not self.touched else 4.0
+                reward += 12.0 if not self.touched else 1.0
             speed = np.hypot(p["vx"], p["vy"])
             reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2)
         reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 5e-5 * np.sum(d.actuator_force ** 2)
