@@ -3078,12 +3078,12 @@
   "owner_head_scale": 0.7,
   "total_mass_kg": {
    "microduck": 0.7372,
-   "hybrid": 0.7085
+   "hybrid": 0.7235
   },
   "head_mass_kg": {
    "microduck": 0.1888,
-   "hybrid": 0.16,
-   "diff_g": -28.8
+   "hybrid": 0.175,
+   "diff_g": -13.8
   },
   "head_com_world_STAND_m": {
    "microduck": [
@@ -3110,9 +3110,9 @@
     0.0003208
    ],
    "hybrid": [
-    0.000127,
-    0.0002154,
-    0.0002719
+    0.000139,
+    0.0002356,
+    0.0002974
    ]
   },
   "whole_robot_com_world_STAND_m": {
@@ -3122,14 +3122,14 @@
     0.1417
    ],
    "hybrid": [
-    -0.0009,
+    -0.0005,
     -0.0002,
-    0.1389
+    0.1411
    ],
    "diff_mm": [
-    -1.5,
+    -1.0,
     -0.2,
-    -2.8
+    -0.7
    ]
   },
   "owner_shell_offset_in_head_frame_mm": [
@@ -3212,12 +3212,12 @@
   "owner_head_scale": 0.7,
   "total_mass_kg": {
    "microduck": 0.7372,
-   "hybrid": 0.7085
+   "hybrid": 0.7235
   },
   "head_mass_kg": {
    "microduck": 0.1888,
-   "hybrid": 0.16,
-   "diff_g": -28.8
+   "hybrid": 0.175,
+   "diff_g": -13.8
   },
   "head_com_world_STAND_m": {
    "microduck": [
@@ -3244,9 +3244,9 @@
     0.0003208
    ],
    "hybrid": [
-    0.000127,
-    0.0002154,
-    0.0002719
+    0.000139,
+    0.0002356,
+    0.0002974
    ]
   },
   "whole_robot_com_world_STAND_m": {
@@ -3256,14 +3256,14 @@
     0.1417
    ],
    "hybrid": [
-    -0.0009,
+    -0.0005,
     -0.0002,
-    0.1389
+    0.1411
    ],
    "diff_mm": [
-    -1.5,
+    -1.0,
     -0.2,
-    -2.8
+    -0.7
    ]
   },
   "owner_shell_offset_in_head_frame_mm": [
@@ -3346,12 +3346,12 @@
   "owner_head_scale": 0.7,
   "total_mass_kg": {
    "microduck": 0.7372,
-   "hybrid": 0.7085
+   "hybrid": 0.7235
   },
   "head_mass_kg": {
    "microduck": 0.1888,
-   "hybrid": 0.16,
-   "diff_g": -28.8
+   "hybrid": 0.175,
+   "diff_g": -13.8
   },
   "head_com_world_STAND_m": {
    "microduck": [
@@ -3378,9 +3378,9 @@
     0.0003208
    ],
    "hybrid": [
-    0.000127,
-    0.0002154,
-    0.0002719
+    0.000139,
+    0.0002356,
+    0.0002974
    ]
   },
   "whole_robot_com_world_STAND_m": {
@@ -3390,14 +3390,14 @@
     0.1417
    ],
    "hybrid": [
-    -0.001,
+    -0.0006,
     -0.0002,
-    0.1389
+    0.1411
    ],
    "diff_mm": [
-    -1.6,
+    -1.1,
     -0.2,
-    -2.8
+    -0.7
    ]
   },
   "owner_shell_offset_in_head_frame_mm": [
@@ -3480,12 +3480,12 @@
   "owner_head_scale": 0.7,
   "total_mass_kg": {
    "microduck": 0.7372,
-   "hybrid": 0.7085
+   "hybrid": 0.7235
   },
   "head_mass_kg": {
    "microduck": 0.1888,
-   "hybrid": 0.16,
-   "diff_g": -28.8
+   "hybrid": 0.175,
+   "diff_g": -13.8
   },
   "head_com_world_STAND_m": {
    "microduck": [
@@ -3512,9 +3512,9 @@
     0.0003208
    ],
    "hybrid": [
-    0.000127,
-    0.0002154,
-    0.0002719
+    0.000139,
+    0.0002356,
+    0.0002974
    ]
   },
   "whole_robot_com_world_STAND_m": {
@@ -3524,14 +3524,14 @@
     0.1417
    ],
    "hybrid": [
-    -0.001,
+    -0.0006,
     -0.0002,
-    0.1389
+    0.1411
    ],
    "diff_mm": [
-    -1.6,
+    -1.1,
     -0.2,
-    -2.8
+    -0.7
    ]
   },
   "owner_shell_offset_in_head_frame_mm": [

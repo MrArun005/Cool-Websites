@@ -413,10 +413,10 @@ VARIANTS = {
     # Head shapes (build_shapes.py): human-like robot head, rounder duck head; mass SHAPE_KG, CoM from the parts.
     "hybrid_human": dict(collision="owner_noantenna", head_mass="shape", shape="human"),
     "hybrid_roundduck": dict(collision="owner_noantenna", head_mass="shape", shape="roundduck"),
-    "hybrid_human_tall": dict(collision="owner_noantenna", head_mass="shape", shape="human_tall"),
-    "hybrid_roundduck_tall": dict(collision="owner_noantenna", head_mass="shape", shape="roundduck_tall"),
+    "hybrid_human_tall": dict(collision="owner_noantenna", head_mass=0.160, shape="human_tall"),       # tested at 160 g
+    "hybrid_roundduck_tall": dict(collision="owner_noantenna", head_mass=0.160, shape="roundduck_tall"),
 }
-SHAPE_KG = 0.160               # the lightest mass that passed all 12 skills in the sweep (README "Lighter head")
+SHAPE_KG = 0.175               # the recommended mass from the sweep (README "Lighter head"); the printed shapes estimate 166-174 g
 ELECTRONICS_KG = 0.081         # README "Lighter head": the parts a head cannot do without (estimate)
 MD_HEAD_KG = 0.188766          # Microduck's head link
 

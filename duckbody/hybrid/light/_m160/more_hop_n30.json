@@ -1,0 +1,715 @@
+{
+ "hop": {
+  "success": 27,
+  "n": 30,
+  "desc": "hops, about one a second (scripted crouch-push-tuck-land), velstand between",
+  "runs": [
+   {
+    "success": true,
+    "seed": 0,
+    "body": {
+     "mass_scale_mean": 1.003,
+     "friction": 1.088,
+     "kp": 206.9,
+     "vin": 7.15,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     85,
+     80,
+     80,
+     80,
+     80,
+     80
+    ],
+    "flight_ms_med": 80.0,
+    "landing_bw": 4.55,
+    "max_tilt": 8.9
+   },
+   {
+    "success": true,
+    "seed": 1,
+    "body": {
+     "mass_scale_mean": 0.999,
+     "friction": 1.288,
+     "kp": 227.7,
+     "vin": 7.73,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     110,
+     105,
+     100,
+     105,
+     105,
+     105
+    ],
+    "flight_ms_med": 105.0,
+    "landing_bw": 6.29,
+    "max_tilt": 10.3
+   },
+   {
+    "success": true,
+    "seed": 2,
+    "body": {
+     "mass_scale_mean": 0.996,
+     "friction": 1.165,
+     "kp": 189.1,
+     "vin": 8.07,
+     "lag": 3
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     80,
+     80,
+     80,
+     80,
+     80,
+     80
+    ],
+    "flight_ms_med": 80.0,
+    "landing_bw": 3.91,
+    "max_tilt": 6.9
+   },
+   {
+    "success": true,
+    "seed": 3,
+    "body": {
+     "mass_scale_mean": 0.995,
+     "friction": 0.888,
+     "kp": 223.5,
+     "vin": 7.49,
+     "lag": 3
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     95,
+     105,
+     110,
+     105,
+     105,
+     100
+    ],
+    "flight_ms_med": 105.0,
+    "landing_bw": 6.04,
+    "max_tilt": 10.6
+   },
+   {
+    "success": true,
+    "seed": 4,
+    "body": {
+     "mass_scale_mean": 1.014,
+     "friction": 0.78,
+     "kp": 199.9,
+     "vin": 7.34,
+     "lag": 6
+    },
+    "flights": 5,
+    "hops_per_s": 0.83,
+    "flight_ms": [
+     85,
+     80,
+     75,
+     75,
+     75
+    ],
+    "flight_ms_med": 75.0,
+    "landing_bw": 4.34,
+    "max_tilt": 9.8
+   },
+   {
+    "success": true,
+    "seed": 5,
+    "body": {
+     "mass_scale_mean": 1.002,
+     "friction": 0.739,
+     "kp": 210.8,
+     "vin": 7.98,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     80,
+     95,
+     90,
+     95,
+     95,
+     85
+    ],
+    "flight_ms_med": 92.5,
+    "landing_bw": 4.8,
+    "max_tilt": 9.0
+   },
+   {
+    "success": true,
+    "seed": 6,
+    "body": {
+     "mass_scale_mean": 1.001,
+     "friction": 0.998,
+     "kp": 215.6,
+     "vin": 7.42,
+     "lag": 3
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     85,
+     95,
+     95,
+     95,
+     95,
+     95
+    ],
+    "flight_ms_med": 95.0,
+    "landing_bw": 4.94,
+    "max_tilt": 8.8
+   },
+   {
+    "success": true,
+    "seed": 7,
+    "body": {
+     "mass_scale_mean": 1.004,
+     "friction": 0.726,
+     "kp": 172.1,
+     "vin": 7.38,
+     "lag": 6
+    },
+    "flights": 5,
+    "hops_per_s": 0.83,
+    "flight_ms": [
+     55,
+     55,
+     55,
+     50,
+     55
+    ],
+    "flight_ms_med": 55.0,
+    "landing_bw": 2.95,
+    "max_tilt": 7.7
+   },
+   {
+    "success": true,
+    "seed": 8,
+    "body": {
+     "mass_scale_mean": 0.994,
+     "friction": 0.871,
+     "kp": 171.0,
+     "vin": 6.81,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     25,
+     25,
+     40,
+     30,
+     35,
+     40
+    ],
+    "flight_ms_med": 32.5,
+    "landing_bw": 2.18,
+    "max_tilt": 9.1
+   },
+   {
+    "success": true,
+    "seed": 9,
+    "body": {
+     "mass_scale_mean": 1.008,
+     "friction": 1.292,
+     "kp": 223.0,
+     "vin": 8.05,
+     "lag": 6
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     110,
+     105,
+     105,
+     105,
+     105,
+     105
+    ],
+    "flight_ms_med": 105.0,
+    "landing_bw": 5.96,
+    "max_tilt": 10.4
+   },
+   {
+    "success": true,
+    "seed": 10,
+    "body": {
+     "mass_scale_mean": 1.009,
+     "friction": 1.282,
+     "kp": 201.1,
+     "vin": 7.05,
+     "lag": 5
+    },
+    "flights": 5,
+    "hops_per_s": 0.83,
+    "flight_ms": [
+     75,
+     70,
+     70,
+     70,
+     70
+    ],
+    "flight_ms_med": 70.0,
+    "landing_bw": 4.13,
+    "max_tilt": 10.0
+   },
+   {
+    "success": true,
+    "seed": 11,
+    "body": {
+     "mass_scale_mean": 0.994,
+     "friction": 0.99,
+     "kp": 191.2,
+     "vin": 7.51,
+     "lag": 5
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     65,
+     65,
+     80,
+     80,
+     75,
+     80
+    ],
+    "flight_ms_med": 77.5,
+    "landing_bw": 4.2,
+    "max_tilt": 9.6
+   },
+   {
+    "success": true,
+    "seed": 12,
+    "body": {
+     "mass_scale_mean": 0.991,
+     "friction": 1.228,
+     "kp": 173.9,
+     "vin": 8.09,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     60,
+     65,
+     70,
+     65,
+     65,
+     60
+    ],
+    "flight_ms_med": 65.0,
+    "landing_bw": 3.5,
+    "max_tilt": 7.1
+   },
+   {
+    "success": false,
+    "seed": 13,
+    "body": {
+     "mass_scale_mean": 1.007,
+     "friction": 1.023,
+     "kp": 214.2,
+     "vin": 8.19,
+     "lag": 5
+    },
+    "flights": 2,
+    "hops_per_s": 0.33,
+    "flight_ms": [
+     100,
+     25
+    ],
+    "flight_ms_med": 62.5,
+    "landing_bw": 6.23,
+    "max_tilt": 92.2
+   },
+   {
+    "success": true,
+    "seed": 14,
+    "body": {
+     "mass_scale_mean": 1.008,
+     "friction": 0.953,
+     "kp": 210.1,
+     "vin": 6.55,
+     "lag": 3
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     70,
+     70,
+     75,
+     75,
+     75,
+     70
+    ],
+    "flight_ms_med": 72.5,
+    "landing_bw": 2.89,
+    "max_tilt": 9.9
+   },
+   {
+    "success": false,
+    "seed": 15,
+    "body": {
+     "mass_scale_mean": 1.006,
+     "friction": 1.28,
+     "kp": 215.9,
+     "vin": 7.83,
+     "lag": 6
+    },
+    "flights": 4,
+    "hops_per_s": 0.67,
+    "flight_ms": [
+     105,
+     100,
+     50,
+     25
+    ],
+    "flight_ms_med": 75.0,
+    "landing_bw": 6.67,
+    "max_tilt": 93.6
+   },
+   {
+    "success": true,
+    "seed": 16,
+    "body": {
+     "mass_scale_mean": 1.003,
+     "friction": 0.944,
+     "kp": 178.3,
+     "vin": 7.15,
+     "lag": 3
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     40,
+     45,
+     55,
+     60,
+     60,
+     60
+    ],
+    "flight_ms_med": 57.5,
+    "landing_bw": 3.13,
+    "max_tilt": 6.8
+   },
+   {
+    "success": true,
+    "seed": 17,
+    "body": {
+     "mass_scale_mean": 0.995,
+     "friction": 0.971,
+     "kp": 225.2,
+     "vin": 7.89,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     100,
+     105,
+     110,
+     95,
+     110,
+     110
+    ],
+    "flight_ms_med": 107.5,
+    "landing_bw": 5.85,
+    "max_tilt": 9.7
+   },
+   {
+    "success": true,
+    "seed": 18,
+    "body": {
+     "mass_scale_mean": 1.005,
+     "friction": 0.704,
+     "kp": 225.3,
+     "vin": 6.72,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     80,
+     85,
+     70,
+     85,
+     85,
+     80
+    ],
+    "flight_ms_med": 82.5,
+    "landing_bw": 4.17,
+    "max_tilt": 10.4
+   },
+   {
+    "success": true,
+    "seed": 19,
+    "body": {
+     "mass_scale_mean": 1.005,
+     "friction": 0.976,
+     "kp": 216.6,
+     "vin": 7.42,
+     "lag": 5
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     85,
+     95,
+     90,
+     90,
+     90,
+     90
+    ],
+    "flight_ms_med": 90.0,
+    "landing_bw": 4.77,
+    "max_tilt": 9.8
+   },
+   {
+    "success": true,
+    "seed": 20,
+    "body": {
+     "mass_scale_mean": 0.991,
+     "friction": 0.78,
+     "kp": 212.1,
+     "vin": 7.54,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     95,
+     95,
+     95,
+     95,
+     75,
+     85
+    ],
+    "flight_ms_med": 95.0,
+    "landing_bw": 5.48,
+    "max_tilt": 8.7
+   },
+   {
+    "success": true,
+    "seed": 21,
+    "body": {
+     "mass_scale_mean": 1.008,
+     "friction": 0.7,
+     "kp": 185.6,
+     "vin": 7.3,
+     "lag": 5
+    },
+    "flights": 5,
+    "hops_per_s": 0.83,
+    "flight_ms": [
+     70,
+     65,
+     60,
+     65,
+     65
+    ],
+    "flight_ms_med": 65.0,
+    "landing_bw": 3.87,
+    "max_tilt": 7.3
+   },
+   {
+    "success": true,
+    "seed": 22,
+    "body": {
+     "mass_scale_mean": 0.997,
+     "friction": 1.007,
+     "kp": 210.1,
+     "vin": 7.2,
+     "lag": 6
+    },
+    "flights": 5,
+    "hops_per_s": 0.83,
+    "flight_ms": [
+     75,
+     70,
+     75,
+     75,
+     75
+    ],
+    "flight_ms_med": 75.0,
+    "landing_bw": 3.99,
+    "max_tilt": 9.9
+   },
+   {
+    "success": true,
+    "seed": 23,
+    "body": {
+     "mass_scale_mean": 0.992,
+     "friction": 1.211,
+     "kp": 226.3,
+     "vin": 6.52,
+     "lag": 3
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     70,
+     80,
+     80,
+     75,
+     80,
+     75
+    ],
+    "flight_ms_med": 77.5,
+    "landing_bw": 4.11,
+    "max_tilt": 10.1
+   },
+   {
+    "success": false,
+    "seed": 24,
+    "body": {
+     "mass_scale_mean": 1.003,
+     "friction": 0.923,
+     "kp": 173.3,
+     "vin": 7.72,
+     "lag": 6
+    },
+    "flights": 3,
+    "hops_per_s": 0.5,
+    "flight_ms": [
+     55,
+     55,
+     15
+    ],
+    "flight_ms_med": 55.0,
+    "landing_bw": 3.37,
+    "max_tilt": 94.1
+   },
+   {
+    "success": true,
+    "seed": 25,
+    "body": {
+     "mass_scale_mean": 0.992,
+     "friction": 1.034,
+     "kp": 200.4,
+     "vin": 7.56,
+     "lag": 5
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     75,
+     85,
+     90,
+     90,
+     90,
+     90
+    ],
+    "flight_ms_med": 90.0,
+    "landing_bw": 4.57,
+    "max_tilt": 10.3
+   },
+   {
+    "success": true,
+    "seed": 26,
+    "body": {
+     "mass_scale_mean": 0.996,
+     "friction": 1.259,
+     "kp": 227.0,
+     "vin": 6.77,
+     "lag": 5
+    },
+    "flights": 5,
+    "hops_per_s": 0.83,
+    "flight_ms": [
+     80,
+     85,
+     85,
+     85,
+     85
+    ],
+    "flight_ms_med": 85.0,
+    "landing_bw": 4.48,
+    "max_tilt": 10.5
+   },
+   {
+    "success": true,
+    "seed": 27,
+    "body": {
+     "mass_scale_mean": 0.999,
+     "friction": 0.907,
+     "kp": 216.2,
+     "vin": 7.52,
+     "lag": 3
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     90,
+     105,
+     100,
+     100,
+     100,
+     105
+    ],
+    "flight_ms_med": 100.0,
+    "landing_bw": 5.49,
+    "max_tilt": 9.5
+   },
+   {
+    "success": true,
+    "seed": 28,
+    "body": {
+     "mass_scale_mean": 1.006,
+     "friction": 1.062,
+     "kp": 175.1,
+     "vin": 7.75,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     65,
+     65,
+     65,
+     65,
+     65,
+     65
+    ],
+    "flight_ms_med": 65.0,
+    "landing_bw": 3.44,
+    "max_tilt": 7.5
+   },
+   {
+    "success": true,
+    "seed": 29,
+    "body": {
+     "mass_scale_mean": 0.994,
+     "friction": 0.864,
+     "kp": 215.6,
+     "vin": 8.15,
+     "lag": 4
+    },
+    "flights": 6,
+    "hops_per_s": 1.0,
+    "flight_ms": [
+     100,
+     110,
+     95,
+     110,
+     105,
+     115
+    ],
+    "flight_ms_med": 107.5,
+    "landing_bw": 6.28,
+    "max_tilt": 9.0
+   }
+  ],
+  "wall_s": 56
+ }
+}

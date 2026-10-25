@@ -1,0 +1,488 @@
+{
+ "summary": {
+  "L2_course_r": {
+   "n": 10,
+   "finished": 8,
+   "median_dist": 6.35,
+   "median_t_finished": 34.08,
+   "falls": 16,
+   "runs_with_falls": 8,
+   "off_path": 11,
+   "median_score": 1367.0,
+   "cleared": {
+    "start": 10,
+    "steps": 10,
+    "ramps": 9,
+    "bars": 9,
+    "rough": 9,
+    "narrow": 9,
+    "hole": 8,
+    "shoves": 8
+   },
+   "failed_at": {
+    "ramps": 1,
+    "hole": 1
+   },
+   "ends": {
+    "finished": 8,
+    "time": 2
+   },
+   "falls_by_stage": {
+    "steps": 2,
+    "ramps": 5,
+    "bars": 6,
+    "rough": 3
+   }
+  }
+ },
+ "runs": [
+  {
+   "level": 2,
+   "seed": 10,
+   "mode": "course_r",
+   "end": "finished",
+   "finished": true,
+   "t": 33.66,
+   "dist": 6.35,
+   "frac": 1.0,
+   "falls": 1,
+   "stumbles": 3,
+   "unsticks": 0,
+   "backups": 0,
+   "falls_at": [
+    {
+     "t": 13.68,
+     "x": 3.025,
+     "stage": "bars"
+    }
+   ],
+   "off_path": 2,
+   "score": 1513,
+   "cleared": [
+    "start",
+    "steps",
+    "ramps",
+    "bars",
+    "rough",
+    "narrow",
+    "hole",
+    "shoves",
+    "finish"
+   ],
+   "failed_at": null,
+   "body": {
+    "mass_scale_mean": 0.994,
+    "friction": 0.84,
+    "kp": 216.0,
+    "vin": 8.18,
+    "lag": 4
+   },
+   "wall_s": 10.8
+  },
+  {
+   "level": 2,
+   "seed": 11,
+   "mode": "course_r",
+   "end": "finished",
+   "finished": true,
+   "t": 27.54,
+   "dist": 6.35,
+   "frac": 1.0,
+   "falls": 0,
+   "stumbles": 0,
+   "unsticks": 0,
+   "backups": 0,
+   "falls_at": [],
+   "off_path": 1,
+   "score": 1625,
+   "cleared": [
+    "start",
+    "steps",
+    "ramps",
+    "bars",
+    "rough",
+    "narrow",
+    "hole",
+    "shoves",
+    "finish"
+   ],
+   "failed_at": null,
+   "body": {
+    "mass_scale_mean": 0.992,
+    "friction": 0.976,
+    "kp": 211.5,
+    "vin": 6.59,
+    "lag": 3
+   },
+   "wall_s": 5.9
+  },
+  {
+   "level": 2,
+   "seed": 12,
+   "mode": "course_r",
+   "end": "time",
+   "finished": false,
+   "t": 90.0,
+   "dist": 4.574,
+   "frac": 0.72,
+   "falls": 2,
+   "stumbles": 120,
+   "unsticks": 0,
+   "backups": 45,
+   "falls_at": [
+    {
+     "t": 9.26,
+     "x": 1.972,
+     "stage": "ramps"
+    },
+    {
+     "t": 14.74,
+     "x": 2.971,
+     "stage": "bars"
+    }
+   ],
+   "off_path": 1,
+   "score": 620,
+   "cleared": [
+    "start",
+    "steps",
+    "ramps",
+    "bars",
+    "rough",
+    "narrow"
+   ],
+   "failed_at": "hole",
+   "body": {
+    "mass_scale_mean": 0.998,
+    "friction": 1.244,
+    "kp": 187.0,
+    "vin": 6.88,
+    "lag": 5
+   },
+   "wall_s": 26.7
+  },
+  {
+   "level": 2,
+   "seed": 13,
+   "mode": "course_r",
+   "end": "finished",
+   "finished": true,
+   "t": 64.94,
+   "dist": 6.35,
+   "frac": 1.0,
+   "falls": 3,
+   "stumbles": 4,
+   "unsticks": 5,
+   "backups": 0,
+   "falls_at": [
+    {
+     "t": 4.78,
+     "x": 0.417,
+     "stage": "steps"
+    },
+    {
+     "t": 30.26,
+     "x": 3.037,
+     "stage": "bars"
+    },
+    {
+     "t": 40.42,
+     "x": 3.596,
+     "stage": "rough"
+    }
+   ],
+   "off_path": 2,
+   "score": 1101,
+   "cleared": [
+    "start",
+    "steps",
+    "ramps",
+    "bars",
+    "rough",
+    "narrow",
+    "hole",
+    "shoves",
+    "finish"
+   ],
+   "failed_at": null,
+   "body": {
+    "mass_scale_mean": 1.001,
+    "friction": 1.267,
+    "kp": 222.5,
+    "vin": 7.13,
+    "lag": 3
+   },
+   "wall_s": 8.6
+  },
+  {
+   "level": 2,
+   "seed": 14,
+   "mode": "course_r",
+   "end": "finished",
+   "finished": true,
+   "t": 27.82,
+   "dist": 6.35,
+   "frac": 1.0,
+   "falls": 1,
+   "stumbles": 1,
+   "unsticks": 0,
+   "backups": 0,
+   "falls_at": [
+    {
+     "t": 11.76,
+     "x": 3.052,
+     "stage": "bars"
+    }
+   ],
+   "off_path": 1,
+   "score": 1572,
+   "cleared": [
+    "start",
+    "steps",
+    "ramps",
+    "bars",
+    "rough",
+    "narrow",
+    "hole",
+    "shoves",
+    "finish"
+   ],
+   "failed_at": null,
+   "body": {
+    "mass_scale_mean": 1.006,
+    "friction": 1.207,
+    "kp": 195.8,
+    "vin": 6.58,
+    "lag": 3
+   },
+   "wall_s": 3.9
+  },
+  {
+   "level": 2,
+   "seed": 15,
+   "mode": "course_r",
+   "end": "finished",
+   "finished": true,
+   "t": 47.12,
+   "dist": 6.35,
+   "frac": 1.0,
+   "falls": 4,
+   "stumbles": 6,
+   "unsticks": 3,
+   "backups": 0,
+   "falls_at": [
+    {
+     "t": 8.82,
+     "x": 1.91,
+     "stage": "ramps"
+    },
+    {
+     "t": 11.64,
+     "x": 1.885,
+     "stage": "ramps"
+    },
+    {
+     "t": 14.66,
+     "x": 1.887,
+     "stage": "ramps"
+    },
+    {
+     "t": 23.64,
+     "x": 3.262,
+     "stage": "rough"
+    }
+   ],
+   "off_path": 3,
+   "score": 1229,
+   "cleared": [
+    "start",
+    "steps",
+    "ramps",
+    "bars",
+    "rough",
+    "narrow",
+    "hole",
+    "shoves",
+    "finish"
+   ],
+   "failed_at": null,
+   "body": {
+    "mass_scale_mean": 0.986,
+    "friction": 1.165,
+    "kp": 222.1,
+    "vin": 7.46,
+    "lag": 4
+   },
+   "wall_s": 7.8
+  },
+  {
+   "level": 2,
+   "seed": 16,
+   "mode": "course_r",
+   "end": "finished",
+   "finished": true,
+   "t": 54.6,
+   "dist": 6.35,
+   "frac": 1.0,
+   "falls": 3,
+   "stumbles": 11,
+   "unsticks": 2,
+   "backups": 1,
+   "falls_at": [
+    {
+     "t": 6.7,
+     "x": 1.094,
+     "stage": "ramps"
+    },
+    {
+     "t": 28.48,
+     "x": 2.797,
+     "stage": "bars"
+    },
+    {
+     "t": 34.56,
+     "x": 3.242,
+     "stage": "rough"
+    }
+   ],
+   "off_path": 0,
+   "score": 1204,
+   "cleared": [
+    "start",
+    "steps",
+    "ramps",
+    "bars",
+    "rough",
+    "narrow",
+    "hole",
+    "shoves",
+    "finish"
+   ],
+   "failed_at": null,
+   "body": {
+    "mass_scale_mean": 1.01,
+    "friction": 1.141,
+    "kp": 201.4,
+    "vin": 7.8,
+    "lag": 6
+   },
+   "wall_s": 7.9
+  },
+  {
+   "level": 2,
+   "seed": 17,
+   "mode": "course_r",
+   "end": "finished",
+   "finished": true,
+   "t": 28.34,
+   "dist": 6.35,
+   "frac": 1.0,
+   "falls": 0,
+   "stumbles": 1,
+   "unsticks": 0,
+   "backups": 0,
+   "falls_at": [],
+   "off_path": 1,
+   "score": 1617,
+   "cleared": [
+    "start",
+    "steps",
+    "ramps",
+    "bars",
+    "rough",
+    "narrow",
+    "hole",
+    "shoves",
+    "finish"
+   ],
+   "failed_at": null,
+   "body": {
+    "mass_scale_mean": 1.003,
+    "friction": 1.13,
+    "kp": 199.4,
+    "vin": 7.93,
+    "lag": 4
+   },
+   "wall_s": 3.0
+  },
+  {
+   "level": 2,
+   "seed": 18,
+   "mode": "course_r",
+   "end": "time",
+   "finished": false,
+   "t": 90.0,
+   "dist": 0.963,
+   "frac": 0.152,
+   "falls": 1,
+   "stumbles": 140,
+   "unsticks": 0,
+   "backups": 55,
+   "falls_at": [
+    {
+     "t": 3.18,
+     "x": 0.432,
+     "stage": "steps"
+    }
+   ],
+   "off_path": 0,
+   "score": 102,
+   "cleared": [
+    "start",
+    "steps"
+   ],
+   "failed_at": "ramps",
+   "body": {
+    "mass_scale_mean": 0.996,
+    "friction": 0.781,
+    "kp": 215.1,
+    "vin": 7.08,
+    "lag": 4
+   },
+   "wall_s": 14.5
+  },
+  {
+   "level": 2,
+   "seed": 19,
+   "mode": "course_r",
+   "end": "finished",
+   "finished": true,
+   "t": 34.5,
+   "dist": 6.35,
+   "frac": 1.0,
+   "falls": 1,
+   "stumbles": 1,
+   "unsticks": 1,
+   "backups": 0,
+   "falls_at": [
+    {
+     "t": 12.22,
+     "x": 3.09,
+     "stage": "bars"
+    }
+   ],
+   "off_path": 0,
+   "score": 1505,
+   "cleared": [
+    "start",
+    "steps",
+    "ramps",
+    "bars",
+    "rough",
+    "narrow",
+    "hole",
+    "shoves",
+    "finish"
+   ],
+   "failed_at": null,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 0.785,
+    "kp": 213.3,
+    "vin": 7.25,
+    "lag": 4
+   },
+   "wall_s": 4.4
+  }
+ ]
+}

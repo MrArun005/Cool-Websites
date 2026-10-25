@@ -1,0 +1,124 @@
+{
+ "summary": {
+  "n": 5,
+  "in_view_median": 0.953,
+  "in_view_front_median": 0.96,
+  "final_dist_cam_median": 0.17,
+  "final_dist_trunk_median": 0.271,
+  "within_25cm": 5,
+  "falls": 0,
+  "hops": 19,
+  "reacquired": 5,
+  "reacquire_median_s": 1.45
+ },
+ "runs": [
+  {
+   "seed": 5,
+   "in_view": 0.953,
+   "in_view_front": 0.953,
+   "behind_frac": 0.0,
+   "final_dist_cam": 0.163,
+   "final_dist_trunk": 0.263,
+   "falls": 0,
+   "hops": 5,
+   "reacquire_s": [
+    1.2,
+    1.4
+   ],
+   "body": {
+    "mass_scale_mean": 0.995,
+    "friction": 0.921,
+    "kp": 227.1,
+    "vin": 7.18,
+    "lag": 6
+   },
+   "wall_s": 59.7
+  },
+  {
+   "seed": 6,
+   "in_view": 0.98,
+   "in_view_front": 0.98,
+   "behind_frac": 0.0,
+   "final_dist_cam": 0.17,
+   "final_dist_trunk": 0.271,
+   "falls": 0,
+   "hops": 3,
+   "reacquire_s": [
+    1.2
+   ],
+   "body": {
+    "mass_scale_mean": 1.006,
+    "friction": 1.18,
+    "kp": 228.4,
+    "vin": 6.76,
+    "lag": 6
+   },
+   "wall_s": 66.6
+  },
+  {
+   "seed": 7,
+   "in_view": 0.908,
+   "in_view_front": 0.943,
+   "behind_frac": 0.037,
+   "final_dist_cam": 0.183,
+   "final_dist_trunk": 0.284,
+   "falls": 0,
+   "hops": 5,
+   "reacquire_s": [
+    1.7,
+    3.8
+   ],
+   "body": {
+    "mass_scale_mean": 0.996,
+    "friction": 0.736,
+    "kp": 193.3,
+    "vin": 7.05,
+    "lag": 6
+   },
+   "wall_s": 65.4
+  },
+  {
+   "seed": 8,
+   "in_view": 0.945,
+   "in_view_front": 0.976,
+   "behind_frac": 0.032,
+   "final_dist_cam": 0.171,
+   "final_dist_trunk": 0.271,
+   "falls": 0,
+   "hops": 2,
+   "reacquire_s": [
+    3.4
+   ],
+   "body": {
+    "mass_scale_mean": 0.998,
+    "friction": 1.039,
+    "kp": 212.3,
+    "vin": 6.91,
+    "lag": 4
+   },
+   "wall_s": 57.1
+  },
+  {
+   "seed": 9,
+   "in_view": 0.96,
+   "in_view_front": 0.96,
+   "behind_frac": 0.0,
+   "final_dist_cam": 0.169,
+   "final_dist_trunk": 0.271,
+   "falls": 0,
+   "hops": 4,
+   "reacquire_s": [
+    1.5,
+    1.1
+   ],
+   "body": {
+    "mass_scale_mean": 0.997,
+    "friction": 1.16,
+    "kp": 210.4,
+    "vin": 7.86,
+    "lag": 5
+   },
+   "wall_s": 73.1
+  }
+ ]
+}

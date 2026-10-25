@@ -1,0 +1,130 @@
+{
+ "getup_back": {
+  "success": 8,
+  "n": 10,
+  "desc": "get up from lying on its back (velstand)",
+  "runs": [
+   {
+    "success": true,
+    "seed": 0,
+    "body": {
+     "mass_scale_mean": 0.997,
+     "friction": 1.103,
+     "kp": 182.0,
+     "vin": 8.1,
+     "lag": 6
+    },
+    "t_up_s": 1.4000000000000001
+   },
+   {
+    "success": true,
+    "seed": 1,
+    "body": {
+     "mass_scale_mean": 1.007,
+     "friction": 0.829,
+     "kp": 208.4,
+     "vin": 7.87,
+     "lag": 5
+    },
+    "t_up_s": 1.1
+   },
+   {
+    "success": false,
+    "seed": 2,
+    "body": {
+     "mass_scale_mean": 1.004,
+     "friction": 1.2,
+     "kp": 176.0,
+     "vin": 7.27,
+     "lag": 4
+    },
+    "t_up_s": null
+   },
+   {
+    "success": true,
+    "seed": 3,
+    "body": {
+     "mass_scale_mean": 1.002,
+     "friction": 1.211,
+     "kp": 180.1,
+     "vin": 8.14,
+     "lag": 4
+    },
+    "t_up_s": 1.28
+   },
+   {
+    "success": true,
+    "seed": 4,
+    "body": {
+     "mass_scale_mean": 1.003,
+     "friction": 0.935,
+     "kp": 222.6,
+     "vin": 8.06,
+     "lag": 5
+    },
+    "t_up_s": 0.9
+   },
+   {
+    "success": true,
+    "seed": 5,
+    "body": {
+     "mass_scale_mean": 1.001,
+     "friction": 1.115,
+     "kp": 208.1,
+     "vin": 7.14,
+     "lag": 3
+    },
+    "t_up_s": 1.86
+   },
+   {
+    "success": false,
+    "seed": 6,
+    "body": {
+     "mass_scale_mean": 0.999,
+     "friction": 1.055,
+     "kp": 182.6,
+     "vin": 7.26,
+     "lag": 3
+    },
+    "t_up_s": 2.08
+   },
+   {
+    "success": true,
+    "seed": 7,
+    "body": {
+     "mass_scale_mean": 1.002,
+     "friction": 0.941,
+     "kp": 175.8,
+     "vin": 8.15,
+     "lag": 4
+    },
+    "t_up_s": 1.3800000000000001
+   },
+   {
+    "success": true,
+    "seed": 8,
+    "body": {
+     "mass_scale_mean": 0.997,
+     "friction": 0.742,
+     "kp": 212.9,
+     "vin": 7.04,
+     "lag": 4
+    },
+    "t_up_s": 1.16
+   },
+   {
+    "success": true,
+    "seed": 9,
+    "body": {
+     "mass_scale_mean": 0.997,
+     "friction": 0.894,
+     "kp": 213.2,
+     "vin": 6.52,
+     "lag": 5
+    },
+    "t_up_s": 1.36
+   }
+  ],
+  "wall_s": 15
+ }
+}

@@ -3,6 +3,7 @@
     PY=/home/user/cool-websites/.venv/bin/python
     $PY duckbody/hybrid/light_suite.py run [--jobs 3] [--bodies _noantenna,_m160,...] [--logs DIR]
     $PY duckbody/hybrid/light_suite.py merge          # -> light/results_light.json + the README table (printed)
+    $PY duckbody/hybrid/light_suite.py promote --bodies _m175   # that body's runs -> the main results_*_hybrid.json
 
 Per body (HYBRID_BODY=<suffix>, so runtime_hybrid.SCENE is scene_hybrid_allcollisions<suffix>.xml), single-process
 units, `--jobs` at a time (each with one numpy thread):
@@ -41,12 +42,13 @@ BODIES = {          # suffix -> label, head mass (g), head scale
     "_m100": ("100 g", 100, 1.0),
     "_k85": ("x0.85 (159 g)", 159, 0.85),
     "_k75": ("x0.75 (142 g)", 142, 0.75),
-    "_human": ("human-like head (160 g)", 160, None),             # build_shapes.py; mass build_hybrid.SHAPE_KG
-    "_roundduck": ("round duck head (160 g)", 160, None),
-    "_human_tall": ("human-like, first tall version (skills only)", 160, None),
-    "_roundduck_tall": ("round duck, first tall version (skills only)", 160, None),
+    "_human": ("human-like head (175 g)", 175, None),             # build_shapes.py; mass build_hybrid.SHAPE_KG
+    "_roundduck": ("round duck head (175 g)", 175, None),
+    "_human_tall": ("human-like, first tall version (160 g, skills only)", 160, None),
+    "_roundduck_tall": ("round duck, first tall version (160 g, skills only)", 160, None),
 }
 MATCH_SEEDS = (0, 1)
+MORE_HURDLES = ("_noantenna", "_m175", "_m160")
 
 
 def units(body):
@@ -60,6 +62,10 @@ def units(body):
     for lv in (3, 2, 1):
         u.append((f"course_L{lv}", [PY, "course.py", "--levels", str(lv), "--modes", "course_r", "--jobs", "1",
                                     "--out", str(d / f"course_L{lv}.json")]))
+    if body in MORE_HURDLES:   # 10 more bodies at the hard levels (10 per cell is noisy there)
+        for lv in (2, 3):
+            u.append((f"course_L{lv}_seeds10-19", [PY, "course.py", "--levels", str(lv), "--modes", "course_r", "--seeds", "10-19",
+                                                   "--jobs", "1", "--out", str(d / f"course_L{lv}_seeds10-19.json")]))
     for s in SKILLS:
         u.append((f"skills_{s}", [PY, "test_skills_hybrid.py", "--skills", s, "--out", str(d / f"skills_{s}.json")]))
     return [(body, name, cmd, Path(cmd[-1])) for name, cmd in u]
@@ -145,6 +151,10 @@ def summarize(body):
             continue
         c = json.loads(f.read_text())["summary"][f"L{lv}_course_r"]
         S["course"][lv] = dict(finished=c["finished"], n=c["n"], falls=c["falls"], t_med=c.get("median_t_finished"))
+        extra = sorted(d.glob(f"course_L{lv}_seeds*.json"))           # more bodies (light_suite.py extra)
+        if extra:
+            rs = [r for x in [f] + extra for r in json.loads(x.read_text())["runs"]]
+            S["course"][lv]["more"] = dict(finished=sum(r["finished"] for r in rs), n=len(rs), falls=sum(r["falls"] for r in rs))
     # follow
     fr = []
     for part in ("0-4", "5-9"):
@@ -209,7 +219,8 @@ def table(rows):
     line("roll (deg)", lambda r: fmt(r["roll_deg"], "{:.0f}"))
     for lv in (1, 2, 3):
         line(f"hurdles L{lv}: finished, falls, median s",
-             lambda r, lv=lv: (lambda c: f"{c['finished']}/{c['n']}, {c['falls']}, {fmt(c['t_med'], '{:.0f}')}")(r["course"][lv]) if lv in r["course"] else "-")
+             lambda r, lv=lv: (lambda c: f"{c['finished']}/{c['n']}, {c['falls']}, {fmt(c['t_med'], '{:.0f}')}"
+                               + (f" ({c['more']['finished']}/{c['more']['n']} on {c['more']['n']} bodies)" if "more" in c else ""))(r["course"][lv]) if lv in r["course"] else "-")
     line("follow: in view, final cm, within 25 cm, falls",
          lambda r: (lambda f: f"{100 * f['in_view']:.0f} %, {f['final_cm']:.1f}, {f['within_25']}/{f['n']}, {f['falls']}")(r["follow"]) if "follow" in r else "-")
     line("soccer (10 x 2 min): goals, with goal, kicks connected, falls",
@@ -228,14 +239,43 @@ def merge(a):
             print(r["body"], "missing", r["missing"])
 
 
+def promote(a):
+    """The recommended body's runs -> the main results files (results_{skills,course,follow,soccer}_hybrid.json), the
+    ones page_data.py reads. The match results come from the page's recorded matches (page_data.py --match-only)."""
+    sys.path.insert(0, str(HERE))
+    os.environ["HYBRID_BODY"] = a.bodies
+    import course as C
+    import soccer as SO
+    d = OUT / a.bodies
+    sk = {s: json.loads((d / f"skills_{s}.json").read_text())[s] for s in SKILLS}
+    sk["_meta"] = dict(n=10, body=f"scene_hybrid_allcollisions{a.bodies}.xml", seeds="0-9", source=f"light/{a.bodies}",
+                       randomization="harness.MicroduckSim.randomize_body (mass/inertia x0.95-1.05, trunk+head CoM +-3mm, "
+                                     "friction x0.7-1.3, kp x0.85-1.15, 6.5-8.2 V, delay 3-6 steps) + obs noise")
+    (HERE / "results_skills_hybrid.json").write_text(json.dumps(sk, indent=1))
+    runs = [r for lv in (1, 2, 3) for r in json.loads((d / f"course_L{lv}.json").read_text())["runs"]]
+    (HERE / "results_course_hybrid.json").write_text(json.dumps(dict(summary=C.summarize(runs), runs=runs), indent=1))
+    fr = [r for part in ("0-4", "5-9") for r in json.loads((d / f"follow_{part}.json").read_text())["runs"]]
+    fs = dict(n=len(fr), in_view_median=float(np.median([r["in_view"] for r in fr])),
+              in_view_front_median=float(np.median([r["in_view_front"] for r in fr])),
+              final_dist_cam_median=float(np.median([r["final_dist_cam"] for r in fr])),
+              final_dist_trunk_median=float(np.median([r["final_dist_trunk"] for r in fr])),
+              within_25cm=sum(r["final_dist_cam"] < 0.25 for r in fr), falls=sum(r["falls"] for r in fr),
+              hops=sum(r["hops"] for r in fr), reacquired=sum(len(r["reacquire_s"]) > 0 for r in fr),
+              reacquire_median_s=float(np.median([x for r in fr for x in r["reacquire_s"]])) if any(r["reacquire_s"] for r in fr) else None)
+    (HERE / "results_follow_hybrid.json").write_text(json.dumps(dict(summary=fs, runs=fr), indent=1))
+    sr = [r for part in ("0-4", "5-9") for r in json.loads((d / f"soccer_{part}.json").read_text())["runs"]]
+    (HERE / "results_soccer_hybrid.json").write_text(json.dumps(dict(summary=SO.summarize(sr), runs=sr), indent=1))
+    print("promoted", a.bodies)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("run", "merge"))
+    ap.add_argument("what", choices=("run", "merge", "promote"))
     ap.add_argument("--jobs", type=int, default=3)
     ap.add_argument("--bodies", default=",".join(BODIES))
     ap.add_argument("--logs", default=str(OUT / "logs"))
     a = ap.parse_args()
-    run(a) if a.what == "run" else merge(a)
+    {"run": run, "merge": merge, "promote": promote}[a.what](a)
 
 
 if __name__ == "__main__":

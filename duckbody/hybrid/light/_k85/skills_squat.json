@@ -1,0 +1,150 @@
+{
+ "squat": {
+  "success": 10,
+  "n": 10,
+  "desc": "squat down (scripted, soles flat, IMU ankle balance), then stand (velstand)",
+  "runs": [
+   {
+    "success": true,
+    "seed": 0,
+    "body": {
+     "mass_scale_mean": 1.003,
+     "friction": 1.088,
+     "kp": 206.9,
+     "vin": 7.15,
+     "lag": 4
+    },
+    "drop_m": 0.05,
+    "tilt_squat": 4.0,
+    "tilt_rise": 6.9
+   },
+   {
+    "success": true,
+    "seed": 1,
+    "body": {
+     "mass_scale_mean": 0.999,
+     "friction": 1.288,
+     "kp": 227.7,
+     "vin": 7.73,
+     "lag": 4
+    },
+    "drop_m": 0.05,
+    "tilt_squat": 3.5,
+    "tilt_rise": 5.8
+   },
+   {
+    "success": true,
+    "seed": 2,
+    "body": {
+     "mass_scale_mean": 0.996,
+     "friction": 1.165,
+     "kp": 189.1,
+     "vin": 8.07,
+     "lag": 3
+    },
+    "drop_m": 0.05,
+    "tilt_squat": 3.0,
+    "tilt_rise": 6.4
+   },
+   {
+    "success": true,
+    "seed": 3,
+    "body": {
+     "mass_scale_mean": 0.995,
+     "friction": 0.888,
+     "kp": 223.5,
+     "vin": 7.49,
+     "lag": 3
+    },
+    "drop_m": 0.05,
+    "tilt_squat": 3.4,
+    "tilt_rise": 6.0
+   },
+   {
+    "success": true,
+    "seed": 4,
+    "body": {
+     "mass_scale_mean": 1.014,
+     "friction": 0.78,
+     "kp": 199.9,
+     "vin": 7.34,
+     "lag": 6
+    },
+    "drop_m": 0.05,
+    "tilt_squat": 4.3,
+    "tilt_rise": 7.7
+   },
+   {
+    "success": true,
+    "seed": 5,
+    "body": {
+     "mass_scale_mean": 1.002,
+     "friction": 0.739,
+     "kp": 210.8,
+     "vin": 7.98,
+     "lag": 4
+    },
+    "drop_m": 0.05,
+    "tilt_squat": 2.8,
+    "tilt_rise": 5.7
+   },
+   {
+    "success": true,
+    "seed": 6,
+    "body": {
+     "mass_scale_mean": 1.001,
+     "friction": 0.998,
+     "kp": 215.6,
+     "vin": 7.42,
+     "lag": 3
+    },
+    "drop_m": 0.05,
+    "tilt_squat": 3.0,
+    "tilt_rise": 6.1
+   },
+   {
+    "success": true,
+    "seed": 7,
+    "body": {
+     "mass_scale_mean": 1.004,
+     "friction": 0.726,
+     "kp": 172.1,
+     "vin": 7.38,
+     "lag": 6
+    },
+    "drop_m": 0.05,
+    "tilt_squat": 5.6,
+    "tilt_rise": 8.4
+   },
+   {
+    "success": true,
+    "seed": 8,
+    "body": {
+     "mass_scale_mean": 0.994,
+     "friction": 0.871,
+     "kp": 171.0,
+     "vin": 6.81,
+     "lag": 4
+    },
+    "drop_m": 0.049,
+    "tilt_squat": 5.8,
+    "tilt_rise": 8.8
+   },
+   {
+    "success": true,
+    "seed": 9,
+    "body": {
+     "mass_scale_mean": 1.008,
+     "friction": 1.292,
+     "kp": 223.0,
+     "vin": 8.05,
+     "lag": 6
+    },
+    "drop_m": 0.051,
+    "tilt_squat": 4.4,
+    "tilt_rise": 5.9
+   }
+  ],
+  "wall_s": 12
+ }
+}

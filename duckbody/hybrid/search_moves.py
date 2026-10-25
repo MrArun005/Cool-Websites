@@ -23,7 +23,9 @@ sys.path.insert(0, str(HERE))
 import moves_hybrid as mv  # noqa: E402
 from harness import DEFAULT_POSE, MicroduckSim, Policy  # noqa: E402
 
-SCENE = str(HERE / "scene_hybrid_allcollisions_noantenna.xml")
+import runtime_hybrid as rh  # noqa: E402
+
+SCENE = str(rh.SCENE)          # the default body (HYBRID_BODY picks another)
 MOVES = HERE / "moves_hybrid.json"
 _SIM, _POL = {}, {}
 
@@ -299,9 +301,11 @@ def main():
     ap.add_argument("move", choices=["hop", "swag", "lie_down"])
     ap.add_argument("--gens", type=int, default=12)
     ap.add_argument("--procs", type=int, default=3)
+    ap.add_argument("--from-current", action="store_true", help="start from the parameters in moves_hybrid.json")
     a = ap.parse_args()
     if a.move == "hop":
-        fit, P, detail = cem(hop_score, HOP_SPEC, HOP_BASE, gens=a.gens, procs=a.procs)
+        base = dict(HOP_BASE, **json.loads(MOVES.read_text())["hop"]["params"]) if a.from_current else HOP_BASE
+        fit, P, detail = cem(hop_score, HOP_SPEC, base, gens=a.gens, procs=a.procs)
         P = {k: round(v, 4) for k, v in P.items()}
         save("hop", dict(params=P, search=dict(fitness=round(fit, 2), bodies=detail)))
     if a.move == "swag":

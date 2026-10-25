@@ -214,7 +214,7 @@
             <body name="jaw_soft" pos="-0.0179 0 0.0145" quat="0.707107 0 -0.707107 -0">
               <!-- Joint from yaw_roll_motion to jaw_soft -->
               <joint axis="0 0 1" name="head_roll" type="hinge" range="-0.43633231299858327 0.4363323129985815" class="chosen_actuator" />
-              <inertial pos="0.00993356 0.000690486 -0.0279799" mass="0.15547" fullinertia="0.000250411 0.000191934 0.00012455 -4.75351e-07 1.16508e-05 3.75769e-06" />
+              <inertial pos="0.0098839 0.000688765 -0.0281526" mass="0.17047" fullinertia="0.000275956 0.000212182 0.000136465 -5.25746e-07 1.21579e-05 4.0897e-06" />
               <geom type="mesh" class="visual" name="shape_human_skull_vis" mesh="shape_human_skull" material="shape_human_material" />
               <geom type="mesh" class="collision" name="shape_human_skull_col" mesh="shape_human_skull" />
               <geom type="ellipsoid" size="0.02 0.036 0.011" pos="0.015 0 -0.08755" name="shape_faceplate" contype="0" conaffinity="0" group="2" rgba="0.12 0.14 0.18 1" />

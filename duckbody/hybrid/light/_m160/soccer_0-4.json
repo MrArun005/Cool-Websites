@@ -1,0 +1,491 @@
+{
+ "summary": {
+  "n": 5,
+  "goals_median": 3.0,
+  "goals_min": 0,
+  "goals_max": 3,
+  "goals_total": 9,
+  "matches_with_goals": 3,
+  "kicks_median": 4.0,
+  "dribbled_goals": 0,
+  "kicks": 20,
+  "connected": 18,
+  "falls": 0,
+  "runs_with_falls": 0,
+  "in_view_median": 0.526
+ },
+ "runs": [
+  {
+   "seed": 0,
+   "goals": 0,
+   "goal_t": [],
+   "goals_without_kick": 0,
+   "kicks": 3,
+   "connected": 3,
+   "kick_log": [
+    {
+     "foot": "right",
+     "ex": 0.015,
+     "ey": -0.018,
+     "eh": 0.117,
+     "t": 10.6,
+     "n": 1,
+     "b0": [
+      0.065,
+      0.411
+     ],
+     "vmax": 1.146,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.009,
+     "ey": -0.008,
+     "eh": 0.14,
+     "t": 20.4,
+     "n": 2,
+     "b0": [
+      1.123,
+      -0.651
+     ],
+     "vmax": 1.232,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.001,
+     "ey": -0.011,
+     "eh": 0.057,
+     "t": 66.8,
+     "n": 3,
+     "b0": [
+      1.104,
+      -0.661
+     ],
+     "vmax": 1.001,
+     "connected": true
+    }
+   ],
+   "falls": 0,
+   "falls_t": [],
+   "in_view": 0.507,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 1.226,
+    "kp": 173.5,
+    "vin": 7.07,
+    "lag": 6
+   },
+   "fixes": 23,
+   "fix_rejects": 0,
+   "backups": 4,
+   "unsticks": 0,
+   "kickoff": {
+    "duck": [
+     -0.797,
+     -0.195,
+     0.257
+    ],
+    "ball": [
+     0.065,
+     0.411
+    ]
+   },
+   "wall_s": 138.1
+  },
+  {
+   "seed": 1,
+   "goals": 3,
+   "goal_t": [
+    10.28,
+    61.96,
+    109.04
+   ],
+   "goals_without_kick": 0,
+   "kicks": 4,
+   "connected": 4,
+   "kick_log": [
+    {
+     "foot": "right",
+     "ex": 0.019,
+     "ey": 0.001,
+     "eh": -0.149,
+     "t": 9.2,
+     "n": 1,
+     "b0": [
+      0.497,
+      0.425
+     ],
+     "vmax": 1.147,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.019,
+     "ey": -0.002,
+     "eh": 0.055,
+     "t": 24.98,
+     "n": 2,
+     "b0": [
+      0.0,
+      0.0
+     ],
+     "vmax": 0.977,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.009,
+     "ey": -0.003,
+     "eh": -0.019,
+     "t": 61.76,
+     "n": 3,
+     "b0": [
+      1.213,
+      0.084
+     ],
+     "vmax": 1.123,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.015,
+     "ey": 0.0,
+     "eh": -0.079,
+     "t": 106.26,
+     "n": 4,
+     "b0": [
+      0.0,
+      0.0
+     ],
+     "vmax": 1.014,
+     "connected": true
+    }
+   ],
+   "falls": 0,
+   "falls_t": [],
+   "in_view": 0.526,
+   "body": {
+    "mass_scale_mean": 1.003,
+    "friction": 0.815,
+    "kp": 218.1,
+    "vin": 6.83,
+    "lag": 4
+   },
+   "fixes": 143,
+   "fix_rejects": 15,
+   "backups": 3,
+   "unsticks": 0,
+   "kickoff": {
+    "duck": [
+     -0.531,
+     0.363,
+     0.175
+    ],
+    "ball": [
+     0.497,
+     0.425
+    ]
+   },
+   "wall_s": 137.0
+  },
+  {
+   "seed": 2,
+   "goals": 3,
+   "goal_t": [
+    21.36,
+    65.68,
+    105.7
+   ],
+   "goals_without_kick": 0,
+   "kicks": 6,
+   "connected": 4,
+   "kick_log": [
+    {
+     "foot": "right",
+     "ex": -0.006,
+     "ey": 0.007,
+     "eh": -0.057,
+     "t": 20.3,
+     "n": 1,
+     "b0": [
+      0.381,
+      0.132
+     ],
+     "vmax": 1.231,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": -0.004,
+     "ey": 0.009,
+     "eh": 0.134,
+     "t": 44.78,
+     "n": 2,
+     "b0": [
+      0.036,
+      -0.058
+     ],
+     "vmax": 0.038,
+     "connected": false
+    },
+    {
+     "foot": "left",
+     "ex": 0.011,
+     "ey": 0.005,
+     "eh": -0.043,
+     "t": 52.78,
+     "n": 3,
+     "b0": [
+      0.085,
+      -0.03
+     ],
+     "vmax": 0.027,
+     "connected": false
+    },
+    {
+     "foot": "right",
+     "ex": 0.014,
+     "ey": 0.005,
+     "eh": -0.112,
+     "t": 64.0,
+     "n": 4,
+     "b0": [
+      0.091,
+      0.012
+     ],
+     "vmax": 1.004,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.001,
+     "ey": -0.002,
+     "eh": -0.138,
+     "t": 86.76,
+     "n": 5,
+     "b0": [
+      -0.018,
+      0.086
+     ],
+     "vmax": 1.243,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.011,
+     "ey": 0.006,
+     "eh": -0.09,
+     "t": 105.18,
+     "n": 6,
+     "b0": [
+      1.057,
+      0.369
+     ],
+     "vmax": 1.096,
+     "connected": true
+    }
+   ],
+   "falls": 0,
+   "falls_t": [],
+   "in_view": 0.499,
+   "body": {
+    "mass_scale_mean": 1.006,
+    "friction": 1.239,
+    "kp": 220.1,
+    "vin": 7.15,
+    "lag": 5
+   },
+   "fixes": 153,
+   "fix_rejects": 5,
+   "backups": 3,
+   "unsticks": 0,
+   "kickoff": {
+    "duck": [
+     -0.851,
+     -0.247,
+     0.049
+    ],
+    "ball": [
+     0.387,
+     0.049
+    ]
+   },
+   "wall_s": 134.4
+  },
+  {
+   "seed": 3,
+   "goals": 3,
+   "goal_t": [
+    6.62,
+    23.88,
+    38.54
+   ],
+   "goals_without_kick": 0,
+   "kicks": 4,
+   "connected": 4,
+   "kick_log": [
+    {
+     "foot": "right",
+     "ex": -0.01,
+     "ey": 0.013,
+     "eh": -0.053,
+     "t": 5.04,
+     "n": 1,
+     "b0": [
+      0.03,
+      0.028
+     ],
+     "vmax": 1.28,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": -0.004,
+     "ey": 0.01,
+     "eh": 0.056,
+     "t": 22.0,
+     "n": 2,
+     "b0": [
+      -0.059,
+      -0.159
+     ],
+     "vmax": 1.165,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.007,
+     "ey": 0.02,
+     "eh": -0.141,
+     "t": 36.7,
+     "n": 3,
+     "b0": [
+      0.0,
+      0.0
+     ],
+     "vmax": 1.078,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": -0.008,
+     "ey": -0.003,
+     "eh": -0.04,
+     "t": 54.54,
+     "n": 4,
+     "b0": [
+      0.413,
+      0.075
+     ],
+     "vmax": 0.907,
+     "connected": true
+    }
+   ],
+   "falls": 0,
+   "falls_t": [],
+   "in_view": 0.667,
+   "body": {
+    "mass_scale_mean": 1.004,
+    "friction": 1.119,
+    "kp": 187.5,
+    "vin": 7.98,
+    "lag": 6
+   },
+   "fixes": 132,
+   "fix_rejects": 3,
+   "backups": 3,
+   "unsticks": 0,
+   "kickoff": {
+    "duck": [
+     -0.716,
+     0.222,
+     0.0
+    ],
+    "ball": [
+     0.03,
+     0.028
+    ]
+   },
+   "wall_s": 167.0
+  },
+  {
+   "seed": 4,
+   "goals": 0,
+   "goal_t": [],
+   "goals_without_kick": 0,
+   "kicks": 3,
+   "connected": 3,
+   "kick_log": [
+    {
+     "foot": "left",
+     "ex": 0.009,
+     "ey": 0.005,
+     "eh": -0.064,
+     "t": 36.94,
+     "n": 1,
+     "b0": [
+      0.961,
+      0.713
+     ],
+     "vmax": 0.812,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.015,
+     "ey": 0.009,
+     "eh": -0.072,
+     "t": 69.24,
+     "n": 2,
+     "b0": [
+      0.814,
+      0.709
+     ],
+     "vmax": 0.422,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.013,
+     "ey": -0.016,
+     "eh": -0.07,
+     "t": 74.7,
+     "n": 3,
+     "b0": [
+      0.994,
+      0.698
+     ],
+     "vmax": 0.52,
+     "connected": true
+    }
+   ],
+   "falls": 0,
+   "falls_t": [],
+   "in_view": 0.679,
+   "body": {
+    "mass_scale_mean": 1.0,
+    "friction": 1.249,
+    "kp": 202.2,
+    "vin": 7.89,
+    "lag": 6
+   },
+   "fixes": 25,
+   "fix_rejects": 0,
+   "backups": 1,
+   "unsticks": 0,
+   "kickoff": {
+    "duck": [
+     -0.747,
+     0.294,
+     0.11
+    ],
+    "ball": [
+     0.357,
+     -0.069
+    ]
+   },
+   "wall_s": 99.7
+  }
+ ]
+}

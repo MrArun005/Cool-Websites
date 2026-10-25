@@ -1,0 +1,1070 @@
+[
+ {
+  "body": "_noantenna",
+  "label": "baseline (189 g, x1)",
+  "head_g": 189,
+  "k": 1.0,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "10/10",
+   "run": "10/10",
+   "squat": "10/10",
+   "sit_stand": "10/10",
+   "swag": "10/10",
+   "sleep_wake": "10/10",
+   "lie_down": "10/10",
+   "getup_face_down": "10/10",
+   "getup_back": "10/10",
+   "hop": "10/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 120,
+  "skills_total": 120,
+  "walk_mps": 0.1655,
+  "run_mps": 0.492,
+  "walk_tilt_max": 5.6,
+  "run_tilt_max": 5.9,
+  "idle_tilt_max": 1.4,
+  "hop_flight_ms": 85.0,
+  "hop_height_mm": 8.859656250000002,
+  "hops_per_s": 1.0,
+  "hop_landing_bw": 4.175,
+  "hop_tilt_max": 10.649999999999999,
+  "lie_down_peak_g": 3.4000000000000004,
+  "getup_back_s": 0.92,
+  "getup_face_down_s": 0.24,
+  "roll_deg": 358.0,
+  "squat_tilt": 4.8,
+  "course": {
+   "1": {
+    "finished": 10,
+    "n": 10,
+    "falls": 1,
+    "t_med": 22.04
+   },
+   "2": {
+    "finished": 9,
+    "n": 10,
+    "falls": 25,
+    "t_med": 36.86,
+    "more": {
+     "finished": 18,
+     "n": 20,
+     "falls": 39
+    }
+   },
+   "3": {
+    "finished": 7,
+    "n": 10,
+    "falls": 66,
+    "t_med": 63.1,
+    "more": {
+     "finished": 11,
+     "n": 20,
+     "falls": 115
+    }
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.951,
+   "final_cm": 16.75,
+   "within_25": 9,
+   "falls": 0,
+   "hops": 33
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 25,
+   "goals_med": 3.0,
+   "with_goal": 9,
+   "kicks": 48,
+   "connected": 36,
+   "falls": 1
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     0,
+     0
+    ],
+    [
+     1,
+     0
+    ]
+   ],
+   "goals": 1,
+   "kicks": 33,
+   "connected": 19,
+   "shots": 18,
+   "falls": 16,
+   "rtf": 0.4215
+  }
+ },
+ {
+  "body": "_m175",
+  "label": "175 g",
+  "head_g": 175,
+  "k": 1.0,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "10/10",
+   "run": "10/10",
+   "squat": "10/10",
+   "sit_stand": "10/10",
+   "swag": "10/10",
+   "sleep_wake": "10/10",
+   "lie_down": "10/10",
+   "getup_face_down": "10/10",
+   "getup_back": "10/10",
+   "hop": "9/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 119,
+  "skills_total": 120,
+  "walk_mps": 0.1575,
+  "run_mps": 0.477,
+  "walk_tilt_max": 5.45,
+  "run_tilt_max": 6.2,
+  "idle_tilt_max": 1.45,
+  "hop_flight_ms": 88.75,
+  "hop_height_mm": 9.658634765625001,
+  "hops_per_s": 1.0,
+  "hop_landing_bw": 4.48,
+  "hop_tilt_max": 11.0,
+  "lie_down_peak_g": 3.4000000000000004,
+  "getup_back_s": 0.92,
+  "getup_face_down_s": 0.24,
+  "roll_deg": 359.0,
+  "squat_tilt": 4.45,
+  "course": {
+   "1": {
+    "finished": 10,
+    "n": 10,
+    "falls": 2,
+    "t_med": 23.0
+   },
+   "2": {
+    "finished": 7,
+    "n": 10,
+    "falls": 22,
+    "t_med": 34.62,
+    "more": {
+     "finished": 17,
+     "n": 20,
+     "falls": 44
+    }
+   },
+   "3": {
+    "finished": 6,
+    "n": 10,
+    "falls": 57,
+    "t_med": 51.5,
+    "more": {
+     "finished": 7,
+     "n": 20,
+     "falls": 132
+    }
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.949,
+   "final_cm": 16.900000000000002,
+   "within_25": 10,
+   "falls": 0,
+   "hops": 33
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 24,
+   "goals_med": 2.5,
+   "with_goal": 9,
+   "kicks": 45,
+   "connected": 35,
+   "falls": 0
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     1,
+     0
+    ],
+    [
+     0,
+     1
+    ]
+   ],
+   "goals": 2,
+   "kicks": 34,
+   "connected": 16,
+   "shots": 24,
+   "falls": 7,
+   "rtf": 0.5475000000000001
+  }
+ },
+ {
+  "body": "_m160",
+  "label": "160 g",
+  "head_g": 160,
+  "k": 1.0,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "10/10",
+   "run": "10/10",
+   "squat": "10/10",
+   "sit_stand": "10/10",
+   "swag": "10/10",
+   "sleep_wake": "10/10",
+   "lie_down": "10/10",
+   "getup_face_down": "10/10",
+   "getup_back": "10/10",
+   "hop": "10/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 120,
+  "skills_total": 120,
+  "walk_mps": 0.15,
+  "run_mps": 0.4715,
+  "walk_tilt_max": 5.300000000000001,
+  "run_tilt_max": 6.25,
+  "idle_tilt_max": 1.55,
+  "hop_flight_ms": 86.25,
+  "hop_height_mm": 9.122150390624999,
+  "hops_per_s": 1.0,
+  "hop_landing_bw": 4.675,
+  "hop_tilt_max": 9.05,
+  "lie_down_peak_g": 3.4000000000000004,
+  "getup_back_s": 0.92,
+  "getup_face_down_s": 0.24,
+  "roll_deg": 358.0,
+  "squat_tilt": 3.95,
+  "course": {
+   "1": {
+    "finished": 10,
+    "n": 10,
+    "falls": 2,
+    "t_med": 25.4
+   },
+   "2": {
+    "finished": 7,
+    "n": 10,
+    "falls": 25,
+    "t_med": 40.12,
+    "more": {
+     "finished": 15,
+     "n": 20,
+     "falls": 41
+    }
+   },
+   "3": {
+    "finished": 6,
+    "n": 10,
+    "falls": 62,
+    "t_med": 70.35,
+    "more": {
+     "finished": 11,
+     "n": 20,
+     "falls": 116
+    }
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.9139999999999999,
+   "final_cm": 16.950000000000003,
+   "within_25": 10,
+   "falls": 0,
+   "hops": 31
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 19,
+   "goals_med": 2.5,
+   "with_goal": 7,
+   "kicks": 42,
+   "connected": 35,
+   "falls": 1
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     0,
+     1
+    ],
+    [
+     0,
+     1
+    ]
+   ],
+   "goals": 2,
+   "kicks": 38,
+   "connected": 13,
+   "shots": 25,
+   "falls": 2,
+   "rtf": 0.41800000000000004
+  }
+ },
+ {
+  "body": "_m140",
+  "label": "140 g",
+  "head_g": 140,
+  "k": 1.0,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "10/10",
+   "run": "10/10",
+   "squat": "10/10",
+   "sit_stand": "10/10",
+   "swag": "10/10",
+   "sleep_wake": "10/10",
+   "lie_down": "9/10",
+   "getup_face_down": "10/10",
+   "getup_back": "10/10",
+   "hop": "5/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 114,
+  "skills_total": 120,
+  "walk_mps": 0.14200000000000002,
+  "run_mps": 0.451,
+  "walk_tilt_max": 5.050000000000001,
+  "run_tilt_max": 6.25,
+  "idle_tilt_max": 1.55,
+  "hop_flight_ms": 85.0,
+  "hop_height_mm": 8.859656250000002,
+  "hops_per_s": 0.58,
+  "hop_landing_bw": 4.904999999999999,
+  "hop_tilt_max": 50.599999999999994,
+  "lie_down_peak_g": 3.4000000000000004,
+  "getup_back_s": 1.06,
+  "getup_face_down_s": 0.22999999999999998,
+  "roll_deg": 359.0,
+  "squat_tilt": 3.5999999999999996,
+  "course": {
+   "1": {
+    "finished": 10,
+    "n": 10,
+    "falls": 3,
+    "t_med": 26.119999999999997
+   },
+   "2": {
+    "finished": 7,
+    "n": 10,
+    "falls": 29,
+    "t_med": 31.46
+   },
+   "3": {
+    "finished": 1,
+    "n": 10,
+    "falls": 44,
+    "t_med": 67.06
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.903,
+   "final_cm": 16.950000000000003,
+   "within_25": 9,
+   "falls": 0,
+   "hops": 34
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 11,
+   "goals_med": 1.0,
+   "with_goal": 7,
+   "kicks": 45,
+   "connected": 41,
+   "falls": 0
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "goals": 0,
+   "kicks": 31,
+   "connected": 12,
+   "shots": 13,
+   "falls": 1,
+   "rtf": 0.39349999999999996
+  }
+ },
+ {
+  "body": "_m120",
+  "label": "120 g",
+  "head_g": 120,
+  "k": 1.0,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "8/10",
+   "run": "10/10",
+   "squat": "8/10",
+   "sit_stand": "10/10",
+   "swag": "4/10",
+   "sleep_wake": "10/10",
+   "lie_down": "7/10",
+   "getup_face_down": "10/10",
+   "getup_back": "10/10",
+   "hop": "1/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 98,
+  "skills_total": 120,
+  "walk_mps": 0.14100000000000001,
+  "run_mps": 0.442,
+  "walk_tilt_max": 4.949999999999999,
+  "run_tilt_max": 6.199999999999999,
+  "idle_tilt_max": 1.65,
+  "hop_flight_ms": 68.75,
+  "hop_height_mm": 5.795947265625001,
+  "hops_per_s": 0.25,
+  "hop_landing_bw": 4.545,
+  "hop_tilt_max": 92.05,
+  "lie_down_peak_g": 3.4000000000000004,
+  "getup_back_s": 1.1600000000000001,
+  "getup_face_down_s": 0.22999999999999998,
+  "roll_deg": 358.5,
+  "squat_tilt": 3.2,
+  "course": {
+   "1": {
+    "finished": 10,
+    "n": 10,
+    "falls": 4,
+    "t_med": 29.130000000000003
+   },
+   "2": {
+    "finished": 9,
+    "n": 10,
+    "falls": 19,
+    "t_med": 53.64
+   },
+   "3": {
+    "finished": 1,
+    "n": 10,
+    "falls": 79,
+    "t_med": 74.26
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.8594999999999999,
+   "final_cm": 17.45,
+   "within_25": 8,
+   "falls": 0,
+   "hops": 21
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 7,
+   "goals_med": 1.0,
+   "with_goal": 7,
+   "kicks": 31,
+   "connected": 23,
+   "falls": 3
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "goals": 0,
+   "kicks": 27,
+   "connected": 11,
+   "shots": 12,
+   "falls": 3,
+   "rtf": 0.37
+  }
+ },
+ {
+  "body": "_m100",
+  "label": "100 g",
+  "head_g": 100,
+  "k": 1.0,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "9/10",
+   "run": "10/10",
+   "squat": "7/10",
+   "sit_stand": "10/10",
+   "swag": "1/10",
+   "sleep_wake": "10/10",
+   "lie_down": "9/10",
+   "getup_face_down": "10/10",
+   "getup_back": "9/10",
+   "hop": "0/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 95,
+  "skills_total": 120,
+  "walk_mps": 0.14,
+  "run_mps": 0.425,
+  "walk_tilt_max": 5.0,
+  "run_tilt_max": 6.2,
+  "idle_tilt_max": 1.75,
+  "hop_flight_ms": 62.5,
+  "hop_height_mm": 4.7900390625,
+  "hops_per_s": 0.25,
+  "hop_landing_bw": 4.029999999999999,
+  "hop_tilt_max": 92.3,
+  "lie_down_peak_g": 3.4000000000000004,
+  "getup_back_s": 1.1400000000000001,
+  "getup_face_down_s": 0.22999999999999998,
+  "roll_deg": 359.0,
+  "squat_tilt": 2.8,
+  "course": {
+   "1": {
+    "finished": 10,
+    "n": 10,
+    "falls": 4,
+    "t_med": 29.43
+   },
+   "2": {
+    "finished": 9,
+    "n": 10,
+    "falls": 37,
+    "t_med": 54.22
+   },
+   "3": {
+    "finished": 0,
+    "n": 10,
+    "falls": 74,
+    "t_med": null
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.7885,
+   "final_cm": 20.6,
+   "within_25": 8,
+   "falls": 0,
+   "hops": 22
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 5,
+   "goals_med": 0.5,
+   "with_goal": 5,
+   "kicks": 20,
+   "connected": 16,
+   "falls": 4
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "goals": 0,
+   "kicks": 34,
+   "connected": 12,
+   "shots": 18,
+   "falls": 4,
+   "rtf": 0.352
+  }
+ },
+ {
+  "body": "_k85",
+  "label": "x0.85 (159 g)",
+  "head_g": 159,
+  "k": 0.85,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "10/10",
+   "run": "10/10",
+   "squat": "10/10",
+   "sit_stand": "10/10",
+   "swag": "10/10",
+   "sleep_wake": "10/10",
+   "lie_down": "10/10",
+   "getup_face_down": "10/10",
+   "getup_back": "10/10",
+   "hop": "7/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 117,
+  "skills_total": 120,
+  "walk_mps": 0.1415,
+  "run_mps": 0.471,
+  "walk_tilt_max": 5.15,
+  "run_tilt_max": 6.4,
+  "idle_tilt_max": 1.5,
+  "hop_flight_ms": 80.0,
+  "hop_height_mm": 7.848000000000001,
+  "hops_per_s": 1.0,
+  "hop_landing_bw": 4.79,
+  "hop_tilt_max": 9.65,
+  "lie_down_peak_g": 3.45,
+  "getup_back_s": 1.1300000000000001,
+  "getup_face_down_s": 0.27,
+  "roll_deg": 359.0,
+  "squat_tilt": 3.75,
+  "course": {
+   "1": {
+    "finished": 10,
+    "n": 10,
+    "falls": 2,
+    "t_med": 25.259999999999998
+   },
+   "2": {
+    "finished": 9,
+    "n": 10,
+    "falls": 24,
+    "t_med": 42.9
+   },
+   "3": {
+    "finished": 6,
+    "n": 10,
+    "falls": 63,
+    "t_med": 62.37
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.8225,
+   "final_cm": 17.2,
+   "within_25": 9,
+   "falls": 0,
+   "hops": 26
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 17,
+   "goals_med": 2.0,
+   "with_goal": 10,
+   "kicks": 37,
+   "connected": 31,
+   "falls": 3
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "goals": 0,
+   "kicks": 36,
+   "connected": 15,
+   "shots": 15,
+   "falls": 6,
+   "rtf": 0.3855
+  }
+ },
+ {
+  "body": "_k75",
+  "label": "x0.75 (142 g)",
+  "head_g": 142,
+  "k": 0.75,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "7/10",
+   "run": "10/10",
+   "squat": "9/10",
+   "sit_stand": "10/10",
+   "swag": "6/10",
+   "sleep_wake": "10/10",
+   "lie_down": "7/10",
+   "getup_face_down": "10/10",
+   "getup_back": "8/10",
+   "hop": "2/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 99,
+  "skills_total": 120,
+  "walk_mps": 0.133,
+  "run_mps": 0.4565,
+  "walk_tilt_max": 4.95,
+  "run_tilt_max": 6.199999999999999,
+  "idle_tilt_max": 1.55,
+  "hop_flight_ms": 63.75,
+  "hop_height_mm": 4.983556640625,
+  "hops_per_s": 0.5,
+  "hop_landing_bw": 5.05,
+  "hop_tilt_max": 98.85,
+  "lie_down_peak_g": 3.6,
+  "getup_back_s": 1.32,
+  "getup_face_down_s": 0.3,
+  "roll_deg": 358.0,
+  "squat_tilt": 3.3,
+  "course": {
+   "1": {
+    "finished": 9,
+    "n": 10,
+    "falls": 3,
+    "t_med": 26.68
+   },
+   "2": {
+    "finished": 8,
+    "n": 10,
+    "falls": 29,
+    "t_med": 44.22
+   },
+   "3": {
+    "finished": 3,
+    "n": 10,
+    "falls": 71,
+    "t_med": 54.18
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.837,
+   "final_cm": 17.65,
+   "within_25": 10,
+   "falls": 0,
+   "hops": 23
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 19,
+   "goals_med": 2.0,
+   "with_goal": 9,
+   "kicks": 42,
+   "connected": 34,
+   "falls": 3
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     0,
+     0
+    ],
+    [
+     1,
+     0
+    ]
+   ],
+   "goals": 1,
+   "kicks": 33,
+   "connected": 14,
+   "shots": 16,
+   "falls": 3,
+   "rtf": 0.3735
+  }
+ },
+ {
+  "body": "_human",
+  "label": "human-like head (175 g)",
+  "head_g": 175,
+  "k": null,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "10/10",
+   "run": "10/10",
+   "squat": "10/10",
+   "sit_stand": "10/10",
+   "swag": "10/10",
+   "sleep_wake": "10/10",
+   "lie_down": "10/10",
+   "getup_face_down": "10/10",
+   "getup_back": "10/10",
+   "hop": "9/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 119,
+  "skills_total": 120,
+  "walk_mps": 0.152,
+  "run_mps": 0.4725,
+  "walk_tilt_max": 5.45,
+  "run_tilt_max": 6.35,
+  "idle_tilt_max": 1.45,
+  "hop_flight_ms": 87.5,
+  "hop_height_mm": 9.3884765625,
+  "hops_per_s": 1.0,
+  "hop_landing_bw": 4.5649999999999995,
+  "hop_tilt_max": 10.149999999999999,
+  "lie_down_peak_g": 3.4000000000000004,
+  "getup_back_s": 0.91,
+  "getup_face_down_s": 0.32,
+  "roll_deg": 358.0,
+  "squat_tilt": 3.9499999999999997,
+  "course": {
+   "1": {
+    "finished": 10,
+    "n": 10,
+    "falls": 5,
+    "t_med": 25.36
+   },
+   "2": {
+    "finished": 9,
+    "n": 10,
+    "falls": 26,
+    "t_med": 41.26
+   },
+   "3": {
+    "finished": 5,
+    "n": 10,
+    "falls": 67,
+    "t_med": 45.3
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.944,
+   "final_cm": 16.950000000000003,
+   "within_25": 8,
+   "falls": 0,
+   "hops": 32
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 17,
+   "goals_med": 1.0,
+   "with_goal": 9,
+   "kicks": 53,
+   "connected": 42,
+   "falls": 4
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "goals": 0,
+   "kicks": 30,
+   "connected": 17,
+   "shots": 17,
+   "falls": 13,
+   "rtf": 0.474
+  }
+ },
+ {
+  "body": "_roundduck",
+  "label": "round duck head (175 g)",
+  "head_g": 175,
+  "k": null,
+  "missing": [],
+  "skills": {
+   "idle": "10/10",
+   "walk": "10/10",
+   "run": "10/10",
+   "squat": "10/10",
+   "sit_stand": "10/10",
+   "swag": "10/10",
+   "sleep_wake": "10/10",
+   "lie_down": "10/10",
+   "getup_face_down": "10/10",
+   "getup_back": "10/10",
+   "hop": "8/10",
+   "roll": "10/10"
+  },
+  "skills_passed": 118,
+  "skills_total": 120,
+  "walk_mps": 0.1505,
+  "run_mps": 0.46950000000000003,
+  "walk_tilt_max": 5.4,
+  "run_tilt_max": 6.1,
+  "idle_tilt_max": 1.4,
+  "hop_flight_ms": 87.5,
+  "hop_height_mm": 9.3884765625,
+  "hops_per_s": 1.0,
+  "hop_landing_bw": 4.535,
+  "hop_tilt_max": 10.2,
+  "lie_down_peak_g": 3.4000000000000004,
+  "getup_back_s": 0.78,
+  "getup_face_down_s": 0.27,
+  "roll_deg": 357.5,
+  "squat_tilt": 3.85,
+  "course": {
+   "1": {
+    "finished": 10,
+    "n": 10,
+    "falls": 3,
+    "t_med": 24.36
+   },
+   "2": {
+    "finished": 10,
+    "n": 10,
+    "falls": 14,
+    "t_med": 31.169999999999998
+   },
+   "3": {
+    "finished": 5,
+    "n": 10,
+    "falls": 54,
+    "t_med": 49.16
+   }
+  },
+  "follow": {
+   "n": 10,
+   "in_view": 0.9675,
+   "final_cm": 16.8,
+   "within_25": 9,
+   "falls": 0,
+   "hops": 32
+  },
+  "soccer": {
+   "n": 10,
+   "goals": 16,
+   "goals_med": 1.0,
+   "with_goal": 9,
+   "kicks": 48,
+   "connected": 37,
+   "falls": 4
+  },
+  "match": {
+   "n": 2,
+   "scores": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "goals": 0,
+   "kicks": 28,
+   "connected": 14,
+   "shots": 16,
+   "falls": 5,
+   "rtf": 0.41200000000000003
+  }
+ },
+ {
+  "body": "_human_tall",
+  "label": "human-like, first tall version (160 g, skills only)",
+  "head_g": 160,
+  "k": null,
+  "missing": [
+   "course_L1",
+   "course_L2",
+   "course_L3",
+   "follow_0-4",
+   "follow_5-9",
+   "soccer_0-4",
+   "soccer_5-9",
+   "match_s0",
+   "match_s1"
+  ],
+  "skills": {
+   "idle": "10/10",
+   "walk": "10/10",
+   "run": "10/10",
+   "squat": "10/10",
+   "sit_stand": "10/10",
+   "swag": "10/10",
+   "sleep_wake": "10/10",
+   "lie_down": "10/10",
+   "getup_face_down": "10/10",
+   "getup_back": "1/10",
+   "hop": "9/10",
+   "roll": "5/10"
+  },
+  "skills_passed": 105,
+  "skills_total": 120,
+  "walk_mps": 0.1505,
+  "run_mps": 0.472,
+  "walk_tilt_max": 5.300000000000001,
+  "run_tilt_max": 5.85,
+  "idle_tilt_max": 1.55,
+  "hop_flight_ms": 87.5,
+  "hop_height_mm": 9.3884765625,
+  "hops_per_s": 1.0,
+  "hop_landing_bw": 4.484999999999999,
+  "hop_tilt_max": 10.2,
+  "lie_down_peak_g": 3.45,
+  "getup_back_s": 0.88,
+  "getup_face_down_s": 0.3,
+  "roll_deg": 299.0,
+  "squat_tilt": 4.15,
+  "course": {}
+ },
+ {
+  "body": "_roundduck_tall",
+  "label": "round duck, first tall version (160 g, skills only)",
+  "head_g": 160,
+  "k": null,
+  "missing": [
+   "course_L1",
+   "course_L2",
+   "course_L3",
+   "follow_0-4",
+   "follow_5-9",
+   "soccer_0-4",
+   "soccer_5-9",
+   "match_s0",
+   "match_s1"
+  ],
+  "skills": {
+   "idle": "10/10",
+   "walk": "10/10",
+   "run": "10/10",
+   "squat": "10/10",
+   "sit_stand": "10/10",
+   "swag": "10/10",
+   "sleep_wake": "10/10",
+   "lie_down": "10/10",
+   "getup_face_down": "10/10",
+   "getup_back": "3/10",
+   "hop": "9/10",
+   "roll": "8/10"
+  },
+  "skills_passed": 110,
+  "skills_total": 120,
+  "walk_mps": 0.154,
+  "run_mps": 0.4785,
+  "walk_tilt_max": 5.35,
+  "run_tilt_max": 6.55,
+  "idle_tilt_max": 1.55,
+  "hop_flight_ms": 87.5,
+  "hop_height_mm": 9.3884765625,
+  "hops_per_s": 1.0,
+  "hop_landing_bw": 4.515000000000001,
+  "hop_tilt_max": 9.95,
+  "lie_down_peak_g": 3.4000000000000004,
+  "getup_back_s": 1.52,
+  "getup_face_down_s": 0.26,
+  "roll_deg": 354.0,
+  "squat_tilt": 4.3,
+  "course": {}
+ }
+]
