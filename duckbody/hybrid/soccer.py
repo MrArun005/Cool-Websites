@@ -98,7 +98,7 @@ def pitch_boxes():
     return b
 
 
-def scene_editor(cam=True):
+def scene_editor(cam=True, chest=False):
     import mujoco
 
     def edit(spec):
@@ -107,6 +107,8 @@ def scene_editor(cam=True):
             c = head.add_camera()
             c.name = "eye"
             c.pos, c.quat, c.fovy = list(F.EYE_POS), list(F.EYE_QUAT), F.FOVY
+        if chest:                                   # opt-in: the chest camera (follow.CHEST_*, --chest)
+            F.add_chest_camera(spec.body(F.CHEST_BODY))
         for i, b in enumerate(pitch_boxes()):
             g = spec.worldbody.add_geom()
             g.name = f"pitch_{b['kind']}_{i}"
@@ -139,8 +141,8 @@ def scene_editor(cam=True):
 class Pitch:
     """The sim with the pitch and a free ball; helpers for the ball state."""
 
-    def __init__(self, seed=0, randomize=True, cam=True):
-        self.sim = MicroduckSim(str(rh.SCENE), seed=seed, randomize=randomize, edit=scene_editor(cam))
+    def __init__(self, seed=0, randomize=True, cam=True, chest=False):
+        self.sim = MicroduckSim(str(rh.SCENE), seed=seed, randomize=randomize, edit=scene_editor(cam, chest))
         m = self.sim.m
         j = m.joint("ball_free")
         self.bq, self.bv = int(m.jnt_qposadr[j.id]), int(m.jnt_dofadr[j.id])
@@ -277,10 +279,12 @@ def detect_goal(img_rgb):
                 right=(float(xs[ri]), float(ys[ri])), edge=u0 <= 1 or u1 >= W - 2)
 
 
-def pixel_ground(sim, cam_id, u, v, z=0.0):
+def pixel_ground(sim, cam_id, u, v, z=0.0, fy=None):
     """Ground point (height z) seen at pixel (u, v), relative to the trunk in the trunk's yaw frame (x forward,
-    y left). Camera pose from the head joints' kinematics, trunk tilt from the IMU (on the robot: encoders + IMU)."""
-    ray = sim.d.cam_xmat[cam_id].reshape(3, 3) @ np.array([(u - W / 2) / FY, -(v - H / 2) / FY, -1.0])
+    y left). Camera pose from the head joints' kinematics, trunk tilt from the IMU (on the robot: encoders + IMU).
+    fy: the camera's focal length in pixels (default the head camera's; F.CHEST_FY for the chest camera)."""
+    fy = FY if fy is None else fy
+    ray = sim.d.cam_xmat[cam_id].reshape(3, 3) @ np.array([(u - W / 2) / fy, -(v - H / 2) / fy, -1.0])
     c = sim.d.cam_xpos[cam_id]
     if ray[2] > -1e-3:
         return None
@@ -305,6 +309,9 @@ AROUND = 0.28                            # going round the ball: pass this far t
 KICK_X, KICK_Y = 0.08, 0.032             # ball centre in the trunk frame for a straight kick (probe: x 0.06-0.10)
 TOL_X, TOL_Y, TOL_H = 0.02, 0.02, 0.15   # alignment tolerances (m, m, rad); probe: +-2 cm sideways = +-15 deg
 LOST_S = 0.7
+CHEST_D = 0.24                           # --chest: the ball this close -> head at home (the chest camera sees it)
+CHEST_READY_S = 0.3                      # --chest: the head was home through the alignment: kick after 0.3 s (probe:
+                                         # 0.25 s after the head command is home -> 18/18)
 LOST_S_LONG = 4.0
 ALIGN_MAX_S = 8.0                        # going round a still ball it may be out of view this long
 READY_S = 1.0                            # head back home before a kick: from the foot view the kick brains do
@@ -322,8 +329,9 @@ class Player:
     """The duck's soccer brain: perception (camera at 10 Hz), estimation (IMU heading, dead reckoning, goal
     sightings), and the behaviour state machine search -> approach -> align -> kick -> chase."""
 
-    def __init__(self, rt, cam_id, psi0=0.0, pos0=(0.0, 0.0)):
+    def __init__(self, rt, cam_id, psi0=0.0, pos0=(0.0, 0.0), chest_id=None):
         self.rt, self.sim, self.cam_id = rt, rt.sim, cam_id
+        self.chest_id = chest_id                 # the chest camera (opt-in, --chest): sees the ball at the feet
         self.psi = psi0                          # heading, field frame (IMU gyro about gravity, integrated)
         self.pos = np.array(pos0, float)         # dead-reckoned position, fixed by goal sightings
         self.ball_f = np.array([0.0, 0.0])       # ball in the field frame (last sighting)
@@ -373,31 +381,40 @@ class Player:
         c, s = math.cos(self.psi), math.sin(self.psi)
         return np.array([c * d[0] + s * d[1], -s * d[0] + c * d[1]])
 
-    def expect_visible(self):
+    def expect_visible(self, cam=None, fy=None):
         """Would the ball be in the picture if it were where we think? (projection through the camera pose)"""
         sim = self.sim
+        cam = self.cam_id if cam is None else cam
+        fy = FY if fy is None else fy
         rel = self.to_body(self.ball_f)
         R = sim.d.xmat[sim.trunk].reshape(3, 3)
         yaw = math.atan2(R[1, 0], R[0, 0])
         c, s = math.cos(yaw), math.sin(yaw)
         p = sim.d.xpos[sim.trunk] + np.array([c * rel[0] - s * rel[1], s * rel[0] + c * rel[1], 0.0])
         p[2] = BALL_R
-        pc = sim.d.cam_xmat[self.cam_id].reshape(3, 3).T @ (p - sim.d.cam_xpos[self.cam_id])
+        pc = sim.d.cam_xmat[cam].reshape(3, 3).T @ (p - sim.d.cam_xpos[cam])
         if pc[2] > -0.03:
             return False
-        u, v = -pc[0] / pc[2] * FY, pc[1] / pc[2] * FY
+        u, v = -pc[0] / pc[2] * fy, pc[1] / pc[2] * fy
         return abs(u) < W / 2 - 6 and abs(v) < H / 2 - 6
 
-    def see(self, img):
+    def see(self, img, chest_img=None):
         det = F.detect(img)
+        g = None if det is None else pixel_ground(self.sim, self.cam_id, det[0], det[1], BALL_R)
+        if chest_img is not None:                 # the chest camera's fix wins when the ball is close (at the feet)
+            dc = F.detect(chest_img)
+            gc = None if dc is None else pixel_ground(self.sim, self.chest_id, dc[0], dc[1], BALL_R, fy=F.CHEST_FY)
+            if gc is not None and float(np.hypot(*gc)) < 0.30:   # (match.CHEST_RANGE: further out it ranges poorly)
+                g = gc
+                if det is None:
+                    det = dc
         self.last_det = det
-        if det is not None:
-            g = pixel_ground(self.sim, self.cam_id, det[0], det[1], BALL_R)
-            if g is not None and np.hypot(*g) < 3.5:
+        if g is not None:
+            if np.hypot(*g) < 3.5:
                 self.ball_f = self.to_field(g)
                 self.ball_seen_t = self.t
                 self.misses = 0
-        elif self.expect_visible():
+        elif self.expect_visible() or (self.chest_id is not None and self.expect_visible(self.chest_id, F.CHEST_FY)):
             self.misses += 1                      # it should be in view but is not: it has moved
         gd = detect_goal(img)
         self.last_goal = gd
@@ -461,7 +478,9 @@ class Player:
         rel = self.to_body(self.ball_f)
         d = float(np.hypot(*rel))
         bear = math.atan2(rel[1], rel[0])
-        if d < 0.24:
+        if self.chest_id is not None and d < CHEST_D:     # the chest camera sees it: head at home
+            self.rt.look(0.0, 0.0)
+        elif d < 0.24:
             self.rt.look(float(np.clip(bear, -0.8, 0.8)), FOOT_VIEW[1], neck=FOOT_VIEW[0])
         else:
             elev = math.atan2(CAM_H - BALL_R, max(d - 0.04, 0.05))
@@ -511,7 +530,10 @@ class Player:
                 nod = 0.5 + 0.5 * math.sin(2 * math.pi * 0.5 * ph)      # far (pitch 0.1) .. at the feet (0.9, neck -0.3)
                 self.rt.look(0.6 * self.search_dir, 0.1 + 0.8 * nod, neck=-0.3 * nod)
                 if dball < 0.3 and ph < 1.5:                 # lost it up close: step back, look down at the feet
-                    self.rt.look(0.0, FOOT_VIEW[1], neck=FOOT_VIEW[0])
+                    if self.chest_id is not None:
+                        self.rt.look(0.0, 0.0)
+                    else:
+                        self.rt.look(0.0, FOOT_VIEW[1], neck=FOOT_VIEW[0])
                     return -0.35, 0.0, 0.0
                 if ph > 10 and ph % 10 < 3:                  # turned round without it: walk towards the middle
                     vx, vy, wz, _ = self.go_to(np.array([0.0, 0.0]), 0.8)
@@ -544,7 +566,10 @@ class Player:
                     self.foot = None
             return vx, vy, wz
         if self.state == "align":
-            self.rt.look(0.0, FOOT_VIEW[1], neck=FOOT_VIEW[0])
+            if self.chest_id is not None:            # the chest camera watches the feet: the head stays home
+                self.rt.look(0.0, 0.0)
+            else:
+                self.rt.look(0.0, FOOT_VIEW[1], neck=FOOT_VIEW[0])
             if dball > BEHIND + 0.15 or along > 0.0:
                 self.set_state("approach")
                 return 0.0, 0.0, 0.0
@@ -591,7 +616,7 @@ class Player:
             return vx, vy, wz
         if self.state == "ready":                    # stand still, head home, then the kick brain
             self.rt.look(0.0, 0.0)
-            if t - self.state_t >= READY_S:
+            if t - self.state_t >= (CHEST_READY_S if self.chest_id is not None else READY_S):
                 self.set_state("kick")
                 self.kicks += 1
                 self.kick_at["t"] = round(t, 2)
@@ -616,9 +641,9 @@ def in_goal(b):
     return b[0] > PITCH_X + BALL_R and abs(b[1]) < GOAL_W / 2
 
 
-def play(seed=0, record=False, t_match=T_MATCH, trace=False, cam_every=4):
+def play(seed=0, record=False, t_match=T_MATCH, trace=False, cam_every=4, chest=False):
     import mujoco
-    P = Pitch(seed=seed, randomize=True)
+    P = Pitch(seed=seed, randomize=True, chest=chest)
     sim = P.sim
     rt = rh.HybridRuntime(sim=sim, seed=seed, log=None)
     rt.reset("standing")
@@ -631,7 +656,8 @@ def play(seed=0, record=False, t_match=T_MATCH, trace=False, cam_every=4):
     ren.scene.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
     ren.scene.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = 0
     cam_id = sim.m.camera("eye").id
-    pl = Player(rt, cam_id, psi0=dyaw, pos0=(dx, dy))   # told where it stands and which way it faces at kick-off
+    chest_id = sim.m.camera("chest").id if chest else None
+    pl = Player(rt, cam_id, psi0=dyaw, pos0=(dx, dy), chest_id=chest_id)   # told where it stands / faces at kick-off
     every = rh.HZ // CAM_HZ
     goals, goal_t, reset_at, goal_hop_end = [], None, None, 0.0
     kicks, frames, balls, states, cams, dets = [], [], [], [], [], []
@@ -659,7 +685,11 @@ def play(seed=0, record=False, t_match=T_MATCH, trace=False, cam_every=4):
             mujoco.mj_forward(sim.m, sim.d)
             ren.update_scene(sim.d, camera="eye")
             img = ren.render()
-            det, gd = pl.see(img)
+            chest_img = None
+            if chest:
+                ren.update_scene(sim.d, camera="chest")
+                chest_img = ren.render()
+            det, gd = pl.see(img, chest_img)
             frames_n += 1
             seen += det is not None
             if record and k % (every * cam_every) == 0:
@@ -701,9 +731,12 @@ def play(seed=0, record=False, t_match=T_MATCH, trace=False, cam_every=4):
     return res
 
 
+CHEST_RUN = False
+
+
 def _job(seed):
     t = time.time()
-    r = play(seed)
+    r = play(seed, chest=CHEST_RUN)
     r["wall_s"] = round(time.time() - t, 1)
     return r
 
@@ -727,9 +760,12 @@ def main():
     ap.add_argument("--trace", type=int, default=None, help="one match with a printed trace (seed)")
     ap.add_argument("--t", type=float, default=T_MATCH)
     ap.add_argument("--out", default=str(HERE / "results_soccer_hybrid.json"))
+    ap.add_argument("--chest", action="store_true", help="opt-in: the chest camera for the ball at the feet")
     a = ap.parse_args()
+    global CHEST_RUN
+    CHEST_RUN = a.chest
     if a.trace is not None:
-        r = play(a.trace, trace=True, t_match=a.t)
+        r = play(a.trace, trace=True, t_match=a.t, chest=a.chest)
         print({k: v for k, v in r.items() if k != "body"})
         return
     if a.probe:

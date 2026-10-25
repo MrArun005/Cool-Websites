@@ -128,7 +128,7 @@ def main():
             wms[tn] = dict(t=t, phase=phase if phase in ("playing", "ready", "set") else "other", dir=d,
                            ball=ball + rng.normal(0, 0.02, 2), setpiece=sp,
                            spots={n: (np.array(SPOTS[tn == "blue"][q["role"]]) * d).tolist() for n, q in P.items() if q["team"] == tn},
-                           players=players, opps=opps)
+                           players=players, opps=opps, chest=(k // 1500) % 3 != 2)   # chest camera on 2/3 of the time
         rec = dict(wm={tn: plain(w) for tn, w in wms.items()}, cmds={})
         for tn in teams:
             cmds = tac[tn].step(wms[tn])

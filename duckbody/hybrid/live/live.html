@@ -42,6 +42,10 @@
   .board .call.goal { background: var(--goal); color: #222; border-color: #e0b800; }
   .live { position: absolute; left: 10px; top: 10px; font: 700 0.72rem var(--mono); letter-spacing: 0.08em; color: #fff; background: #c8322a; padding: 2px 7px; border-radius: 5px; pointer-events: none; }
   .ov { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); padding: 3px 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.7); font: 0.76rem var(--mono); color: var(--ink); pointer-events: none; font-variant-numeric: tabular-nums; }
+  .inset { position: absolute; right: 10px; bottom: 10px; width: 200px; height: 150px; border: 2px solid rgba(255, 255, 255, 0.85); border-radius: 6px; pointer-events: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
+  .inset span { position: absolute; left: 0; right: 0; bottom: 100%; margin-bottom: 3px; font: 600 0.7rem var(--mono); color: #fff; text-shadow: 0 1px 2px #000; text-align: right; white-space: nowrap; }
+  #players tbody tr { cursor: pointer; }
+  #players tbody tr.sel td { background: rgba(255, 255, 255, 0.08); }
   .slow { position: absolute; right: 10px; top: 10px; font: 600 0.75rem var(--mono); color: #222; background: var(--accent); padding: 2px 8px; border-radius: 6px; pointer-events: none; }
   .loading { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; background: var(--stage); font: 0.9rem var(--mono); color: var(--muted); }
   .loading .err { color: var(--bad); max-width: 60ch; }
@@ -66,7 +70,7 @@
   td .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; }
   dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: 0.9rem; }
   dt { color: var(--muted); } dd { margin: 0; }
-  @media (max-width: 560px) { .board { font-size: 0.72rem; gap: 6px; padding: 4px 8px; } .board b { font-size: 1rem; } .live { top: 46px; } .slow { top: 46px; } }
+  @media (max-width: 560px) { .board { font-size: 0.72rem; gap: 6px; padding: 4px 8px; } .board b { font-size: 1rem; } .live { top: 46px; } .slow { top: 46px; } .inset { width: 120px; height: 90px; bottom: 34px; } }
 </style>
 </head>
 <body>
@@ -83,6 +87,7 @@
     <div class="board" id="board"><span class="tm"><i class="sw" style="background:var(--blue)"></i>BLUE</span><b id="score">0 : 0</b><span class="tm">YELLOW<i class="sw" style="background:var(--yellow)"></i></span><span class="clk" id="clock">1H 0:00</span><span class="call" id="call">kick-off</span></div>
     <span class="slow" id="slow" hidden></span>
     <div class="ov" id="ov"></div>
+    <div class="inset" id="inset" hidden><span id="insetlbl"></span></div>
     <div class="loading" id="loading"><div id="loadmsg">Loading the physics engine…</div></div>
   </section>
 
@@ -103,6 +108,7 @@
     </section>
     <section class="card">
       <h2>Players</h2>
+      <p class="meta" style="margin:0 0 8px">Tap a player to see what its chest camera sees (bottom right of the pitch).</p>
       <div class="tablewrap"><table id="players">
         <thead><tr><th>Duck</th><th>Role</th><th>Doing</th><th>Kicks</th><th>Falls</th></tr></thead><tbody></tbody>
       </table></div>
@@ -116,7 +122,8 @@
       <dt>Servos</dt><dd>BAM's XL330 model on all 154 servos, ported to JavaScript: firmware P loop, DC motor with back-EMF, load-dependent friction, battery sag per duck, 15–30 ms command delay. Every duck gets a random body (mass, grip, servo strength, battery) like Microduck's training.</dd>
       <dt>Brains</dt><dd>Microduck's ONNX files, unchanged: velstand walks, turns and gets up after a fall; ball_kick_left and ball_kick_right kick; roulade frees a stuck duck. They run from the ONNX weights in plain JavaScript (checked against onnxruntime to 0.000006).</dd>
       <dt>Tactics</dt><dd>The match code's team tactics, ported line by line (same commands on 60 000 recorded decisions): a striker and a second player on the ball, support runs, marking, passes, a goalkeeper that comes out.</dd>
-      <dt>Simplified</dt><dd>The head cameras are not rendered. A player sees the ball when it is inside its camera's real field of view, not hidden behind another duck and close enough to show as a blob; the position it gets has noise that grows with distance. Self-localization is the true pose plus a drifting error, as in the Python match. On a slow computer the match runs in slow motion rather than skipping physics; the badge on the pitch says how slow.</dd>
+      <dt>Cameras</dt><dd>Each duck has its head camera and a second, small <b>chest camera</b>: 160&nbsp;×&nbsp;120, 120° wide, at the front bottom of the trunk 7.5&nbsp;cm above the grass, looking 60° down. It sees the ball under the chest and between the feet, where the head camera never can; near the ball the head stays up and the duck kicks without stopping to look down. The inset shows the selected player's chest view.</dd>
+      <dt>Simplified</dt><dd>The cameras' pictures are not used for detection (the inset is only drawn for you). A player sees the ball when it is inside a camera's real field of view, not hidden behind another duck or its own body (its parts as boxes, as in the Python match) and close enough to show as a blob; the position it gets has noise that grows with distance. Self-localization is the true pose plus a drifting error, as in the Python match. On a slow computer the match runs in slow motion rather than skipping physics; the badge on the pitch says how slow.</dd>
     </dl>
   </section>
 </div>
@@ -356,7 +363,40 @@ function updateBoard() {
 let tableT = 0;
 function updateTable(now) {
   if (now - tableT < 500) return; tableT = now;
-  tbody.innerHTML = game.players.map(p => `<tr><td><i class="sw" style="background:${TEAM[p.team.name]}"></i>${p.team.name[0].toUpperCase()}${p.num}</td><td>${p.role}${p.cmd && p.cmd.role === 'striker' ? ' · on the ball' : ''}</td><td>${!p.active() ? 'off (pick-up)' : (p.state || '').replace('contest:', 'contest · ')}</td><td class="num">${p.stats.kicks}</td><td class="num">${p.rt.falls}</td></tr>`).join('');
+  const sp = selPlayer();
+  tbody.innerHTML = game.players.map(p => `<tr data-p="${p.name}"${p === sp ? ' class="sel"' : ''}><td><i class="sw" style="background:${TEAM[p.team.name]}"></i>${p.team.name[0].toUpperCase()}${p.num}</td><td>${p.role}${p.cmd && p.cmd.role === 'striker' ? ' · on the ball' : ''}</td><td>${!p.active() ? 'off (pick-up)' : (p.state || '').replace('contest:', 'contest · ')}</td><td class="num">${p.stats.kicks}</td><td class="num">${p.rt.falls}</td></tr>`).join('');
+}
+// the selected player's chest camera, drawn as an inset (MuJoCo's camera frame is three.js's: x right, y up, -z ahead)
+const chestCam = new THREE.PerspectiveCamera(104.8, 4 / 3, 0.005, 20);
+root.add(chestCam);
+const camM = new THREE.Matrix4();
+let selected = null;
+tbody.addEventListener('click', e => { const tr = e.target.closest('tr'); if (tr && tr.dataset.p) { selected = tr.dataset.p; tableT = 0; } });
+function selPlayer() {
+  if (!game) return null;
+  let p = selected && game.players.find(q => q.name === selected);
+  if (!p) p = game.players.find(q => q.team.name === 'blue' && q.cmd && q.cmd.role === 'striker') || game.players[0];
+  return p;
+}
+function drawInset() {
+  const box = $('inset'), p = selPlayer(), ci = p && p.duck.meta.chest;
+  if (!p || ci === undefined || !game.chest) { box.hidden = true; return; }
+  box.hidden = false;
+  const d = game.world.d, x = d.cam_xpos, R = d.cam_xmat;
+  chestCam.fov = game.CFY ? 2 * Math.atan(60 / game.CFY) * 180 / Math.PI : 104.8; chestCam.updateProjectionMatrix();
+  chestCam.position.set(x[3 * ci], x[3 * ci + 1], x[3 * ci + 2]);
+  camM.set(R[9 * ci], R[9 * ci + 1], R[9 * ci + 2], 0, R[9 * ci + 3], R[9 * ci + 4], R[9 * ci + 5], 0, R[9 * ci + 6], R[9 * ci + 7], R[9 * ci + 8], 0, 0, 0, 0, 1);
+  chestCam.quaternion.setFromRotationMatrix(camM);
+  const lbl = `${p.team.name[0].toUpperCase()}${p.num} chest camera`;
+  if ($('insetlbl').textContent !== lbl) $('insetlbl').textContent = lbl;
+  const cw = canvas.clientWidth, ch = canvas.clientHeight, w = box.offsetWidth - 4, h = box.offsetHeight - 4;
+  const left = box.offsetLeft + 2, bottom = ch - (box.offsetTop + 2 + h);
+  const hide = [ballRing, ballArrow, ballTrail, ...ducks3.map(k => k.tag)];
+  for (const o of hide) o.visible = false;
+  renderer.setScissorTest(true); renderer.setViewport(left, bottom, w, h); renderer.setScissor(left, bottom, w, h);
+  renderer.render(scene, chestCam);
+  renderer.setScissorTest(false); renderer.setViewport(0, 0, cw, ch);
+  for (const o of hide) o.visible = true;
 }
 const tgt = new THREE.Vector3();
 function frame(now) {
@@ -386,6 +426,7 @@ function frame(now) {
   controls.update();
   ballFx(now);
   renderer.render(scene, camera);
+  drawInset();
   fpsN++;
   if (now - fpsT > 1000) {
     fps = fpsN * 1000 / (now - fpsT); fpsN = 0; fpsT = now;

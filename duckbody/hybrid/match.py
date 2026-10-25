@@ -191,6 +191,7 @@ def robot_spec(force_limit, team, cam=True):
     if cam:
         c = spec.body("jaw_soft").add_camera()
         c.name, c.pos, c.quat, c.fovy = "eye", list(F.EYE_POS), list(F.EYE_QUAT), F.FOVY
+        F.add_chest_camera(spec.body(F.CHEST_BODY))      # the chest camera (used when CHEST)
     tint = TEAM_RGB.get(team)
     if cam:                     # what the head cameras draw of the other ducks: one box per part (see proxy_boxes)
         for body, (pos, half, rgb) in proxy_boxes().items():
@@ -381,6 +382,7 @@ class Duck:
         self.bodies = [b for b in range(m.nbody) if m.body_rootid[b] == self.trunk]
         self.geoms = {g for g in range(m.ngeom) if m.body_rootid[m.geom_bodyid[g]] == self.trunk}
         self.cam = m.camera(f"{name}_eye").id if world.cams else None
+        self.chest = m.camera(f"{name}_chest").id if world.cams else None
         self.feet = (m.body(f"{name}_ankle_left").id, m.body(f"{name}_ankle_right").id)
         legb = {m.body(f"{name}_{b}").id for b in ("ankle_left", "ankle_right", "leg", "leg_2", "upper_leg_left",
                                                      "upper_leg_right")}
@@ -605,8 +607,16 @@ def make_renderer(m):
     return ren
 
 
-def render_eye(ren, d, cam):
+def render_eye(ren, d, cam, near=None):
+    """One camera image. near: the near clipping plane (m) for this picture: MuJoCo's is znear x the model's extent,
+    9.6 cm on this big pitch, which would cut away the floor right under the chest camera (7.5 cm up). The head camera
+    keeps the model's (it sits inside its own head's box, which the near plane hides)."""
+    m = ren.model
+    z0 = m.vis.map.znear
+    if near is not None:
+        m.vis.map.znear = near / m.stat.extent
     ren.update_scene(d, camera=cam, scene_option=ren._opt)
+    m.vis.map.znear = z0
     return ren.render()
 
 
@@ -714,6 +724,11 @@ ROLES = ("GK", "D1", "D2", "A1", "A2")
 # Ball at the feet (perception): the head camera cannot see a ball under the body or between / behind the feet.
 MEMORY = True               # ball memory + leg touch (False: the earlier behaviour, for before / after runs)
 MEM_S, MEM_NEAR, MEM_TAU = 3.0, 0.4, 0.5    # keep the last own fix this long when it was this close; velocity decay
+CHEST = True                # the chest camera (follow.CHEST_*) for the ball at the feet (False: head camera only)
+CHEST_BLIND_X = TT.CHEST_BLIND_X            # with it the blind zone shrinks to under the trunk / behind the feet
+CHEST_NEAR_PLANE = 0.005    # its near clipping plane (m)
+CHEST_RANGE = 0.30          # chest camera fixes are used up to this far (chest_camera.py: 1-2 cm error to ~0.27 m,
+                            # 3-8 cm beyond, where the ball sits near the top edge of its picture)
 SELF_BLIND_X, SELF_BLIND_Y = 0.05, 0.10     # body frame: the camera never sees the ball here (own body / feet;
                                             # measured: with the head down it sees x 0.04-0.22 m, |y| < 0.1 m)
 TOUCH_N = 0.3               # leg contact force that counts as "felt" (servo load spike; see Player.touch)
@@ -823,27 +838,41 @@ class Player:
         c, s = math.cos(self.psi), math.sin(self.psi)
         return np.array([c * d[0] + s * d[1], -s * d[0] + c * d[1]])
 
-    def expect_visible(self):
+    def expect_visible(self, cam=None, fy=None):
+        """Would the ball be in this camera's picture if it were where we think (the head camera by default)?"""
         if self.ball_f is None:
             return False
         sim = self.duck
+        cam = sim.cam if cam is None else cam
+        fy = SO.FY if fy is None else fy
         rel = self.to_body(self.ball_f)
         R = sim.d.xmat[sim.trunk].reshape(3, 3)
         yaw = math.atan2(R[1, 0], R[0, 0])
         c, s = math.cos(yaw), math.sin(yaw)
         p = sim.d.xpos[sim.trunk] + np.array([c * rel[0] - s * rel[1], s * rel[0] + c * rel[1], 0.0])
         p[2] = BALL_R
-        pc = sim.d.cam_xmat[sim.cam].reshape(3, 3).T @ (p - sim.d.cam_xpos[sim.cam])
+        pc = sim.d.cam_xmat[cam].reshape(3, 3).T @ (p - sim.d.cam_xpos[cam])
         if pc[2] > -0.03:
             return False
-        u, v = -pc[0] / pc[2] * SO.FY, pc[1] / pc[2] * SO.FY
+        u, v = -pc[0] / pc[2] * fy, pc[1] / pc[2] * fy
         return abs(u) < F.W / 2 - 6 and abs(v) < F.H / 2 - 6
 
-    def see(self, img, t):
+    def see(self, img, t, chest_img=None):
+        """One camera frame (10 Hz): the head camera's picture and, with CHEST, the chest camera's. A chest camera fix
+        closer than CHEST_RANGE wins (it looks at the feet and ranges them to ~1-2 cm), else the head camera's."""
         det = F.detect(img)
-        self.stats["frames"] += 1
+        g = None
         if det is not None:
             g = SO.pixel_ground(self.duck, self.duck.cam, det[0], det[1], BALL_R)
+        if chest_img is not None:
+            dc = F.detect(chest_img)
+            gc = None if dc is None else SO.pixel_ground(self.duck, self.duck.chest, dc[0], dc[1], BALL_R, fy=F.CHEST_FY)
+            self.stats["chest_frames"] = self.stats.get("chest_frames", 0) + 1
+            if gc is not None and float(np.hypot(*gc)) < CHEST_RANGE:   # further out it ranges poorly (near the top
+                self.stats["chest_seen"] = self.stats.get("chest_seen", 0) + 1   # of its picture): the head's job
+                det, g = dc, gc
+        self.stats["frames"] += 1
+        if det is not None:
             if g is not None and np.hypot(*g) < 3.0:
                 f = self.to_field(g)
                 if MEMORY and self.ball_f is not None and 0.05 < t - self.ball_t < 0.5:
@@ -856,11 +885,13 @@ class Player:
                 self.fix_rel = np.asarray(g, float)
                 self.stats["frames_seen"] += 1
                 return det
-        if self.expect_visible():
+        chest = chest_img is not None
+        if self.expect_visible() or (chest and self.expect_visible(self.duck.chest, F.CHEST_FY)):
             self.misses += 1
             if MEMORY and self.ball_f is not None:
                 r = self.to_body(self.mem_pos(t))
-                if not (r[0] < SELF_BLIND_X and abs(r[1]) < SELF_BLIND_Y):   # not where its own body hides it
+                bx = CHEST_BLIND_X if chest else SELF_BLIND_X
+                if not (r[0] < bx and abs(r[1]) < SELF_BLIND_Y):   # not where its own body hides it
                     self.mem_misses += 1
         return det
 
@@ -1077,6 +1108,13 @@ class Diag:
         self.arr = {}                     # player -> {t0, states}
         self.arrivals = []
         self.last_touch_t = {}
+        # round 3: falls (what the player was doing, the nearest duck), standing near the ball, where a lost ball is,
+        # how glides end
+        self.falls_seen, self.prev_state, self.prev_cmd = {}, {}, {}
+        self.fall_log = []
+        self.near_stand_ticks = 0
+        self.lost_where = {}
+        self.glide_ends, self.glides = {}, 0
 
     def near_objects(self, b):
         g = self.g
@@ -1139,6 +1177,28 @@ class Diag:
             dist = min(float(np.linalg.norm(d.xpos[q][:2] - b)) for q in (dk.trunk,) + dk.feet)
             c = p.cmd
             st = p.state.split("/")[0] if p.state else "?"
+            # falls: the state and command just before, the nearest other duck (trunk centres)
+            nf = p.rt.falls
+            if nf > self.falls_seen.get(p.name, 0):
+                q0 = d.xpos[dk.trunk][:2]
+                near_d = min(float(np.linalg.norm(d.xpos[o.trunk][:2] - q0)) for o in g.world.ducks if o is not dk)
+                pc = self.prev_cmd.get(p.name)
+                self.fall_log.append(dict(name=p.name, t=round(t, 2), state=self.prev_state.get(p.name, "?"),
+                                          vx=None if pc is None else round(pc[0], 2), near_duck=round(near_d, 3),
+                                          ball_d=round(dist, 3)))
+            self.falls_seen[p.name] = nf
+            prev = self.prev_state.get(p.name, "")
+            if prev.split(":")[0] == "glide" and st.split(":")[0] != "glide":
+                k2 = st.split(":")[0]
+                self.glide_ends[k2] = self.glide_ends.get(k2, 0) + 1
+            if prev.split(":")[0] != "glide" and st.split(":")[0] == "glide":
+                self.glides += 1
+            self.prev_state[p.name] = st
+            self.prev_cmd[p.name] = None if c is None else (c.vx, c.vy, c.wz)
+            busy0 = p.rt.mode in ("kick left", "kick right", "get up", "hop")
+            if dist < DIAG_LOST_D and c is not None and not busy0 and abs(c.vx) < 1e-6 and abs(c.vy) < 1e-6 \
+                    and abs(c.wz) < 1e-6:
+                self.near_stand_ticks += 1
             if dist < 0.25:
                 e["states"][st] = e["states"].get(st, 0) + 1
             # lost at the feet
@@ -1148,6 +1208,12 @@ class Diag:
                 if unseen:
                     lt = self.lost_ticks
                     lt["total"] += 1
+                    R = d.xmat[dk.trunk].reshape(3, 3)
+                    yaw = math.atan2(R[1, 0], R[0, 0])
+                    eb = b - d.xpos[dk.trunk][:2]
+                    rx, ry = math.cos(yaw) * eb[0] + math.sin(yaw) * eb[1], -math.sin(yaw) * eb[0] + math.cos(yaw) * eb[1]
+                    wh = ("under/behind" if rx < 0.02 else ("front" if rx < 0.15 else "far")) if abs(ry) < 0.1 else "side"
+                    self.lost_where[wh] = self.lost_where.get(wh, 0) + 1
                     _, src = p.ball(t)
                     lt["by_src"][str(src)] = lt["by_src"].get(str(src), 0) + 1
                     busy = p.rt.mode in ("kick left", "kick right", "get up", "hop")
@@ -1197,7 +1263,9 @@ class Diag:
         for n in list(self.lost):
             self._end_lost(n)
         return dict(episodes=self.episodes, lost_spans=self.lost_spans,
-                    lost_ticks=self.lost_ticks, near_ticks=self.near_ticks, arrivals=self.arrivals)
+                    lost_ticks=self.lost_ticks, near_ticks=self.near_ticks, arrivals=self.arrivals,
+                    fall_log=self.fall_log, near_stand_ticks=self.near_stand_ticks, lost_where=self.lost_where,
+                    glides=self.glides, glide_ends=self.glide_ends)
 
 
 class Game:
@@ -1418,7 +1486,7 @@ class Game:
                     setpiece=None if sp is None else dict(kind=sp["kind"], ours=sp["team"] == tm.name,
                                                           ball=sp["ball"], radius=sp["radius"]),
                     spots={p.name: self.spot(tm, p.role, tm.name == self.kickoff_team) for p in tm.players},
-                    players=players, opps=opps)
+                    players=players, opps=opps, chest=CHEST)
 
     def apply(self, p, c, t):
         """One player's tactics.Cmd -> its runtime (velstand twist, head) and, on a kick, the kick brain."""
@@ -1590,7 +1658,8 @@ class Game:
             mujoco.mj_forward(w.m, w.d)
             for p in self.players:
                 if p.cam_on:
-                    p.see(render_eye(self.ren, w.d, p.duck.cam), t)
+                    p.see(render_eye(self.ren, w.d, p.duck.cam), t,
+                          render_eye(self.ren, w.d, p.duck.chest, near=CHEST_NEAR_PLANE) if CHEST else None)
         for p in self.players:
             if p.cam_on:
                 p.share(t)
@@ -1673,6 +1742,7 @@ class Game:
                     playing_s=round(self.half_s * self.halves, 1), wall_s=round(getattr(self, "wall", 0.0), 1),
                     rtf=round(sim_s / max(1e-6, getattr(self, "wall", 1.0)), 3),
                     bodies={dk.name: dk.dr for dk in self.world.ducks}, metrics=self.metrics.result(),
+                    chest=CHEST, new_play=TT.NEW_PLAY,
                     diag=self.diag.result())
 
 
@@ -1837,6 +1907,29 @@ def diag_report(runs):
     R["by_kind"] = {}
     for k in kk:
         R["by_kind"][k["kind"]] = R["by_kind"].get(k["kind"], 0) + 1
+    # round 3 (absent in older result files)
+    dd = [r["diag"] for r in runs]
+    if all("fall_log" in x for x in dd):
+        R["near_ball_standing_s"] = round(sum(x["near_stand_ticks"] for x in dd) * rh.DT, 1)
+        lw = {}
+        for x in dd:
+            for k, v in x["lost_where"].items():
+                lw[k] = lw.get(k, 0) + v
+        R["lost_where_s"] = {k: round(v * rh.DT, 1) for k, v in sorted(lw.items(), key=lambda kv: -kv[1])}
+        fl = [f for x in dd for f in x["fall_log"]]
+        fs = {}
+        for f in fl:
+            k = f["state"].split(":")[0] + (":" + f["state"].split(":")[1] if ":" in f["state"] else "")
+            fs[k] = fs.get(k, 0) + 1
+        R["falls_by_state"] = dict(sorted(fs.items(), key=lambda kv: -kv[1]))
+        R["falls_duck_within_0.25"] = sum(f["near_duck"] < 0.25 for f in fl)
+        R["glides"] = sum(x["glides"] for x in dd)
+        ge = {}
+        for x in dd:
+            for k, v in x["glide_ends"].items():
+                ge[k] = ge.get(k, 0) + v
+        R["glide_ends"] = ge
+    R["chest_frames_seen"] = sum(p.get("chest_seen", 0) for r in runs for p in r["players"].values())
     return R
 
 
@@ -1852,7 +1945,14 @@ def main():
     ap.add_argument("--one", type=int, default=None, help="play one match (seed) in this process, write --out")
     ap.add_argument("--merge", nargs="*", default=None, help="merge --one result files into --out")
     ap.add_argument("--report", nargs="*", default=None, help="stuck-ball / kick-cycle report (Diag) of --one files")
+    ap.add_argument("--no-chest", action="store_true", help="head camera only (no chest camera)")
+    ap.add_argument("--old-play", action="store_true", help="c093f02's ball play (tactics.NEW_PLAY = False)")
     a = ap.parse_args()
+    global CHEST
+    if a.no_chest:
+        CHEST = False
+    if a.old_play:
+        TT.NEW_PLAY = False
     if a.check:
         check()
         g = Game(seed=0)

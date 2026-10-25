@@ -11,10 +11,13 @@
 //   - ball touches are read from the contacts only while a duck is within 0.35 m of the ball; a leg touch (the ball
 //     memory's "touch" fix, match.Game.feel) is any contact of the ball with a foot / shin / thigh (match.py also
 //     requires 0.3 N of contact force).
-//   - the visibility model has no self-occlusion: the duck's own trunk and legs do not hide the ball (match.py
-//     renders them), so a ball right at the toes is seen a bit more often here.
+//   - self-occlusion as in match.py: the duck's own parts are the boxes match.py's cameras render (meta.self_boxes, one
+//     per body); the ball counts as seen when its centre or one of 4 points on its rim (0.7 radius, across the view)
+//     is in the picture and the ray to it misses the own boxes and the other ducks' trunk / head spheres.
+//   - the chest camera (match.py CHEST, follow.CHEST_*): a second camera at the front bottom of the trunk, 120 deg wide,
+//     looking forward and down; same visibility model. Its fix is used (and wins) when the ball is closer than 0.30 m.
 import { World, Runtime, brainsTick, Rng, DT, HZ, clip } from './live_sim.js';
-import { TeamTactics, lookAt, wrap, unit } from './tactics.js';
+import { TeamTactics, lookAt, wrap, unit, CHEST_BLIND_X } from './tactics.js';
 
 export const HALF_S = 180.0;
 const CAM_EVERY = 5, WIFI_DELAY = 0.2, WIFI_NOISE = 0.02, WIFI_EVERY = 0.2;
@@ -30,6 +33,7 @@ const CAM_H = 0.21, CAM_DOWN = 0.17;
 // ball at the feet (match.py): ball memory, leg touch
 const MEM_S = 3.0, MEM_NEAR = 0.4, MEM_TAU = 0.5, SELF_BLIND_X = 0.05, SELF_BLIND_Y = 0.10, TOUCH_SIGMA = 0.02;
 const norm2 = (x, y) => Math.hypot(x, y);
+const CHEST_RANGE = 0.30;          // chest camera fixes are used (and win) up to this far (match.CHEST_RANGE)
 
 class Team {
   constructor(name, dir) { this.name = name; this.dir = dir; this.msgs = []; this.ball = null; this.ball_t = -99; this.ball_from = null; this.score = 0; this.players = []; }
@@ -67,27 +71,43 @@ class Player {
   to_field(rel) { const c = Math.cos(this.psi), s = Math.sin(this.psi); return [this.pos[0] + c * rel[0] - s * rel[1], this.pos[1] + s * rel[0] + c * rel[1]]; }
   to_body(p) { const dx = p[0] - this.pos[0], dy = p[1] - this.pos[1], c = Math.cos(this.psi), s = Math.sin(this.psi); return [c * dx + s * dy, -s * dx + c * dy]; }
   // camera projection of a world point: [u, v, depth] (pixels from the image centre), or null when behind
-  project(p) {
-    const d = this.g.world.d, ci = this.duck.meta.cam, cp = d.cam_xpos, cm = d.cam_xmat;
+  project(p, ci = this.duck.meta.cam, FY = this.g.FY) {
+    const d = this.g.world.d, cp = d.cam_xpos, cm = d.cam_xmat;
     const e = [p[0] - cp[3 * ci], p[1] - cp[3 * ci + 1], p[2] - cp[3 * ci + 2]], R = cm.subarray(9 * ci, 9 * ci + 9);
     const pc = [R[0] * e[0] + R[3] * e[1] + R[6] * e[2], R[1] * e[0] + R[4] * e[1] + R[7] * e[2], R[2] * e[0] + R[5] * e[1] + R[8] * e[2]];
     if (pc[2] > -0.03) return null;
-    const FY = this.g.FY;
     return [-pc[0] / pc[2] * FY, pc[1] / pc[2] * FY, Math.hypot(pc[0], pc[1], pc[2]), [cp[3 * ci], cp[3 * ci + 1], cp[3 * ci + 2]]];
   }
-  expect_visible() {
+  expect_visible(ci = this.duck.meta.cam, FY = this.g.FY) {
     if (this.ball_f === null) return false;
     const rel = this.to_body(this.ball_f), [tp, yaw] = this.duck.pose(), c = Math.cos(yaw), s = Math.sin(yaw);
-    const pr = this.project([tp[0] + c * rel[0] - s * rel[1], tp[1] + s * rel[0] + c * rel[1], this.g.BALL_R]);
+    const pr = this.project([tp[0] + c * rel[0] - s * rel[1], tp[1] + s * rel[0] + c * rel[1], this.g.BALL_R], ci, FY);
     return pr !== null && Math.abs(pr[0]) < 80 - 6 && Math.abs(pr[1]) < 60 - 6;
+  }
+  // does camera ci see the ball? A blob of >= 6 px whose centre or a rim point (0.7 r, across the view) is in the
+  // picture with a clear line of sight (own body boxes, other ducks)
+  sees(ci, FY, b) {
+    const pr = this.project(b, ci, FY);
+    if (pr === null) return false;
+    const [u, v, depth, cpos] = pr, rpx = FY * this.g.BALL_R / depth;
+    if (!(Math.abs(u) < 80 + rpx * 0.5 && Math.abs(v) < 60 + rpx * 0.5 && Math.PI * rpx * rpx >= 6)) return false;
+    const R = this.g.world.d.cam_xmat.subarray(9 * ci, 9 * ci + 9), r = 0.7 * this.g.BALL_R;
+    for (const [a, c] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const q = [b[0] + r * (a * R[0] + c * R[1]), b[1] + r * (a * R[3] + c * R[4]), b[2] + r * (a * R[6] + c * R[7])];
+      const pq = this.project(q, ci, FY);
+      if (pq === null || Math.abs(pq[0]) > 80 || Math.abs(pq[1]) > 60) continue;
+      if (!this.g.selfBlocked(cpos, q, this.duck) && !this.g.occluded(cpos, q, this.duck.i)) return true;
+    }
+    return false;
   }
   see(t) {
     this.stats.frames++;
-    const [b] = this.g.world.ball(), pr = this.project(b);
-    let det = false;
-    if (pr !== null) {
-      const [u, v, depth, cpos] = pr, rpx = this.g.FY * this.g.BALL_R / depth;
-      det = Math.abs(u) < 80 + rpx * 0.5 && Math.abs(v) < 60 + rpx * 0.5 && Math.PI * rpx * rpx >= 6 && !this.g.occluded(cpos, b, this.duck.i);
+    const [b] = this.g.world.ball(), m = this.duck.meta;
+    let det = this.sees(m.cam, this.g.FY, b);
+    if (this.g.chest) {
+      const dc = this.sees(m.chest, this.g.CFY, b), [tp] = this.duck.pose();
+      this.stats.chest_frames = (this.stats.chest_frames || 0) + 1;
+      if (dc && Math.hypot(b[0] - tp[0], b[1] - tp[1]) < CHEST_RANGE) { this.stats.chest_seen = (this.stats.chest_seen || 0) + 1; det = true; }
     }
     if (det) {
       const [tp, yaw] = this.duck.pose(), dx = b[0] - tp[0], dy = b[1] - tp[1], c = Math.cos(yaw), s = Math.sin(yaw);
@@ -104,9 +124,10 @@ class Player {
         return true;
       }
     }
-    if (this.expect_visible()) {
+    const chest = this.g.chest;
+    if (this.expect_visible() || (chest && this.expect_visible(this.duck.meta.chest, this.g.CFY))) {
       this.misses++;
-      if (this.ball_f !== null) { const r = this.to_body(this.mem_pos(t)); if (!(r[0] < SELF_BLIND_X && Math.abs(r[1]) < SELF_BLIND_Y)) this.mem_misses++; }
+      if (this.ball_f !== null) { const r = this.to_body(this.mem_pos(t)); if (!(r[0] < (chest ? CHEST_BLIND_X : SELF_BLIND_X) && Math.abs(r[1]) < SELF_BLIND_Y)) this.mem_misses++; }
     }
     return false;
   }
@@ -168,11 +189,15 @@ class Referee {
 
 export class Game {
   // runBrains(name, X Float32Array N*61, N) -> Float32Array N*14 (onnx_mlp.js MlpPolicy.runBatch)
-  constructor(mj, xml, meta, moves, runBrains, { seed = 0, halfS = HALF_S, halves = 2 } = {}) {
+  constructor(mj, xml, meta, moves, runBrains, { seed = 0, halfS = HALF_S, halves = 2, chest = true } = {}) {
     this.seed = seed; this.halfS = halfS; this.halves = halves; this.runBrains = runBrains;
     this.world = new World(mj, xml, meta, { seed, randomize: true });
     this.mj = mj; this.P = meta.pitch; this.BALL_R = meta.pitch.ball_r;
     this.FY = (meta.eye.h / 2) / Math.tan(meta.eye.fovy * Math.PI / 360);
+    this.chest = chest && !!meta.chest;                 // the chest camera (needs a model exported with it)
+    this.CFY = meta.chest ? (meta.chest.h / 2) / Math.tan(meta.chest.fovy * Math.PI / 360) : 0;
+    this.selfBoxes = {};                                // per duck: its own parts as boxes [body, centre, half] (self-occlusion)
+    for (const r of meta.robots) this.selfBoxes[r.name] = (meta.self_boxes || []).map(([bn, c, h]) => [r.bodies[r.body_names.indexOf(bn)], c, h]).filter(x => x[0] !== undefined);
     this.rng = new Rng(5000 + seed);
     this.teams = { blue: new Team('blue', 1.0), yellow: new Team('yellow', -1.0) };
     this.players = []; this.rts = [];
@@ -207,6 +232,27 @@ export class Game {
   other(team) { return team === 'blue' ? 'yellow' : 'blue'; }
   by_index(i) { return this.players.find(p => p.duck.i === i) || null; }
   spot(team, role, kicking) { const s = KICKOFF_SPOTS[kicking][role]; return [s[0] * team.dir, s[1] * team.dir]; }
+  selfBlocked(c, q, duck) {         // the segment camera c -> point q crosses one of the duck's own boxes (not one c is in)
+    const d = this.world.d, X = d.xpos, M = d.xmat;
+    for (const [bi, bc, h] of this.selfBoxes[duck.name] || []) {
+      const R = M.subarray(9 * bi, 9 * bi + 9), o = [X[3 * bi] + R[0] * bc[0] + R[1] * bc[1] + R[2] * bc[2],
+        X[3 * bi + 1] + R[3] * bc[0] + R[4] * bc[1] + R[5] * bc[2], X[3 * bi + 2] + R[6] * bc[0] + R[7] * bc[1] + R[8] * bc[2]];
+      const loc = p => { const e = [p[0] - o[0], p[1] - o[1], p[2] - o[2]]; return [R[0] * e[0] + R[3] * e[1] + R[6] * e[2], R[1] * e[0] + R[4] * e[1] + R[7] * e[2], R[2] * e[0] + R[5] * e[1] + R[8] * e[2]]; };
+      const a = loc(c), bb = loc(q);
+      if (Math.abs(a[0]) <= h[0] && Math.abs(a[1]) <= h[1] && Math.abs(a[2]) <= h[2]) continue;     // inside: culled
+      let t0 = 0, t1 = 1, hit = true;
+      for (let k = 0; k < 3 && hit; k++) {
+        const dd = bb[k] - a[k];
+        if (Math.abs(dd) < 1e-12) { if (Math.abs(a[k]) > h[k]) hit = false; continue; }
+        let ta = (-h[k] - a[k]) / dd, tb = (h[k] - a[k]) / dd;
+        if (ta > tb) [ta, tb] = [tb, ta];
+        t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+        if (t0 > t1) hit = false;
+      }
+      if (hit) return true;
+    }
+    return false;
+  }
   occluded(c, b, self) {          // the ray camera -> ball passes through another duck's trunk or head (6 cm spheres)
     const d = this.world.d, x = d.xpos, ab = [b[0] - c[0], b[1] - c[1], b[2] - c[2]], L2 = ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2;
     for (const dk of this.world.ducks) {
@@ -340,7 +386,7 @@ export class Game {
     const spots = {};
     for (const p of tm.players) spots[p.name] = this.spot(tm, p.role, tm.name === this.kickoff_team);
     return { t, phase, dir: tm.dir, ball: tm.ball === null || t - tm.ball_t > 4.0 ? null : tm.ball,
-      setpiece: sp === null ? null : { kind: sp.kind, ours: sp.team === tm.name, ball: sp.ball, radius: sp.radius }, spots, players, opps };
+      setpiece: sp === null ? null : { kind: sp.kind, ours: sp.team === tm.name, ball: sp.ball, radius: sp.radius }, spots, players, opps, chest: this.chest };
   }
   apply(p, c, t) {
     p.cmd = c; p.state = c.state;

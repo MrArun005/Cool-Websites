@@ -275,7 +275,10 @@ runtime. What `step()` does each tick:
   foot is in the air. Otherwise a **walk-through strike**: walk through the ball at speed on a foot's line, past an
   opponent who stands on the aim line; a ball beside the duck is walked into as it lies (curving, no turn on the
   spot) unless that sends it to our goal. Pinned against the body 1.5 s: a step back, then a curving step round.
-  The old align / head home / standing kick is the fallback when the walk-in cannot line up. **Dribble** when
+  The old align / head home / standing kick is the fallback when the walk-in cannot line up. Since the chest camera
+  round (below): glide only with nobody within 0.30 m of the ball, a standing kick when the ball is 6-9 cm ahead of a
+  foot and the duck is free, no kick from faster than a 0.45 walk, at most 0.5 with a duck 0.25 m ahead, and strikes
+  curve round an opponent on the walking line (shoulder to shoulder). **Dribble** when
   uncontested (behind the ball, 1.3-3.2 m from goal, nobody within 0.55 m): walk through it towards the goal for up
   to 5 s. **Ball at the feet but out of view**: look straight down at the remembered spot, step back if it is under
   the toes, a sidestep-turn if it is beside, never a search turn; after 1.5 s play it blind.
@@ -296,7 +299,8 @@ runtime. What `step()` does each tick:
   player fighting for the ball), within 0.3 m -> turn at most 0.9 rad/s (was 0.75). Off-ball targets keep 0.4 m from
   teammates. Without these the first version fell about 4x as often as before.
 - **Cameras**: the goalkeeper, the striker, a pass receiver and the second when within 1 m of the ball render their
-  head cameras (160 x 120, 10 Hz, soccer.py's colour blob and floor ray) and share the ball over "wifi" (5 per
+  head cameras (160 x 120, 10 Hz, soccer.py's colour blob and floor ray) and their chest cameras (see "Chest camera"
+  below; within 0.24 m of the ball the head stays at home) and share the ball over "wifi" (5 per
   second, 200 ms late, 2 cm noise); the others play on that shared estimate. Opponents are perceived with a drifting
   6 cm error (1 s correlation), standing in for robot detection. A player close to the ball also keeps a **ball
   memory** and feels **leg touches** (below).
@@ -318,21 +322,22 @@ whoever is still off his spot by more than 0.35 m or down is carried there, Robo
 
 | match (seed) | Blue : Yellow | kicks (connected) | shots | passes (completed) | players moving > 70 % | mean moving | distance / player | duels | falls (incl. referee) | dropped balls |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 0 | 2 : 2 | 3 (2) | 1 | 1 (1) | 8/10 | 83 % | 48 m | 53 | 7 | 0 |
-| 1 | 0 : 0 | 3 (2) | 2 | 0 (0) | 8/10 | 80 % | 42 m | 33 | 9 | 2 |
-| 2 | 1 : 0 | 2 (0) | 0 | 0 (0) | 8/10 | 82 % | 45 m | 49 | 10 | 2 |
-| 3 | 0 : 0 | 3 (3) | 1 | 0 (0) | 8/10 | 82 % | 47 m | 43 | 12 | 2 |
-| 4 | 0 : 0 | 3 (2) | 1 | 1 (0) | 8/10 | 81 % | 43 m | 38 | 15 | 5 |
+| 0 | 0 : 0 | 20 (15) | 6 | 3 (1) | 8/10 | 83 % | 49 m | 44 | 4 | 1 |
+| 1 | 2 : 0 | 22 (16) | 12 | 1 (0) | 8/10 | 83 % | 46 m | 44 | 4 | 1 |
+| 2 | 1 : 1 | 17 (7) | 9 | 1 (0) | 8/10 | 83 % | 48 m | 45 | 11 | 2 |
+| 3 | 1 : 0 | 13 (7) | 6 | 3 (2) | 9/10 | 84 % | 50 m | 46 | 7 | 0 |
+| 4 | 2 : 1 | 14 (14) | 9 | 0 (0) | 8/10 | 83 % | 48 m | 45 | 8 | 0 |
 
-5 goals in 5 matches (before the stuck-ball / strike rewrite: 2 goals, 1 of them an own goal), 11 dropped balls
-(before: 56), 14 kicks (before: 157, 74 connected): the ball is now mostly moved by walk-through strikes, which the
-kick count does not include. Falls went up: 53 (before 38), most of them the strikers walking through the ball at
-speed into an opponent (b4 10, y5 10); on the shorter 3 x 3 min comparison below they went down (18 -> 12), so
-treat falls as about the same or somewhat worse. "Moving" = the trunk travelled more than 3 cm/s over a 0.5 s window,
+With the chest camera round (below): **8 goals in 5 matches, 4 of them own goals** (a defender's or the keeper's
+touch last: shots now arrive harder and are deflected in; before this round: 5 goals, 1 own goal), **86 kicks, 59
+connected, 42 shots** (before: 14 kicks, 9 connected, 5 shots), **34 falls** (before 53; 38 before the stuck-ball
+rewrite), 4 dropped balls (before 11). The ball is still moved more by walk-through strikes than by kicks, which the
+kick count does not include. "Moving" = the trunk travelled more than 3 cm/s over a 0.5 s window,
 over the playing time (turning on the spot counts about a third of the time, stepping in place never); "duels" =
 players of both teams within 0.3 m of the ball at once.
 
-Falls per duck over all matches: b1 3, b2 2, b3 4, b4 10, b5 5, y1 1, y2 5, y3 5, y4 6, y5 10, ref 2.
+Falls per duck over all matches: b1 1, b2 3, b3 1, b4 4, b5 4, y1 2, y2 6, y3 4, y4 3, y5 3, ref 3 (before this
+round: b4 10, y5 10, ...: the strikers).
 
 **Before / after the tactics rewrite** (same seeds 0-2, 2 x 3 min each; before = the earlier behaviour, kept as
 `_match_before.py` with the same measurement code; `results_match_activity.json`):
@@ -528,6 +533,121 @@ MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --one 0 --t 180 --halves 1 --out s
 $PY duckbody/hybrid/match.py --report s0.json s1.json s2.json                    # stalls, lost at the feet, arrival -> strike
 ```
 
+### Chest camera, fewer falls, kicks with room (`chest_camera.py`, `follow.CHEST_*`, `tactics.py`)
+
+The previous round left three things: the head camera cannot see a ball under the body or between the feet (197 s of
+player time within 15 cm of the ball without an own sighting, in 3 x 3 min), falls went up (strikers walking through
+the ball at drive 0.9 into opponents), and kicks almost disappeared (4 in 3 x 3 min).
+
+**1. A chest camera (a hardware change, simulated).** A second 160 x 120 camera at 10 Hz like the head camera, with a
+120 deg (horizontal; 105 deg vertical) wide-angle lens, at the **front bottom edge of the trunk, centred: (0.037, 0,
+-0.042) m in the trunk frame, 7.5 cm above the grass, looking forward and 60 deg down**. Picked from the geometry with
+the full body meshes rendered (`chest_camera.py --search`: 9 poses, 2 positions x pitch 55-85 deg; `--map`: the chosen
+one on a 1 cm grid standing and at 6 phases of a walk; `results_chest_camera.json`, `chest_camera_view.png`):
+
+| zone (trunk frame) | seen, standing | seen, walking (6 phases) | ranging error, median / p90 |
+|---|---:|---:|---|
+| under the front of the chest, between / behind the toes (x -0.05..0.05, \|y\| < 0.10) | 64 % | 58-64 % | 2.4 / 4.0 cm |
+| at the toes, kick spot (x 0.05..0.15, \|y\| < 0.10) | 100 % | 100 % | 2.6 / 3.9 cm |
+| ahead (x 0.15..0.30, \|y\| < 0.15) | 100 % | 100 % | 1.7 / 3.2 cm |
+| beside the feet (x -0.05..0.15, \|y\| 0.10..0.20) | 41 % | 41-51 % | 3.8 / 7.0 cm |
+
+Steeper (75-85 deg) sees more under the chest (80-93 %) but loses everything beyond ~0.2 m; 55 deg sees less under it.
+At 60 deg it overlaps the head camera's view (head at home: from 0.34 m; pitched 0.6: from 0.14 m). **Blind zones**:
+under the rear two thirds of the trunk and behind the heels (x < -0.01 m: the camera is at the front edge, 7.5 cm up, and
+a 7 cm ball under the belly is almost at its height), and beside the feet outside the 120 deg wedge (roughly |y| > x +
+0.11 m, e.g. a ball right next to an ankle). The legs hardly get in the way (walking changes the seen share by a few
+%). Beyond ~0.28 m the ball sits near the top edge of its picture and the floor ray is 3-8 cm off, so its fixes are
+used only within 0.30 m (`match.CHEST_RANGE`). On the 9.6 m pitch MuJoCo's near clipping plane is 9.6 cm (znear x
+extent), which would cut the floor right under this camera: its pictures use a 5 mm near plane.
+
+Use: `match.py` renders it (the same proxy boxes, including the duck's own: self-occlusion) for every player whose
+camera is on, its fix wins within 0.30 m; `--no-chest` turns it off. `soccer.py --chest` (opt-in) does the same for
+the single duck (head at home in align, 0.3 s ready instead of 1 s). Tactics (`wm["chest"]`): within 0.24 m of the
+ball the head stays at home instead of the foot view (the kick brains need it home), "find" only steps back for a ball
+under the trunk. The live page's visibility model now has the same: the chest camera, and self-occlusion by the boxes
+`match.py` renders (`meta.self_boxes`; a ray from the camera to the ball's centre or a rim point must miss them).
+
+Real parts and their cost: "Chest camera: real parts" under "Physical build" (the Pi Zero 2 W has a single camera
+connector, so the chest camera comes in over serial or USB).
+
+**2. Fewer falls** (`tactics.py`, `NEW_PLAY`; `--old-play` gives c093f02's play): another duck within 0.25 m in front
+-> walk at most 0.5 (probe: walking through the ball falls 0/24 at drive 0.4, 4/24 at 0.7, 3/24 at 1.0; kicks on the
+move 4/160 at 0.4, 41-71/160 at 0.7-1.0); walk-through strikes and scrambles curve round an opponent on the walking
+line (within 0.4 m) to pass him shoulder to shoulder, 0.14 m apart (target shifted up to 9 cm, the ball still meets a
+foot); no kick from a walk faster than 0.45.
+
+**3. Kicks with room**: no opponent within 0.30 m of the ball -> the glide (head home 0.25 s, walk in at 0.4, kick
+when the kicking foot is in the air, probe 13/16), given up when one comes within 0.22 m; and with the ball 6-9 cm
+ahead of a foot, the aim roughly ahead and the duck free: stop and kick standing (probe 16/16), or kick from a slow
+walk (<= 0.45) with that foot in the air. A shot from further than 1.8 m with nobody within 0.55 m is carried closer
+first (a 1.2 m/s kick rolls ~1.7 m).
+
+**Before / after** (seeds 0-2, 1 x 3 min each, same Diag; before = commit c093f02, reproduced exactly by
+`match.py --no-chest --old-play`; `results_match_stalls.json` "round3"):
+
+| | before (c093f02) | after |
+|---|---:|---:|
+| stalls > 3 s (count / total time / median) | 46 / 232 s / 4.6 s | 38 / 203 s / 5.0 s |
+| dropped balls | 1 | 1 |
+| player time within 15 cm of the ball without an own sighting | 197 s | 156 s |
+| ... where the ball was: at the toes / beside the feet / under or behind | 94 / 66 / 32 s | 12 / 93 / 50 s |
+| ... standing while lost / any standing within 15 cm | 26 s / 27 s | 25 s / 26 s |
+| player time within 15 cm of the ball | 399 s | 453 s |
+| kicks (connected), ball speed median | 4 (2), 0.42 m/s | 29 (22), 0.70 m/s |
+| shots / goals | 1 / 2 | 12 / 2 |
+| glides ending in a kick | 3 of 78 | 8 of 54 |
+| arrival -> strike, median | 1.64 s | 1.34 s |
+| falls | 12 | 10 |
+| players moving (mean share) | 83 % | 83 % |
+
+What this means, honestly:
+- **The chest camera removes the blind spot at the toes** (94 s -> 12 s lost with the ball 2-15 cm ahead), but not
+  beside the feet or under the belly, which is where the remaining 156 s are (a ball pinned beside an ankle in a duel
+  is the common case). A camera can't fix those; leg touch / foot load sensing (above) is still what covers them.
+  "Standing while lost" did not go down (25 vs 26 s); it counts every player near the ball, also the ones whose
+  tactics keep the camera off (markers, cover).
+- **Kicks are back**: 7x as many, connected 3/4 of the time and harder (0.70 vs 0.42 m/s median), 12 shots instead
+  of 1, because the head can stay at home near the ball, so a kick needs no stop to raise it. Goals the same (2); most
+  shots are from 0.8-1.6 m and are blocked or stopped by the keeper.
+- **Falls a little lower** (12 -> 10 here; the 5 full matches below are the bigger sample). Falls in "duel" (the fast
+  orbit round the ball) are still the largest group.
+- Stalls a little shorter overall (232 -> 203 s); dropped balls unchanged.
+
+Run:
+```
+MUJOCO_GL=osmesa $PY duckbody/hybrid/chest_camera.py --search      # candidate poses (then, in a new process:)
+MUJOCO_GL=osmesa $PY duckbody/hybrid/chest_camera.py --map         # the chosen pose, standing + walking
+MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --one 0 --t 180 --halves 1 --out a0.json                       # after
+MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --one 0 --t 180 --halves 1 --no-chest --old-play --out b0.json # = c093f02
+$PY duckbody/hybrid/match.py --report a0.json a1.json a2.json
+MUJOCO_GL=osmesa $PY duckbody/hybrid/soccer.py --chest --seeds 0-9    # the single-duck game with the chest camera
+```
+
+**The live page** (the same in `tactics.js` / `live_game.js`; `tactics_check` 0 differing commands of 120 000, with
+the chest camera on 2/3 of the recorded time; measured in node with the page's own code, `lost_node.mjs`, seeds 1-3,
+1 x 3 min; before = the page at commit c093f02; `results_live_stalls.json` "round3"):
+
+| live page | before (c093f02) | after |
+|---|---:|---:|
+| player time within 15 cm of the ball without an own sighting | 177 s | 122 s |
+| ... standing while lost / any standing within 15 cm | 24 s / 26 s | 17 s / 20 s |
+| stalls > 3 s (count / time) | 39 / 190 s | 41 / 200 s |
+| dropped balls | 6 | 1 |
+| kicks (connected) / shots / goals | 6 (6) / 3 / 1 | 41 (30) / 24 / 5 |
+| falls | 14 | 15 |
+| players moving | 82 % | 81 % |
+| speed in node (x real time) | 2.2 | 2.1-2.2 |
+
+The page's visibility model is now as honest as match.py's about the duck's own body: the cameras' rays to the ball
+must miss the boxes match.py renders for the duck's own parts (before, a ball under the chest counted as seen by the
+head camera whenever it was in the field of view). Even so it "loses" the ball less than match.py: it has no
+floor-ray ranging error and no blob-size limits beyond the 6-pixel area test. On the page the falls did not go down
+(14 -> 15; match.py: 12 -> 10 and 53 -> 34), and 3 seeds are too few to say more; why the page differs here
+(its convex-hull contacts, its simpler visibility) is not resolved. In headless Chromium (software GL) the page keeps real time
+with the chest-camera inset (127 s of match in 150 s of wall time including start-up, no errors); click a player in
+the Players table to see its chest camera.
+
 ## Microduck's brains on the hybrid head (first study)
 
 **What this is.** A simulated duck built from Pollen Robotics' **Microduck** (legs, hips, trunk, neck, all
@@ -703,6 +823,29 @@ To do for the real head:
 3. Weigh the finished head. Ballast it to Microduck's 189 g with the CoM within about 5 mm of
    Microduck's: about 33 mm ahead of and 5 mm above the roll axis at the standing pose. The brains work
    without this (owner-mass variant), but it keeps you inside their training randomization.
+
+### Chest camera: real parts (the simulation's chest camera, built)
+
+Where: the front bottom edge of the trunk, centred, lens 7.5 cm above the floor, tilted 60 deg down (`follow.CHEST_*`):
+a ~8 mm hole or a small printed bracket under the front of Microduck's trunk, the board inside the trunk, ~5-10 g.
+
+The catch: **the Pi Zero 2 W has one camera connector** (one 22-pin CSI-2 port), and the head camera uses it. So the
+chest camera needs another way in:
+
+| option | parts | approx. price (INR, online in India, Oct 2026) | verdict |
+|---|---|---:|---|
+| **A. small smart camera, blob detection on board, result over serial / USB** | Seeed XIAO ESP32S3 Sense (ESP32-S3 + OV2640, 21 x 17.5 mm) + a 120 deg OV2640 module (24-pin, 21 mm flex) | ~1,700 + ~330-500 = **~2,000-2,300** | **recommended**: it finds the magenta blob itself at 160 x 120 (a colour threshold, easy at 10+ Hz on an S3) and sends u, v, radius (~20 bytes, 10 Hz) over UART or USB-CDC; small enough for the trunk |
+| B. ESP32-CAM, same idea | AI-Thinker ESP32-CAM (OV2640) + 120 deg OV2640 module with 75 mm flex + ESP32-CAM-MB programmer | ~430-850 + ~550-1,000 + ~150-250 = **~1,100-2,100** | cheapest; the board is 27 x 40 mm (inside the trunk, lens on the long flex), 180-300 mA at 5 V |
+| C. USB camera on the Pi | 120 deg UVC module (e.g. OV5648 5 MP USB, Probots) + micro-USB OTG cable | ~2,420 + ~100-150 = **~2,500** | simplest software (the Pi runs the same detector), but it takes the Zero's only data USB port (a hub if that port is in use) and the boards are ~32-38 mm wide |
+| D. camera multiplexer | Arducam Multi Camera Adapter V2.2 + a second wide Pi camera + 22-to-15-pin cable | ~4,700 + ~600-1,200 + ~200 = **~5,500-6,100** | not recommended: one camera at a time (switching halves both frame rates), 65 x 56 mm board |
+| E. OpenMV Cam RT1062 over serial | the camera (with its own lens mount) | **~24,000** (Tanotis, incl. import duty) | works, far too expensive and big for this |
+
+Honest about the cost and the gap to the simulation: option A adds ~₹2,000-2,300 and a firmware to write (colour
+threshold, blob, serial protocol) plus the Pi-side reader and the camera's pose / lens calibration; the simulation's
+camera is an ideal pinhole, a real 120 deg lens is a fisheye that has to be undistorted (or the floor ray computed
+through the lens model), and it sees the floor from 7.5 cm up, so dirt, the lines and the other ducks' feet are close
+and big. Prices are the listings seen in October 2026 (IndiaMART, KSP Electronics, TechieSMS, Probots, Tanotis) and
+change often; Robu.in and Robocraze carry the same parts.
 
 ## Licenses
 

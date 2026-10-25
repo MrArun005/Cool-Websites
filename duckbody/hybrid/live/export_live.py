@@ -12,8 +12,9 @@ written as ONE self-contained XML so the page can load it into MuJoCo WASM witho
   - every collision mesh is inlined as the vertices of its convex hull. MuJoCo collides meshes by their convex hull
     anyway, and every body has an explicit inertial, so the physics is the same (--check compares 4 s of walking);
   - geoms that never collide (the visible meshes, groups 2 and 4) are dropped: the page draws duck_mesh_match.json;
-  - the head camera 'eye' (follow.py's) is kept on every duck: the page's players "see" with its pose and field of
-    view (no rendering, see live.js).
+  - the head camera 'eye' (follow.py's) and the chest camera 'chest' (follow.CHEST_*) are kept on every duck: the
+    page's players "see" with their poses and fields of view (no rendering; self-occlusion by the boxes match.py's
+    cameras render, meta self_boxes; see live_game.js).
 live_meta.json carries what the page needs to drive it: per robot the actuator / joint / qpos / dof indices in the
 policy order, BAM's friction-row index quirk (match.MultiBam.quirk), sensor and body ids; BAM's XL330 m6 parameters;
 the policies are Microduck's ONNX files, copied unchanged (the page runs them with onnx_mlp.js).
@@ -72,6 +73,7 @@ def live_spec(robots=M.ROBOTS, pitch=True):
                 child.delete(mesh)
         c = child.body("jaw_soft").add_camera()
         c.name, c.pos, c.quat, c.fovy = "eye", list(F.EYE_POS), list(F.EYE_QUAT), F.FOVY
+        F.add_chest_camera(child.body(F.CHEST_BODY))          # the chest camera (match.py CHEST)
         if first is not None:
             for mesh in list(child.meshes):
                 child.delete(mesh)
@@ -143,6 +145,7 @@ def meta(m, robots=M.ROBOTS):
                         jrange=[[float(v) for v in m.jnt_range[j]] for j in jnt],
                         free_q=int(m.jnt_qposadr[free]), free_v=d0, trunk=trunk, gyro=int(s.adr[0]),
                         mouth=m.actuator(f"{name}_mouth").id, cam=m.camera(f"{name}_eye").id,
+                        chest=m.camera(f"{name}_chest").id,
                         bodies=bodies, body_names=[m.body(b).name[len(name) + 1:] for b in bodies],
                         geom0=min(geoms), geom1=max(geoms), jaw=m.body(f"{name}_jaw_soft").id,
                         legs={str(g): int(m.geom_bodyid[g]) for g in geoms
@@ -161,7 +164,11 @@ def meta(m, robots=M.ROBOTS):
     return dict(**ball, robots=rob, bam=p, default_pose=[float(v) for v in DEFAULT_POSE], joint_names=list(JOINT_NAMES),
                 nq=m.nq, nv=m.nv, nu=m.nu, nbody=m.nbody, ngeom=m.ngeom, timestep=float(m.opt.timestep),
                 frictiondof=int(mujoco.mjtConstraint.mjCNSTR_FRICTION_DOF.value), pitch=M.pitch_info(),
-                eye=dict(fovy=F.FOVY, w=F.W, h=F.H), mujoco_py=mujoco.__version__)
+                eye=dict(fovy=F.FOVY, w=F.W, h=F.H), chest=dict(fovy=F.CHEST_FOVY, w=F.W, h=F.H),
+                # self-occlusion (live_game.js): the boxes match.py's cameras render for a duck's own parts, per body
+                self_boxes=[[k, [round(float(v), 5) for v in pos], [round(float(v), 5) for v in half]]
+                            for k, (pos, half, _) in M.proxy_boxes().items()],
+                mujoco_py=mujoco.__version__)
 
 
 def check(xml_path, seconds=4.0):

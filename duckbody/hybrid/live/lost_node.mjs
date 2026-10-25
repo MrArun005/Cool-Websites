@@ -1,6 +1,7 @@
 // node lost_node.mjs PAGE_LIVE_DIR SECONDS SEED : a live 5v5 match in node with the page's own code (PAGE_LIVE_DIR/live_game.js),
 // measuring ball-lost-at-the-feet (trunk within 15 cm of the ball, no own camera fix for 0.3 s), stalls (ball within
-// 15 cm of its anchor > 3 s), dropped balls, kicks.  Run from a folder whose node_modules has @mujoco/mujoco@3.15.0.
+// 15 cm of its anchor > 3 s), dropped balls, kicks, shots, goals, falls, moving share, standing near the ball.
+// Run from a folder whose node_modules has @mujoco/mujoco@3.15.0. CHEST=0 in the environment: head cameras only.
 import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
@@ -16,8 +17,8 @@ for (const b of ['velstand', 'ball_kick_left', 'ball_kick_right', 'roulade']) {
   pols[b] = new MlpPolicy(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.length), b);
 }
 const g = new Game(mj, fs.readFileSync(path.join(dir, 'live_model_5v5.xml'), 'utf8'), JSON.parse(fs.readFileSync(path.join(dir, 'live_meta_5v5.json'), 'utf8')),
-  JSON.parse(fs.readFileSync(path.join(dir, 'live_moves.json'), 'utf8')), (n, X, N) => pols[n].runBatch(X, N), { seed: +seedArg, halfS: +secArg, halves: 1 });
-const L = { near: 0, lost: 0, search: 0, standing: 0 }, st = {};
+  JSON.parse(fs.readFileSync(path.join(dir, 'live_moves.json'), 'utf8')), (n, X, N) => pols[n].runBatch(X, N), { seed: +seedArg, halfS: +secArg, halves: 1, chest: process.env.CHEST !== '0' });
+const L = { near: 0, lost: 0, search: 0, standing: 0, near_standing: 0 }, st = {};
 let anchor = null, t0 = 0, stalls = 0, stall_s = 0, play = 0;
 const t1 = performance.now();
 while (g.phase !== 'end') {
@@ -35,6 +36,8 @@ while (g.phase !== 'end') {
     const [q] = p.duck.pose();
     if (Math.hypot(q[0] - b[0], q[1] - b[1]) >= 0.15) continue;
     L.near++;
+    const c0 = p.cmd;
+    if (c0 && c0.vx === 0 && c0.vy === 0 && c0.wz === 0 && !['kick left', 'kick right', 'get up', 'hop'].includes(p.rt.mode)) L.near_standing++;
     if (g.t - p.ball_t <= 0.3) continue;
     L.lost++;
     const s = (p.state || '').split('/')[0]; st[s] = (st[s] || 0) + 1;
@@ -45,7 +48,10 @@ while (g.phase !== 'end') {
 }
 const sm = g.summary(), wall = (performance.now() - t1) / 1000;
 const r = x => +(x * 0.02).toFixed(1);
-console.log(JSON.stringify({ seed: +seedArg, play_s: r(play), rtf: +(sm.sim_s / wall).toFixed(2), score: sm.score, kicks: sm.kicks, connected: sm.connected, falls: sm.falls,
+const mv = g.players.filter(p => p.stats.samples).map(p => p.stats.moving / p.stats.samples);
+console.log(JSON.stringify({ seed: +seedArg, chest: g.chest, play_s: r(play), rtf: +(sm.sim_s / wall).toFixed(2), score: sm.score, kicks: sm.kicks, connected: sm.connected,
+  shots: g.kicks.filter(k => k.kind === 'shot').length, falls: sm.falls, moving: +(mv.reduce((a, b) => a + b, 0) / Math.max(1, mv.length)).toFixed(3),
+  near_standing_s: r(L.near_standing), chest_seen: g.players.reduce((a, p) => a + (p.stats.chest_seen || 0), 0),
   dropped: g.events.filter(e => e.kind === 'dropped ball').length, stalls, stall_s: +stall_s.toFixed(1),
   near_s: r(L.near), lost_near_s: r(L.lost), lost_search_s: r(L.search), lost_standing_s: r(L.standing),
   lost_states_s: Object.fromEntries(Object.entries(st).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => [k, r(v)])) }));

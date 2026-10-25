@@ -63,6 +63,35 @@ K_TURN, K_FWD, V_MAX, V_MIN, V_BACK = 1.5, 1.2, 0.8, 0.15, -0.3
 LOST_S, SEARCH_WZ = 0.6, 0.9
 HOP_NEAR, HOP_HOLD_S = 0.18, 1.5
 CAM_DOWN = 0.17                     # the eye looks ~10 deg down at head pitch 0 (standing)
+# Chest camera (a second camera, not on Microduck): 160 x 120 at 10 Hz like the eye, a 120 deg (horizontal) wide-angle
+# lens, at the front bottom of the trunk looking forward and down. It sees under the chest and between the feet,
+# where no ray from the head camera reaches (the trunk and legs are in the way). Pose picked from the geometry with the
+# full body rendered (README "Chest camera"). Pinhole model (a real 120 deg lens is a fisheye; rectified it is this).
+CHEST_BODY = "trunk_base"
+CHEST_POS = (0.037, 0.0, -0.042)    # trunk_base frame: front bottom edge of the trunk, centred (7.5 cm above the floor)
+CHEST_PITCH_DEG = 60.0              # optical axis this far below the trunk's forward axis
+CHEST_HFOV = 120.0
+CHEST_FOVY = math.degrees(2 * math.atan(math.tan(math.radians(CHEST_HFOV / 2)) * H / W))   # 104.5 deg
+CHEST_FY = (H / 2) / math.tan(math.radians(CHEST_FOVY) / 2)
+
+
+def chest_quat(pitch_deg=CHEST_PITCH_DEG):
+    """Camera orientation in the trunk frame: looking along (cos p, 0, -sin p), image up = towards forward / up."""
+    th = math.radians(pitch_deg)
+    f = np.array([math.cos(th), 0.0, -math.sin(th)])
+    up = np.array([math.sin(th), 0.0, math.cos(th)])
+    z = -f
+    x = np.cross(up, z)
+    M = np.stack([x, up, z], 1)
+    w = math.sqrt(max(1e-12, 1.0 + M[0, 0] + M[1, 1] + M[2, 2])) / 2
+    return (w, (M[2, 1] - M[1, 2]) / (4 * w), (M[0, 2] - M[2, 0]) / (4 * w), (M[1, 0] - M[0, 1]) / (4 * w))
+
+
+def add_chest_camera(body, name="chest", pos=CHEST_POS, pitch_deg=CHEST_PITCH_DEG):
+    """Add the chest camera to an MjSpec body (the trunk)."""
+    c = body.add_camera()
+    c.name, c.pos, c.quat, c.fovy = name, list(pos), list(chest_quat(pitch_deg)), CHEST_FOVY
+    return c
 
 
 def scene_editor():
