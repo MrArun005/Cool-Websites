@@ -253,6 +253,9 @@ def promote(a):
                                      "friction x0.7-1.3, kp x0.85-1.15, 6.5-8.2 V, delay 3-6 steps) + obs noise")
     (HERE / "results_skills_hybrid.json").write_text(json.dumps(sk, indent=1))
     runs = [r for lv in (1, 2, 3) for r in json.loads((d / f"course_L{lv}.json").read_text())["runs"]]
+    modes = d / "course_modes_walk_course.json"      # the page's hurdle table also shows walk and course mode
+    if modes.exists():
+        runs = json.loads(modes.read_text())["runs"] + runs
     (HERE / "results_course_hybrid.json").write_text(json.dumps(dict(summary=C.summarize(runs), runs=runs), indent=1))
     fr = [r for part in ("0-4", "5-9") for r in json.loads((d / f"follow_{part}.json").read_text())["runs"]]
     fs = dict(n=len(fr), in_view_median=float(np.median([r["in_view"] for r in fr])),

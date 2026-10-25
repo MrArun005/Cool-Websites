@@ -38,7 +38,7 @@ import moves_hybrid as mv  # noqa: E402
 
 # The body: scene_hybrid_allcollisions<BODY>.xml (every part collides; antennas drawn only). HYBRID_BODY=<suffix>
 # picks another build_hybrid.py variant for every script that imports this (tests, games, match, page data).
-BODY = os.environ.get("HYBRID_BODY", "_noantenna")
+BODY = os.environ.get("HYBRID_BODY", "_m175")   # README "Lighter head": the 175 g head (was _noantenna, 189 g)
 SCENE = HERE / f"scene_hybrid_allcollisions{BODY}.xml"
 ROBOT = HERE / f"hybrid_allcollisions{BODY}.xml"
 MOVES = HERE / "moves_hybrid.json"

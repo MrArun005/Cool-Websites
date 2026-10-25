@@ -1,5 +1,10 @@
 # Hybrid duck: Microduck body + the owner's duck head
 
+> **Branch `claude/micro-duck-hybrid-light`:** the default body is the **175 g head** (`scene_hybrid_allcollisions_m175.xml`,
+> 14 g lighter than Microduck's 189 g, same shape and CoM), see "Lighter head" below. The main `results_*_hybrid.json`
+> now hold its runs (hurdles: course mode + reflex only); the tables in the sections below are the 189 g head's (rerun:
+> `light/_noantenna/`). Any script runs another body with `HYBRID_BODY=<suffix>`.
+
 ## Main robot: every skill, through one runtime (`runtime_hybrid.py`)
 
 The hybrid is now the main robot. `runtime_hybrid.py` turns commands ("walk", "run", "squat", "sit", "swag",
@@ -378,6 +383,183 @@ rebuilds every body by forward kinematics from `kin` (checked against MuJoCo: `-
 one light mesh (`duck_mesh_match.json`) with team colours and numbers, the pitch, a broadcast camera following the
 ball, a scoreboard with the match clock and the referee's last call, and a ball finder (a ring on the grass, an
 arrow above the ball and a short trail, drawn through the ducks) so the 7 cm ball is easy to find under a duck.
+
+## Lighter head (`light_suite.py`, `build_shapes.py`): the default body is now the 175 g head
+
+The owner found the hybrid's head heavy. Two readings, both tested: a lighter head (mass, same shape) and a smaller
+head (shell, bill and jaw scaled, mass with them), plus two new head shapes. Every variant ran the **whole suite**
+(`light_suite.py run`, single-process units, 3 at a time): the 12 skills x 10 randomized bodies (seeds 0-9, as
+`results_skills_hybrid.json`), hurdles levels 1-3 (course mode + stumble reflex, seeds 0-9), follow (seeds 0-9), soccer
+(10 x 2 min) and two 5v5 matches (seeds 0 and 1, one half of 3 min). Raw runs: `light/<body>/`, summary
+`light/results_light.json`. The baseline column is the old default (`_noantenna`, 189 g) run again by the same scripts;
+it reproduces the committed skills and soccer results exactly.
+
+**What changes in the model** (`build_hybrid.py`, `head_report.json`): `_m175` ... `_m100` keep the owner's head (no
+antennas) and Microduck's head CoM, with mass and inertia scaled together. `_k85` / `_k75` scale the shell, bill and jaw
+by 0.85 / 0.75 about the shell centre (the head camera moves with them, `follow._eye_for_body`), CoM moved with the shell,
+mass = 81 g of fixed parts + the rest of 189 g x k^2 (159 g, 142 g), inertia x mass ratio x k^2. Head CoM moves 1.9 /
+3.1 mm. Select any of them with `HYBRID_BODY=<suffix>`; every script (tests, games, match, page data, live export) uses
+`runtime_hybrid.SCENE`.
+
+### What a head has to weigh: the parts it cannot do without
+
+Microduck's head link (`jaw_soft`, everything after the head_roll joint) carries, besides the shells:
+
+| part | mass | source |
+|---|---|---|
+| 2 x Dynamixel XL330-M288 (mouth servo, and the head_roll servo whose case rides in the head link) | 36 g | Robotis datasheet: 18 g each |
+| Raspberry Pi Zero 2 W + soldered header | 12 g | Raspberry Pi: 10 g bare board |
+| robot hat (65 x 31 mm PCB, 0.8 mm, + parts and connectors) | ~7 g | mesh volume 1.6 cm3 FR4 + parts |
+| camera board + M12 lens + lens holder + flex cable | ~9.5 g | Pi camera v2-size board 3 g, glass M12 lens ~4 g, holder ~1.5 g |
+| speaker (35 x 25 x 7 mm) | ~5 g | typical micro speaker |
+| motor support (printed), roll bearing | ~6 g + 2 g | mesh volumes 7.5 / 0.2 cm3 |
+| screws, inserts, wires | ~5 g | |
+| **fixed parts** | **~81 g** (+-8 g) | `build_hybrid.ELECTRONICS_KG` |
+
+The owner's shell is a solid ~2.2 mm wall: head 70 cm3 + bottom sheet 23 cm3 = 93 cm3 of PLA, ~115 g solid, plus the
+two bills (~11 g printed hollow). As built that is about 81 + 115 + 11 = ~205 g, close to the 189 g the sim matches.
+
+**Lightest physically possible head (same parts, same shell shape):**
+- shell 0.8 mm walls (2 perimeters), bottom sheet 1.2 mm, hollow bills, PLA: shell ~50 g + bills ~11 g -> **~145 g**
+- the same in foaming LW-PLA (~0.6-0.75 g/cm3 printed) -> shell + bills ~33 g -> **~115-120 g**
+- below that a part has to move out of the head (the Pi + hat into the trunk saves ~19 g, the speaker ~5 g).
+So **100 g is not buildable** with this head stack, 120 g only just (LW-PLA, thin walls), 140-160 g is ordinary printing.
+
+
+### Results: mass and size
+
+| test | baseline (189 g, x1) | 175 g | 160 g | 140 g | 120 g | 100 g | x0.85 (159 g) | x0.75 (142 g) |
+|---|---|---|---|---|---|---|---|---|
+| 12 skills x 10 bodies, passed | **120/120** | **119/120** | **120/120** | **114/120** | **98/120** | **95/120** | **117/120** | **99/120** |
+| skills below 10/10 | none | hop 9/10 | none | lie_down 9/10, hop 5/10 | walk 8/10, squat 8/10, swag 4/10, lie_down 7/10, hop 1/10 | walk 9/10, squat 7/10, swag 1/10, lie_down 9/10, getup_back 9/10, hop 0/10 | hop 7/10 | walk 7/10, squat 9/10, swag 6/10, lie_down 7/10, getup_back 8/10, hop 2/10 |
+| walk speed (m/s, median) | 0.17 | 0.16 | 0.15 | 0.14 | 0.14 | 0.14 | 0.14 | 0.13 |
+| run speed (m/s, median) | 0.49 | 0.48 | 0.47 | 0.45 | 0.44 | 0.42 | 0.47 | 0.46 |
+| hop: flight ms / height mm / hops per s | 85 / 8.9 / 1.00 | 89 / 9.7 / 1.00 | 86 / 9.1 / 1.00 | 85 / 8.9 / 0.58 | 69 / 5.8 / 0.25 | 62 / 4.8 / 0.25 | 80 / 7.8 / 1.00 | 64 / 5.0 / 0.50 |
+| hop landing (x body weight) | 4.2 | 4.5 | 4.7 | 4.9 | 4.5 | 4.0 | 4.8 | 5.0 |
+| lie-down peak (g) | 3.4 | 3.4 | 3.4 | 3.4 | 3.4 | 3.4 | 3.5 | 3.6 |
+| max tilt: idle / walk / run / hop (deg) | 1.4 / 5.6 / 5.9 / 10.6 | 1.4 / 5.5 / 6.2 / 11.0 | 1.6 / 5.3 / 6.2 / 9.1 | 1.6 / 5.1 / 6.2 / 50.6 | 1.6 / 4.9 / 6.2 / 92.0 | 1.8 / 5.0 / 6.2 / 92.3 | 1.5 / 5.2 / 6.4 / 9.7 | 1.6 / 5.0 / 6.2 / 98.8 |
+| get up: face down / back (s) | 0.24 / 0.92 | 0.24 / 0.92 | 0.24 / 0.92 | 0.23 / 1.06 | 0.23 / 1.16 | 0.23 / 1.14 | 0.27 / 1.13 | 0.30 / 1.32 |
+| roll (deg) | 358 | 359 | 358 | 359 | 358 | 359 | 359 | 358 |
+| hurdles L1: finished, falls, median s | 10/10, 1, 22 | 10/10, 2, 23 | 10/10, 2, 25 | 10/10, 3, 26 | 10/10, 4, 29 | 10/10, 4, 29 | 10/10, 2, 25 | 9/10, 3, 27 |
+| hurdles L2: finished, falls, median s | 9/10, 25, 37 (18/20 on 20 bodies) | 7/10, 22, 35 (17/20 on 20 bodies) | 7/10, 25, 40 (15/20 on 20 bodies) | 7/10, 29, 31 | 9/10, 19, 54 | 9/10, 37, 54 | 9/10, 24, 43 | 8/10, 29, 44 |
+| hurdles L3: finished, falls, median s | 7/10, 66, 63 (11/20 on 20 bodies) | 6/10, 57, 52 (7/20 on 20 bodies) | 6/10, 62, 70 (11/20 on 20 bodies) | 1/10, 44, 67 | 1/10, 79, 74 | 0/10, 74, - | 6/10, 63, 62 | 3/10, 71, 54 |
+| follow: in view, final cm, within 25 cm, falls | 95 %, 16.8, 9/10, 0 | 95 %, 16.9, 10/10, 0 | 91 %, 17.0, 10/10, 0 | 90 %, 17.0, 9/10, 0 | 86 %, 17.4, 8/10, 0 | 79 %, 20.6, 8/10, 0 | 82 %, 17.2, 9/10, 0 | 84 %, 17.6, 10/10, 0 |
+| soccer (10 x 2 min): goals, with goal, kicks connected, falls | 25, 9/10, 36/48, 1 | 24, 9/10, 35/45, 0 | 19, 7/10, 35/42, 1 | 11, 7/10, 41/45, 0 | 7, 7/10, 23/31, 3 | 5, 5/10, 16/20, 4 | 17, 10/10, 31/37, 3 | 19, 9/10, 34/42, 3 |
+| 5v5 (seeds 0, 1; 1 x 3 min): scores, kicks (connected), shots, falls | 0:0 1:0, 33 (19), 18, 16 | 1:0 0:1, 34 (16), 24, 7 | 0:1 0:1, 38 (13), 25, 2 | 0:0 0:0, 31 (12), 13, 1 | 0:0 0:0, 27 (11), 12, 3 | 0:0 0:0, 34 (12), 18, 4 | 0:0 0:0, 36 (15), 15, 6 | 0:0 1:0, 33 (14), 16, 3 |
+
+Hurdles at levels 2-3 with 10 bodies are noisy, so the three closest candidates also ran bodies 10-19 (in brackets: 20
+bodies). Hop on 30 bodies (`light/<body>/more_hop_n30.json`): 189 g **29/30**, 175 g **26/30**, 160 g 27/30.
+
+Reading it:
+- **Lighter heads walk slower.** The walk is 6 % slower at 175 g, 12 % at 160 g and 18 % at 140 g, on every one of the
+  10 bodies (same seeds, paired). The run drops less (0.49 -> 0.48 -> 0.47 -> 0.45). velstand leans on the head's
+  weight: a lighter head moves the whole robot's CoM back and down (175 g: 0.4 mm back, 1.8 mm down), and the
+  brain was trained only with +-5 % head mass.
+- **Soccer shows it most**: 25 goals in 10 matches at 189 g, **24** at 175 g, 19 at 160 g, 11 at 140 g, 5 at 100 g. A
+  slower walk means fewer find-align-kick cycles in 2 minutes. Ball following loses "in view" the same way (95 % ->
+  91 % at 160 g -> 79 % at 100 g).
+- **The scripted moves are tuned for 189 g**: hop (searched with the 189 g head) drops to 5/10 at 140 g and 0-1/10 at
+  100-120 g, swag to 1-6/10 below 140 g, squat and walk start failing at 120 g.
+- **Smaller heads** behave like lighter heads of the same mass (x0.85 159 g ~ 160 g, x0.75 142 g ~ 140 g) with
+  worse hop and follow (the camera is lower and nearer), and the get-up from the back is slower (1.13-1.32 s vs
+  0.92 s): the smaller hull gives less leverage.
+- **Falls**: no skill fell at 175 g except one hop (and 3 of 30 hops on 30 bodies); hurdle falls per 10 bodies L1-3
+  are about the same (1/25/66 vs 2/22/57); 5v5 falls are not worse (7 vs 16 in the two matches); soccer 0 vs 1.
+
+**Recommended: `_m175`, 175 g (14 g lighter, same shape, same CoM)**, now the default scene on this branch
+(`runtime_hybrid.BODY`), and the main `results_*_hybrid.json` hold its runs (`light_suite.py promote --bodies _m175`;
+the 5v5 results are the two page matches, 2 x 3 min). It is the lightest variant that keeps every test at the
+baseline level within the noise of these runs: 119/120 skills, soccer 24 vs 25 goals, follow 95 %, hurdles 10/10,
+17/20, 7/20 (baseline 10/10, 18/20, 11/20: level 3 is past velstand's training and swings by +-2 at 20 bodies), 5v5
+2 goals vs 1. What it costs, honestly: walk 0.16 instead of 0.17 m/s and hop 26/30 instead of 29/30. 160 g passes all
+12 skills too but loses a quarter of the soccer goals; 140 g and below and x0.75 lose skills. The page's two full
+matches on the 175 g head (2 x 3 min, seeds 0 and 1, `results_match_hybrid.json`) ended 1:0 and 0:1 (an own goal),
+64 kicks (23 connected), 42 shots, 9 falls.
+A re-search of the hop for 175 g (`search_moves.py hop --from-current`, 4 bodies) overfit: 10/30 on 30 bodies. Reverted;
+a re-search on more bodies is the way to win the 3 hops back.
+
+**Inside the brains' comfort zone** (Microduck's training: head mass x0.95-1.05 = 179-198 g, head CoM +-3 mm
+ramped to about +-8 mm):
+- inside: the 189 g baseline.
+- at the edge, works at baseline level: **175 g** (-7 %, CoM unchanged), and the two new shapes at 175 g (CoM 5.4-5.6 mm off).
+- outside, works but worse: 160 g, x0.85 (all or nearly all skills pass; slower walk, fewer goals).
+- outside, fails: 140 g, 120 g, 100 g, x0.75 (hop, swag, squat, walk). These need the scripted moves searched again
+  for the new mass and, to get the walk speed and soccer back, velstand fine-tuned with head mass randomized down to
+  ~0.6 x (the "Fine-tuning" section's recipe). **No retraining is needed for the recommended 175 g head.**
+
+**Size: how they look** (`light/heads_side_by_side.png`, `render_heads.py`: front, side, 3/4). x0.85 still reads as
+the owner's flat duck head, the overhang past the body is less (119 x 118 mm on a ~90 mm wide trunk); x0.75 looks
+about right for the body but **neither holds the head stack**: Microduck's electronics need a 111 x 80 x 41 mm box and
+the owner's shell is already 2-3 mm short in height at x1 (x0.85: 35 mm inside, x0.75: 105 mm long). They would need the
+stack rearranged. The mass study is what the owner can build: print the same head lighter.
+
+![heads](light/heads_side_by_side.png)
+
+### Head shapes: a human-like robot head and a round duck head (`build_shapes.py`, `shapes/`)
+
+Both are smooth superellipsoid skulls (numpy only: parametric surface, inner wall offset along the normals, rim strip,
+checked watertight) that replace the owner's head and Microduck's top shell and face part. **They mount like
+Microduck's own head**: Microduck's bottom head shell stays (unchanged STL in `microduck/assets/`; it carries the motor
+support on the head_roll XL330 and the roll bearing, i.e. the head mount), and the skull sits on a 1.5 mm flange that
+rests 3 mm onto the bottom shell's rim (the rim at 2 mm below the roll axis, as Microduck's shells meet). The script
+checks that every part of Microduck's head stack (Pi Zero 2 W + hat, camera + M12 lens, speaker, mouth XL330 and
+support, head_roll XL330, bearing) is inside the inner wall with >= 1 mm clearance, and that the flange covers the
+bottom shell's rim.
+
+| | human-like head | round duck head |
+|---|---|---|
+| look | rounded skull, dark face plate, two cyan eye windows, mouth slit, chin on the mouth servo; no bill, no antennas | rounded duck skull, black eyes on the sides, the owner's bill x0.85, lower bill on the mouth servo |
+| size (L x W x H, H incl. bottom shell) | 148 x 100 x 59 mm | 154 x 106 x 61 mm |
+| head camera ('eye') | behind the left eye window: 100 mm ahead of the roll axis, 22 mm left, 20 mm up (was 96 / 0 / 20) | front of the skull above the bill: 92 / 0 / 20 mm |
+| printed mass estimate (1.6 mm PLA walls) | 166 g (fixed parts 81 + bottom shell 12 + skull 48 + flange 21 + face 4) | 174 g (... skull 50 + flange 23 + bills 9) |
+| simulated as | 175 g, CoM from the parts: 2.5 mm back, 4.8 mm up | 175 g, CoM 2.9 mm back, 4.7 mm up |
+| collision | the skull (convex), Microduck's bottom shell, chin ellipsoid | the skull, bottom shell, both bill ellipsoids |
+
+The first versions were taller domes (79 and 65 mm with the bottom shell) ending 39-41 mm behind the roll axis
+(`_human_tall`, `_roundduck_tall`, kept for this). On their backs they **could not get up**: 1/10 and 3/10, and the
+roll dropped to 5/10 and 8/10. Lying on its back the duck gets up by levering over the back of its head; a round head
+that ends close behind the neck rolls instead of propping. Experiments (each 10 bodies): flatter tops, removing the
+chin or bottom-shell collision, or the 189 g mass did not help (1-3/10); a skull reaching **52-60 mm behind the roll axis**
+(the owner's head reaches 47 mm, with a flat back) fixed it at once: 10/10 get-up, 10/10 roll, also with a round top.
+The final shapes are those, 59-61 mm tall like Microduck's own head.
+
+| test | baseline (189 g, x1) | 175 g | human-like head (175 g) | round duck head (175 g) | human-like, first tall version (160 g, skills only) | round duck, first tall version (160 g, skills only) |
+|---|---|---|---|---|---|---|
+| 12 skills x 10 bodies, passed | **120/120** | **119/120** | **119/120** | **118/120** | **105/120** | **110/120** |
+| skills below 10/10 | none | hop 9/10 | hop 9/10 | hop 8/10 | getup_back 1/10, hop 9/10, roll 5/10 | getup_back 3/10, hop 9/10, roll 8/10 |
+| walk speed (m/s, median) | 0.17 | 0.16 | 0.15 | 0.15 | 0.15 | 0.15 |
+| run speed (m/s, median) | 0.49 | 0.48 | 0.47 | 0.47 | 0.47 | 0.48 |
+| hop: flight ms / height mm / hops per s | 85 / 8.9 / 1.00 | 89 / 9.7 / 1.00 | 88 / 9.4 / 1.00 | 88 / 9.4 / 1.00 | 88 / 9.4 / 1.00 | 88 / 9.4 / 1.00 |
+| hop landing (x body weight) | 4.2 | 4.5 | 4.6 | 4.5 | 4.5 | 4.5 |
+| lie-down peak (g) | 3.4 | 3.4 | 3.4 | 3.4 | 3.5 | 3.4 |
+| max tilt: idle / walk / run / hop (deg) | 1.4 / 5.6 / 5.9 / 10.6 | 1.4 / 5.5 / 6.2 / 11.0 | 1.4 / 5.5 / 6.3 / 10.1 | 1.4 / 5.4 / 6.1 / 10.2 | 1.6 / 5.3 / 5.8 / 10.2 | 1.6 / 5.3 / 6.5 / 9.9 |
+| get up: face down / back (s) | 0.24 / 0.92 | 0.24 / 0.92 | 0.32 / 0.91 | 0.27 / 0.78 | 0.30 / 0.88 | 0.26 / 1.52 |
+| roll (deg) | 358 | 359 | 358 | 358 | 299 | 354 |
+
+The shapes keep every skill (hop 9/10 and 8/10 as 175 g's 9/10), follow (94 %, 97 % in view) and the hurdles at
+level 1-2 (the round duck finished level 2 10/10 with 14 falls, the fewest of all). They lose in soccer: 16-17 goals
+against 24 for the owner's head at the same mass (kicks connect as often, 37/48-42/53; the cycles are slower: the
+skull's CoM is ~5 mm further up and back, and the walk is 0.15 m/s). Use them if the look matters more than goals.
+
+**3D printing** (`shapes/print/`, millimetres, z up, rim plane at z = 0): `human_shell.stl` / `roundduck_shell.stl` are
+the skull wall (1.6 mm, `WALL`) with the mounting flange (1.5 mm, `FLANGE`, 3 mm ledge onto Microduck's
+`bottom_head_shell.stl`; drill or melt the screw holes through the ledge where the bottom shell's bosses are, they are
+not modelled); print rim-down with tree supports under the lower bulge, or split at the widest line. `*_bill.stl`
+(round duck upper bill, glue into the face) and `*_jaw.stl` (chin / lower bill, on the mouth XL330 horn like the owner's
+jaw) are solid ellipsoids (print hollow, 2 perimeters). `shapes/<name>_skull.stl` is the closed outer surface the
+simulation draws and collides with (head frame, metres). Rebuild: `build_shapes.py`, then `build_hybrid.py hybrid_human
+hybrid_roundduck`. To fit the face plate, eyes and mouth slit as separate coloured parts, `shapes/shapes.json` has
+their positions and sizes.
+
+Run:
+```
+PY=/home/user/cool-websites/.venv/bin/python
+$PY duckbody/hybrid/build_shapes.py && $PY duckbody/hybrid/build_hybrid.py          # all variants (or name some)
+$PY duckbody/hybrid/light_suite.py run [--bodies _m175,_human]                      # ~45 CPU-min per body
+$PY duckbody/hybrid/light_suite.py merge                                            # the tables above
+HYBRID_BODY=_noantenna $PY duckbody/hybrid/test_skills_hybrid.py --skills hop        # any script on another body
+MUJOCO_GL=osmesa $PY duckbody/hybrid/render_heads.py                                # light/heads_side_by_side.png
+```
 
 ## Microduck's brains on the hybrid head (first study)
 

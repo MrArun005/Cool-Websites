@@ -16,7 +16,7 @@
     },
     "head_yaw_range_rad": 1.4,
     "jaw_max_rad": 0.64,
-    "max_tilt": 1.5
+    "max_tilt": 1.6
    },
    {
     "success": true,
@@ -30,7 +30,7 @@
     },
     "head_yaw_range_rad": 1.71,
     "jaw_max_rad": 0.65,
-    "max_tilt": 1.5
+    "max_tilt": 1.6
    },
    {
     "success": true,
@@ -44,7 +44,7 @@
     },
     "head_yaw_range_rad": 0.88,
     "jaw_max_rad": 0.65,
-    "max_tilt": 1.3
+    "max_tilt": 1.4
    },
    {
     "success": true,
@@ -84,9 +84,9 @@
      "vin": 7.98,
      "lag": 4
     },
-    "head_yaw_range_rad": 1.67,
+    "head_yaw_range_rad": 1.66,
     "jaw_max_rad": 0.65,
-    "max_tilt": 1.0
+    "max_tilt": 1.1
    },
    {
     "success": true,
@@ -114,7 +114,7 @@
     },
     "head_yaw_range_rad": 1.33,
     "jaw_max_rad": 0.66,
-    "max_tilt": 1.0
+    "max_tilt": 1.1
    },
    {
     "success": true,
@@ -128,7 +128,7 @@
     },
     "head_yaw_range_rad": 1.12,
     "jaw_max_rad": 0.66,
-    "max_tilt": 1.9
+    "max_tilt": 2.0
    },
    {
     "success": true,
@@ -145,7 +145,7 @@
     "max_tilt": 1.5
    }
   ],
-  "wall_s": 33
+  "wall_s": 17
  },
  "walk": {
   "success": 10,
@@ -162,8 +162,8 @@
      "vin": 7.15,
      "lag": 4
     },
-    "speed_mps": 0.161,
-    "sideways_mps": -0.004,
+    "speed_mps": 0.154,
+    "sideways_mps": 0.0,
     "max_tilt": 5.7
    },
    {
@@ -176,8 +176,8 @@
      "vin": 7.73,
      "lag": 4
     },
-    "speed_mps": 0.177,
-    "sideways_mps": 0.006,
+    "speed_mps": 0.168,
+    "sideways_mps": 0.007,
     "max_tilt": 5.3
    },
    {
@@ -190,9 +190,9 @@
      "vin": 8.07,
      "lag": 3
     },
-    "speed_mps": 0.15,
+    "speed_mps": 0.142,
     "sideways_mps": 0.014,
-    "max_tilt": 5.0
+    "max_tilt": 4.9
    },
    {
     "success": true,
@@ -204,9 +204,9 @@
      "vin": 7.49,
      "lag": 3
     },
-    "speed_mps": 0.172,
-    "sideways_mps": 0.016,
-    "max_tilt": 5.7
+    "speed_mps": 0.161,
+    "sideways_mps": 0.014,
+    "max_tilt": 5.5
    },
    {
     "success": true,
@@ -218,9 +218,9 @@
      "vin": 7.34,
      "lag": 6
     },
-    "speed_mps": 0.184,
-    "sideways_mps": 0.009,
-    "max_tilt": 5.4
+    "speed_mps": 0.172,
+    "sideways_mps": 0.008,
+    "max_tilt": 5.3
    },
    {
     "success": true,
@@ -232,9 +232,9 @@
      "vin": 7.98,
      "lag": 4
     },
-    "speed_mps": 0.165,
-    "sideways_mps": 0.012,
-    "max_tilt": 5.6
+    "speed_mps": 0.16,
+    "sideways_mps": 0.017,
+    "max_tilt": 5.4
    },
    {
     "success": true,
@@ -246,9 +246,9 @@
      "vin": 7.42,
      "lag": 3
     },
-    "speed_mps": 0.158,
-    "sideways_mps": 0.009,
-    "max_tilt": 5.6
+    "speed_mps": 0.152,
+    "sideways_mps": 0.011,
+    "max_tilt": 5.8
    },
    {
     "success": true,
@@ -260,9 +260,9 @@
      "vin": 7.38,
      "lag": 6
     },
-    "speed_mps": 0.166,
-    "sideways_mps": 0.004,
-    "max_tilt": 6.1
+    "speed_mps": 0.155,
+    "sideways_mps": 0.008,
+    "max_tilt": 6.0
    },
    {
     "success": true,
@@ -274,9 +274,9 @@
      "vin": 6.81,
      "lag": 4
     },
-    "speed_mps": 0.146,
-    "sideways_mps": -0.001,
-    "max_tilt": 6.0
+    "speed_mps": 0.134,
+    "sideways_mps": 0.006,
+    "max_tilt": 5.9
    },
    {
     "success": true,
@@ -288,12 +288,12 @@
      "vin": 8.05,
      "lag": 6
     },
-    "speed_mps": 0.178,
+    "speed_mps": 0.171,
     "sideways_mps": 0.011,
-    "max_tilt": 5.2
+    "max_tilt": 5.0
    }
   ],
-  "wall_s": 41
+  "wall_s": 20
  },
  "run": {
   "success": 10,
@@ -310,9 +310,9 @@
      "vin": 7.15,
      "lag": 4
     },
-    "speed_mps": 0.488,
-    "sideways_mps": 0.106,
-    "max_tilt": 5.9
+    "speed_mps": 0.471,
+    "sideways_mps": 0.105,
+    "max_tilt": 6.4
    },
    {
     "success": true,
@@ -324,9 +324,9 @@
      "vin": 7.73,
      "lag": 4
     },
-    "speed_mps": 0.496,
-    "sideways_mps": 0.012,
-    "max_tilt": 5.7
+    "speed_mps": 0.483,
+    "sideways_mps": 0.053,
+    "max_tilt": 5.8
    },
    {
     "success": true,
@@ -338,9 +338,9 @@
      "vin": 8.07,
      "lag": 3
     },
-    "speed_mps": 0.503,
-    "sideways_mps": -0.002,
-    "max_tilt": 5.6
+    "speed_mps": 0.488,
+    "sideways_mps": -0.067,
+    "max_tilt": 5.7
    },
    {
     "success": true,
@@ -352,9 +352,9 @@
      "vin": 7.49,
      "lag": 3
     },
-    "speed_mps": 0.524,
-    "sideways_mps": -0.032,
-    "max_tilt": 5.7
+    "speed_mps": 0.509,
+    "sideways_mps": -0.048,
+    "max_tilt": 6.0
    },
    {
     "success": true,
@@ -366,9 +366,9 @@
      "vin": 7.34,
      "lag": 6
     },
-    "speed_mps": 0.487,
-    "sideways_mps": 0.081,
-    "max_tilt": 8.5
+    "speed_mps": 0.463,
+    "sideways_mps": 0.119,
+    "max_tilt": 8.3
    },
    {
     "success": true,
@@ -380,9 +380,9 @@
      "vin": 7.98,
      "lag": 4
     },
-    "speed_mps": 0.48,
-    "sideways_mps": 0.058,
-    "max_tilt": 5.9
+    "speed_mps": 0.471,
+    "sideways_mps": 0.023,
+    "max_tilt": 5.7
    },
    {
     "success": true,
@@ -394,8 +394,8 @@
      "vin": 7.42,
      "lag": 3
     },
-    "speed_mps": 0.502,
-    "sideways_mps": -0.087,
+    "speed_mps": 0.5,
+    "sideways_mps": -0.041,
     "max_tilt": 5.6
    },
    {
@@ -408,9 +408,9 @@
      "vin": 7.38,
      "lag": 6
     },
-    "speed_mps": 0.465,
-    "sideways_mps": -0.017,
-    "max_tilt": 10.1
+    "speed_mps": 0.454,
+    "sideways_mps": 0.054,
+    "max_tilt": 9.3
    },
    {
     "success": true,
@@ -422,8 +422,8 @@
      "vin": 6.81,
      "lag": 4
     },
-    "speed_mps": 0.503,
-    "sideways_mps": -0.062,
+    "speed_mps": 0.488,
+    "sideways_mps": -0.069,
     "max_tilt": 9.4
    },
    {
@@ -436,12 +436,12 @@
      "vin": 8.05,
      "lag": 6
     },
-    "speed_mps": 0.451,
-    "sideways_mps": 0.143,
-    "max_tilt": 7.4
+    "speed_mps": 0.453,
+    "sideways_mps": 0.135,
+    "max_tilt": 8.0
    }
   ],
-  "wall_s": 29
+  "wall_s": 15
  },
  "squat": {
   "success": 10,
@@ -459,8 +459,8 @@
      "lag": 4
     },
     "drop_m": 0.05,
-    "tilt_squat": 5.2,
-    "tilt_rise": 8.0
+    "tilt_squat": 4.7,
+    "tilt_rise": 7.4
    },
    {
     "success": true,
@@ -474,7 +474,7 @@
     },
     "drop_m": 0.05,
     "tilt_squat": 3.9,
-    "tilt_rise": 6.7
+    "tilt_rise": 6.5
    },
    {
     "success": true,
@@ -487,8 +487,8 @@
      "lag": 3
     },
     "drop_m": 0.05,
-    "tilt_squat": 4.1,
-    "tilt_rise": 7.3
+    "tilt_squat": 3.7,
+    "tilt_rise": 7.1
    },
    {
     "success": true,
@@ -501,8 +501,8 @@
      "lag": 3
     },
     "drop_m": 0.05,
-    "tilt_squat": 4.6,
-    "tilt_rise": 7.0
+    "tilt_squat": 4.2,
+    "tilt_rise": 6.6
    },
    {
     "success": true,
@@ -515,8 +515,8 @@
      "lag": 6
     },
     "drop_m": 0.05,
-    "tilt_squat": 5.9,
-    "tilt_rise": 9.0
+    "tilt_squat": 5.3,
+    "tilt_rise": 8.5
    },
    {
     "success": true,
@@ -529,8 +529,8 @@
      "lag": 4
     },
     "drop_m": 0.05,
-    "tilt_squat": 3.6,
-    "tilt_rise": 6.6
+    "tilt_squat": 3.4,
+    "tilt_rise": 6.3
    },
    {
     "success": true,
@@ -543,8 +543,8 @@
      "lag": 3
     },
     "drop_m": 0.05,
-    "tilt_squat": 4.1,
-    "tilt_rise": 7.2
+    "tilt_squat": 3.7,
+    "tilt_rise": 6.9
    },
    {
     "success": true,
@@ -557,8 +557,8 @@
      "lag": 6
     },
     "drop_m": 0.05,
-    "tilt_squat": 7.2,
-    "tilt_rise": 10.3
+    "tilt_squat": 6.4,
+    "tilt_rise": 9.8
    },
    {
     "success": true,
@@ -571,8 +571,8 @@
      "lag": 4
     },
     "drop_m": 0.049,
-    "tilt_squat": 8.9,
-    "tilt_rise": 11.0
+    "tilt_squat": 7.7,
+    "tilt_rise": 9.7
    },
    {
     "success": true,
@@ -585,11 +585,11 @@
      "lag": 6
     },
     "drop_m": 0.051,
-    "tilt_squat": 5.0,
-    "tilt_rise": 6.9
+    "tilt_squat": 4.8,
+    "tilt_rise": 6.5
    }
   ],
-  "wall_s": 16
+  "wall_s": 15
  },
  "sit_stand": {
   "success": 10,
@@ -608,7 +608,7 @@
     },
     "seated": true,
     "seat_z": 0.062,
-    "tilt_rise": 7.5
+    "tilt_rise": 7.7
    },
    {
     "success": true,
@@ -622,7 +622,7 @@
     },
     "seated": true,
     "seat_z": 0.062,
-    "tilt_rise": 7.5
+    "tilt_rise": 7.0
    },
    {
     "success": true,
@@ -636,7 +636,7 @@
     },
     "seated": true,
     "seat_z": 0.062,
-    "tilt_rise": 7.2
+    "tilt_rise": 6.9
    },
    {
     "success": true,
@@ -650,7 +650,7 @@
     },
     "seated": true,
     "seat_z": 0.062,
-    "tilt_rise": 6.8
+    "tilt_rise": 6.9
    },
    {
     "success": true,
@@ -664,7 +664,7 @@
     },
     "seated": true,
     "seat_z": 0.062,
-    "tilt_rise": 8.9
+    "tilt_rise": 8.6
    },
    {
     "success": true,
@@ -678,7 +678,7 @@
     },
     "seated": true,
     "seat_z": 0.062,
-    "tilt_rise": 8.5
+    "tilt_rise": 7.7
    },
    {
     "success": true,
@@ -692,7 +692,7 @@
     },
     "seated": true,
     "seat_z": 0.062,
-    "tilt_rise": 7.4
+    "tilt_rise": 7.1
    },
    {
     "success": true,
@@ -706,7 +706,7 @@
     },
     "seated": true,
     "seat_z": 0.062,
-    "tilt_rise": 8.7
+    "tilt_rise": 8.6
    },
    {
     "success": true,
@@ -733,11 +733,11 @@
      "lag": 6
     },
     "seated": true,
-    "seat_z": 0.062,
-    "tilt_rise": 8.2
+    "seat_z": 0.061,
+    "tilt_rise": 8.4
    }
   ],
-  "wall_s": 40
+  "wall_s": 21
  },
  "swag": {
   "success": 10,
@@ -756,11 +756,11 @@
     },
     "swag_pose": {
      "z": 0.061,
-     "tilt": 5.9
+     "tilt": 6.0
     },
     "in_swag": true,
-    "knee_open_rad": 0.71,
-    "tilt_rise": 6.3
+    "knee_open_rad": 0.7,
+    "tilt_rise": 6.4
    },
    {
     "success": true,
@@ -773,12 +773,12 @@
      "lag": 4
     },
     "swag_pose": {
-     "z": 0.06,
-     "tilt": 6.0
+     "z": 0.061,
+     "tilt": 3.5
     },
     "in_swag": true,
-    "knee_open_rad": 0.71,
-    "tilt_rise": 7.1
+    "knee_open_rad": 0.54,
+    "tilt_rise": 5.7
    },
    {
     "success": true,
@@ -792,10 +792,10 @@
     },
     "swag_pose": {
      "z": 0.06,
-     "tilt": 5.9
+     "tilt": 6.0
     },
     "in_swag": true,
-    "knee_open_rad": 0.72,
+    "knee_open_rad": 0.7,
     "tilt_rise": 6.7
    },
    {
@@ -813,8 +813,8 @@
      "tilt": 5.9
     },
     "in_swag": true,
-    "knee_open_rad": 0.73,
-    "tilt_rise": 6.9
+    "knee_open_rad": 0.72,
+    "tilt_rise": 7.1
    },
    {
     "success": true,
@@ -828,11 +828,11 @@
     },
     "swag_pose": {
      "z": 0.061,
-     "tilt": 5.7
+     "tilt": 5.8
     },
     "in_swag": true,
-    "knee_open_rad": 0.74,
-    "tilt_rise": 6.9
+    "knee_open_rad": 0.73,
+    "tilt_rise": 7.3
    },
    {
     "success": true,
@@ -846,11 +846,11 @@
     },
     "swag_pose": {
      "z": 0.061,
-     "tilt": 5.9
+     "tilt": 6.0
     },
     "in_swag": true,
-    "knee_open_rad": 0.71,
-    "tilt_rise": 6.7
+    "knee_open_rad": 0.68,
+    "tilt_rise": 6.9
    },
    {
     "success": true,
@@ -867,8 +867,8 @@
      "tilt": 5.9
     },
     "in_swag": true,
-    "knee_open_rad": 0.71,
-    "tilt_rise": 6.9
+    "knee_open_rad": 0.7,
+    "tilt_rise": 7.0
    },
    {
     "success": true,
@@ -882,11 +882,11 @@
     },
     "swag_pose": {
      "z": 0.061,
-     "tilt": 5.9
+     "tilt": 6.0
     },
     "in_swag": true,
-    "knee_open_rad": 0.75,
-    "tilt_rise": 7.2
+    "knee_open_rad": 0.73,
+    "tilt_rise": 7.5
    },
    {
     "success": true,
@@ -900,11 +900,11 @@
     },
     "swag_pose": {
      "z": 0.061,
-     "tilt": 5.9
+     "tilt": 6.0
     },
     "in_swag": true,
-    "knee_open_rad": 0.75,
-    "tilt_rise": 6.6
+    "knee_open_rad": 0.73,
+    "tilt_rise": 6.8
    },
    {
     "success": true,
@@ -917,15 +917,15 @@
      "lag": 6
     },
     "swag_pose": {
-     "z": 0.06,
-     "tilt": 5.1
+     "z": 0.061,
+     "tilt": 4.6
     },
     "in_swag": true,
-    "knee_open_rad": 0.65,
-    "tilt_rise": 7.6
+    "knee_open_rad": 0.57,
+    "tilt_rise": 7.4
    }
   ],
-  "wall_s": 57
+  "wall_s": 30
  },
  "sleep_wake": {
   "success": 10,
@@ -943,8 +943,8 @@
      "lag": 4
     },
     "asleep": true,
-    "neck_droop_rad": -0.59,
-    "tilt_rise": 5.5
+    "neck_droop_rad": -0.58,
+    "tilt_rise": 4.9
    },
    {
     "success": true,
@@ -957,8 +957,8 @@
      "lag": 4
     },
     "asleep": true,
-    "neck_droop_rad": -0.57,
-    "tilt_rise": 4.5
+    "neck_droop_rad": -0.56,
+    "tilt_rise": 4.7
    },
    {
     "success": true,
@@ -972,7 +972,7 @@
     },
     "asleep": true,
     "neck_droop_rad": -0.58,
-    "tilt_rise": 5.2
+    "tilt_rise": 5.5
    },
    {
     "success": true,
@@ -985,8 +985,8 @@
      "lag": 3
     },
     "asleep": true,
-    "neck_droop_rad": -0.57,
-    "tilt_rise": 6.1
+    "neck_droop_rad": -0.56,
+    "tilt_rise": 5.6
    },
    {
     "success": true,
@@ -999,8 +999,8 @@
      "lag": 6
     },
     "asleep": true,
-    "neck_droop_rad": -0.6,
-    "tilt_rise": 5.4
+    "neck_droop_rad": -0.59,
+    "tilt_rise": 5.5
    },
    {
     "success": true,
@@ -1013,8 +1013,8 @@
      "lag": 4
     },
     "asleep": true,
-    "neck_droop_rad": -0.57,
-    "tilt_rise": 4.8
+    "neck_droop_rad": -0.56,
+    "tilt_rise": 4.9
    },
    {
     "success": true,
@@ -1027,8 +1027,8 @@
      "lag": 3
     },
     "asleep": true,
-    "neck_droop_rad": -0.58,
-    "tilt_rise": 6.4
+    "neck_droop_rad": -0.57,
+    "tilt_rise": 6.3
    },
    {
     "success": true,
@@ -1041,8 +1041,8 @@
      "lag": 6
     },
     "asleep": true,
-    "neck_droop_rad": -0.61,
-    "tilt_rise": 6.4
+    "neck_droop_rad": -0.6,
+    "tilt_rise": 5.5
    },
    {
     "success": true,
@@ -1055,8 +1055,8 @@
      "lag": 4
     },
     "asleep": true,
-    "neck_droop_rad": -0.64,
-    "tilt_rise": 7.3
+    "neck_droop_rad": -0.62,
+    "tilt_rise": 7.7
    },
    {
     "success": true,
@@ -1069,11 +1069,11 @@
      "lag": 6
     },
     "asleep": true,
-    "neck_droop_rad": -0.56,
-    "tilt_rise": 5.7
+    "neck_droop_rad": -0.55,
+    "tilt_rise": 6.2
    }
   ],
-  "wall_s": 30
+  "wall_s": 21
  },
  "lie_down": {
   "success": 10,
@@ -1092,10 +1092,10 @@
     },
     "lying": true,
     "face": "down",
-    "rest_speed": 0.007,
+    "rest_speed": 0.005,
     "peak_g": 3.7,
     "t_up_s": 0.26,
-    "tilt_after": 1.1
+    "tilt_after": 1.2
    },
    {
     "success": true,
@@ -1112,7 +1112,7 @@
     "rest_speed": 0.004,
     "peak_g": 2.8,
     "t_up_s": 0.24,
-    "tilt_after": 1.2
+    "tilt_after": 1.3
    },
    {
     "success": true,
@@ -1129,7 +1129,7 @@
     "rest_speed": 0.005,
     "peak_g": 2.1,
     "t_up_s": 0.22,
-    "tilt_after": 1.1
+    "tilt_after": 1.0
    },
    {
     "success": true,
@@ -1143,7 +1143,7 @@
     },
     "lying": true,
     "face": "down",
-    "rest_speed": 0.004,
+    "rest_speed": 0.003,
     "peak_g": 1.8,
     "t_up_s": 0.24,
     "tilt_after": 1.0
@@ -1162,8 +1162,8 @@
     "face": "down",
     "rest_speed": 0.005,
     "peak_g": 2.5,
-    "t_up_s": 0.24,
-    "tilt_after": 0.7
+    "t_up_s": 0.22,
+    "tilt_after": 0.6
    },
    {
     "success": true,
@@ -1213,8 +1213,8 @@
     "face": "down",
     "rest_speed": 0.007,
     "peak_g": 3.9,
-    "t_up_s": 0.24,
-    "tilt_after": 1.0
+    "t_up_s": 0.22,
+    "tilt_after": 0.9
    },
    {
     "success": true,
@@ -1231,7 +1231,7 @@
     "rest_speed": 0.002,
     "peak_g": 3.1,
     "t_up_s": 0.22,
-    "tilt_after": 2.1
+    "tilt_after": 1.7
    },
    {
     "success": true,
@@ -1247,11 +1247,11 @@
     "face": "down",
     "rest_speed": 0.003,
     "peak_g": 3.8,
-    "t_up_s": 0.26,
-    "tilt_after": 1.0
+    "t_up_s": 0.24,
+    "tilt_after": 1.1
    }
   ],
-  "wall_s": 20
+  "wall_s": 8
  },
  "getup_face_down": {
   "success": 10,
@@ -1316,7 +1316,7 @@
      "vin": 8.06,
      "lag": 5
     },
-    "t_up_s": 0.24
+    "t_up_s": 0.22
    },
    {
     "success": true,
@@ -1364,7 +1364,7 @@
      "vin": 7.04,
      "lag": 4
     },
-    "t_up_s": 0.26
+    "t_up_s": 0.24
    },
    {
     "success": true,
@@ -1379,7 +1379,7 @@
     "t_up_s": 0.24
    }
   ],
-  "wall_s": 30
+  "wall_s": 15
  },
  "getup_back": {
   "success": 10,
@@ -1396,7 +1396,7 @@
      "vin": 8.1,
      "lag": 6
     },
-    "t_up_s": 0.98
+    "t_up_s": 1.0
    },
    {
     "success": true,
@@ -1408,7 +1408,7 @@
      "vin": 7.87,
      "lag": 5
     },
-    "t_up_s": 0.8200000000000001
+    "t_up_s": 0.78
    },
    {
     "success": true,
@@ -1420,7 +1420,7 @@
      "vin": 7.27,
      "lag": 4
     },
-    "t_up_s": 1.34
+    "t_up_s": 1.36
    },
    {
     "success": true,
@@ -1432,7 +1432,7 @@
      "vin": 8.14,
      "lag": 4
     },
-    "t_up_s": 0.9
+    "t_up_s": 0.98
    },
    {
     "success": true,
@@ -1444,7 +1444,7 @@
      "vin": 8.06,
      "lag": 5
     },
-    "t_up_s": 0.76
+    "t_up_s": 0.74
    },
    {
     "success": true,
@@ -1456,7 +1456,7 @@
      "vin": 7.14,
      "lag": 3
     },
-    "t_up_s": 1.02
+    "t_up_s": 1.06
    },
    {
     "success": true,
@@ -1468,7 +1468,7 @@
      "vin": 7.26,
      "lag": 3
     },
-    "t_up_s": 0.96
+    "t_up_s": 0.92
    },
    {
     "success": true,
@@ -1480,7 +1480,7 @@
      "vin": 8.15,
      "lag": 4
     },
-    "t_up_s": 0.88
+    "t_up_s": 0.86
    },
    {
     "success": true,
@@ -1492,7 +1492,7 @@
      "vin": 7.04,
      "lag": 4
     },
-    "t_up_s": 0.8
+    "t_up_s": 0.78
    },
    {
     "success": true,
@@ -1504,13 +1504,13 @@
      "vin": 6.52,
      "lag": 5
     },
-    "t_up_s": 0.9400000000000001
+    "t_up_s": 0.92
    }
   ],
-  "wall_s": 33
+  "wall_s": 16
  },
  "hop": {
-  "success": 10,
+  "success": 9,
   "n": 10,
   "desc": "hops, about one a second (scripted crouch-push-tuck-land), velstand between",
   "runs": [
@@ -1530,13 +1530,13 @@
      80,
      85,
      85,
-     85,
+     80,
      80,
      80
     ],
-    "flight_ms_med": 82.5,
-    "landing_bw": 3.17,
-    "max_tilt": 10.7
+    "flight_ms_med": 80.0,
+    "landing_bw": 4.08,
+    "max_tilt": 10.0
    },
    {
     "success": true,
@@ -1553,14 +1553,14 @@
     "flight_ms": [
      105,
      105,
-     105,
+     100,
      105,
      105,
      105
     ],
     "flight_ms_med": 105.0,
-    "landing_bw": 4.52,
-    "max_tilt": 11.2
+    "landing_bw": 5.43,
+    "max_tilt": 11.3
    },
    {
     "success": true,
@@ -1575,16 +1575,16 @@
     "flights": 6,
     "hops_per_s": 1.0,
     "flight_ms": [
+     80,
+     80,
      85,
      85,
      85,
-     85,
-     85,
-     85
+     80
     ],
-    "flight_ms_med": 85.0,
-    "landing_bw": 4.17,
-    "max_tilt": 8.6
+    "flight_ms_med": 82.5,
+    "landing_bw": 4.27,
+    "max_tilt": 7.7
    },
    {
     "success": true,
@@ -1599,16 +1599,16 @@
     "flights": 6,
     "hops_per_s": 1.0,
     "flight_ms": [
-     100,
+     95,
+     110,
      105,
-     100,
      105,
      105,
-     100
+     105
     ],
-    "flight_ms_med": 102.5,
-    "landing_bw": 4.64,
-    "max_tilt": 11.1
+    "flight_ms_med": 105.0,
+    "landing_bw": 5.75,
+    "max_tilt": 11.3
    },
    {
     "success": true,
@@ -1623,15 +1623,15 @@
     "flights": 5,
     "hops_per_s": 0.83,
     "flight_ms": [
-     75,
-     75,
+     85,
+     85,
      80,
      80,
      80
     ],
     "flight_ms_med": 80.0,
-    "landing_bw": 3.26,
-    "max_tilt": 10.3
+    "landing_bw": 4.47,
+    "max_tilt": 11.1
    },
    {
     "success": true,
@@ -1646,16 +1646,16 @@
     "flights": 6,
     "hops_per_s": 1.0,
     "flight_ms": [
-     95,
-     85,
-     85,
-     85,
-     85,
-     95
+     105,
+     100,
+     105,
+     100,
+     100,
+     105
     ],
-    "flight_ms_med": 85.0,
-    "landing_bw": 5.17,
-    "max_tilt": 9.5
+    "flight_ms_med": 102.5,
+    "landing_bw": 6.1,
+    "max_tilt": 9.8
    },
    {
     "success": true,
@@ -1670,7 +1670,7 @@
     "flights": 6,
     "hops_per_s": 1.0,
     "flight_ms": [
-     80,
+     75,
      95,
      95,
      95,
@@ -1678,11 +1678,11 @@
      95
     ],
     "flight_ms_med": 95.0,
-    "landing_bw": 3.51,
-    "max_tilt": 10.6
+    "landing_bw": 4.49,
+    "max_tilt": 9.6
    },
    {
-    "success": true,
+    "success": false,
     "seed": 7,
     "body": {
      "mass_scale_mean": 1.004,
@@ -1691,18 +1691,15 @@
      "vin": 7.38,
      "lag": 6
     },
-    "flights": 5,
-    "hops_per_s": 0.83,
+    "flights": 2,
+    "hops_per_s": 0.33,
     "flight_ms": [
-     65,
      60,
-     60,
-     60,
-     55
+     20
     ],
-    "flight_ms_med": 60.0,
-    "landing_bw": 4.18,
-    "max_tilt": 10.1
+    "flight_ms_med": 40.0,
+    "landing_bw": 2.55,
+    "max_tilt": 96.3
    },
    {
     "success": true,
@@ -1717,15 +1714,15 @@
     "flights": 5,
     "hops_per_s": 0.83,
     "flight_ms": [
+     40,
+     40,
      50,
      45,
-     25,
-     40,
-     45
+     40
     ],
-    "flight_ms_med": 45.0,
-    "landing_bw": 2.41,
-    "max_tilt": 13.0
+    "flight_ms_med": 40.0,
+    "landing_bw": 2.19,
+    "max_tilt": 10.9
    },
    {
     "success": true,
@@ -1742,17 +1739,17 @@
     "flight_ms": [
      110,
      110,
-     115,
      110,
-     25,
+     100,
+     105,
      105
     ],
-    "flight_ms_med": 110.0,
-    "landing_bw": 6.44,
-    "max_tilt": 12.0
+    "flight_ms_med": 107.5,
+    "landing_bw": 6.54,
+    "max_tilt": 11.2
    }
   ],
-  "wall_s": 19
+  "wall_s": 17
  },
  "roll": {
   "success": 10,
@@ -1769,7 +1766,7 @@
      "vin": 7.15,
      "lag": 4
     },
-    "rotation_deg": 357,
+    "rotation_deg": 356,
     "tilt_after": 1.5
    },
    {
@@ -1782,8 +1779,8 @@
      "vin": 7.73,
      "lag": 4
     },
-    "rotation_deg": 359,
-    "tilt_after": 1.0
+    "rotation_deg": 360,
+    "tilt_after": 1.2
    },
    {
     "success": true,
@@ -1795,8 +1792,8 @@
      "vin": 8.07,
      "lag": 3
     },
-    "rotation_deg": 358,
-    "tilt_after": 1.5
+    "rotation_deg": 359,
+    "tilt_after": 1.3
    },
    {
     "success": true,
@@ -1808,8 +1805,8 @@
      "vin": 7.49,
      "lag": 3
     },
-    "rotation_deg": 357,
-    "tilt_after": 1.3
+    "rotation_deg": 359,
+    "tilt_after": 1.4
    },
    {
     "success": true,
@@ -1821,8 +1818,8 @@
      "vin": 7.34,
      "lag": 6
     },
-    "rotation_deg": 358,
-    "tilt_after": 0.5
+    "rotation_deg": 355,
+    "tilt_after": 2.2
    },
    {
     "success": true,
@@ -1835,7 +1832,7 @@
      "lag": 4
     },
     "rotation_deg": 359,
-    "tilt_after": 1.1
+    "tilt_after": 1.2
    },
    {
     "success": true,
@@ -1861,7 +1858,7 @@
      "lag": 6
     },
     "rotation_deg": 355,
-    "tilt_after": 2.9
+    "tilt_after": 2.5
    },
    {
     "success": true,
@@ -1873,8 +1870,8 @@
      "vin": 6.81,
      "lag": 4
     },
-    "rotation_deg": 358,
-    "tilt_after": 3.7
+    "rotation_deg": 355,
+    "tilt_after": 3.6
    },
    {
     "success": true,
@@ -1886,16 +1883,17 @@
      "vin": 8.05,
      "lag": 6
     },
-    "rotation_deg": 362,
-    "tilt_after": 1.3
+    "rotation_deg": 361,
+    "tilt_after": 2.8
    }
   ],
-  "wall_s": 24
+  "wall_s": 17
  },
  "_meta": {
   "n": 10,
-  "body": "scene_hybrid_allcollisions_noantenna.xml",
-  "randomization": "harness.MicroduckSim.randomize_body (mass/inertia x0.95-1.05, trunk+head CoM +-3mm, friction x0.7-1.3, kp x0.85-1.15, 6.5-8.2 V, delay 3-6 steps) + obs noise",
-  "seeds": "0-9"
+  "body": "scene_hybrid_allcollisions_m175.xml",
+  "seeds": "0-9",
+  "source": "light/_m175",
+  "randomization": "harness.MicroduckSim.randomize_body (mass/inertia x0.95-1.05, trunk+head CoM +-3mm, friction x0.7-1.3, kp x0.85-1.15, 6.5-8.2 V, delay 3-6 steps) + obs noise"
  }
 }

@@ -1,109 +1,122 @@
 {
  "summary": {
   "n": 10,
-  "goals_median": 3.0,
+  "goals_median": 2.5,
   "goals_min": 0,
-  "goals_max": 4,
-  "goals_total": 25,
+  "goals_max": 5,
+  "goals_total": 24,
   "matches_with_goals": 9,
   "kicks_median": 5.0,
-  "dribbled_goals": 4,
-  "kicks": 48,
-  "connected": 36,
-  "falls": 1,
-  "runs_with_falls": 1,
-  "in_view_median": 0.5025
+  "dribbled_goals": 2,
+  "kicks": 45,
+  "connected": 35,
+  "falls": 0,
+  "runs_with_falls": 0,
+  "in_view_median": 0.522
  },
  "runs": [
   {
    "seed": 0,
-   "goals": 4,
+   "goals": 5,
    "goal_t": [
-    9.2,
-    24.2,
-    54.02,
-    115.18
+    18.56,
+    46.96,
+    62.96,
+    78.46,
+    104.38
    ],
-   "goals_without_kick": 1,
-   "kicks": 5,
+   "goals_without_kick": 0,
+   "kicks": 6,
    "connected": 5,
    "kick_log": [
     {
-     "foot": "right",
-     "ex": 0.001,
-     "ey": -0.001,
-     "eh": -0.098,
-     "t": 7.6,
+     "foot": "left",
+     "ex": 0.004,
+     "ey": -0.005,
+     "eh": -0.083,
+     "t": 17.12,
      "n": 1,
      "b0": [
-      0.065,
-      0.411
+      0.139,
+      0.076
      ],
-     "vmax": 1.197,
-     "connected": true
-    },
-    {
-     "foot": "left",
-     "ex": -0.0,
-     "ey": -0.006,
-     "eh": 0.101,
-     "t": 22.58,
-     "n": 2,
-     "b0": [
-      0.0,
-      0.0
-     ],
-     "vmax": 1.218,
-     "connected": true
-    },
-    {
-     "foot": "left",
-     "ex": 0.012,
-     "ey": 0.014,
-     "eh": 0.017,
-     "t": 35.8,
-     "n": 3,
-     "b0": [
-      0.887,
-      -0.17
-     ],
-     "vmax": 0.369,
-     "connected": true
-    },
-    {
-     "foot": "left",
-     "ex": 0.005,
-     "ey": 0.005,
-     "eh": -0.101,
-     "t": 78.3,
-     "n": 4,
-     "b0": [
-      0.06,
-      0.046
-     ],
-     "vmax": 1.121,
+     "vmax": 1.188,
      "connected": true
     },
     {
      "foot": "right",
      "ex": 0.017,
-     "ey": -0.009,
-     "eh": -0.05,
-     "t": 114.92,
+     "ey": 0.003,
+     "eh": 0.061,
+     "t": 45.5,
+     "n": 2,
+     "b0": [
+      0.163,
+      -0.042
+     ],
+     "vmax": 1.115,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.016,
+     "ey": -0.003,
+     "eh": 0.022,
+     "t": 60.8,
+     "n": 3,
+     "b0": [
+      0.0,
+      0.0
+     ],
+     "vmax": 0.889,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.018,
+     "ey": 0.017,
+     "eh": 0.038,
+     "t": 76.2,
+     "n": 4,
+     "b0": [
+      0.0,
+      0.0
+     ],
+     "vmax": 0.877,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.002,
+     "ey": -0.015,
+     "eh": 0.001,
+     "t": 92.58,
      "n": 5,
      "b0": [
-      1.166,
-      0.025
+      0.049,
+      -0.076
      ],
-     "vmax": 1.125,
+     "vmax": 0.038,
+     "connected": false
+    },
+    {
+     "foot": "left",
+     "ex": 0.013,
+     "ey": -0.01,
+     "eh": -0.007,
+     "t": 102.8,
+     "n": 6,
+     "b0": [
+      0.079,
+      -0.127
+     ],
+     "vmax": 1.147,
      "connected": true
     }
    ],
-   "falls": 1,
-   "falls_t": [
-    91.4
-   ],
-   "in_view": 0.449,
+   "falls": 0,
+   "falls_t": [],
+   "in_view": 0.425,
    "body": {
     "mass_scale_mean": 1.005,
     "friction": 1.226,
@@ -111,9 +124,9 @@
     "vin": 7.07,
     "lag": 6
    },
-   "fixes": 89,
-   "fix_rejects": 7,
-   "backups": 4,
+   "fixes": 119,
+   "fix_rejects": 4,
+   "backups": 2,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -126,109 +139,109 @@
      0.411
     ]
    },
-   "wall_s": 88.1
+   "wall_s": 136.9
   },
   {
    "seed": 1,
    "goals": 4,
    "goal_t": [
-    8.16,
-    24.9,
-    59.08,
-    100.7
+    7.24,
+    38.3,
+    59.7,
+    118.26
    ],
    "goals_without_kick": 0,
    "kicks": 6,
-   "connected": 6,
+   "connected": 5,
    "kick_log": [
     {
      "foot": "right",
-     "ex": 0.014,
-     "ey": -0.014,
-     "eh": -0.129,
-     "t": 7.12,
+     "ex": 0.007,
+     "ey": 0.003,
+     "eh": -0.072,
+     "t": 6.2,
      "n": 1,
      "b0": [
       0.497,
       0.425
-     ],
-     "vmax": 1.253,
-     "connected": true
-    },
-    {
-     "foot": "right",
-     "ex": -0.003,
-     "ey": -0.004,
-     "eh": -0.059,
-     "t": 23.2,
-     "n": 2,
-     "b0": [
-      0.0,
-      0.0
-     ],
-     "vmax": 1.252,
-     "connected": true
-    },
-    {
-     "foot": "right",
-     "ex": 0.006,
-     "ey": 0.008,
-     "eh": -0.006,
-     "t": 57.32,
-     "n": 3,
-     "b0": [
-      -0.051,
-      -0.071
      ],
      "vmax": 1.259,
      "connected": true
     },
     {
      "foot": "right",
-     "ex": 0.003,
-     "ey": 0.013,
-     "eh": -0.106,
-     "t": 78.66,
-     "n": 4,
+     "ex": 0.007,
+     "ey": -0.002,
+     "eh": -0.14,
+     "t": 36.76,
+     "n": 2,
+     "b0": [
+      0.242,
+      0.014
+     ],
+     "vmax": 1.081,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.005,
+     "ey": 0.015,
+     "eh": -0.006,
+     "t": 57.9,
+     "n": 3,
      "b0": [
       0.0,
       0.0
      ],
-     "vmax": 1.222,
+     "vmax": 1.181,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": -0.005,
+     "ey": 0.013,
+     "eh": -0.125,
+     "t": 81.9,
+     "n": 4,
+     "b0": [
+      -0.086,
+      0.032
+     ],
+     "vmax": 1.07,
      "connected": true
     },
     {
      "foot": "left",
      "ex": 0.018,
-     "ey": -0.004,
-     "eh": 0.042,
-     "t": 99.46,
+     "ey": 0.0,
+     "eh": 0.02,
+     "t": 109.22,
      "n": 5,
      "b0": [
-      0.935,
-      -0.338
+      0.939,
+      -0.431
      ],
-     "vmax": 0.775,
-     "connected": true
+     "vmax": 0.007,
+     "connected": false
     },
     {
      "foot": "right",
-     "ex": 0.002,
-     "ey": -0.002,
-     "eh": -0.028,
-     "t": 118.8,
+     "ex": 0.019,
+     "ey": 0.014,
+     "eh": 0.067,
+     "t": 117.1,
      "n": 6,
      "b0": [
-      0.0,
-      0.0
+      0.941,
+      -0.428
      ],
-     "vmax": 1.049,
+     "vmax": 1.017,
      "connected": true
     }
    ],
    "falls": 0,
    "falls_t": [],
-   "in_view": 0.471,
+   "in_view": 0.638,
    "body": {
     "mass_scale_mean": 1.003,
     "friction": 0.815,
@@ -236,9 +249,9 @@
     "vin": 6.83,
     "lag": 4
    },
-   "fixes": 214,
-   "fix_rejects": 5,
-   "backups": 1,
+   "fixes": 173,
+   "fix_rejects": 3,
+   "backups": 3,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -251,94 +264,120 @@
      0.425
     ]
    },
-   "wall_s": 76.5
+   "wall_s": 121.7
   },
   {
    "seed": 2,
-   "goals": 3,
+   "goals": 1,
    "goal_t": [
-    20.34,
-    54.32,
-    97.44
+    28.56
    ],
-   "goals_without_kick": 1,
-   "kicks": 5,
+   "goals_without_kick": 0,
+   "kicks": 7,
    "connected": 5,
    "kick_log": [
     {
-     "foot": "right",
-     "ex": 0.011,
-     "ey": 0.017,
-     "eh": 0.096,
-     "t": 7.4,
+     "foot": "left",
+     "ex": 0.007,
+     "ey": -0.001,
+     "eh": 0.008,
+     "t": 6.64,
      "n": 1,
      "b0": [
-      0.387,
-      0.049
+      0.442,
+      0.087
      ],
-     "vmax": 0.68,
-     "connected": true
+     "vmax": 0.04,
+     "connected": false
     },
     {
      "foot": "right",
-     "ex": 0.018,
-     "ey": 0.013,
-     "eh": 0.048,
-     "t": 19.9,
+     "ex": -0.004,
+     "ey": -0.005,
+     "eh": -0.138,
+     "t": 27.72,
      "n": 2,
      "b0": [
-      1.148,
-      0.342
+      0.724,
+      0.102
      ],
-     "vmax": 0.955,
+     "vmax": 0.966,
      "connected": true
     },
     {
-     "foot": "right",
-     "ex": -0.001,
-     "ey": -0.015,
-     "eh": -0.033,
-     "t": 38.8,
+     "foot": "left",
+     "ex": -0.002,
+     "ey": -0.012,
+     "eh": -0.047,
+     "t": 51.44,
      "n": 3,
      "b0": [
-      -0.002,
-      -0.01
+      0.564,
+      0.019
      ],
-     "vmax": 1.217,
+     "vmax": 1.29,
      "connected": true
     },
     {
      "foot": "left",
-     "ex": 0.008,
-     "ey": 0.017,
-     "eh": -0.075,
-     "t": 70.62,
+     "ex": 0.016,
+     "ey": -0.008,
+     "eh": -0.027,
+     "t": 84.0,
      "n": 4,
      "b0": [
-      0.0,
-      0.0
+      0.799,
+      0.691
      ],
-     "vmax": 1.21,
+     "vmax": 0.965,
      "connected": true
     },
     {
      "foot": "left",
-     "ex": 0.004,
-     "ey": 0.007,
-     "eh": 0.121,
-     "t": 96.7,
+     "ex": 0.016,
+     "ey": 0.003,
+     "eh": 0.122,
+     "t": 89.7,
      "n": 5,
      "b0": [
-      0.746,
-      -0.294
+      1.16,
+      0.605
      ],
-     "vmax": 1.239,
+     "vmax": 1.17,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.006,
+     "ey": 0.005,
+     "eh": -0.019,
+     "t": 100.4,
+     "n": 6,
+     "b0": [
+      0.939,
+      0.702
+     ],
+     "vmax": 0.024,
+     "connected": false
+    },
+    {
+     "foot": "left",
+     "ex": 0.015,
+     "ey": 0.016,
+     "eh": 0.106,
+     "t": 110.9,
+     "n": 7,
+     "b0": [
+      0.902,
+      0.695
+     ],
+     "vmax": 1.067,
      "connected": true
     }
    ],
    "falls": 0,
    "falls_t": [],
-   "in_view": 0.601,
+   "in_view": 0.495,
    "body": {
     "mass_scale_mean": 1.006,
     "friction": 1.239,
@@ -346,9 +385,9 @@
     "vin": 7.15,
     "lag": 5
    },
-   "fixes": 93,
-   "fix_rejects": 5,
-   "backups": 0,
+   "fixes": 56,
+   "fix_rejects": 2,
+   "backups": 2,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -361,66 +400,48 @@
      0.049
     ]
    },
-   "wall_s": 81.7
+   "wall_s": 147.6
   },
   {
    "seed": 3,
-   "goals": 3,
-   "goal_t": [
-    49.18,
-    70.7,
-    93.22
-   ],
-   "goals_without_kick": 1,
-   "kicks": 3,
+   "goals": 0,
+   "goal_t": [],
+   "goals_without_kick": 0,
+   "kicks": 2,
    "connected": 2,
    "kick_log": [
     {
      "foot": "left",
-     "ex": 0.009,
-     "ey": -0.01,
-     "eh": -0.11,
-     "t": 9.2,
+     "ex": 0.011,
+     "ey": 0.004,
+     "eh": 0.089,
+     "t": 5.12,
      "n": 1,
      "b0": [
-      0.475,
-      -0.05
+      0.03,
+      0.028
      ],
-     "vmax": 0.061,
-     "connected": false
-    },
-    {
-     "foot": "right",
-     "ex": 0.006,
-     "ey": -0.02,
-     "eh": -0.054,
-     "t": 69.26,
-     "n": 2,
-     "b0": [
-      0.0,
-      0.0
-     ],
-     "vmax": 1.354,
+     "vmax": 1.082,
      "connected": true
     },
     {
-     "foot": "right",
+     "foot": "left",
      "ex": 0.019,
-     "ey": -0.014,
-     "eh": -0.032,
-     "t": 92.6,
-     "n": 3,
+     "ey": 0.018,
+     "eh": 0.074,
+     "t": 65.08,
+     "n": 2,
      "b0": [
-      0.732,
-      -0.2
+      0.995,
+      0.712
      ],
-     "vmax": 1.325,
+     "vmax": 0.561,
      "connected": true
     }
    ],
    "falls": 0,
    "falls_t": [],
-   "in_view": 0.427,
+   "in_view": 0.703,
    "body": {
     "mass_scale_mean": 1.004,
     "friction": 1.119,
@@ -428,9 +449,9 @@
     "vin": 7.98,
     "lag": 6
    },
-   "fixes": 79,
-   "fix_rejects": 6,
-   "backups": 1,
+   "fixes": 24,
+   "fix_rejects": 2,
+   "backups": 10,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -443,64 +464,109 @@
      0.028
     ]
    },
-   "wall_s": 77.5
+   "wall_s": 128.4
   },
   {
    "seed": 4,
-   "goals": 1,
+   "goals": 4,
    "goal_t": [
-    19.4
+    27.0,
+    58.14,
+    85.38,
+    118.76
    ],
    "goals_without_kick": 0,
-   "kicks": 3,
-   "connected": 2,
+   "kicks": 6,
+   "connected": 4,
    "kick_log": [
     {
      "foot": "left",
-     "ex": 0.005,
-     "ey": -0.001,
-     "eh": -0.041,
-     "t": 6.52,
+     "ex": 0.012,
+     "ey": 0.019,
+     "eh": 0.056,
+     "t": 11.7,
      "n": 1,
      "b0": [
-      0.438,
-      0.002
+      0.731,
+      0.031
      ],
-     "vmax": 0.056,
+     "vmax": 0.124,
      "connected": false
     },
     {
      "foot": "right",
-     "ex": -0.0,
-     "ey": 0.01,
-     "eh": -0.094,
-     "t": 18.1,
+     "ex": 0.015,
+     "ey": -0.009,
+     "eh": -0.133,
+     "t": 26.34,
      "n": 2,
      "b0": [
-      0.507,
-      0.061
+      0.895,
+      0.231
      ],
-     "vmax": 0.996,
+     "vmax": 1.022,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.016,
+     "ey": 0.001,
+     "eh": -0.12,
+     "t": 40.82,
+     "n": 3,
+     "b0": [
+      -0.012,
+      0.064
+     ],
+     "vmax": 0.037,
+     "connected": false
+    },
+    {
+     "foot": "right",
+     "ex": 0.015,
+     "ey": 0.005,
+     "eh": -0.008,
+     "t": 56.5,
+     "n": 4,
+     "b0": [
+      0.128,
+      0.115
+     ],
+     "vmax": 0.975,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.007,
+     "ey": 0.001,
+     "eh": -0.073,
+     "t": 83.7,
+     "n": 5,
+     "b0": [
+      0.175,
+      -0.424
+     ],
+     "vmax": 1.04,
      "connected": true
     },
     {
      "foot": "right",
-     "ex": 0.01,
-     "ey": -0.016,
-     "eh": 0.021,
-     "t": 32.42,
-     "n": 3,
+     "ex": 0.014,
+     "ey": 0.014,
+     "eh": -0.023,
+     "t": 118.3,
+     "n": 6,
      "b0": [
-      0.011,
-      -0.062
+      1.059,
+      0.202
      ],
-     "vmax": 0.954,
+     "vmax": 1.046,
      "connected": true
     }
    ],
    "falls": 0,
    "falls_t": [],
-   "in_view": 0.507,
+   "in_view": 0.464,
    "body": {
     "mass_scale_mean": 1.0,
     "friction": 1.249,
@@ -508,9 +574,9 @@
     "vin": 7.89,
     "lag": 6
    },
-   "fixes": 46,
+   "fixes": 112,
    "fix_rejects": 4,
-   "backups": 3,
+   "backups": 0,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -523,79 +589,66 @@
      -0.069
     ]
    },
-   "wall_s": 79.4
+   "wall_s": 143.1
   },
   {
    "seed": 5,
-   "goals": 2,
+   "goals": 3,
    "goal_t": [
-    9.34,
-    45.52
+    9.12,
+    37.04,
+    101.78
    ],
-   "goals_without_kick": 0,
-   "kicks": 4,
-   "connected": 3,
+   "goals_without_kick": 1,
+   "kicks": 3,
+   "connected": 2,
    "kick_log": [
     {
      "foot": "right",
-     "ex": 0.006,
-     "ey": 0.016,
-     "eh": 0.074,
-     "t": 7.5,
+     "ex": -0.007,
+     "ey": 0.008,
+     "eh": -0.071,
+     "t": 7.06,
      "n": 1,
      "b0": [
       -0.178,
       0.131
      ],
-     "vmax": 1.325,
+     "vmax": 1.297,
      "connected": true
     },
     {
      "foot": "right",
-     "ex": 0.02,
-     "ey": -0.001,
-     "eh": 0.013,
-     "t": 44.8,
+     "ex": 0.004,
+     "ey": 0.004,
+     "eh": -0.029,
+     "t": 36.3,
      "n": 2,
      "b0": [
-      0.727,
-      0.222
+      0.674,
+      0.186
      ],
-     "vmax": 1.131,
+     "vmax": 1.252,
      "connected": true
     },
     {
-     "foot": "left",
+     "foot": "right",
      "ex": 0.015,
-     "ey": -0.002,
-     "eh": 0.088,
-     "t": 59.72,
+     "ey": 0.005,
+     "eh": -0.102,
+     "t": 118.38,
      "n": 3,
      "b0": [
-      0.061,
-      0.021
+      0.114,
+      -0.021
      ],
-     "vmax": 0.752,
-     "connected": true
-    },
-    {
-     "foot": "left",
-     "ex": 0.015,
-     "ey": 0.002,
-     "eh": 0.003,
-     "t": 109.12,
-     "n": 4,
-     "b0": [
-      0.951,
-      0.701
-     ],
-     "vmax": 0.23,
+     "vmax": 0.035,
      "connected": false
     }
    ],
    "falls": 0,
    "falls_t": [],
-   "in_view": 0.482,
+   "in_view": 0.549,
    "body": {
     "mass_scale_mean": 0.995,
     "friction": 0.921,
@@ -603,9 +656,9 @@
     "vin": 7.18,
     "lag": 6
    },
-   "fixes": 116,
-   "fix_rejects": 2,
-   "backups": 2,
+   "fixes": 137,
+   "fix_rejects": 4,
+   "backups": 1,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -618,122 +671,93 @@
      0.131
     ]
    },
-   "wall_s": 80.9
+   "wall_s": 137.9
   },
   {
    "seed": 6,
-   "goals": 3,
+   "goals": 2,
    "goal_t": [
-    24.3,
-    50.92,
-    98.2
+    32.26,
+    65.76
    ],
    "goals_without_kick": 0,
-   "kicks": 7,
+   "kicks": 5,
    "connected": 4,
    "kick_log": [
     {
      "foot": "left",
-     "ex": 0.017,
-     "ey": -0.0,
-     "eh": -0.119,
-     "t": 7.5,
+     "ex": 0.014,
+     "ey": -0.004,
+     "eh": -0.132,
+     "t": 7.42,
      "n": 1,
      "b0": [
-      0.071,
-      0.452
+      0.109,
+      0.491
      ],
-     "vmax": 0.079,
+     "vmax": 0.058,
      "connected": false
-    },
-    {
-     "foot": "right",
-     "ex": 0.005,
-     "ey": 0.01,
-     "eh": -0.051,
-     "t": 23.0,
-     "n": 2,
-     "b0": [
-      0.26,
-      0.414
-     ],
-     "vmax": 1.186,
-     "connected": true
-    },
-    {
-     "foot": "right",
-     "ex": 0.007,
-     "ey": 0.02,
-     "eh": -0.023,
-     "t": 49.7,
-     "n": 3,
-     "b0": [
-      0.293,
-      0.345
-     ],
-     "vmax": 1.25,
-     "connected": true
-    },
-    {
-     "foot": "right",
-     "ex": 0.002,
-     "ey": 0.001,
-     "eh": -0.107,
-     "t": 74.8,
-     "n": 4,
-     "b0": [
-      0.417,
-      0.304
-     ],
-     "vmax": 0.065,
-     "connected": false
-    },
-    {
-     "foot": "right",
-     "ex": -0.002,
-     "ey": -0.0,
-     "eh": -0.001,
-     "t": 79.7,
-     "n": 5,
-     "b0": [
-      0.577,
-      0.225
-     ],
-     "vmax": 0.054,
-     "connected": false
-    },
-    {
-     "foot": "right",
-     "ex": 0.016,
-     "ey": -0.006,
-     "eh": -0.044,
-     "t": 97.5,
-     "n": 6,
-     "b0": [
-      0.875,
-      0.392
-     ],
-     "vmax": 1.312,
-     "connected": true
     },
     {
      "foot": "right",
      "ex": 0.011,
-     "ey": -0.001,
-     "eh": -0.002,
-     "t": 119.3,
-     "n": 7,
+     "ey": 0.006,
+     "eh": -0.073,
+     "t": 31.66,
+     "n": 2,
      "b0": [
-      0.073,
-      -0.007
+      0.837,
+      0.257
      ],
-     "vmax": 1.226,
+     "vmax": 1.274,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.019,
+     "ey": 0.013,
+     "eh": -0.084,
+     "t": 64.12,
+     "n": 3,
+     "b0": [
+      0.333,
+      0.239
+     ],
+     "vmax": 0.829,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.009,
+     "ey": 0.009,
+     "eh": 0.015,
+     "t": 79.58,
+     "n": 4,
+     "b0": [
+      0.03,
+      0.064
+     ],
+     "vmax": 0.461,
+     "connected": true
+    },
+    {
+     "foot": "left",
+     "ex": 0.004,
+     "ey": 0.004,
+     "eh": -0.139,
+     "t": 104.34,
+     "n": 5,
+     "b0": [
+      0.716,
+      0.701
+     ],
+     "vmax": 0.659,
      "connected": true
     }
    ],
    "falls": 0,
    "falls_t": [],
-   "in_view": 0.534,
+   "in_view": 0.587,
    "body": {
     "mass_scale_mean": 1.006,
     "friction": 1.18,
@@ -741,9 +765,9 @@
     "vin": 6.76,
     "lag": 6
    },
-   "fixes": 221,
-   "fix_rejects": 3,
-   "backups": 0,
+   "fixes": 60,
+   "fix_rejects": 1,
+   "backups": 1,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -756,94 +780,94 @@
      0.451
     ]
    },
-   "wall_s": 79.9
+   "wall_s": 130.6
   },
   {
    "seed": 7,
    "goals": 3,
    "goal_t": [
-    12.6,
-    40.84,
-    68.98
+    24.46,
+    46.52,
+    84.58
    ],
    "goals_without_kick": 1,
    "kicks": 5,
-   "connected": 3,
+   "connected": 4,
    "kick_log": [
     {
-     "foot": "right",
-     "ex": 0.007,
-     "ey": 0.014,
-     "eh": -0.034,
-     "t": 10.6,
+     "foot": "left",
+     "ex": 0.017,
+     "ey": -0.007,
+     "eh": -0.013,
+     "t": 9.14,
      "n": 1,
      "b0": [
-      -0.209,
-      -0.17
+      -0.146,
+      -0.164
      ],
-     "vmax": 1.302,
-     "connected": true
+     "vmax": 0.029,
+     "connected": false
     },
     {
-     "foot": "left",
-     "ex": 0.007,
-     "ey": -0.003,
-     "eh": 0.049,
-     "t": 39.84,
+     "foot": "right",
+     "ex": -0.0,
+     "ey": 0.015,
+     "eh": -0.141,
+     "t": 22.6,
      "n": 2,
      "b0": [
-      0.655,
-      -0.348
+      -0.134,
+      -0.163
      ],
-     "vmax": 1.243,
+     "vmax": 1.306,
      "connected": true
     },
     {
      "foot": "right",
-     "ex": 0.019,
-     "ey": -0.017,
-     "eh": -0.03,
-     "t": 56.9,
+     "ex": 0.018,
+     "ey": -0.011,
+     "eh": 0.073,
+     "t": 44.1,
      "n": 3,
      "b0": [
       0.0,
       0.0
      ],
-     "vmax": 1.232,
+     "vmax": 1.063,
      "connected": true
     },
     {
      "foot": "right",
-     "ex": -0.005,
-     "ey": -0.013,
-     "eh": -0.134,
-     "t": 104.36,
+     "ex": -0.004,
+     "ey": 0.019,
+     "eh": -0.077,
+     "t": 61.78,
      "n": 4,
      "b0": [
-      0.478,
-      0.098
+      0.0,
+      0.0
      ],
-     "vmax": 0.026,
-     "connected": false
+     "vmax": 1.067,
+     "connected": true
     },
     {
-     "foot": "right",
-     "ex": -0.001,
-     "ey": -0.017,
-     "eh": -0.105,
-     "t": 109.26,
+     "foot": "left",
+     "ex": 0.01,
+     "ey": 0.011,
+     "eh": -0.047,
+     "t": 104.7,
      "n": 5,
      "b0": [
-      0.669,
-      0.056
+      0.234,
+      0.036
      ],
-     "vmax": 0.014,
-     "connected": false
+     "vmax": 1.127,
+     "connected": true
     }
    ],
    "falls": 0,
    "falls_t": [],
-   "in_view": 0.534,
+   "in_view": 0.475,
    "body": {
     "mass_scale_mean": 0.996,
     "friction": 0.736,
@@ -851,9 +875,9 @@
     "vin": 7.05,
     "lag": 6
    },
-   "fixes": 140,
-   "fix_rejects": 6,
-   "backups": 3,
+   "fixes": 156,
+   "fix_rejects": 11,
+   "backups": 0,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -866,34 +890,50 @@
      -0.178
     ]
    },
-   "wall_s": 74.7
+   "wall_s": 135.2
   },
   {
    "seed": 8,
-   "goals": 0,
-   "goal_t": [],
+   "goals": 1,
+   "goal_t": [
+    28.92
+   ],
    "goals_without_kick": 0,
-   "kicks": 1,
-   "connected": 1,
+   "kicks": 2,
+   "connected": 2,
    "kick_log": [
     {
-     "foot": "left",
-     "ex": 0.011,
-     "ey": 0.002,
-     "eh": -0.041,
-     "t": 10.32,
+     "foot": "right",
+     "ex": 0.014,
+     "ey": 0.012,
+     "eh": -0.015,
+     "t": 27.14,
      "n": 1,
      "b0": [
-      -0.211,
-      -0.255
+      -0.102,
+      -0.165
      ],
-     "vmax": 1.25,
+     "vmax": 1.246,
+     "connected": true
+    },
+    {
+     "foot": "right",
+     "ex": 0.009,
+     "ey": -0.01,
+     "eh": 0.037,
+     "t": 60.4,
+     "n": 2,
+     "b0": [
+      0.367,
+      0.173
+     ],
+     "vmax": 1.229,
      "connected": true
     }
    ],
    "falls": 0,
    "falls_t": [],
-   "in_view": 0.498,
+   "in_view": 0.492,
    "body": {
     "mass_scale_mean": 0.998,
     "friction": 1.039,
@@ -901,9 +941,9 @@
     "vin": 6.91,
     "lag": 4
    },
-   "fixes": 25,
-   "fix_rejects": 2,
-   "backups": 2,
+   "fixes": 79,
+   "fix_rejects": 3,
+   "backups": 1,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -916,149 +956,64 @@
      -0.255
     ]
    },
-   "wall_s": 76.5
+   "wall_s": 123.4
   },
   {
    "seed": 9,
-   "goals": 2,
+   "goals": 1,
    "goal_t": [
-    41.98,
-    74.08
+    11.44
    ],
    "goals_without_kick": 0,
-   "kicks": 9,
-   "connected": 5,
+   "kicks": 3,
+   "connected": 2,
    "kick_log": [
     {
      "foot": "right",
-     "ex": 0.02,
-     "ey": 0.013,
-     "eh": -0.138,
-     "t": 9.3,
+     "ex": 0.0,
+     "ey": -0.013,
+     "eh": -0.059,
+     "t": 9.42,
      "n": 1,
      "b0": [
-      -0.019,
-      0.24
+      -0.211,
+      0.401
      ],
-     "vmax": 0.011,
-     "connected": false
+     "vmax": 1.292,
+     "connected": true
     },
     {
-     "foot": "right",
-     "ex": -0.002,
+     "foot": "left",
+     "ex": 0.017,
      "ey": 0.013,
-     "eh": -0.036,
-     "t": 26.9,
+     "eh": -0.141,
+     "t": 24.76,
      "n": 2,
      "b0": [
-      0.157,
-      0.441
+      0.0,
+      0.0
      ],
-     "vmax": 1.052,
+     "vmax": 1.393,
      "connected": true
     },
     {
-     "foot": "right",
-     "ex": 0.015,
-     "ey": 0.019,
-     "eh": 0.025,
-     "t": 35.24,
+     "foot": "left",
+     "ex": 0.017,
+     "ey": -0.003,
+     "eh": -0.089,
+     "t": 35.7,
      "n": 3,
      "b0": [
-      1.114,
-      0.259
+      1.204,
+      0.685
      ],
-     "vmax": 0.076,
+     "vmax": 0.042,
      "connected": false
-    },
-    {
-     "foot": "left",
-     "ex": 0.018,
-     "ey": 0.019,
-     "eh": -0.087,
-     "t": 41.6,
-     "n": 4,
-     "b0": [
-      1.109,
-      0.158
-     ],
-     "vmax": 1.332,
-     "connected": true
-    },
-    {
-     "foot": "right",
-     "ex": 0.002,
-     "ey": -0.017,
-     "eh": -0.078,
-     "t": 66.6,
-     "n": 5,
-     "b0": [
-      0.21,
-      0.007
-     ],
-     "vmax": 0.123,
-     "connected": false
-    },
-    {
-     "foot": "right",
-     "ex": 0.02,
-     "ey": -0.016,
-     "eh": -0.128,
-     "t": 73.0,
-     "n": 6,
-     "b0": [
-      0.375,
-      0.012
-     ],
-     "vmax": 1.17,
-     "connected": true
-    },
-    {
-     "foot": "left",
-     "ex": -0.007,
-     "ey": 0.003,
-     "eh": -0.101,
-     "t": 87.14,
-     "n": 7,
-     "b0": [
-      0.077,
-      0.031
-     ],
-     "vmax": 0.051,
-     "connected": false
-    },
-    {
-     "foot": "right",
-     "ex": -0.007,
-     "ey": 0.013,
-     "eh": -0.133,
-     "t": 107.3,
-     "n": 8,
-     "b0": [
-      0.151,
-      0.037
-     ],
-     "vmax": 1.372,
-     "connected": true
-    },
-    {
-     "foot": "left",
-     "ex": 0.012,
-     "ey": 0.017,
-     "eh": 0.023,
-     "t": 119.46,
-     "n": 9,
-     "b0": [
-      1.109,
-      -0.345
-     ],
-     "vmax": 1.248,
-     "connected": true
     }
    ],
    "falls": 0,
    "falls_t": [],
-   "in_view": 0.517,
+   "in_view": 0.583,
    "body": {
     "mass_scale_mean": 0.997,
     "friction": 1.16,
@@ -1066,9 +1021,9 @@
     "vin": 7.86,
     "lag": 5
    },
-   "fixes": 164,
-   "fix_rejects": 3,
-   "backups": 2,
+   "fixes": 78,
+   "fix_rejects": 1,
+   "backups": 1,
    "unsticks": 0,
    "kickoff": {
     "duck": [
@@ -1081,7 +1036,7 @@
      0.401
     ]
    },
-   "wall_s": 59.8
+   "wall_s": 155.3
   }
  ]
 }

@@ -302,7 +302,7 @@ def main():
             (page / f"rollout_{name}.json").write_text(json.dumps(dict(
                 fps=25, seconds=len(best["frames"]) / 25, frames=best["frames"], bodies=sim.body_names(), success=True,
                 task=name, seed=best["seed"], note=r["desc"], info=best["info"], events=best["events"],
-                checkpoint="hybrid runtime: " + r["desc"]), separators=(",", ":")))
+                checkpoint="hybrid runtime: " + r["desc"], curve=[]), separators=(",", ":")))   # the page reads curve
 
 
 if __name__ == "__main__":
