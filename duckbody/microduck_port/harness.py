@@ -115,7 +115,7 @@ def _axis_quat(axis, ang):
 
 class MicroduckSim:
     def __init__(self, scene: str = SCENE_FULL, vin: float = BAM_VIN, delay: bool = True, obs_noise: bool = True,
-                 seed: int = 0, randomize: bool = False):
+                 seed: int = 0, randomize: bool = False, edit=None):
         from bam.model import load_model
         from bam.mujoco import MujocoController
 
@@ -144,6 +144,8 @@ class MicroduckSim:
             j.frictionloss = 0.0
             j.solref_friction = BAM_STIFF_SOLREF_FRICTION
             j.solimp_friction = BAM_STIFF_SOLIMP_FRICTION
+        if edit is not None:   # optional scene additions (hybrid course / ball), MjSpec -> None
+            edit(spec)
         self.m = spec.compile()
         self.m.opt.timestep = TIMESTEP
         self.d = mujoco.MjData(self.m)

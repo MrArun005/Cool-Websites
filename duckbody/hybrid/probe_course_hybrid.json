@@ -1,0 +1,767 @@
+[
+ {
+  "kind": "step",
+  "value": 0.01,
+  "vx": 0.3,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 13.58
+ },
+ {
+  "kind": "step",
+  "value": 0.01,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 8.129999999999999
+ },
+ {
+  "kind": "step",
+  "value": 0.01,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 5.1899999999999995
+ },
+ {
+  "kind": "step",
+  "value": 0.01,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 4.109999999999999
+ },
+ {
+  "kind": "step",
+  "value": 0.01,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 9,
+  "falls": 1,
+  "t_med": 3.2
+ },
+ {
+  "kind": "step",
+  "value": 0.015,
+  "vx": 0.3,
+  "n": 10,
+  "clean": 7,
+  "falls": 5,
+  "t_med": 14.96
+ },
+ {
+  "kind": "step",
+  "value": 0.015,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 7,
+  "falls": 6,
+  "t_med": 9.82
+ },
+ {
+  "kind": "step",
+  "value": 0.015,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 5,
+  "falls": 15,
+  "t_med": 6.4
+ },
+ {
+  "kind": "step",
+  "value": 0.015,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 8,
+  "falls": 2,
+  "t_med": 4.0600000000000005
+ },
+ {
+  "kind": "step",
+  "value": 0.015,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 8,
+  "falls": 2,
+  "t_med": 3.32
+ },
+ {
+  "kind": "step",
+  "value": 0.02,
+  "vx": 0.3,
+  "n": 10,
+  "clean": 1,
+  "falls": 14,
+  "t_med": 30.0
+ },
+ {
+  "kind": "step",
+  "value": 0.02,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 3,
+  "falls": 15,
+  "t_med": 30.0
+ },
+ {
+  "kind": "step",
+  "value": 0.02,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 0,
+  "falls": 28,
+  "t_med": 30.0
+ },
+ {
+  "kind": "step",
+  "value": 0.02,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 6,
+  "falls": 8,
+  "t_med": 4.59
+ },
+ {
+  "kind": "step",
+  "value": 0.02,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 3,
+  "falls": 13,
+  "t_med": 17.97
+ },
+ {
+  "kind": "step",
+  "value": 0.025,
+  "vx": 0.3,
+  "n": 10,
+  "clean": 0,
+  "falls": 23,
+  "t_med": 30.0
+ },
+ {
+  "kind": "step",
+  "value": 0.025,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 0,
+  "falls": 23,
+  "t_med": 30.0
+ },
+ {
+  "kind": "step",
+  "value": 0.025,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 0,
+  "falls": 16,
+  "t_med": 30.0
+ },
+ {
+  "kind": "step",
+  "value": 0.025,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 1,
+  "falls": 17,
+  "t_med": 30.0
+ },
+ {
+  "kind": "step",
+  "value": 0.025,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 2,
+  "falls": 12,
+  "t_med": 30.0
+ },
+ {
+  "kind": "bar",
+  "value": 0.005,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 8.34
+ },
+ {
+  "kind": "bar",
+  "value": 0.005,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 4.95
+ },
+ {
+  "kind": "bar",
+  "value": 0.005,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 4.029999999999999
+ },
+ {
+  "kind": "bar",
+  "value": 0.005,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 3.6100000000000003
+ },
+ {
+  "kind": "bar",
+  "value": 0.005,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 3.16
+ },
+ {
+  "kind": "bar",
+  "value": 0.01,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 8.16
+ },
+ {
+  "kind": "bar",
+  "value": 0.01,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 5.15
+ },
+ {
+  "kind": "bar",
+  "value": 0.01,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 9,
+  "falls": 3,
+  "t_med": 4.140000000000001
+ },
+ {
+  "kind": "bar",
+  "value": 0.01,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 3.67
+ },
+ {
+  "kind": "bar",
+  "value": 0.01,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 3.1900000000000004
+ },
+ {
+  "kind": "bar",
+  "value": 0.015,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 3,
+  "falls": 7,
+  "t_med": 11.7
+ },
+ {
+  "kind": "bar",
+  "value": 0.015,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 4,
+  "falls": 9,
+  "t_med": 30.0
+ },
+ {
+  "kind": "bar",
+  "value": 0.015,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 8,
+  "falls": 2,
+  "t_med": 4.29
+ },
+ {
+  "kind": "bar",
+  "value": 0.015,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 7,
+  "falls": 6,
+  "t_med": 3.84
+ },
+ {
+  "kind": "bar",
+  "value": 0.015,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 7,
+  "falls": 2,
+  "t_med": 3.42
+ },
+ {
+  "kind": "bar",
+  "value": 0.02,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 1,
+  "falls": 16,
+  "t_med": 21.95
+ },
+ {
+  "kind": "bar",
+  "value": 0.02,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 0,
+  "falls": 29,
+  "t_med": 30.0
+ },
+ {
+  "kind": "bar",
+  "value": 0.02,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 4,
+  "falls": 7,
+  "t_med": 17.87
+ },
+ {
+  "kind": "bar",
+  "value": 0.02,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 4,
+  "falls": 9,
+  "t_med": 7.39
+ },
+ {
+  "kind": "bar",
+  "value": 0.02,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 2,
+  "falls": 9,
+  "t_med": 30.0
+ },
+ {
+  "kind": "bar",
+  "value": 0.025,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 0,
+  "falls": 13,
+  "t_med": 30.0
+ },
+ {
+  "kind": "bar",
+  "value": 0.025,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 0,
+  "falls": 13,
+  "t_med": 30.0
+ },
+ {
+  "kind": "bar",
+  "value": 0.025,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 1,
+  "falls": 13,
+  "t_med": 30.0
+ },
+ {
+  "kind": "bar",
+  "value": 0.025,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 1,
+  "falls": 12,
+  "t_med": 30.0
+ },
+ {
+  "kind": "bar",
+  "value": 0.025,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 0,
+  "falls": 12,
+  "t_med": 30.0
+ },
+ {
+  "kind": "ramp",
+  "value": 5,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 8.07
+ },
+ {
+  "kind": "ramp",
+  "value": 5,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 5.15
+ },
+ {
+  "kind": "ramp",
+  "value": 5,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 4.16
+ },
+ {
+  "kind": "ramp",
+  "value": 5,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 3.67
+ },
+ {
+  "kind": "ramp",
+  "value": 5,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 3.1900000000000004
+ },
+ {
+  "kind": "ramp",
+  "value": 10,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 9,
+  "falls": 0,
+  "t_med": 14.379999999999999
+ },
+ {
+  "kind": "ramp",
+  "value": 10,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 6.1
+ },
+ {
+  "kind": "ramp",
+  "value": 10,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 4.52
+ },
+ {
+  "kind": "ramp",
+  "value": 10,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 3.87
+ },
+ {
+  "kind": "ramp",
+  "value": 10,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 3.3099999999999996
+ },
+ {
+  "kind": "ramp",
+  "value": 12.5,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 0,
+  "falls": 0,
+  "t_med": 30.0
+ },
+ {
+  "kind": "ramp",
+  "value": 12.5,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 9,
+  "falls": 1,
+  "t_med": 8.05
+ },
+ {
+  "kind": "ramp",
+  "value": 12.5,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 5.0
+ },
+ {
+  "kind": "ramp",
+  "value": 12.5,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 4.119999999999999
+ },
+ {
+  "kind": "ramp",
+  "value": 12.5,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 3.3499999999999996
+ },
+ {
+  "kind": "ramp",
+  "value": 15,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 0,
+  "falls": 0,
+  "t_med": 30.0
+ },
+ {
+  "kind": "ramp",
+  "value": 15,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 0,
+  "falls": 0,
+  "t_med": 30.0
+ },
+ {
+  "kind": "ramp",
+  "value": 15,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 2,
+  "falls": 14,
+  "t_med": 10.82
+ },
+ {
+  "kind": "ramp",
+  "value": 15,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 8,
+  "falls": 2,
+  "t_med": 4.42
+ },
+ {
+  "kind": "ramp",
+  "value": 15,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 5,
+  "falls": 7,
+  "t_med": 3.7
+ },
+ {
+  "kind": "ramp",
+  "value": 20,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 0,
+  "falls": 0,
+  "t_med": 30.0
+ },
+ {
+  "kind": "ramp",
+  "value": 20,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 0,
+  "falls": 4,
+  "t_med": 30.0
+ },
+ {
+  "kind": "ramp",
+  "value": 20,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 0,
+  "falls": 18,
+  "t_med": 30.0
+ },
+ {
+  "kind": "ramp",
+  "value": 20,
+  "vx": 1.0,
+  "n": 10,
+  "clean": 0,
+  "falls": 19,
+  "t_med": 30.0
+ },
+ {
+  "kind": "ramp",
+  "value": 20,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 0,
+  "falls": 11,
+  "t_med": 30.0
+ },
+ {
+  "kind": "rough",
+  "value": 0.008,
+  "vx": 0.3,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 13.02
+ },
+ {
+  "kind": "rough",
+  "value": 0.008,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 7.8
+ },
+ {
+  "kind": "rough",
+  "value": 0.008,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 5.13
+ },
+ {
+  "kind": "rough",
+  "value": 0.008,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 9,
+  "falls": 1,
+  "t_med": 4.37
+ },
+ {
+  "kind": "rough",
+  "value": 0.008,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 8,
+  "falls": 2,
+  "t_med": 3.3099999999999996
+ },
+ {
+  "kind": "rough",
+  "value": 0.012,
+  "vx": 0.3,
+  "n": 10,
+  "clean": 6,
+  "falls": 4,
+  "t_med": 12.95
+ },
+ {
+  "kind": "rough",
+  "value": 0.012,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 9,
+  "falls": 1,
+  "t_med": 9.399999999999999
+ },
+ {
+  "kind": "rough",
+  "value": 0.012,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 10,
+  "falls": 0,
+  "t_med": 5.359999999999999
+ },
+ {
+  "kind": "rough",
+  "value": 0.012,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 8,
+  "falls": 3,
+  "t_med": 4.42
+ },
+ {
+  "kind": "rough",
+  "value": 0.012,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 6,
+  "falls": 6,
+  "t_med": 3.5
+ },
+ {
+  "kind": "rough",
+  "value": 0.016,
+  "vx": 0.3,
+  "n": 10,
+  "clean": 4,
+  "falls": 9,
+  "t_med": 30.0
+ },
+ {
+  "kind": "rough",
+  "value": 0.016,
+  "vx": 0.4,
+  "n": 10,
+  "clean": 5,
+  "falls": 9,
+  "t_med": 20.18
+ },
+ {
+  "kind": "rough",
+  "value": 0.016,
+  "vx": 0.6,
+  "n": 10,
+  "clean": 5,
+  "falls": 8,
+  "t_med": 18.35
+ },
+ {
+  "kind": "rough",
+  "value": 0.016,
+  "vx": 0.8,
+  "n": 10,
+  "clean": 6,
+  "falls": 5,
+  "t_med": 4.9399999999999995
+ },
+ {
+  "kind": "rough",
+  "value": 0.016,
+  "vx": 1.35,
+  "n": 10,
+  "clean": 3,
+  "falls": 13,
+  "t_med": 30.0
+ }
+]

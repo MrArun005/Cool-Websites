@@ -14,7 +14,7 @@ mouth servo from speech (syllables of the text, or `say_audio()` loudness throug
 mass and inertia x0.95-1.05 per part, trunk and head CoM +-3 mm, floor friction x0.7-1.3, servo kp x0.85-1.15,
 battery 6.5-8.2 V, command delay 3-6 physics steps, Microduck's observation noise; `harness.MicroduckSim(randomize=True)`).
 Body: `scene_hybrid_allcollisions_noantenna.xml` (every part collides; antennas drawn only). Raw numbers:
-`results_skills_hybrid.json`.
+`results_skills_hybrid.json`. Re-checked after the game changes to the runtime (drive mode, zero twist on a fall, unstick): get up x2, walk, run, roll, hop still 10/10.
 
 | skill | how | passed | key numbers (median) |
 |---|---|---|---|
@@ -62,6 +62,84 @@ $PY duckbody/hybrid/test_runtime_hybrid.py                 # unit tests, ~10 s
 $PY duckbody/hybrid/test_skills_hybrid.py [--skills hop,roll] [--page DIR]   # 10 bodies per skill, ~3 min per group of 4
 $PY duckbody/hybrid/search_moves.py hop|swag|lie_down       # the searches (3 processes, 15-25 min each)
 $PY duckbody/hybrid/page_data.py DIR                        # live page data from results_skills_hybrid.json
+```
+
+## Games: the hurdle course and following a ball (`course.py`, `follow.py`)
+
+### The hardest hurdle game (`course.py`)
+
+A MuJoCo course in front of the duck: a 1 m wide deck (15 cm side walls) over a floor 6 cm lower, so the hole is
+a real hole. Stages in order: start, **steps** (up, 30 cm, down), **ramps** (up/flat/down twice), **bars** (three low
+bars across), **rough** (random small boxes), **narrow** beam (1 cm high), **hole** (walk round it on a side lane),
+**shoves** (velocity kicks in random directions), finish (6.2-6.6 m). Levels:
+
+| level | step | ramps | bars | rough | beam width | hole | shoves |
+|---|---|---|---|---|---|---|---|
+| 1 | 1 cm | 5 / 10 deg | 0.5, 1.0, 1.5 cm | 0.3-0.8 cm | 18 cm | 20 x 24 cm | 2 x 0.3 m/s |
+| 2 | 1.5 cm | 7.5 / 12.5 deg | 1.0, 1.5, 2.0 cm | 0.5-1.2 cm | 15 cm | 25 x 30 cm | 3 x 0.4 m/s |
+| 3 | 2 cm | 10 / 15 deg | 1.5, 2.0, 2.5 cm | 0.8-1.6 cm | 12 cm | 30 x 36 cm | 4 x 0.5 m/s |
+
+(velstand was trained on steps up to 1.5 cm, a 1 cm random grid and slopes up to 5.7 deg, so levels 2-3 go past it.)
+Score: 1000 x fraction reached + 10 per second left of 90 s at the finish - 50 per fall. A fall costs time:
+velstand gets up and the duck walks on. Steering is pure pursuit on the centre line with the **simulator's trunk
+position** (on a real course this needs the camera on the course edges or a tag; the yaw part is what the IMU gives).
+
+**Results, 10 randomized bodies per cell (finished / 10; falls summed over the 10 runs)** (`results_course_hybrid.json`):
+
+| level | walk (0.4 everywhere) | course mode | course mode + stumble reflex | median time (reflex) | falls (reflex) | where the non-finishers stopped |
+|---|---|---|---|---|---|---|
+| 1 | 8/10, 1 fall | **10/10**, 1 fall | **10/10**, 1 fall | 22 s (walk: 43 s) | 1 | walk: bars, hole (timed out) |
+| 2 | 0/10 (stalls on the 12.5 deg ramp) | 9/10, 27 falls | **9/10**, 25 falls | 37 s | 25 | bars (1) |
+| 3 | 0/10 (2 cm step, 15 deg ramp) | 6/10, 71 falls | **7/10**, 66 falls | 63 s | 66 | ramps, rough, hole (1 each) |
+
+Stages cleared at level 3 with the reflex: steps 10, ramps 9, bars 9, rough 8, narrow 8, hole 7, shoves 7 (of 10).
+Falls at level 3 happen on the 15 deg ramp (30), the 2-2.5 cm bars (17), the step (6), rough (6), shoves (5).
+
+What made the difference (all in `runtime_hybrid.py`, no training):
+- **Speed per obstacle** (`COURSE_SPEED`, from `course.py --probe`: every obstacle x 5 speed commands x 10 bodies,
+  `probe_course_hybrid.json`). Slow walks stall on ramps past 10 deg (0.4: 0/10 at 12.5 deg) and trip on 1.5 cm
+  bars (0.4: 3/10, 0.8: 8/10); a run trips on steps and rough ground. So: run 1.35 on the flat, 1.0 on ramps, 0.8 on
+  steps / bars / shoves, 0.7 rough, 0.6 beam and hole. That alone takes level 1 from 8/10 in 43 s to 10/10 in 21 s.
+- **Turn on the spot** when the heading is off by > 0.7 rad, and **back up** 1 s when a turn is blocked (IMU yaw does
+  not move for 1.5 s while turning: a foot caught behind a bar).
+- **Get-up fixes** (help every skill): a fall now zeroes the twist (velstand got the walk command while getting up and
+  propped itself on step edges), and an **unstick sequence**: 2 s not upright -> the lie-down keyframes, then a 0.8 s
+  roulade kick, then a 1.5 s one, velstand after each. Two trap poses it needs: crouched with the head on the floor
+  and a foot on a step (tilt 35-50 deg, velstand holds it forever), and lying on its side propped by the flat 14 cm
+  head. Twist wiggles, head swings and the sit pose did not free them.
+- **Stumble reflex** (`course_r`): tilt > 12 deg -> stand still 0.6 s. Small but real at the hard levels (L2 37 s vs
+  43 s, L3 7/10 vs 6/10, fewer falls); no effect at level 1.
+- **Hopping over bars does not help**: the searched hop is in place with ~6 mm of flight, and the bars that trip it
+  are 1.5 cm and up. Higher foot lift would need training (velstand's foot-clearance target is 2 cm).
+
+### Follow a ball with the head camera (`follow.py`)
+
+Microduck's MJCF `head_camera` ends up inside the owner's longer head shell (and its frame looks backwards), so the sim
+adds `eye` on the front of the owner's head above the bill (Pi camera v2 field of view, 62 x 49 deg), rendered
+160 x 120 at 10 Hz (OSMesa). Detection is an OpenCV HSV threshold for the magenta ball + largest blob (0.2 ms per
+frame here; a few ms on a Pi Zero 2 W). The ray to the ball goes into the trunk frame through the head joints'
+kinematics, giving bearing, elevation and (from the pixel radius) distance; the head looks straight at it, the body
+turns (wz = 1.5 x bearing) and walks (vx = 1.2 x (distance - 15 cm), at least 0.15, back up if it comes too close),
+turns on the spot to search after 0.6 s without it, and hops when it has been within 18 cm of a still ball for 1.5 s.
+Ball paths: rolls at 4-12 cm/s with stops, once rolls fast (0.7 m/s) round the duck to 0.5 m behind it, stops for
+the last 8 s; 60 s per run, 10 randomized bodies and paths (`results_follow_hybrid.json`):
+
+| ball in view (median) | final distance camera -> ball (median; target 15 cm) | within 25 cm | falls | hops | lost and found again |
+|---|---|---|---|---|---|
+| **95 %** (58-97 % per run) | **16.8 cm** (trunk -> ball 27 cm) | 9/10 | 0 | 33 | 10/10 runs, median 2.3 s |
+
+Honestly: in 3 runs it took 9-18 s to find the ball again once (it turned the wrong way, or the ball sat close
+behind it at the edge of view). The first version servoed the head on the pixel error and integrated on the
+*commanded* head angle; with the head's lag it overshot and lost the ball (25 % in view). Next step for real toys:
+a tiny CNN detector (96 x 96 int8, FOMO/SSD-style) in place of the colour threshold.
+
+Run:
+```
+PY=/home/user/cool-websites/.venv/bin/python
+$PY duckbody/hybrid/course.py [--levels 1,2,3] [--modes walk,course,course_r]   # ~2 min, 3 processes
+$PY duckbody/hybrid/course.py --probe                                           # single obstacles x speeds, ~7 min
+MUJOCO_GL=osmesa $PY duckbody/hybrid/follow.py                                   # ~2 min
+MUJOCO_GL=osmesa $PY duckbody/hybrid/page_data.py DIR --replays                  # page: hurdles, hurdles_typical, follow
 ```
 
 ## Microduck's brains on the hybrid head (first study)

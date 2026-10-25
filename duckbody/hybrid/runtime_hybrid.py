@@ -52,6 +52,23 @@ HEAD_RATE = 2.0        # rad/s, head command slew
 SLEEP_HEAD = (-0.9, 0.5, 0.0, 0.0)   # neck_pitch, head_pitch, head_yaw, head_roll deltas: head drooped
 SWAG_GUARD_DEG = 6.0   # swag: leaning back further than this fades the leg offsets out (the sit brain re-balances)
 SWAG_HEAD = (0.15, -0.25, 0.45, 0.25)  # chin up, looking aside, head cocked (search_moves.SWAG_HEAD)
+DRIVE_ACC = (1.5, 1.0, 3.0)   # drive: twist slew limits per second (vx, vy, wz); the caller steers every tick
+# "course" mode (hurdle game, course.py): velstand speed command per obstacle, from course.py --probe (10 bodies per
+# obstacle and speed; probe_course_hybrid.json): slow walks stall on ramps past 10 deg and trip on 1.5 cm bars, a run
+# trips on steps and rough ground. Plus a stumble reflex: tilt past STUMBLE_DEG -> stand still STUMBLE_HOLD_S.
+COURSE_SPEED = dict(start=1.35, steps=0.8, ramps=1.0, bars=0.8, rough=0.7, narrow=0.6, hole=0.6, shoves=0.8, finish=1.35)
+COURSE_TURN_SLOW = ((0.3, 0.6), (0.7, 0.0))    # heading error > 0.3 rad -> at most 0.6; > 0.7 rad: turn on the spot
+STUMBLE_DEG, STUMBLE_HOLD_S = 12.0, 0.6
+TURN_STUCK = (1.5, 0.25, 1.0, -0.4)   # turning (|wz| >= 0.5) for 1.5 s with < 0.25 rad of IMU yaw: back up 1 s at -0.4
+                                      # (a foot caught behind a bar or step edge blocks turning on the spot)
+GETUP_SETTLE_S = 0.5
+# Stuck while getting up (e.g. crouched with the head on the floor and one foot on a step, tilt 30-50 deg, which
+# velstand holds forever with any twist command; or lying on its side, propped by the flat 14 cm head): after
+# UNSTICK_AFTER_S not upright, try in turn: the lie-down keyframes (fold onto the belly where it is), a short roulade
+# kick (0.8 s), a long one (1.5 s); velstand gets up after each. Twist wiggles, head swings and the sit pose did not
+# free it (tested on 4 stuck states); the roulades did, but roll 0.1-0.5 m in whatever direction the duck faces.
+UNSTICK_AFTER_S = 2.0
+UNSTICK_SEQ = (("lie_down", "done"), ("roulade", 0.8), ("roulade", 1.5))   # drive after a fall: upright (tilt < 25 deg) this long before walking on
 
 # command -> plan: list of (brain, end) where end = seconds, None (stay) or a condition name
 PLANS = {
@@ -60,6 +77,7 @@ PLANS = {
     "walk": [("velstand", None)],
     "run": [("velstand", None)],
     "turn": [("velstand", None)],
+    "drive": [("velstand", None)],   # external steering every tick: course.py (hurdles), follow.py (ball)
     "squat": [("velstand", 0.5), ("squat_down", 1.0), ("squat_hold", None)],    # settle still, then squat
     "squat up": [("squat_up", 0.8), ("velstand", None)],
     "settle": [("velstand", 0.8), ("velstand", None)],      # stop walking before a move that starts from standing
@@ -112,6 +130,10 @@ class HybridRuntime:
         self.last_step = ("velstand", None)
         self.roll_rot = 0.0
         self.on_substep = None          # optional callback(sim) every physics step (tests: contacts at 200 Hz)
+        self.vel_goal = np.zeros(3)     # drive: twist the caller asks for (self.vel follows it, slewed)
+        self.falls, self.up_ticks, self.down_ticks, self.unsticks, self.unstick_k = 0, 0, 0, 0, 0
+        self.stumble_until, self.stumbles = 0, 0
+        self.turn_hist, self.backup_until, self.backups = [], 0, 0
 
     # ------------------------------------------------------------------ setup
     def reset(self, kind="standing", **kw):
@@ -124,6 +146,8 @@ class HybridRuntime:
         self.mode, self.plan = "stand", [("velstand", None)]
         self.plan_all = list(self.plan)
         self.vel[:] = 0
+        self.vel_goal[:] = 0
+        self.falls, self.up_ticks, self.down_ticks, self.unsticks, self.unstick_k = 0, 0, 0, 0, 0
         self.idle = False
         self._start("velstand")
         if kind != "standing":
@@ -137,7 +161,7 @@ class HybridRuntime:
         if name == "wake":
             name = "stand"
         seated = self.skill in SEATED_SKILLS
-        if name in ("stand", "walk", "run", "turn", "idle", "hop", "jump", "roll", "squat", "lie down", "get up"):
+        if name in ("stand", "walk", "run", "turn", "drive", "idle", "hop", "jump", "roll", "squat", "lie down", "get up"):
             if self.lying() and name not in ("lie down",):
                 name = "get up"                                  # velstand gets up from any fall
             elif prev == "swag" and seated:
@@ -146,7 +170,7 @@ class HybridRuntime:
                 return self._chain("sit up", then=name)
             elif self.skill in ("squat_down", "squat_hold") and name != "squat":
                 return self._chain("squat up", then=name)
-        if prev in ("walk", "run", "turn") and name in ("squat", "sit", "sleep", "swag", "lie down", "hop", "jump", "roll"):
+        if prev in ("walk", "run", "turn", "drive") and name in ("squat", "sit", "sleep", "swag", "lie down", "hop", "jump", "roll"):
             self.vel[:] = 0
             return self._chain("settle", then=name)
         if name in ("sit", "sleep", "swag") and self.skill in ("squat_down", "squat_hold"):
@@ -182,6 +206,8 @@ class HybridRuntime:
             self.vel[:] = [RUN_VX if vx is None else vx, 0.0, wz]
         elif name == "turn":
             self.vel[:] = [0.0, 0.0, wz or 0.6]
+        elif name == "drive":
+            self.vel_goal[:] = [vx or 0.0, vy, wz]
         self.yaw_est = 0.0
         if name == "sleep":
             self.head_goal[:] = SLEEP_HEAD
@@ -189,6 +215,47 @@ class HybridRuntime:
             self.head_goal[:] = SWAG_HEAD
         elif name not in ("idle",):
             self.head_goal[:] = 0
+
+    def drive(self, vx, vy=0.0, wz=0.0):
+        """External steering (hurdle course, ball following): velstand with this twist, slewed by DRIVE_ACC.
+        Call it every tick. After a fall the duck gets up first and walks on once it has been upright
+        GETUP_SETTLE_S (the fall costs time, not the run)."""
+        self.vel_goal[:] = [vx, vy, wz]
+        if self.mode == "drive" and self.skill == "velstand":
+            return
+        if self.mode == "get up" and (self.lying() or self.up_ticks < GETUP_SETTLE_S * HZ):
+            return
+        if self.mode in ("hop", "jump", "roll", "lie down", "squat", "sit", "swag", "sleep") and \
+                (len(self.plan) > 1 or self.skill != "velstand" or self.plan_t < GETUP_SETTLE_S * HZ):
+            return              # let a one-off move (e.g. a celebration hop) finish and settle, then drive again
+        self.command("drive", vx, vy, wz)
+
+    def course_twist(self, stages, heading_err=0.0, wz=0.0, recover=True):
+        """Course mode: (vx, wz) for the obstacles under / just ahead of the duck (the slowest of `stages`), slower
+        while turning; backs up when a turn is blocked (IMU yaw does not move); the stumble reflex if `recover`."""
+        v = self.course_vx(stages, heading_err, recover)
+        n = int(TURN_STUCK[0] * HZ)
+        self.turn_hist = (self.turn_hist + [(abs(wz) >= 0.5 and self.mode == "drive", self.yaw_est)])[-n:]
+        if len(self.turn_hist) == n and all(t for t, _ in self.turn_hist) and \
+                abs(self.turn_hist[-1][1] - self.turn_hist[0][1]) < TURN_STUCK[1]:
+            self.backup_until, self.turn_hist = self.steps + int(TURN_STUCK[2] * HZ), []
+            self.backups += 1
+        if self.steps < self.backup_until:
+            return TURN_STUCK[3], 0.0
+        return v, wz
+
+    def course_vx(self, stages, heading_err=0.0, recover=True):
+        v = min(COURSE_SPEED.get(s, WALK_VX) for s in stages)
+        for err, vmax in COURSE_TURN_SLOW:
+            if abs(heading_err) > err:
+                v = min(v, vmax)
+        if recover and self.mode == "drive":
+            if self.sim.tilt_deg() > STUMBLE_DEG and self.steps >= self.stumble_until:
+                self.stumbles += 1
+                self.stumble_until = self.steps + int(STUMBLE_HOLD_S * HZ)
+            if self.steps < self.stumble_until:
+                v = 0.0
+        return v
 
     def look(self, yaw=0.0, pitch=0.0):
         """Point the head: yaw + left, pitch + down (rad). Kept inside what the brains were trained with."""
@@ -313,6 +380,9 @@ class HybridRuntime:
             v = self.vel.copy()
             if self.mode == "run":
                 v[0] *= min(1.0, self.plan_t * DT / RUN_RAMP_S)
+            if self.mode == "drive":
+                self.vel += np.clip(self.vel_goal - self.vel, -np.array(DRIVE_ACC) * DT, np.array(DRIVE_ACC) * DT)
+                v = self.vel.copy()
             if self.mode in ("walk", "run") and abs(self.vel[2]) < 1e-6:
                 v[2] = float(np.clip(-HEADING_K * self.yaw_est, -WZ_MAX, WZ_MAX))
             c[:3] = v
@@ -367,11 +437,28 @@ class HybridRuntime:
         self.roll_rot = self.roll_rot + float(self.sim.d.sensordata[self.sim.gyro_adr][1]) * DT if self.skill == "roulade" else 0.0
         self.steps += 1
         self.plan_t += 1
+        up = self.sim.tilt_deg() < 25
+        self.up_ticks = self.up_ticks + 1 if up else 0
+        self.down_ticks = 0 if up else self.down_ticks + 1
+        if self.up_ticks > HZ:
+            self.unstick_k = 0
         # fell over while doing something upright: velstand gets up (it is trained for any fall)
         if self.lying() and self.mode not in ("lie down", "roll", "get up") and self.skill not in SEATED_SKILLS:
             self._say_log("fell over: getting up")
+            self.falls += 1
+            self.vel[:] = 0              # get up with a zero twist (a walk command while getting up props it on edges)
+            self.vel_goal[:] = 0
             self.mode, self.plan, self.plan_all = "get up", [("velstand", None)], [("velstand", None)]
             self._start("velstand")
+            return
+        if self.mode == "get up" and self.skill == "velstand" and min(self.down_ticks, self.plan_t) > UNSTICK_AFTER_S * HZ:
+            step = UNSTICK_SEQ[self.unstick_k % len(UNSTICK_SEQ)]
+            self._say_log(f"stuck getting up: {step[0]} {step[1]}, then get up")
+            self.unsticks += 1
+            self.unstick_k += 1
+            self.down_ticks = 0
+            self.plan = [step, ("velstand", None)]
+            self._start(*step)
             return
         if self.plan and self._step_done(self.plan[0][1]):
             self.plan.pop(0)

@@ -3,6 +3,7 @@ and the skill queue, from test_skills_hybrid.py (every skill through runtime_hyb
 
     .venv/bin/python duckbody/hybrid/test_skills_hybrid.py --page OUT_DIR     # results + one replay per skill
     .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR [--mesh]           # tests.json, queue.json, skills.json
+    MUJOCO_GL=osmesa .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR --replays   # + hurdle / follow replays
 
 Writes OUT_DIR/duck_mesh.json (if missing, or with --mesh), tests.json, queue.json, skills.json and rollout.json
 (= the first skill's replay, what the page shows first).
@@ -132,7 +133,74 @@ BRAIN = {"idle": "velstand + head command; jaw from speech", "walk": "velstand 0
          "getup_face_down": "velstand", "getup_back": "velstand", "hop": "scripted, searched; ~1 per s",
          "roll": "roulade, then velstand"}
 ORDER = ["idle", "walk", "run", "squat", "sit_stand", "swag", "sleep_wake", "lie_down", "getup_face_down", "getup_back",
-         "hop", "roll"]
+         "hop", "roll", "hurdles", "hurdles_typical", "follow"]
+
+
+def games():
+    """The hurdle game (course.py -> results_course_hybrid.json) and ball following (follow.py ->
+    results_follow_hybrid.json): table rows for tests.json and the per-level summary for games.json."""
+    tests, skills, g = {}, {}, {}
+    cp, fp = HERE / "results_course_hybrid.json", HERE / "results_follow_hybrid.json"
+    if cp.exists():
+        c = json.loads(cp.read_text())
+        S = c["summary"]
+        levels = sorted({int(k[1]) for k in S})
+        g["hurdles"] = {k: {kk: v[kk] for kk in ("n", "finished", "median_dist", "median_t_finished", "falls",
+                                               "runs_with_falls", "median_score", "cleared", "failed_at")} for k, v in S.items()}
+        g["hurdles_levels"] = levels
+        best = S.get("L1_course_r") or S.get("L1_course")
+        per = " · ".join(f"L{lv} {S[f'L{lv}_course_r']['finished']}/10" for lv in levels if f"L{lv}_course_r" in S)
+        tests["hurdles"] = dict(success=best["finished"] / best["n"], episodes=best["n"], mean_reward=per,
+                                brain="course mode: speed per obstacle, stumble reflex", layout="hybrid")
+        tests["hurdles_typical"] = dict(tests["hurdles"], mean_reward="a middling run, level 2")
+        skills["hurdles"] = dict(success=best["finished"], n=best["n"], note="hurdle game, level 1 (course mode)")
+    if fp.exists():
+        f = json.loads(fp.read_text())
+        S = f["summary"]
+        ok = sum(r["final_dist_cam"] < 0.25 and r["falls"] == 0 for r in f["runs"])
+        tests["follow"] = dict(success=ok / S["n"], episodes=S["n"],
+                               mean_reward=f"in view {100 * S['in_view_median']:.0f} %, ends {100 * S['final_dist_cam_median']:.0f} cm",
+                               brain="head camera + OpenCV colour blob; velstand", layout="hybrid")
+        skills["follow"] = dict(success=ok, n=S["n"], note="follow a ball with the head camera")
+        g["follow"] = S
+    return tests, skills, g
+
+
+def replays(out):
+    """Record the page replays: hurdles (best level-3 run, a typical level-2 run) and follow (a median run)."""
+    import course as C
+    import follow as F
+    c = json.loads((HERE / "results_course_hybrid.json").read_text())["runs"]
+    l3 = [r for r in c if r["level"] == 3 and r["mode"] == "course_r"]
+    best = max(l3, key=lambda r: r["score"])
+    l2 = sorted([r for r in c if r["level"] == 2 and r["mode"] == "course_r"], key=lambda r: r["score"])
+    typical = l2[len(l2) // 2]
+    for name, pick in (("hurdles", best), ("hurdles_typical", typical)):
+        r = C.play(pick["level"], pick["seed"], pick["mode"], record=True)
+        L = r["layout"]
+        note = (f"hurdle game level {r['level']}, body {r['seed']}: {r['end']} in {r['t']:.1f} s, {r['falls']} falls, "
+                f"score {r['score']}")
+        (out / f"rollout_{name}.json").write_text(json.dumps(dict(
+            fps=25, seconds=len(r["frames"]) / 25, frames=r["frames"], bodies=r["bodies"], success=r["finished"],
+            task=name, seed=r["seed"], note=note, checkpoint="hybrid runtime, course mode: " + note,
+            scene=dict(floor_z=L["floor_z"], boxes=[dict(pos=[round(v, 4) for v in b["pos"]], size=[round(v, 4) for v in b["size"]],
+                                                         quat=[round(v, 5) for v in b["quat"]], color=b["color"]) for b in L["boxes"]],
+                       stages=[[n, round(a, 3), round(b, 3)] for n, a, b in L["stages"]]),
+            falls_t=[f["t"] for f in r["falls_at"]], level=r["level"], score=r["score"], curve=[]), separators=(",", ":")))
+        print(name, note, len(r["frames"]))
+    f = json.loads((HERE / "results_follow_hybrid.json").read_text())["runs"]
+    good = [r for r in f if r["final_dist_cam"] < 0.25] or f        # a median run among those that got there
+    med = sorted(good, key=lambda r: r["in_view"])[len(good) // 2]
+    r = F.play(med["seed"], record=True)
+    nb = len(r["bodies"]) - 1                         # the ball is the last body: drawn from `ball`, not the mesh
+    note = (f"follow the ball, body {r['seed']}: in view {100 * r['in_view']:.0f} % of the time, ends "
+            f"{100 * r['final_dist_cam']:.0f} cm away, {r['hops']} hops, {r['falls']} falls")
+    (out / "rollout_follow.json").write_text(json.dumps(dict(
+        fps=25, seconds=len(r["frames"]) / 25, frames=[fr[:nb * 7] for fr in r["frames"]], bodies=r["bodies"][:nb],
+        success=r["falls"] == 0 and r["final_dist_cam"] < 0.25, task="follow", seed=r["seed"], note=note,
+        checkpoint="hybrid runtime, follow: " + note, ball=r["ball"], ball_r=F.BALL_R, ball_color="#f2269e",
+        cam=r["cam"], cam_fps=r["cam_fps"], det=r["det"], curve=[]), separators=(",", ":")))
+    print("follow", note, len(r["frames"]), len(r["cam"]))
 
 
 def main():
@@ -150,6 +218,16 @@ def main():
                            brain=BRAIN.get(name, ""), layout="hybrid")
         queue.append(dict(task=name, steps=1, state="done", exam={name: dict(success=r["success"] / r["n"])}))
         skills[name] = dict(success=r["success"], n=r["n"], note=r["desc"])
+    gt, gs, g = games()
+    for name in ("hurdles", "hurdles_typical", "follow"):
+        if name in gt:
+            tests[name] = gt[name]
+            queue.append(dict(task=name, steps=1, state="done", exam={name: dict(success=gt[name]["success"])}))
+            if name in gs:
+                skills[name] = gs[name]
+    (out / "games.json").write_text(json.dumps(g))
+    if "--replays" in sys.argv:
+        replays(out)
     (out / "tests.json").write_text(json.dumps(tests))
     (out / "queue.json").write_text(json.dumps(queue))
     (out / "skills.json").write_text(json.dumps(skills, indent=1))
