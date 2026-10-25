@@ -178,6 +178,16 @@ def robot_spec(force_limit, team, cam=True):
         j.frictionloss = 0.0
         j.solref_friction = BAM_STIFF_SOLREF_FRICTION
         j.solimp_friction = BAM_STIFF_SOLIMP_FRICTION
+    # The visible-only meshes (group 2, no contacts; every body has an explicit inertial, so they carry no mass)
+    # do nothing in the simulation: the head cameras draw box proxies and the page draws its own mesh. Dropping
+    # them (and meshes nothing uses any more) takes the 11-duck model from ~860 MB to a fraction.
+    for g in list(spec.geoms):
+        if g.contype == 0 and g.conaffinity == 0 and g.group == 2:
+            spec.delete(g)
+    used = {g.meshname for g in spec.geoms}
+    for mesh in list(spec.meshes):
+        if mesh.name not in used:
+            spec.delete(mesh)
     if cam:
         c = spec.body("jaw_soft").add_camera()
         c.name, c.pos, c.quat, c.fovy = "eye", list(F.EYE_POS), list(F.EYE_QUAT), F.FOVY
@@ -254,7 +264,7 @@ def build_model(robots=ROBOTS, pitch=True, cams=True):
     world.visual.headlight.ambient = [0.35, 0.35, 0.35]
     world.visual.headlight.specular = [0, 0, 0]
     world.visual.global_.offwidth = 640
-    world.memory = 256 << 20                # 11 ducks in a heap (kick-off building) need more than the default arena
+    world.memory = 128 << 20                # 11 ducks in a heap (kick-off building) need more than the default arena
     lt = world.worldbody.add_light()
     lt.pos, lt.dir = [0, 0, 3.5], [0, 0, -1]
     lt.type = mujoco.mjtLightType.mjLIGHT_DIRECTIONAL
@@ -263,11 +273,22 @@ def build_model(robots=ROBOTS, pitch=True, cams=True):
     else:
         g = world.worldbody.add_geom()
         g.name, g.type, g.size = "floor", mujoco.mjtGeom.mjGEOM_PLANE, [0, 0, 0.05]
+    first = None
     for i, (name, team) in enumerate(robots):
         child = robot_spec(force_limit, team, cam=cams)
+        if first is not None:                    # one copy of the meshes for all ducks: the others' geoms point at
+            for mesh in list(child.meshes):      # the first duck's mesh assets (attach would copy ~200 MB per duck)
+                child.delete(mesh)
         fr = world.worldbody.add_frame()
         fr.pos = [0.0, 0.0, 0.0]
         fr.attach_body(child.body("trunk_base"), name + "_", "")
+        if first is None:
+            first = name + "_"
+    if len(robots) > 1:
+        for g in world.geoms:
+            mn = g.meshname
+            if mn and not mn.startswith(first):
+                g.meshname = first + mn.split("_", 1)[1]
     m = world.compile()
     m.opt.timestep = TIMESTEP
     return m, bam
@@ -432,6 +453,8 @@ class World:
             self.ball_geom = self.m.geom("ball_geom").id
         if randomize:
             self.randomize()
+        for dk in self.ducks:                    # not all on the origin (a heap of 11 ducks: ~35k contacts)
+            self.put(dk, -2.0 + 0.4 * dk.i, 0.0, 0.0)
         mujoco.mj_forward(self.m, self.d)
 
     def randomize(self):
@@ -679,6 +702,7 @@ DUEL_D = 0.45               # an opponent this close to the ball: no time to lin
 READY_S, SET_S, GOAL_S = 14.0, 1.5, 4.0
 FREEKICK_S, FREEKICK_D = 10.0, 0.5   # set pieces: opponents keep 0.5 m from the ball for 10 s or until it is played
 KICKOFF_S = 10.0
+NO_PROGRESS_S = 20.0        # ball pinned between ducks this long (moved < 15 cm): dropped ball
 PICKUP_DOWN_S, PICKUP_OUT_S, PICKUP_S = 12.0, 8.0, 10.0   # incapable player: down 12 s / off the pitch 8 s -> out 10 s
 OUT_WHISTLE_S = 0.8         # the ball is placed this long after it went out
 QUICK_X, QUICK_Y, QUICK_H = (-0.03, 0.035), 0.03, 0.45   # duel: kick at once if the ball is here (kick window: 6-11 cm
@@ -964,6 +988,14 @@ class Player:
                         self.kick_at = dict(foot=foot, kind=self.aim_kind, mate=self.aim_mate, quick=True)
                         self.set_state("ready")
                         return 0.0, 0.0, 0.0
+            self.duel_hist = (getattr(self, "duel_hist", []) + [b.copy()])[-150:]
+            if len(self.duel_hist) == 150 and np.linalg.norm(self.duel_hist[0] - b) < 0.05 and t > getattr(self, "detour_until", -1):
+                self.detour_until, self.detour_sign, self.duel_hist = t + 1.5, float(self.rng.choice([-1.0, 1.0])), []
+            if t < getattr(self, "detour_until", -1):     # pinned 3 s: step round it (60 deg) and try from the side
+                a = phi_d + self.detour_sign * 1.0
+                target = np.clip(b + 0.22 * np.array([math.cos(a), math.sin(a)]), -lim, lim)
+                vx, vy, wz, _ = self.go_to(target, 1.0)
+                return vx, vy, wz
             if abs(dphi) > 1.0:                          # not behind it: tight orbit
                 a = phi_d + float(np.clip(dphi, -0.9, 0.9))
                 target = np.clip(b + 0.2 * np.array([math.cos(a), math.sin(a)]), -lim, lim)
@@ -1403,7 +1435,7 @@ class Game:
         for tm in self.teams.values():
             tm.announce(pos, self.t)
         self.setpiece = dict(kind=kind, team=team, ball=list(pos), until=self.t + FREEKICK_S, radius=FREEKICK_D, touched=False)
-        self.ev(kind, team, f"{kind} {team}", pos=[round(float(v), 2) for v in pos])
+        self.ev(kind, team, f"{kind} {team or ''}".strip(), pos=[round(float(v), 2) for v in pos])
 
     def rules(self):
         """Once per tick, on the simulator's truth (the GameController / referee)."""
@@ -1417,6 +1449,15 @@ class Game:
                 moved = np.linalg.norm(b[:2] - np.asarray(sp["ball"])) > 0.15
                 if t > sp["until"] or moved or (sp["touched"] and sp["kind"] != "kick-off"):
                     self.setpiece = None
+            # no progress: dropped ball (both teams 0.5 m away for 3 s)
+            self.prog = getattr(self, "prog", (t, b[:2].copy()))
+            if np.linalg.norm(b[:2] - self.prog[1]) > 0.15 or self.setpiece is not None:
+                self.prog = (t, b[:2].copy())
+            elif t - self.prog[0] > NO_PROGRESS_S and self.out_pending is None:
+                pos = (float(np.clip(b[0], -HX + 0.3, HX - 0.3)), float(np.clip(b[1], -HY + 0.3, HY - 0.3)))
+                self.award("dropped ball", None, pos)
+                self.setpiece["until"] = t + 3.0
+                self.prog = (t, np.array(pos))
             # goal / out
             if self.out_pending is None:
                 gx = HX + LINE_W / 2 + BALL_R
@@ -1726,6 +1767,8 @@ def main():
     ap.add_argument("--t", type=float, default=HALF_S, help="playing time per half (s)")
     ap.add_argument("--halves", type=int, default=2)
     ap.add_argument("--out", default=str(HERE / "results_match_hybrid.json"))
+    ap.add_argument("--one", type=int, default=None, help="play one match (seed) in this process, write --out")
+    ap.add_argument("--merge", nargs="*", default=None, help="merge --one result files into --out")
     a = ap.parse_args()
     if a.check:
         check()
@@ -1743,6 +1786,19 @@ def main():
         print(json.dumps({k: v for k, v in r.items() if k not in ("events", "kicks", "bodies", "players")}, indent=1))
         for n, p in r["players"].items():
             print(n, p)
+        return
+    if a.one is not None:                     # one match in this process -> its own file (merge with --merge)
+        g = Game(seed=a.one, half_s=a.t, halves=a.halves, log=print)
+        r = g.play()
+        Path(a.out).write_text(json.dumps(r))
+        print("done", r["score"], r["wall_s"], r["rtf"])
+        return
+    if a.merge:
+        runs = [json.loads(Path(f).read_text()) for f in a.merge]
+        rows = summarize(runs)
+        for r in rows:
+            print(r)
+        Path(a.out).write_text(json.dumps(dict(summary=rows, runs=runs), indent=1))
         return
     lo, hi = (int(v) for v in a.seeds.split("-"))
     from functools import partial

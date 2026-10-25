@@ -5,6 +5,7 @@ and the skill queue, from test_skills_hybrid.py (every skill through runtime_hyb
     .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR [--mesh]           # tests.json, queue.json, skills.json
     MUJOCO_GL=osmesa .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR --replays   # + hurdle / follow / soccer replays
     MUJOCO_GL=osmesa .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR --soccer    # + only the soccer replay
+    MUJOCO_GL=osmesa .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR --match     # + the 5-a-side match replay
 
 Writes OUT_DIR/duck_mesh.json (if missing, or with --mesh), tests.json, queue.json, skills.json and rollout.json
 (= the first skill's replay, what the page shows first).
@@ -27,7 +28,7 @@ from evaluate_hybrid import BODIES  # noqa: E402
 BODY = "hybrid_noantenna"
 
 
-def mesh(m, out, max_faces=1500):
+def mesh(m, out, max_faces=1500, fname="duck_mesh.json"):
     """Visible geoms per body in body coordinates (ints, x1e4), meshes simplified to about max_faces triangles."""
     parts = {}
     for g in range(m.ngeom):
@@ -53,7 +54,7 @@ def mesh(m, out, max_faces=1500):
             color="#%02x%02x%02x" % tuple(int(255 * c) for c in rgba[:3]),
             v=np.round(v * 1e4).astype(int).ravel().tolist(), f=f.ravel().tolist()))
     names = [m.body(b).name for b in range(1, m.nbody)]
-    (out / "duck_mesh.json").write_text(json.dumps(dict(scale=1e-4, bodies=names, parts=parts), separators=(",", ":")))
+    (out / fname).write_text(json.dumps(dict(scale=1e-4, bodies=names, parts=parts), separators=(",", ":")))
 
 
 def record(sim, run):
@@ -134,7 +135,7 @@ BRAIN = {"idle": "velstand + head command; jaw from speech", "walk": "velstand 0
          "getup_face_down": "velstand", "getup_back": "velstand", "hop": "scripted, searched; ~1 per s",
          "roll": "roulade, then velstand"}
 ORDER = ["idle", "walk", "run", "squat", "sit_stand", "swag", "sleep_wake", "lie_down", "getup_face_down", "getup_back",
-         "hop", "roll", "hurdles", "hurdles_typical", "follow", "soccer"]
+         "hop", "roll", "hurdles", "hurdles_typical", "follow", "soccer", "match"]
 
 
 def games():
@@ -173,7 +174,79 @@ def games():
                                brain="head camera + goal sightings; velstand, ball_kick_left/right", layout="hybrid")
         skills["soccer"] = dict(success=scored, n=S["n"], note="duck soccer: goals in a 2-minute match")
         g["soccer"] = S
+    mp = HERE / "results_match_hybrid.json"
+    if mp.exists():
+        M = json.loads(mp.read_text())
+        rows, runs = M["summary"], M["runs"]
+        n = len(rows)
+        decided = sum(r["score"][0] != r["score"][1] for r in rows)
+        goals = sum(sum(r["score"]) for r in rows)
+        tests["match"] = dict(success=sum(sum(r["score"]) > 0 for r in rows) / n, episodes=n,
+                              mean_reward=f"{goals} goals in {n} matches, kicks {sum(r['connected'] for r in rows)}/{sum(r['kicks'] for r in rows)} connect",
+                              brain="11 hybrids: roles, team ball sharing, referee + GameController", layout="hybrid")
+        skills["match"] = dict(success=sum(sum(r["score"]) > 0 for r in rows), n=n, note="5-a-side match, 2 x 3 min")
+        g["match"] = dict(rows=rows, decided=decided, n=n,
+                          falls_per_player={p: sum(r["players"][p]["falls"] for r in runs) for p in runs[0]["players"]})
     return tests, skills, g
+
+
+def match_replay(out, window_s=90.0, max_mb=6.0):
+    """The match replay: the match with the most goals (then most connected kicks) of match.py's results, played
+    again with recording on (same seed = same match), cut to the window_s seconds with the most happening."""
+    import match as MM
+    runs = json.loads((HERE / "results_match_hybrid.json").read_text())["runs"]
+    pick = max(runs, key=lambda r: (sum(r["score"]), sum(k["connected"] for k in r["kicks"])))
+    g = MM.Game(seed=pick["seed"], record=True)
+    r = g.play()
+    dt = MM.REC_EVERY * 0.02
+    fps = 1 / dt
+    n = int(window_s * fps)
+    ev = r["events"]
+
+    def score(i0):
+        t0, t1 = i0 * dt, (i0 + n) * dt
+        s = 0.0
+        for e in ev:
+            if t0 <= e["t"] < t1:
+                s += {"goal": 10, "kick-off": 1, "throw-in": 1.5, "corner kick": 2, "goal kick": 1.5, "pickup": 1}.get(e["kind"], 0.3)
+        for k in r["kicks"]:
+            if t0 <= k["t"] < t1:
+                s += 2 if k["connected"] else 0.5
+        return s
+    starts = range(0, max(1, len(g.frames) - n), int(5 * fps))
+    i0 = max(starts, key=score)
+    t0 = i0 * dt
+    frames = g.frames[i0:i0 + n]
+    secs = len(frames) * dt
+    before = [e for e in ev if e["t"] < t0]
+    sc0 = [0, 0]
+    for e in before:
+        if e["kind"] == "goal":
+            sc0 = e["score"]
+    robots = []
+    for dk in g.world.ducks:
+        p = g.by_index(dk.i)
+        robots.append(dict(name=dk.name, team=dk.team, number=int(dk.name[1:]) if dk.team != "ref" else 0,
+                           role=p.role if p else "referee", color="#%02x%02x%02x" % tuple(int(255 * c) for c in MM.TEAM_RGB[dk.team])))
+    evw = [dict(e, t=round(e["t"] - t0, 2)) for e in ev if t0 - 30 <= e["t"] < t0 + secs]
+    kicks = [dict(t=round(k["t"] - t0, 2), name=k["name"], team=k["team"], kind=k["kind"], connected=k["connected"])
+             for k in r["kicks"] if t0 <= k["t"] < t0 + secs]
+    goals_w = [e for e in evw if e["kind"] == "goal" and e["t"] >= 0]
+    note = (f"5-a-side match, seed {r['seed']}: final score BLUE {r['score'][0]} : {r['score'][1]} YELLOW; this part "
+            f"{t0:.0f}-{t0 + secs:.0f} s of {r['sim_s']:.0f} s, {len(goals_w)} goals, "
+            f"{sum(k['connected'] for k in kicks)}/{len(kicks)} kicks connected")
+    data = dict(task="match", fps=fps, seconds=secs, t0=round(t0, 2), frames=frames, clk=g.clk[i0:i0 + n],
+                robots=robots, kin=MM.kinematics(), mesh="duck_mesh_match.json", events=evw, kicks=kicks,
+                score0=sc0, final=r["score"], half_s=MM.HALF_S, ball_r=MM.BALL_R, ball_color="#f2269e",
+                scene=dict(pitch=MM.pitch_info()), success=sum(r["score"]) > 0, seed=r["seed"], note=note,
+                checkpoint="hybrid runtime x 11, match.py: " + note, view=[0.0, 1.45, 2.55], curve=[])
+    js = json.dumps(data, separators=(",", ":"))
+    assert len(js) < max_mb * 1e6, len(js)
+    (out / "rollout_match.json").write_text(js)
+    if not (out / "duck_mesh_match.json").exists():
+        mesh(MicroduckSim(str(HERE / "scene_hybrid_allcollisions_noantenna.xml"), seed=0).m, out, max_faces=220,
+             fname="duck_mesh_match.json")
+    print("match", note, f"{len(js) / 1e6:.2f} MB")
 
 
 def replays(out):
@@ -262,7 +335,7 @@ def main():
         queue.append(dict(task=name, steps=1, state="done", exam={name: dict(success=r["success"] / r["n"])}))
         skills[name] = dict(success=r["success"], n=r["n"], note=r["desc"])
     gt, gs, g = games()
-    for name in ("hurdles", "hurdles_typical", "follow", "soccer"):
+    for name in ("hurdles", "hurdles_typical", "follow", "soccer", "match"):
         if name in gt:
             tests[name] = gt[name]
             queue.append(dict(task=name, steps=1, state="done", exam={name: dict(success=gt[name]["success"])}))
@@ -273,6 +346,8 @@ def main():
         replays(out)
     elif "--soccer" in sys.argv:
         soccer_replay(out)
+    if "--match" in sys.argv:
+        match_replay(out)
     (out / "tests.json").write_text(json.dumps(tests))
     (out / "queue.json").write_text(json.dumps(queue))
     (out / "skills.json").write_text(json.dumps(skills, indent=1))
