@@ -37,7 +37,10 @@ landing facing along the jump. A dropped bar costs 5 more, and only a dropped ba
 agility rule); a touch still costs. It still cleared every bar but by 11M fell after every landing: the
 landing bonus needed Bolt facing within 20 degrees, a cliff it rarely reached. Run 16b instead charges a
 little for spinning all through the jump (where the twist starts) and scales the landing bonus by how
-straight Bolt lands.
+straight Bolt lands. It fell after 8 landings in 12 by 11M too: the per-step charge for facing sideways
+after landing added up to about the -25 for a fall, and a fall ends the episode and the charges, so a
+twisted Bolt was better off falling. Run 16c: no charge after landing, standing still pays whichever way
+Bolt faces; only the spin charge and the landing bonus care about the heading.
 """
 import gymnasium as gym
 import mujoco
@@ -211,8 +214,7 @@ class JumpEnv(BoltEnv):
                 self.landed = True   # still on its feet half a second after clearing; worth more facing forward
                 reward += (1.0 if self.dropped else 12.0 if not self.touched else 6.0) * (0.5 + 0.5 * facing)
             speed = np.hypot(p["vx"], p["vy"])
-            reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2) * facing
-            reward -= 0.2 * (1 - np.cos(e))   # landing twisted sideways (run 15f: 40-120 degrees in the games)
+            reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2)
         if self.real:   # spinning about the vertical, all through the jump, is where a twisted landing starts
             reward -= 0.02 * d.qvel[5] ** 2
         reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 5e-5 * np.sum(d.actuator_force ** 2)

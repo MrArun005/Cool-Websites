@@ -204,3 +204,7 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   standing brain twisted it 5-13° as it stopped and the steering aimed at a point under its nose. Following
   the bar's centre line and stopping on the motors' hold: 1-5°. And the jump itself landed Bolt 40-140°
   sideways, which only training can fix (run 16 pays for landing facing forward).
+- **Never make falling a way out.** Runs 16 and 16b charged a little every step that Bolt faced sideways
+  after landing. Over a second and a half that added up to the -25 for a fall, and a fall ends the episode
+  (and the charges), so a twisted Bolt learned to fall: 10 and 8 falls in 12 landings. Rewards for staying
+  up must always beat falling, whatever else is wrong; shape the direction before the landing instead.
