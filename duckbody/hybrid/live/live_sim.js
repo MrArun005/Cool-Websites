@@ -77,7 +77,7 @@ export class World {
     if (randomize) this.randomize();
     this.ducks.forEach((dk, i) => this.put(dk, -2.0 + 0.4 * i, 0.0, 0.0));
     mj.mj_forward(this.m, this.d);
-    this.touchNow = new Set();
+    this.touchNow = new Set(); this.legTouch = new Map();
     this.stepMs = 0; this.bamMs = 0;
   }
 
@@ -180,7 +180,14 @@ export class World {
     for (let c = 0; c < n; c++) {
       const ct = cs.get(c);
       const g1 = ct.geom1, g2 = ct.geom2; ct.delete && ct.delete();
-      if (g1 === bg || g2 === bg) { const o = this.geomOwner[g1 === bg ? g2 : g1]; if (o >= 0) this.touchNow.add(o); }
+      if (g1 === bg || g2 === bg) {
+        const og = g1 === bg ? g2 : g1, o = this.geomOwner[og];
+        if (o >= 0) {
+          this.touchNow.add(o);
+          const lb = this.meta.robots[o].legs && this.meta.robots[o].legs[og];      // leg touch (match.Game.feel)
+          if (lb !== undefined) this.legTouch.set(o, lb);
+        }
+      }
     }
     cs.delete();
   }

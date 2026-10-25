@@ -68,7 +68,7 @@ def cmd_dict(c):
 def main():
     out = Path(sys.argv[1])
     seconds = float(sys.argv[2]) if len(sys.argv) > 2 else 120.0
-    rng = np.random.default_rng(7)
+    rng = np.random.default_rng(int(sys.argv[3]) if len(sys.argv) > 3 else 7)
     teams = {"blue": 1.0, "yellow": -1.0}
     tac = {"blue": TT.TeamTactics(1), "yellow": TT.TeamTactics(2)}
     P = {}
@@ -111,10 +111,16 @@ def main():
                 if p["team"] == tn:
                     rel = ball - p["pos"]
                     own = np.linalg.norm(rel) < 1.5
+                    src = "own" if own else "team"
+                    if np.linalg.norm(rel) < 0.12:             # at the feet the camera may have lost it
+                        src = ["own", "own", "mem", "touch", "team"][int(k // 37 + len(name)) % 5]
+                    age = 0.05 if src == "own" else (0.6 if src in ("mem", "touch") else 1.0)
+                    sw = None if abs(p.get("v", 0.0)) < 0.05 else ("left" if (k // 9) % 2 else "right")
                     players.append(dict(name=name, role=p["role"], pos=p["pos"] + rng.normal(0, 0.02, 2), psi=p["psi"] + rng.normal(0, 0.02),
                                         active=p["active"], down=t < p["down_until"], busy=t < p["busy_until"],
-                                        ball=(ball + rng.normal(0, 0.01, 2)) if own else None, ball_src="own" if own else "team",
-                                        ball_age=0.05 if own else 1.0))
+                                        ball=(ball + rng.normal(0, 0.01, 2)) if (own or src != "team") else None, ball_src=src,
+                                        ball_age=age, ball_sig=0.01 if src == "own" else 0.08, swing=sw, rising=(k % 9) < 5,
+                                        head_home=max(0.0, t - p.get("home_t", 9e9)), moving=abs(p.get("v", 0.0))))
                 else:
                     opps.append(dict(pos=p["pos"] + rng.normal(0, 0.06, 2), role=p["role"], active=p["active"]))
             sp = None if setpiece is None else dict(kind=setpiece["kind"], ours=setpiece["team"] == tn, ball=setpiece["ball"],
@@ -129,7 +135,10 @@ def main():
             rec["cmds"][tn] = {n: cmd_dict(c) for n, c in cmds.items()}
             for n, c in cmds.items():                                 # the stand-in physics
                 p = P[n]
+                home = c.head is not None and abs(c.head[0]) < 1e-9 and abs(c.head[1]) < 1e-9 and c.head[2] is None
+                p["home_t"] = p.get("home_t", t) if home and p.get("home_t", 9e9) < 9e9 else (t if home else 9e9)
                 if t < p["down_until"] or t < p["busy_until"] or not p["active"]:
+                    p["v"] = 0.0
                     continue
                 if c.kick:
                     p["busy_until"] = t + 0.5
@@ -138,6 +147,7 @@ def main():
                         bvel = 1.2 * np.array([math.cos(p["psi"]), math.sin(p["psi"])]) + rng.normal(0, 0.1, 2)
                     continue
                 v = 0.42 * np.clip(c.vx, -1, 1) if abs(c.vx) >= 0.3 else 0.0
+                p["v"] = v
                 vy = 0.15 * np.clip(c.vy, -1, 1) if abs(c.vy) >= 0.3 else 0.0
                 cs, sn = math.cos(p["psi"]), math.sin(p["psi"])
                 p["pos"] = p["pos"] + TT.DT * np.array([cs * v - sn * vy, sn * v + cs * vy])

@@ -382,6 +382,9 @@ class Duck:
         self.geoms = {g for g in range(m.ngeom) if m.body_rootid[m.geom_bodyid[g]] == self.trunk}
         self.cam = m.camera(f"{name}_eye").id if world.cams else None
         self.feet = (m.body(f"{name}_ankle_left").id, m.body(f"{name}_ankle_right").id)
+        legb = {m.body(f"{name}_{b}").id for b in ("ankle_left", "ankle_right", "leg", "leg_2", "upper_leg_left",
+                                                     "upper_leg_right")}
+        self.leg_geoms = {g: int(m.geom_bodyid[g]) for g in self.geoms if int(m.geom_bodyid[g]) in legb}
         self.rng = np.random.default_rng(world.seed * 100 + i)
         self.obs_noise, self.delay = True, True
         self.pending, self.on_substep = DEFAULT_POSE.copy(), None
@@ -708,6 +711,13 @@ NO_PROGRESS_S = 10.0        # ball untouched / pinned between ducks this long (m
 PICKUP_DOWN_S, PICKUP_OUT_S, PICKUP_S = 12.0, 8.0, 10.0   # incapable player: down 12 s / off the pitch 8 s -> out 10 s
 OUT_WHISTLE_S = 0.8         # the ball is placed this long after it went out
 ROLES = ("GK", "D1", "D2", "A1", "A2")
+# Ball at the feet (perception): the head camera cannot see a ball under the body or between / behind the feet.
+MEMORY = True               # ball memory + leg touch (False: the earlier behaviour, for before / after runs)
+MEM_S, MEM_NEAR, MEM_TAU = 3.0, 0.4, 0.5    # keep the last own fix this long when it was this close; velocity decay
+SELF_BLIND_X, SELF_BLIND_Y = 0.05, 0.10     # body frame: the camera never sees the ball here (own body / feet;
+                                            # measured: with the head down it sees x 0.04-0.22 m, |y| < 0.1 m)
+TOUCH_N = 0.3               # leg contact force that counts as "felt" (servo load spike; see Player.touch)
+TOUCH_SIGMA = 0.02          # where the touched link is (forward kinematics from the encoders) + this noise
 assert (TT.HX, TT.HY, TT.GOAL_W, TT.PEN_AREA, TT.BORDER, TT.BALL_R) == (HX, HY, GOAL_W, PEN_AREA, BORDER, BALL_R)
 assert (TT.KICK_X, TT.KICK_Y, TT.TOL_X, TT.TOL_Y, TT.TOL_H, TT.BEHIND, TT.AROUND, TT.READY_S, TT.FOOT_VIEW, TT.CAM_H,
         TT.CAM_DOWN, TT.DT) == (SO.KICK_X, SO.KICK_Y, SO.TOL_X, SO.TOL_Y, SO.TOL_H, SO.BEHIND, SO.AROUND, SO.READY_S,
@@ -767,6 +777,7 @@ class Team:
         self.ball, self.ball_t, self.ball_from = np.array(ball, float), t, None
         for p in self.players:
             p.ball_f, p.ball_t, p.misses = np.array(ball, float), t, 0
+            p.ball_v, p.fix_rel, p.touch_t, p.mem_misses = np.zeros(2), None, -99.0, 0
 
 
 class Player:
@@ -779,6 +790,9 @@ class Player:
         self.rng = np.random.default_rng(1000 * game.seed + duck.i)
         self.err = self.rng.normal(0, 1, 3) * [LOC_SIGMA, LOC_SIGMA, LOC_YAW_SIGMA]
         self.ball_f, self.ball_t, self.misses = None, -99.0, 0
+        self.ball_v, self.fix_rel = np.zeros(2), None     # ball velocity from own fixes; last fix in the body frame
+        self.mem_misses = 0                               # frames the memory said "you should see it here" and didn't
+        self.touch_f, self.touch_t = None, -99.0          # leg-contact (touch) fix
         self.state, self.cmd = "search", None
         self.cam_on = False
         self.penalized_until = None
@@ -831,18 +845,60 @@ class Player:
         if det is not None:
             g = SO.pixel_ground(self.duck, self.duck.cam, det[0], det[1], BALL_R)
             if g is not None and np.hypot(*g) < 3.0:
-                self.ball_f, self.ball_t, self.misses = self.to_field(g), t, 0
+                f = self.to_field(g)
+                if MEMORY and self.ball_f is not None and 0.05 < t - self.ball_t < 0.5:
+                    v = (f - self.ball_f) / (t - self.ball_t)
+                    v = v * min(1.0, 2.0 / max(1e-6, float(np.hypot(*v))))
+                    self.ball_v = 0.5 * self.ball_v + 0.5 * v
+                elif MEMORY:
+                    self.ball_v = np.zeros(2)
+                self.ball_f, self.ball_t, self.misses, self.mem_misses = f, t, 0, 0
+                self.fix_rel = np.asarray(g, float)
                 self.stats["frames_seen"] += 1
                 return det
         if self.expect_visible():
             self.misses += 1
+            if MEMORY and self.ball_f is not None:
+                r = self.to_body(self.mem_pos(t))
+                if not (r[0] < SELF_BLIND_X and abs(r[1]) < SELF_BLIND_Y):   # not where its own body hides it
+                    self.mem_misses += 1
         return det
 
+    def mem_pos(self, t):
+        """Ball memory: the last own fix (field frame: the duck's own motion is in its pose estimate, i.e. odometry)
+        carried on by the ball's last measured velocity, slowing down (MEM_TAU)."""
+        age = t - self.ball_t
+        return self.ball_f + self.ball_v * MEM_TAU * (1.0 - math.exp(-age / MEM_TAU))
+
+    def mem_ok(self, t):
+        return (MEMORY and self.ball_f is not None and self.fix_rel is not None and t - self.ball_t < MEM_S and
+                float(np.hypot(*self.fix_rel)) < MEM_NEAR and self.mem_misses < 3)
+
+    def ball_sig(self, t, src):
+        """1-sigma uncertainty (m) of the estimate ball() returns (grows with age for the memory)."""
+        if src == "own":
+            return 0.01 + 0.02 * max(0.0, t - self.ball_t)
+        if src == "mem":
+            return 0.02 + 0.12 * (t - self.ball_t)
+        if src == "touch":
+            return 0.04
+        if src == "team":
+            return WIFI_NOISE + 0.1 * max(0.0, t - self.team.ball_t)
+        return 9.0
+
     def ball(self, t):
-        """(ball estimate, source): own camera if fresh, else the team's (delayed, noisy), else None."""
+        """(ball estimate, source): own camera if fresh, else (MEMORY) a leg touch, a teammate's newer sighting, the
+        ball memory near the feet, else the team's (delayed, noisy), else None."""
         if self.ball_f is not None and t - self.ball_t < 0.7 and self.misses < 4:
             return self.ball_f, "own"
         tm = self.team
+        if MEMORY:
+            if self.touch_f is not None and t - self.touch_t < 0.6 and self.touch_t > self.ball_t:
+                return self.touch_f, "touch"
+            if tm.ball is not None and t - tm.ball_t < 1.0 and tm.ball_t > self.ball_t and tm.ball_from != self.duck.i:
+                return tm.ball, "team"
+            if self.mem_ok(t):
+                return self.mem_pos(t), "mem"
         if tm.ball is not None and t - tm.ball_t < 4.0:
             return tm.ball, "team"
         if self.ball_f is not None and t - self.ball_t < 4.0 and self.misses < 4:
@@ -856,6 +912,13 @@ class Player:
 
     def active(self):
         return self.penalized_until is None
+
+    def head_home_s(self):
+        """How long the head has been at home (|head command| < 0.05 rad on every axis): the kick brains need it."""
+        at = bool(np.all(np.abs(self.rt.head_cmd) < 0.05))
+        hs = getattr(self, "home_since", None)
+        self.home_since = (self.g.t if hs is None else hs) if at else None
+        return 0.0 if self.home_since is None else self.g.t - self.home_since
 
 
 class Referee:
@@ -1106,14 +1169,15 @@ class Diag:
             role = c.role if c is not None else ""
             a = self.arr.get(p.name)
             if a is None:
-                if role == "striker" and float(np.linalg.norm(d.xpos[dk.trunk][:2] - b)) < DIAG_ARRIVE:
+                if role == "striker" and float(np.linalg.norm(d.xpos[dk.trunk][:2] - b)) < DIAG_ARRIVE \
+                        and float(np.hypot(bv[0], bv[1])) < 0.15 and t - self.last_touch_t.get(dk.i, -9) > 0.5:
                     self.arr[p.name] = dict(t0=t, states={}, name=p.name)
             else:
                 a["states"][st] = a["states"].get(st, 0) + 1
                 touched = t - self.last_touch_t.get(dk.i, -9) < 0.3
                 kicked = any(k["who"] == dk.i and t - k["t"] < 1.2 for k in g.kicks[-3:])
                 spd = float(np.hypot(bv[0], bv[1]))
-                if spd > 0.3 and (touched or kicked):
+                if spd > 0.3 and (touched or kicked) and t - a["t0"] > 0.05:
                     a.update(dur=round(t - a["t0"], 2), how="kick" if kicked else "push", v=round(spd, 2))
                     a["states"] = {k: round(v * rh.DT, 2) for k, v in a["states"].items()}
                     self.arrivals.append(a)
@@ -1170,6 +1234,7 @@ class Game:
         self.out_pending = None
         self.last_touch = None           # (duck index, team, t)
         self.touch_now = set()
+        self.leg_touch, self._f6 = {}, np.zeros(6)
         self.kicks, self.events, self.frames, self.clk = [], [], [], []
         self.ball_moved_from = None
         self.log = log
@@ -1198,12 +1263,34 @@ class Game:
         w = self.world
         bg = w.ball_geom
         d = w.d
-        for c in d.contact[:d.ncon]:
+        for k, c in enumerate(d.contact[:d.ncon]):
             if c.geom1 == bg or c.geom2 == bg:
                 o = c.geom2 if c.geom1 == bg else c.geom1
                 for dk in w.ducks:
                     if o in dk.geoms:
                         self.touch_now.add(dk.i)
+                        if MEMORY and o in dk.leg_geoms:
+                            mujoco.mj_contactForce(w.m, d, k, self._f6)
+                            if abs(self._f6[0]) > TOUCH_N:
+                                self.leg_touch[dk.i] = dk.leg_geoms[o]
+
+    def feel(self):
+        """Leg touch: a ball contact on a foot / shin / thigh (force > TOUCH_N) tells that duck the ball is at that
+        link. On the robot: a load / current spike on that leg's servos that the gait does not explain (XL330
+        Present Load / Present Current), or foot pressure sensors; the link's position comes from the encoders by
+        forward kinematics. Here: the link's position in the trunk frame + TOUCH_SIGMA noise (the robot cannot tell
+        which side of the link was hit)."""
+        for i, b in self.leg_touch.items():
+            p = self.by_index(i)
+            if p is None:
+                continue
+            d, dk = self.world.d, p.duck
+            e = d.xpos[b][:2] - d.xpos[dk.trunk][:2]
+            _, yaw = dk.pose()
+            c, s = math.cos(yaw), math.sin(yaw)
+            rel = np.array([c * e[0] + s * e[1], -s * e[0] + c * e[1]]) + p.rng.normal(0, TOUCH_SIGMA, 2)
+            p.touch_f, p.touch_t = p.to_field(rel), self.t
+        self.leg_touch = {}
 
     def process_touches(self):
         for i in sorted(self.touch_now):
@@ -1309,11 +1396,18 @@ class Game:
         players = []
         for p in tm.players:
             b, src = p.ball(t)
+            # gait phase from the feet (on the robot: leg forward kinematics from the encoders): the foot in the air
+            fl, fr = (float(self.world.d.xpos[f][2]) for f in p.duck.feet)
+            fd = fl - fr
+            swing = "left" if fd > 0.004 else ("right" if fd < -0.004 else None)
+            rising = swing is not None and abs(fd) > abs(getattr(p, "prev_fd", 0.0))
+            p.prev_fd = fd
             players.append(dict(name=p.name, role=p.role, pos=p.pos, psi=p.psi, active=p.active(),
                                 down=p.rt.mode == "get up" or p.rt.lying(),
                                 busy=p.rt.mode in ("kick left", "kick right", "hop"),
                                 ball=None if b is None else np.asarray(b, float), ball_src=src,
-                                ball_age=t - p.ball_t))
+                                ball_age=t - p.ball_t, ball_sig=p.ball_sig(t, src), swing=swing, rising=rising,
+                                head_home=p.head_home_s(), moving=float(np.hypot(*p.rt.vel[:2]))))
         opps = []
         a = rh.DT / OPP_TAU
         for q in self.teams[self.other(tm.name)].players:
@@ -1513,6 +1607,7 @@ class Game:
         for rt in self.rts:
             rt.tick_after()
         self.diag.touch(self.touch_now)
+        self.feel()
         self.process_touches()
         b, bv = w.ball()
         sp = float(np.hypot(bv[0], bv[1]))
@@ -1669,6 +1764,82 @@ def summarize(runs):
     return rows
 
 
+def diag_report(runs):
+    """The stuck-ball / kick-cycle numbers (Diag) over several match results, plus the usual totals."""
+    R = dict(matches=len(runs), play_s=0.0)
+    eps = [e for r in runs for e in r["diag"]["episodes"]]
+    stalls = [e for e in eps if e["dur"] > DIAG_STALL_S]
+    R["stalls"] = len(stalls)
+    R["stall_s"] = round(sum(e["dur"] for e in stalls), 1)
+    R["stall_median_s"] = round(float(np.median([e["dur"] for e in stalls])), 1) if stalls else 0.0
+    by = {}
+    for e in stalls:                      # the object the ball was near most of the stall
+        near = {k: v for k, v in e["near"].items()}
+        main = max(near, key=near.get) if near else "open"
+        if main == "duck" and near.get("referee", 0) > 0.3 * e["dur"]:
+            main = "referee"
+        for o in ("post", "corner", "board/line"):
+            if near.get(o, 0) > 0.3 * e["dur"]:
+                main = o
+        by.setdefault(main, [0, 0.0])
+        by[main][0] += 1
+        by[main][1] = round(by[main][1] + e["dur"], 1)
+    R["stalls_by_object"] = by
+    ends = {}
+    for e in stalls:
+        ends[e["end"]] = ends.get(e["end"], 0) + 1
+    R["stall_ends"] = ends
+    st = {}
+    for e in stalls:
+        for k, v in e["states"].items():
+            st[k] = round(st.get(k, 0) + v, 1)
+    R["stall_states_s"] = dict(sorted(st.items(), key=lambda kv: -kv[1])[:10])
+    lt = {"total": 0, "search": 0, "standing": 0, "moving": 0}
+    srcs, near = {}, 0
+    for r in runs:
+        d = r["diag"]
+        near += d["near_ticks"]
+        for k in lt:
+            lt[k] += d["lost_ticks"][k]
+        for k, v in d["lost_ticks"]["by_src"].items():
+            srcs[k] = srcs.get(k, 0) + v
+    R["near_ball_s"] = round(near * rh.DT, 1)
+    R["lost_near_s"] = {k: round(v * rh.DT, 1) for k, v in lt.items()}
+    R["lost_near_src_s"] = {k: round(v * rh.DT, 1) for k, v in srcs.items()}
+    spans = [x for r in runs for x in r["diag"]["lost_spans"]]
+    R["lost_spans_over_1s"] = sum(x["dur"] > 1.0 for x in spans)
+    R["stalls_with_lost_player"] = sum(
+        any(x["t0"] < e["t0"] + e["dur"] and x["t0"] + x["dur"] > e["t0"] and x["dur"] > 1.0
+            for x in r["diag"]["lost_spans"])
+        for r in runs for e in r["diag"]["episodes"] if e["dur"] > DIAG_STALL_S)
+    arr = [a for r in runs for a in r["diag"]["arrivals"]]
+    R["arrivals"] = len(arr)
+    R["arrive_to_strike_median_s"] = round(float(np.median([a["dur"] for a in arr])), 2) if arr else None
+    R["arrive_to_strike_mean_s"] = round(float(np.mean([a["dur"] for a in arr])), 2) if arr else None
+    R["strike_how"] = {h: sum(a["how"] == h for a in arr) for h in ("kick", "push")}
+    R["strike_v_median"] = round(float(np.median([a["v"] for a in arr])), 2) if arr else None
+    split = {}
+    for a in arr:
+        for k, v in a["states"].items():
+            split[k.split(":")[0]] = split.get(k.split(":")[0], 0) + v
+    R["arrive_split_mean_s"] = {k: round(v / max(1, len(arr)), 2) for k, v in sorted(split.items(), key=lambda kv: -kv[1])}
+    kk = [k for r in runs for k in r["kicks"]]
+    R["kicks"] = len(kk)
+    R["connected"] = sum(k["connected"] for k in kk)
+    R["kick_v_median"] = round(float(np.median([k["vmax"] for k in kk if k["connected"]])), 2) if R["connected"] else 0
+    R["shots"] = sum(k["kind"] == "shot" for k in kk)
+    R["goals"] = sum(len(r["goals"]) for r in runs)
+    R["dropped_balls"] = sum(1 for r in runs for e in r["events"] if e["kind"] == "dropped ball")
+    R["falls"] = sum(p["falls"] for r in runs for p in r["players"].values())
+    mv = [p["moving"] for r in runs for p in r["metrics"]["players"].values()]
+    R["moving"] = round(float(np.mean(mv)), 3)
+    R["play_s"] = round(sum(r["metrics"]["play_s"] for r in runs), 1)
+    R["by_kind"] = {}
+    for k in kk:
+        R["by_kind"][k["kind"]] = R["by_kind"].get(k["kind"], 0) + 1
+    return R
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
@@ -1680,6 +1851,7 @@ def main():
     ap.add_argument("--out", default=str(HERE / "results_match_hybrid.json"))
     ap.add_argument("--one", type=int, default=None, help="play one match (seed) in this process, write --out")
     ap.add_argument("--merge", nargs="*", default=None, help="merge --one result files into --out")
+    ap.add_argument("--report", nargs="*", default=None, help="stuck-ball / kick-cycle report (Diag) of --one files")
     a = ap.parse_args()
     if a.check:
         check()
@@ -1703,6 +1875,10 @@ def main():
         r = g.play()
         Path(a.out).write_text(json.dumps(r))
         print("done", r["score"], r["wall_s"], r["rtf"])
+        return
+    if a.report:
+        runs = [json.loads(Path(f).read_text()) for f in a.report]
+        print(json.dumps(diag_report(runs), indent=1))
         return
     if a.merge:
         runs = [json.loads(Path(f).read_text()) for f in a.merge]

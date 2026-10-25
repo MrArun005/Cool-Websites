@@ -8,7 +8,11 @@
 //     position is the truth plus noise growing with distance (1 cm at the feet, ~3 cm at 1.5 m), at 10 Hz. Everything
 //     after that (to field coordinates with the duck's own pose estimate, team sharing over "wifi", misses) is
 //     match.py's.
-//   - ball touches are read from the contacts only while a duck is within 0.35 m of the ball.
+//   - ball touches are read from the contacts only while a duck is within 0.35 m of the ball; a leg touch (the ball
+//     memory's "touch" fix, match.Game.feel) is any contact of the ball with a foot / shin / thigh (match.py also
+//     requires 0.3 N of contact force).
+//   - the visibility model has no self-occlusion: the duck's own trunk and legs do not hide the ball (match.py
+//     renders them), so a ball right at the toes is seen a bit more often here.
 import { World, Runtime, brainsTick, Rng, DT, HZ, clip } from './live_sim.js';
 import { TeamTactics, lookAt, wrap, unit } from './tactics.js';
 
@@ -23,19 +27,21 @@ const KICKOFF_SPOTS = {
   false: { GK: [-2.25 + 0.3, 0.0], D1: [-1.3, 0.6], D2: [-1.3, -0.6], A1: [-0.6, 0.0], A2: [-0.75, 0.75] },
 };
 const CAM_H = 0.21, CAM_DOWN = 0.17;
+// ball at the feet (match.py): ball memory, leg touch
+const MEM_S = 3.0, MEM_NEAR = 0.4, MEM_TAU = 0.5, SELF_BLIND_X = 0.05, SELF_BLIND_Y = 0.10, TOUCH_SIGMA = 0.02;
 const norm2 = (x, y) => Math.hypot(x, y);
 
 class Team {
-  constructor(name, dir) { this.name = name; this.dir = dir; this.msgs = []; this.ball = null; this.ball_t = -99; this.score = 0; this.players = []; }
+  constructor(name, dir) { this.name = name; this.dir = dir; this.msgs = []; this.ball = null; this.ball_t = -99; this.ball_from = null; this.score = 0; this.players = []; }
   send(t, sender, ball, ball_t, rng) { if (ball) this.msgs.push([t + WIFI_DELAY, sender, [ball[0] + rng.normal(0, WIFI_NOISE), ball[1] + rng.normal(0, WIFI_NOISE)], ball_t]); }
   deliver(t) {
     const keep = [];
-    for (const m of this.msgs) { if (m[0] <= t) { if (m[3] > this.ball_t) { this.ball = m[2]; this.ball_t = m[3]; } } else keep.push(m); }
+    for (const m of this.msgs) { if (m[0] <= t) { if (m[3] > this.ball_t) { this.ball = m[2]; this.ball_t = m[3]; this.ball_from = m[1]; } } else keep.push(m); }
     this.msgs = keep;
   }
   announce(ball, t) {
-    this.msgs = []; this.ball = [ball[0], ball[1]]; this.ball_t = t;
-    for (const p of this.players) { p.ball_f = [ball[0], ball[1]]; p.ball_t = t; p.misses = 0; }
+    this.msgs = []; this.ball = [ball[0], ball[1]]; this.ball_t = t; this.ball_from = null;
+    for (const p of this.players) { p.ball_f = [ball[0], ball[1]]; p.ball_t = t; p.misses = 0; p.ball_v = [0, 0]; p.fix_rel = null; p.touch_t = -99; p.mem_misses = 0; }
   }
 }
 
@@ -45,6 +51,7 @@ class Player {
     this.rng = new Rng(1000 * game.seed + duck.i + 11);
     this.err = [this.rng.normal(0, LOC_SIGMA), this.rng.normal(0, LOC_SIGMA), this.rng.normal(0, LOC_YAW_SIGMA)];
     this.ball_f = null; this.ball_t = -99; this.misses = 0;
+    this.ball_v = [0, 0]; this.fix_rel = null; this.mem_misses = 0; this.touch_f = null; this.touch_t = -99;
     this.state = 'search'; this.cmd = null; this.cam_on = false; this.penalized_until = null; this.last_sent = -9;
     this.down_since = null; this.out_since = null; this.pos = [0, 0]; this.psi = 0;
     this.stats = { kicks: 0, connected: 0, shots: 0, passes: 0, passes_completed: 0, clearances: 0, goals: 0, own_goals: 0, touches: 0, pickups: 0, frames_seen: 0, frames: 0, dist: 0, moving: 0, samples: 0 };
@@ -87,16 +94,40 @@ class Player {
       const dist = Math.hypot(dx, dy), sig = 0.008 + 0.015 * dist;
       const g = [c * dx + s * dy + this.rng.normal(0, sig), -s * dx + c * dy + this.rng.normal(0, sig)];
       if (Math.hypot(g[0], g[1]) < 3.0) {
-        this.ball_f = this.to_field(g); this.ball_t = t; this.misses = 0; this.stats.frames_seen++;
+        const f = this.to_field(g), age = t - this.ball_t;
+        if (this.ball_f !== null && age > 0.05 && age < 0.5) {
+          let v = [(f[0] - this.ball_f[0]) / age, (f[1] - this.ball_f[1]) / age];
+          const k = Math.min(1.0, 2.0 / Math.max(1e-6, Math.hypot(v[0], v[1]))); v = [v[0] * k, v[1] * k];
+          this.ball_v = [0.5 * this.ball_v[0] + 0.5 * v[0], 0.5 * this.ball_v[1] + 0.5 * v[1]];
+        } else this.ball_v = [0, 0];
+        this.ball_f = f; this.ball_t = t; this.misses = 0; this.mem_misses = 0; this.fix_rel = g; this.stats.frames_seen++;
         return true;
       }
     }
-    if (this.expect_visible()) this.misses++;
+    if (this.expect_visible()) {
+      this.misses++;
+      if (this.ball_f !== null) { const r = this.to_body(this.mem_pos(t)); if (!(r[0] < SELF_BLIND_X && Math.abs(r[1]) < SELF_BLIND_Y)) this.mem_misses++; }
+    }
     return false;
+  }
+  mem_pos(t) {
+    const k = MEM_TAU * (1 - Math.exp(-(t - this.ball_t) / MEM_TAU));
+    return [this.ball_f[0] + this.ball_v[0] * k, this.ball_f[1] + this.ball_v[1] * k];
+  }
+  mem_ok(t) { return this.ball_f !== null && this.fix_rel !== null && t - this.ball_t < MEM_S && Math.hypot(this.fix_rel[0], this.fix_rel[1]) < MEM_NEAR && this.mem_misses < 3; }
+  ball_sig(t, src) {
+    if (src === 'own') return 0.01 + 0.02 * Math.max(0, t - this.ball_t);
+    if (src === 'mem') return 0.02 + 0.12 * (t - this.ball_t);
+    if (src === 'touch') return 0.04;
+    if (src === 'team') return WIFI_NOISE + 0.1 * Math.max(0, t - this.team.ball_t);
+    return 9.0;
   }
   ball(t) {
     if (this.ball_f !== null && t - this.ball_t < 0.7 && this.misses < 4) return [this.ball_f, 'own'];
     const tm = this.team;
+    if (this.touch_f !== null && t - this.touch_t < 0.6 && this.touch_t > this.ball_t) return [this.touch_f, 'touch'];
+    if (tm.ball !== null && t - tm.ball_t < 1.0 && tm.ball_t > this.ball_t && tm.ball_from !== this.duck.i) return [tm.ball, 'team'];
+    if (this.mem_ok(t)) return [this.mem_pos(t), 'mem'];
     if (tm.ball !== null && t - tm.ball_t < 4.0) return [tm.ball, 'team'];
     if (this.ball_f !== null && t - this.ball_t < 4.0 && this.misses < 4) return [this.ball_f, 'own'];
     return [null, null];
@@ -192,6 +223,17 @@ export class Game {
   }
 
   // ---------------------------------------------------------------- touches, kicks
+  feel() {                         // leg touch (match.Game.feel): the touched link's position in the trunk frame + noise
+    const w = this.world, x = w.d.xpos;
+    for (const [i, b] of w.legTouch) {
+      const p = this.by_index(i);
+      if (!p) continue;
+      const tr = p.duck.meta.trunk, e = [x[3 * b] - x[3 * tr], x[3 * b + 1] - x[3 * tr + 1]], [, yaw] = p.duck.pose(), c = Math.cos(yaw), s = Math.sin(yaw);
+      const rel = [c * e[0] + s * e[1] + p.rng.normal(0, TOUCH_SIGMA), -s * e[0] + c * e[1] + p.rng.normal(0, TOUCH_SIGMA)];
+      p.touch_f = p.to_field(rel); p.touch_t = this.t;
+    }
+    w.legTouch.clear();
+  }
   process_touches() {
     const tn = Array.from(this.world.touchNow).sort((a, b) => a - b);
     for (const i of tn) {
@@ -274,8 +316,18 @@ export class Game {
     const t = this.t, phase = ['playing', 'ready', 'set'].includes(this.phase) ? this.phase : 'other', sp = this.setpiece;
     const players = tm.players.map(p => {
       const [b, src] = p.ball(t);
+      // gait phase from the feet (match.Game.world_model), head at home for how long, the walk command
+      const m = p.duck.meta, x = this.world.d.xpos;
+      if (p.feet === undefined) p.feet = ['ankle_left', 'ankle_right'].map(nm => m.bodies[m.body_names.indexOf(nm)]);
+      const fd = x[3 * p.feet[0] + 2] - x[3 * p.feet[1] + 2];
+      const swing = fd > 0.004 ? 'left' : (fd < -0.004 ? 'right' : null);
+      const rising = swing !== null && Math.abs(fd) > Math.abs(p.prev_fd ?? 0.0); p.prev_fd = fd;
+      const at = p.rt.headCmd.every(v => Math.abs(v) < 0.05);
+      p.home_since = at ? (p.home_since ?? t) : null;
       return { name: p.name, role: p.role, pos: p.pos, psi: p.psi, active: p.active(), down: p.rt.mode === 'get up' || p.rt.lying(),
-        busy: ['kick left', 'kick right', 'hop', 'settle'].includes(p.rt.mode), ball: b, ball_src: src, ball_age: t - p.ball_t };
+        busy: ['kick left', 'kick right', 'hop', 'settle'].includes(p.rt.mode), ball: b, ball_src: src, ball_age: t - p.ball_t,
+        ball_sig: p.ball_sig(t, src), swing, rising, head_home: p.home_since === null ? 0.0 : t - p.home_since,
+        moving: Math.hypot(p.rt.vel[0], p.rt.vel[1]) };
     });
     const a = DT / OPP_TAU, opps = [];
     for (const q of this.teams[this.other(tm.name)].players) {
@@ -435,6 +487,7 @@ export class Game {
     const near = w.ducks.some(dk => { const [q] = dk.pose(); return Math.hypot(q[0] - b0[0], q[1] - b0[1]) < 0.35; });
     w.physics(near);
     for (const rt of this.rts) rt.after();
+    this.feel();
     this.process_touches();
     const [, bv] = w.ball(), spd = Math.hypot(bv[0], bv[1]);
     for (const kc of this.kicks.slice(-3)) {
@@ -450,6 +503,19 @@ export class Game {
   // measurement only (match.Metrics, simplified): distance walked and share of playing time moving (> 3 cm/s over 0.5 s)
   metrics() {
     if (this.phase !== 'playing') { for (const p of this.players) p.hist = []; return; }
+    // ball lost at the feet (match.Diag, simplified): a player's trunk within 15 cm of the ball, no own fix for 0.3 s
+    const [bb] = this.world.ball(), L = this.lost || (this.lost = { near: 0, lost: 0, search: 0, standing: 0 });
+    for (const p of this.players) {
+      if (!p.active()) continue;
+      const [q] = p.duck.pose();
+      if (Math.hypot(q[0] - bb[0], q[1] - bb[1]) >= 0.15) continue;
+      L.near++;
+      if (this.t - p.ball_t <= 0.3) continue;
+      L.lost++;
+      const c = p.cmd, busy = ['kick left', 'kick right', 'get up', 'hop'].includes(p.rt.mode);
+      if ((p.state || '').startsWith('search')) L.search++;
+      else if (c && !busy && c.vx === 0 && c.vy === 0 && c.wz === 0) L.standing++;
+    }
     if (this.k % 5) return;
     for (const p of this.players) {
       if (!p.active()) { p.hist = []; continue; }
@@ -467,6 +533,8 @@ export class Game {
     per.ref = { team: 'ref', falls: this.ref.rt.falls };
     return { seed: this.seed, score: [this.teams.blue.score, this.teams.yellow.score], sim_s: +this.t.toFixed(1), half: this.half, clock: +this.clock.toFixed(1), phase: this.phase,
       kicks: this.kicks.length, connected: this.kicks.filter(k => k.connected).length, falls: this.rts.reduce((a, r) => a + r.falls, 0),
-      goals: this.events.filter(e => e.kind === 'goal').map(e => e.text), events: this.events.length, players: per };
+      goals: this.events.filter(e => e.kind === 'goal').map(e => e.text), events: this.events.length, players: per,
+      dropped: this.events.filter(e => e.kind === 'dropped ball').length,
+      lost_near_s: this.lost ? Object.fromEntries(Object.entries(this.lost).map(([k, v]) => [k, +(v * DT).toFixed(1)])) : null };
   }
 }

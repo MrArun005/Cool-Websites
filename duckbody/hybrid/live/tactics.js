@@ -11,7 +11,11 @@ const DUEL_D = 0.35, ALIGN_MAX_S = 3.0, SHOOT_D = 2.4, LANE_R = 0.18, PASS_MIN =
 const RECEIVE_S = 4.0, FOLLOW_S = 3.0, ROLE_EVERY = 15, SUPPORT_EVERY = 2.5, COVER_D = 0.6, CONTEST_D = 0.45, MARK_D = 0.3;
 const SHUFFLE_A = 0.12, SHUFFLE_T = 5.0;
 const AIM_Y = 0.35, DRIBBLE_D = [1.3, 3.2], DRIBBLE_FREE = 0.55, DRIBBLE_MAX_S = 5.0;
-const GAP = 0.4, CROWD_VX = 0.6, CROWD_WZ = 0.75, CROWD_VX_BALL = 0.75, PINNED_S = 1.5;
+const GAP = 0.4, CROWD_VX = 0.6, CROWD_WZ = 0.9, CROWD_VX_BALL = 0.75, PINNED_S = 1.5;
+// ball at the feet out of view (tactics.py FIND_*), kick-ready approach / kick on the move (GLIDE_*), walk-through strike
+const FIND_D = 0.3, FIND_BACK_X = 0.06, FIND_BACK_Y = 0.10, FIND_BACK_VX = -0.45, FIND_MAX_S = 1.5;
+const GLIDE_D = 0.45, GLIDE_PHI = 0.35, GLIDE_VX = 0.4, GLIDE_HEAD_X = 0.24, HOME_S = 0.3, GLIDE_WIN = [-0.025, 0.015], GLIDE_TOL_Y = 0.022;
+const FOOT_Y = 0.042, STRIKE_OPP = 0.45, POKE_D = 0.3, SCRAMBLE_D = 0.25;
 
 // ---------------------------------------------------------------- 2-D helpers ([x, y] arrays)
 export const wrap = a => { a = (a + Math.PI) % (2 * Math.PI); if (a < 0) a += 2 * Math.PI; return a - Math.PI; };
@@ -49,6 +53,7 @@ class Mem {
     this.duel_hist = []; this.detour_until = -1.0; this.detour_sign = 1.0;
     this.run_target = null; this.run_t = -99.0;
     this.dribble_block = -1.0;
+    this.find_block = -1.0;
   }
   set_state(s, t) { if (s !== this.state) { this.state = s; this.state_t = t; } }
 }
@@ -333,13 +338,14 @@ export class TeamTactics {
     const st = wm.players.find(x => x.name === this.striker);
     const st_near = st !== undefined && norm(sub(st.pos, me.pos)) < 0.3;
     const st_db = st !== undefined ? norm(sub(st.pos, b)) : 9.0;
-    if (!restricted && db < CONTEST_D && opp_d < Math.min(0.45, st_db) && !st_near) {
-      if (!['approach', 'chase', 'duel', 'align', 'ready', 'dribble'].includes(mem.state)) mem.set_state('duel', t);
+    const poke = !restricted && db < POKE_D && !st_near && st_db > 0.2;
+    if (poke || (!restricted && db < CONTEST_D && opp_d < Math.min(0.45, st_db) && !st_near)) {
+      if (!['approach', 'chase', 'duel', 'align', 'ready', 'dribble', 'glide', 'find'].includes(mem.state)) mem.set_state('duel', t);
       const c = this.ball_play(wm, me, mem, p, b);
       c.state = 'contest:' + c.state;
       return c;
     }
-    if (['duel', 'align', 'ready', 'approach', 'chase', 'dribble'].includes(mem.state)) mem.set_state('cover', t);
+    if (['duel', 'align', 'ready', 'approach', 'chase', 'dribble', 'glide', 'find'].includes(mem.state)) mem.set_state('cover', t);
     let side = 1.0;
     const u = unit(sub(own, b)), n = [-u[1], u[0]];
     if (st !== undefined) side = dot(sub(st.pos, b), n) > 0 ? -1.0 : 1.0;
@@ -364,7 +370,7 @@ export class TeamTactics {
     const my_d = norm(sub(b, me.pos)), opp_d = this.nearest_opp(wm, b);
     const mate_d = minOf(wm.players.filter(x => x.name !== me.name && x.active && !x.down).map(x => norm(sub(x.pos, b))), 9.0);
     const claim = in_box && (my_d < 0.35 || (my_d < 0.7 && my_d < mate_d) || my_d < Math.min(opp_d, mate_d) - 0.1) && !restricted;
-    if (['approach', 'chase', 'align', 'ready', 'duel', 'dribble'].includes(mem.state)) {
+    if (['approach', 'chase', 'align', 'ready', 'duel', 'dribble', 'glide', 'find'].includes(mem.state)) {
       if (!in_box && bt[0] > -HX + PEN_AREA[0] + 0.35) mem.set_state('keeper', t);
       else { const c = this.ball_play(wm, me, mem, p, b); c.cam = true; return c; }
     } else if (claim) {
@@ -419,12 +425,67 @@ export class TeamTactics {
   }
 
   // ------------------------------------------------------------ ball play
+  find(me, mem, t, rel) {
+    mem.set_state('find', t);
+    const bear = Math.atan2(rel[1], rel[0]), head = rel[0] < 0.18 ? [clip(bear, -0.8, 0.8), FOOT_VIEW[1], FOOT_VIEW[0]] : [clip(bear, -0.8, 0.8), 0.6, null];
+    if (rel[0] < FIND_BACK_X && Math.abs(rel[1]) < FIND_BACK_Y) return new Cmd(FIND_BACK_VX, 0.0, 0.0, { head, cam: true, state: 'find:back' });
+    if (Math.abs(bear) > 1.0) return new Cmd(0.0, copysign(0.45, bear), copysign(1.0, bear), { head, cam: true, state: 'find:turn' });
+    return new Cmd(0.0, 0.0, 0.0, { head, cam: true, state: 'find:look' });
+  }
+  scramble(wm, me, rel, b) {
+    const dball = Math.hypot(rel[0], rel[1]);
+    if (dball > SCRAMBLE_D) return null;
+    const bear = Math.atan2(rel[1], rel[0]);
+    if (Math.abs(bear) > 1.9) return null;
+    const push = (Math.abs(bear) < 0.5 ? 0.0 : copysign(Math.PI / 2, bear)) + me.psi;
+    if (dot([Math.cos(push), Math.sin(push)], unit(sub(TeamTactics.own_goal(wm.dir), b))) > 0.5) return null;
+    if (Math.abs(bear) < 0.5) return [0.9, 0.0, clip(1.6 * bear, -0.7, 0.7)];
+    return [rel[0] > 0.04 ? 0.35 : 0.0, copysign(0.45, bear), copysign(1.0, bear)];
+  }
+  past_opponent(wm, b, k) {
+    const qs = this.opp_pos(wm).filter(q => norm(sub(q, b)) < 0.4);
+    if (!qs.length) return k;
+    let q = qs[0];
+    for (const x of qs) if (norm(sub(x, b)) < norm(sub(q, b))) q = x;
+    const ka = Math.atan2(k[1], k[0]), ang = wrap(headingTo(b, q) - ka);
+    if (Math.abs(ang) > 0.7) return k;
+    const a = ka - copysign(0.8, ang);
+    return [Math.cos(a), Math.sin(a)];
+  }
+  pick_foot(wm, rel, b) {
+    let foot = rel[1] > 0 ? 'left' : 'right';
+    if (b[1] > HY - 0.15) foot = wm.dir > 0 ? 'left' : 'right';
+    else if (b[1] < -HY + 0.15) foot = wm.dir > 0 ? 'right' : 'left';
+    return foot;
+  }
+  glide(wm, me, mem, p, b, rel, k, n, r, eh, opp_d, dphi) {
+    const t = wm.t, dball = Math.hypot(rel[0], rel[1]), home = rel[0] > GLIDE_HEAD_X ? [0.0, 0.6, null] : [0.0, 0.0, null];
+    const c = (vx = 0, vy = 0, wz = 0, state = 'glide') => new Cmd(vx, vy, wz, { head: home, cam: true, state });
+    if (dball > GLIDE_D + 0.15 || Math.abs(dphi) > 0.8 || !['own', 'mem'].includes(p.ball_src)) { mem.set_state('approach', t); return c(0, 0, 0, 'approach'); }
+    if (opp_d < DUEL_D - 0.1) { mem.set_state('duel', t); return c(0, 0, 0, 'duel'); }
+    const ty = mem.foot === 'left' ? KICK_Y : -KICK_Y, ex = rel[0] - KICK_X, ey = rel[1] - ty;
+    if (ex < -0.045) return c(FIND_BACK_VX, 0.0, 0.0, 'glide:back');
+    if (GLIDE_WIN[0] < ex && ex < GLIDE_WIN[1] && Math.abs(ey) < GLIDE_TOL_Y && Math.abs(eh) < 0.3) {
+      const hh = p.head_home ?? 0.0;
+      if (hh >= HOME_S && (p.swing === mem.foot || (p.moving ?? 1.0) < 0.05)) {
+        mem.set_state('kick', t);
+        return new Cmd(0, 0, 0, { head: home, kick: mem.foot, kind: mem.aim_kind || 'forward', mate: mem.aim_mate ?? null, cam: true, state: 'kick' });
+      }
+      if (hh < HOME_S) return c(0, 0, 0, 'glide:wait');
+      return c(GLIDE_VX, 0.0, 0.0, 'glide:phase');
+    }
+    if (ex < GLIDE_WIN[0]) return c(FIND_BACK_VX, 0.0, 0.0, 'glide:back');
+    const lat = dot(r, n), psi_d = Math.atan2(k[1], k[0]) - clip(4.0 * (lat + ty), -0.35, 0.35);
+    const e = wrap(psi_d - me.psi), wz = Math.abs(e) < 0.08 ? 0.0 : clip(2.0 * e, -0.7, 0.7);
+    if (ex < 0.06 && Math.abs(ey) > GLIDE_TOL_Y) return c(0.0, copysign(0.45, ey), wz, 'glide:side');
+    return c(GLIDE_VX, 0.0, wz);
+  }
   ball_play(wm, me, mem, p, b) {
     const t = wm.t, src = p.ball_src;
     const fresh_age = p.ball_age ?? 9.0;
-    if (p.ball_src === 'own' && p.ball !== null && p.ball !== undefined) b = [p.ball[0], p.ball[1]];
+    if (['own', 'mem', 'touch'].includes(p.ball_src) && p.ball !== null && p.ball !== undefined) b = [p.ball[0], p.ball[1]];
     const rel = me.to_body(b), dball = Math.hypot(rel[0], rel[1]);
-    if (['search', 'position', 'keeper', 'support', 'block', 'mark', 'press', 'cover', 'receive', 'give-and-go', 'hold', 'wait'].includes(mem.state)) {
+    if (['search', 'position', 'keeper', 'support', 'block', 'mark', 'press', 'cover', 'receive', 'give-and-go', 'hold', 'wait', 'find'].includes(mem.state)) {
       mem.set_state('approach', t);
       mem.search_dir = Math.atan2(rel[1], rel[0]) >= 0 ? 1.0 : -1.0;
     }
@@ -440,12 +501,22 @@ export class TeamTactics {
     const cmd = (vx = 0, vy = 0, wz = 0, head = null, state = null) =>
       new Cmd(vx, vy, wz, { head: head !== null ? head : lookAt(me, b), cam: true, state: state || mem.state });
 
+    if (dball < FIND_D && mem.state !== 'ready' && (['mem', 'touch'].includes(src) || (src === 'team' && fresh_age > 0.3)) && t > mem.find_block) {
+      if (mem.state === 'find' && t - mem.state_t > FIND_MAX_S) { mem.find_block = t + 2.0; mem.set_state('duel', t); }
+      else return this.find(me, mem, t, rel);
+    }
+    const home_ok = (p.head_home ?? 0.0) >= HOME_S;
     if (['approach', 'chase', 'duel', 'align', 'dribble'].includes(mem.state) && own_fresh && Math.abs(eh) < QUICK_H
+        && (mem.state === 'align' || home_ok)
         && !(mem.state === 'dribble' && norm(sub([wm.dir * HX, 0.0], b)) > SHOOT_D)) {
       for (const [foot, ty] of [['left', KICK_Y], ['right', -KICK_Y]]) {
         const ex = rel[0] - KICK_X, ey = rel[1] - ty;
         if (QUICK_X[0] < ex && ex < QUICK_X[1] && Math.abs(ey) < QUICK_Y) {
           mem.foot = foot;
+          if (home_ok) {
+            mem.set_state('kick', t);
+            return new Cmd(0, 0, 0, { head: [0.0, 0.0, null], kick: foot, kind: mem.aim_kind || 'forward', mate: mem.aim_mate ?? null, cam: true, state: 'kick' });
+          }
           mem.kick_at = { foot, kind: mem.aim_kind, mate: mem.aim_mate, quick: true };
           mem.set_state('ready', t);
           return cmd(0, 0, 0, [0.0, 0.0, null]);
@@ -460,6 +531,7 @@ export class TeamTactics {
       if (mem.duel_hist.length === nh && norm(sub(mem.duel_hist[0], b)) < 0.05 && t > mem.detour_until) {
         mem.detour_until = t + 1.2; mem.detour_sign = mem.rng.choice([-1.0, 1.0]); mem.duel_hist = [];
       }
+      if (t < mem.detour_until - 0.8) return cmd(-0.5, 0.0, 0.0, null, 'duel:back');
       if (t < mem.detour_until) {
         const a = phi_d + mem.detour_sign * 1.0;
         const target = clipLim(add(b, [0.22 * Math.cos(a), 0.22 * Math.sin(a)]), lim);
@@ -468,12 +540,17 @@ export class TeamTactics {
       }
       let vx, vy, wz;
       if (Math.abs(dphi) > 1.0) {
+        const sc = this.scramble(wm, me, rel, b);
+        if (sc !== null) return cmd(sc[0], sc[1], sc[2], null, 'duel:scramble');
         const a = phi_d + clip(dphi, -0.9, 0.9);
         const target = clipLim(add(b, [0.2 * Math.cos(a), 0.2 * Math.sin(a)]), lim);
         [vx, vy, wz] = goTo(me, target, 1.0);
       } else {
         const sg = rel[1] > 0 ? 1.0 : -1.0;
-        [vx, vy, wz] = goTo(me, sub(add(b, mul(k, 0.15)), mul(n, sg * KICK_Y)), 1.0);
+        const kk = this.past_opponent(wm, b, k), nn = [-kk[1], kk[0]];
+        [vx, vy, wz] = goTo(me, sub(add(b, mul(kk, 0.15)), mul(nn, sg * FOOT_Y)), 1.0);
+        if (vx > 0.0 && Math.abs(Math.atan2(rel[1], rel[0])) < 0.5) vx = Math.max(vx, 0.9);
+        return cmd(vx, vy, wz, null, 'duel:strike');
       }
       return cmd(vx, vy, wz);
     }
@@ -495,6 +572,13 @@ export class TeamTactics {
           mem.set_state('dribble', t);
           return cmd();
         }
+        const bv = this.ball_vel(), bspeed = Math.hypot(bv[0], bv[1]);
+        if (Math.abs(dphi) < GLIDE_PHI && dball < GLIDE_D && ['own', 'mem'].includes(src) && bspeed < 0.25) {
+          if (opp_d < STRIKE_OPP) { mem.set_state('duel', t); return cmd(); }
+          mem.set_state('glide', t);
+          mem.foot = this.pick_foot(wm, rel, b);
+          return cmd(0, 0, 0, [0.0, 0.0, null]);
+        }
         const P = clipLim(sub(b, mul(k, BEHIND)), lim);
         let dd;
         [vx, vy, wz, dd] = goTo(me, P, dball > 0.8 ? 1.1 : 0.9, Math.atan2(k[1], k[0]));
@@ -502,6 +586,7 @@ export class TeamTactics {
       }
       return cmd(vx, vy, wz);
     }
+    if (mem.state === 'glide') return this.glide(wm, me, mem, p, b, rel, k, n, r, eh, opp_d, dphi);
     if (mem.state === 'dribble') {
       const goal = [wm.dir * HX, 0.0], dg = norm(sub(goal, b));
       if (dg < DRIBBLE_D[0] || opp_d < DUEL_D || t - mem.state_t > DRIBBLE_MAX_S || dball > 0.35 || Math.abs(dphi) > 1.0) {
@@ -510,7 +595,7 @@ export class TeamTactics {
         return cmd();
       }
       const kd = unit(sub(goal, b)), nd = [-kd[1], kd[0]], sg = rel[1] > 0 ? 1.0 : -1.0;
-      const [vx, vy, wz] = goTo(me, sub(add(b, mul(kd, 0.15)), mul(nd, sg * KICK_Y)), 0.75);
+      const [vx, vy, wz] = goTo(me, sub(add(b, mul(kd, 0.15)), mul(nd, sg * FOOT_Y)), 0.75);
       return cmd(vx, vy, wz);
     }
     if (mem.state === 'align') {
@@ -541,7 +626,9 @@ export class TeamTactics {
     }
     if (mem.state === 'ready') {
       const quick = (mem.kick_at || {}).quick;
-      if (t - mem.state_t >= (quick ? QUICK_READY_S : READY_S)) {
+      const ty = mem.foot === 'left' ? KICK_Y : -KICK_Y;
+      if (['own', 'mem', 'touch'].includes(src) && (Math.abs(rel[0] - KICK_X) > 0.06 || Math.abs(rel[1] - ty) > 0.05)) { mem.set_state('approach', t); return cmd(); }
+      if (t - mem.state_t >= (quick ? QUICK_READY_S : READY_S) || (t - mem.state_t >= 0.1 && (p.head_home ?? 0.0) >= HOME_S)) {
         mem.set_state('kick', t);
         const ka = mem.kick_at || {};
         return new Cmd(0, 0, 0, { head: [0.0, 0.0, null], kick: mem.foot, kind: ka.kind || 'forward', mate: ka.mate ?? null, cam: true, state: 'kick' });

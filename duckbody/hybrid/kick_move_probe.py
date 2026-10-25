@@ -36,7 +36,8 @@ HEADS = {"home": (0.0, 0.0, None), "p03": (0.0, 0.3, None), "p06": (0.0, 0.6, No
          "foot": (0.0, SO.FOOT_VIEW[1], SO.FOOT_VIEW[0])}
 
 
-def kick_move_trial(seed, foot, vx, phase, dx, dy, mode="kick", head="home", decel=0.0, warm=2.0, after=2.0):
+def kick_move_trial(seed, foot, vx, phase, dx, dy, mode="kick", head="home", decel=0.0, warm=2.0, after=2.0,
+                    head_up=None):
     import mujoco
     P = SO.Pitch(seed=seed, randomize=True, cam=False)
     sim = P.sim
@@ -91,6 +92,13 @@ def kick_move_trial(seed, foot, vx, phase, dx, dy, mode="kick", head="home", dec
     bx, by = 0.09 + dx, fy + dy
     P.set_ball(p[0] + c * bx - s * by, p[1] + s * bx + c * by)
     b0, _ = P.ball()
+    if head_up is not None:                          # head from `head` back home, kick after head_up s
+        rt.look(0.0, 0.0)
+        for _ in range(int(round(head_up * rh.HZ))):
+            if rt.mode == "drive":
+                rt.drive(*(rt.vel_goal))
+            rt.tick()
+        b0, _ = P.ball()
     if mode == "kick":
         rt.command(f"kick {foot}")
     vmax, vdir, t_hit, falls0 = 0.0, None, None, rt.falls
@@ -108,6 +116,7 @@ def kick_move_trial(seed, foot, vx, phase, dx, dy, mode="kick", head="home", dec
                 t_hit = k * rh.DT
     b1, _ = P.ball()
     return dict(seed=seed, foot=foot, vx=vx, phase=phase, dx=dx, dy=dy, mode=mode, head=head, decel=decel, trig=True,
+                head_up=head_up,
                 v_trunk=round(v_trunk, 3), hit=vmax > 0.3, v=round(vmax, 3),
                 dir_deg=None if vdir is None else round(math.degrees(vdir), 1), t_hit=t_hit,
                 rolled=round(float(np.hypot(*(b1[:2] - b0[:2]))), 3), up=rt.falls == falls0 and not rt.lying())
@@ -137,6 +146,10 @@ def grid(name):
         for seed, foot, hd, dx in itertools.product((0, 1, 2), ("left", "right"), ("home", "p03", "p06", "foot"),
                                                     (0.0, 0.03)):
             G.append(dict(seed=seed, foot=foot, vx=0.0, phase=0, dx=dx, dy=-0.01, head=hd))
+    elif name == "headup":        # standing, head from the foot view / pitched back home, kick after head_up s
+        for seed, foot, hd, hu in itertools.product((0, 1, 2), ("left", "right"), ("p03", "p06", "foot"),
+                                                    (0.1, 0.25, 0.4, 0.6, 0.8)):
+            G.append(dict(seed=seed, foot=foot, vx=0.0, phase=0, dx=0.0, dy=-0.01, head=hd, head_up=hu))
     return G
 
 

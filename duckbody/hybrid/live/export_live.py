@@ -117,6 +117,9 @@ def for_wasm(xml):
     return re.sub(r' input="(pos)?"', "", xml)
 
 
+LEG_BODIES = ("ankle_left", "ankle_right", "leg", "leg_2", "upper_leg_left", "upper_leg_right")   # leg touch (match.py)
+
+
 def meta(m, robots=M.ROBOTS):
     from bam.model import load_model
     bam = load_model(motor_name="xl330", model="m6")
@@ -141,7 +144,9 @@ def meta(m, robots=M.ROBOTS):
                         free_q=int(m.jnt_qposadr[free]), free_v=d0, trunk=trunk, gyro=int(s.adr[0]),
                         mouth=m.actuator(f"{name}_mouth").id, cam=m.camera(f"{name}_eye").id,
                         bodies=bodies, body_names=[m.body(b).name[len(name) + 1:] for b in bodies],
-                        geom0=min(geoms), geom1=max(geoms), jaw=m.body(f"{name}_jaw_soft").id))
+                        geom0=min(geoms), geom1=max(geoms), jaw=m.body(f"{name}_jaw_soft").id,
+                        legs={str(g): int(m.geom_bodyid[g]) for g in geoms
+                              if m.body(int(m.geom_bodyid[g])).name[len(name) + 1:] in LEG_BODIES}))
     p = {k: getattr(bam, k).value for k in ("kt", "R", "armature", "friction_base", "friction_stribeck",
                                              "load_friction_motor", "load_friction_external", "load_friction_motor_stribeck",
                                              "load_friction_external_stribeck", "load_friction_motor_quad",

@@ -85,9 +85,33 @@ CONTEST_D = 0.45            # second player joins the contest when the ball is t
 MARK_D = 0.3                # markers stay this far goal-side of their opponent
 SHUFFLE_A, SHUFFLE_T = 0.12, 5.0   # jockeying at a spot: +-12 cm sideways, period 5 s
 GAP = 0.4                   # off-ball targets keep this far from teammates
-CROWD_VX, CROWD_WZ = 0.6, 0.75   # speed limits next to other ducks
+CROWD_VX, CROWD_WZ = 0.6, 0.9    # speed limits next to other ducks (turning: velstand 0.75 -> ~0.7 rad/s, 0.9 -> ~0.9)
 CROWD_VX_BALL = 0.75        # ... for the player fighting for the ball (it has to push)
 PINNED_S = 1.5              # duel: the ball hasn't moved 5 cm in this long -> step round it, try from the side
+# ball at the feet, out of the camera's view (under the body, between / behind the feet): the player's estimate is its
+# memory ("mem": last fix + odometry + the ball's last velocity), a leg touch ("touch") or a teammate's ("team")
+FIND_D = 0.3                # within this: find it at the feet (look down, step back / quarter turn), never a search turn
+FIND_BACK_X, FIND_BACK_Y = 0.06, 0.10   # body frame: the ball is here (under / behind the toes) -> step back
+                            # (the head camera, head down, sees x 0.04-0.22 m ahead of the trunk, |y| < 0.1 m; head at
+                            # home nothing closer than 0.34 m; head pitch 0.6: 0.14 m)
+FIND_BACK_VX = -0.45        # velstand ~ -0.1 m/s: 5-10 cm in 0.5-1 s
+FIND_MAX_S = 1.5            # still not in view after this long: play it blind (walk through the estimate) for 2 s
+# kick-ready approach ("glide") and kick on the move (kick_move_probe.py): the kick brains do nothing unless the head
+# is at home (head pitch 0.3 already: 0/12), so the head goes home GLIDE_D before the ball and the duck walks in on
+# its memory / the last fixes; the kick starts from a slow walk (drive 0.4) when the kicking foot is in the air
+# (probe: 13/16 hits, ~0.8 m/s, no falls; from drive 0.7-1.0 the duck falls in 10-75 % of the kicks)
+GLIDE_D = 0.45              # start the glide (head home) this far from the ball, behind it on the aim line
+GLIDE_PHI = 0.35            # ... within this angle of the line behind the ball
+GLIDE_VX = 0.4              # walk-in command (velstand ~0.2 m/s)
+GLIDE_HEAD_X = 0.24         # head pitched down until the ball is this close (body x), then home for the kick
+HOME_S = 0.3                # head command at home this long before a kick (probe: from the foot view, pitch 0.3 or
+                            # 0.6, 0.25 s after the head command is home -> 18/18; the slew itself is 2 rad/s)
+GLIDE_WIN = (-0.025, 0.015)  # kick when the ball is this far from the kick spot (KICK_X) ...
+GLIDE_TOL_Y = 0.022         # ... and this close sideways
+FOOT_Y = 0.042              # the feet's line: a ball walked through on it goes about straight (probe)
+STRIKE_OPP = 0.45           # behind the ball and an opponent this close: no time to glide -> walk through it fast
+SCRAMBLE_D = 0.25          # duel: a ball this close but not in front is pushed out from where it is (scramble)
+POKE_D = 0.3                # the second player this close to the ball (pressing) plays it (walk through) instead of standing
 
 
 def wrap(a):
@@ -137,6 +161,7 @@ class Mem:
         self.duel_hist, self.detour_until, self.detour_sign = [], -1.0, 1.0
         self.run_target, self.run_t = None, -99.0
         self.dribble_block = -1.0
+        self.find_block = -1.0
 
     def set_state(self, s, t):
         if s != self.state:
@@ -545,14 +570,15 @@ class TeamTactics:
         st = next((x for x in wm["players"] if x["name"] == self.striker), None)
         st_near = st is not None and float(np.linalg.norm(np.asarray(st["pos"], float) - me.pos)) < 0.3
         st_db = float(np.linalg.norm(np.asarray(st["pos"], float) - b)) if st is not None else 9.0
-        if not restricted and db < CONTEST_D and opp_d < min(0.45, st_db) and not st_near:   # they have it: 2 on it
+        poke = not restricted and db < POKE_D and not st_near and st_db > 0.2   # pressing right at the ball: play it
+        if poke or (not restricted and db < CONTEST_D and opp_d < min(0.45, st_db) and not st_near):   # 2 on it
             mem_state = mem.state
-            if mem_state not in ("approach", "chase", "duel", "align", "ready", "dribble"):
+            if mem_state not in ("approach", "chase", "duel", "align", "ready", "dribble", "glide", "find"):
                 mem.set_state("duel", t)
             c = self.ball_play(wm, me, mem, p, b)
             c.state = "contest:" + c.state
             return c
-        if mem.state in ("duel", "align", "ready", "approach", "chase", "dribble"):
+        if mem.state in ("duel", "align", "ready", "approach", "chase", "dribble", "glide", "find"):
             mem.set_state("cover", t)
         side = 1.0
         if st is not None:
@@ -591,7 +617,7 @@ class TeamTactics:
                       if x["name"] != me.name and x["active"] and not x["down"]] + [9.0])
         claim = in_box and (my_d < 0.35 or (my_d < 0.7 and my_d < mate_d) or my_d < min(opp_d, mate_d) - 0.1) \
             and not restricted
-        if mem.state in ("approach", "chase", "align", "ready", "duel", "dribble"):
+        if mem.state in ("approach", "chase", "align", "ready", "duel", "dribble", "glide", "find"):
             if not in_box and bt[0] > -HX + PEN_AREA[0] + 0.35:
                 mem.set_state("keeper", t)
             else:
@@ -661,17 +687,113 @@ class TeamTactics:
         return goal, "forward", None
 
     # ------------------------------------------------------------ ball play
+    def find(self, me, mem, t, rel):
+        """Ball near the feet but not in view: gaze straight down at where it should be (foot view); under / behind
+        the toes -> step back; to the side -> a quarter turn towards it; else hold still for the camera."""
+        mem.set_state("find", t)
+        bear = math.atan2(rel[1], rel[0])
+        head = (float(np.clip(bear, -0.8, 0.8)), FOOT_VIEW[1], FOOT_VIEW[0]) if rel[0] < 0.18 else \
+            (float(np.clip(bear, -0.8, 0.8)), 0.6, None)
+        if rel[0] < FIND_BACK_X and abs(rel[1]) < FIND_BACK_Y:
+            return Cmd(FIND_BACK_VX, 0.0, 0.0, head=head, cam=True, state="find:back")
+        if abs(bear) > 1.0:                          # quarter turn towards it, with a sidestep (a turn on the spot is
+            return Cmd(0.0, math.copysign(0.45, bear), math.copysign(1.0, bear), head=head, cam=True,   # easily blocked)
+                       state="find:turn")
+        return Cmd(0.0, 0.0, 0.0, head=head, cam=True, state="find:look")
+
+    def scramble(self, wm, me, rel, b):
+        """Contested ball right at the duck but not in front of it (pinned at a foot, beside the body): push it out
+        from where it is: in front -> walk through it; beside -> sidestep into it while turning towards it (drags
+        it out sideways); never when that pushes it towards our own goal, never for a ball behind. Turning on the
+        spot next to another duck mostly fails (it blocks the turn), a sidestep does not."""
+        dball = float(np.hypot(*rel))
+        if dball > SCRAMBLE_D:
+            return None
+        bear = math.atan2(rel[1], rel[0])
+        if abs(bear) > 1.9:
+            return None
+        push = (0.0 if abs(bear) < 0.5 else math.copysign(math.pi / 2, bear)) + me.psi    # field direction of the push
+        own = self.own_goal(wm["dir"])
+        if float(np.array([math.cos(push), math.sin(push)]) @ unit(own - b)) > 0.5:
+            return None
+        if abs(bear) < 0.5:
+            return 0.9, 0.0, float(np.clip(1.6 * bear, -0.7, 0.7))
+        return (0.35 if rel[0] > 0.04 else 0.0), math.copysign(0.45, bear), math.copysign(1.0, bear)
+
+    def past_opponent(self, wm, b, k):
+        """Walk-through direction: the aim, unless an opponent stands on that line right at the ball (pushing into
+        his feet pins it): then 0.8 rad to the side away from him."""
+        qs = [q for q in self.opp_pos(wm) if float(np.linalg.norm(q - b)) < 0.4]
+        if not qs:
+            return k
+        q = min(qs, key=lambda q: float(np.linalg.norm(q - b)))
+        ka = math.atan2(k[1], k[0])
+        ang = wrap(heading_to(b, q) - ka)
+        if abs(ang) > 0.7:
+            return k
+        a = ka - math.copysign(0.8, ang)
+        return np.array([math.cos(a), math.sin(a)])
+
+    def pick_foot(self, wm, rel, b):
+        foot = "left" if rel[1] > 0 else "right"
+        if b[1] > HY - 0.15:
+            foot = "left" if wm["dir"] > 0 else "right"
+        elif b[1] < -HY + 0.15:
+            foot = "right" if wm["dir"] > 0 else "left"
+        return foot
+
+    def glide(self, wm, me, mem, p, b, rel, k, n, r, eh, opp_d, dphi):
+        """Kick-ready approach: head at home, walk in slowly on the line behind the ball steering the ball onto the
+        kicking foot (memory + odometry once the camera no longer sees it), and kick without stopping when it is in
+        the window and that foot is in the air. Ball too close -> step back; missed it -> walk through it."""
+        t = wm["t"]
+        dball = float(np.hypot(*rel))
+        # head pitched 0.6 (the camera sees 0.14-0.4 m ahead) until the ball is GLIDE_HEAD_X ahead, then home: the
+        # last fixes are close, and the head has been home > HOME_S when the ball reaches the kick window
+        home = (0.0, 0.6, None) if rel[0] > GLIDE_HEAD_X else (0.0, 0.0, None)
+
+        def c(vx=0.0, vy=0.0, wz=0.0, state="glide"):
+            return Cmd(vx, vy, wz, head=home, cam=True, state=state)
+        if dball > GLIDE_D + 0.15 or abs(dphi) > 0.8 or p["ball_src"] not in ("own", "mem"):
+            mem.set_state("approach", t)
+            return c(state="approach")
+        if opp_d < DUEL_D - 0.1:
+            mem.set_state("duel", t)
+            return c(state="duel")
+        ty = KICK_Y if mem.foot == "left" else -KICK_Y
+        ex, ey = rel[0] - KICK_X, rel[1] - ty
+        if ex < -0.045:                              # too close (under the toes): step back, then kick
+            return c(FIND_BACK_VX, 0.0, 0.0, state="glide:back")
+        if GLIDE_WIN[0] < ex < GLIDE_WIN[1] and abs(ey) < GLIDE_TOL_Y and abs(eh) < 0.3:
+            if p.get("head_home", 0.0) >= HOME_S and (p.get("swing") == mem.foot or p.get("moving", 1.0) < 0.05):
+                mem.set_state("kick", t)
+                return Cmd(head=home, kick=mem.foot, kind=mem.aim_kind or "forward", mate=mem.aim_mate, cam=True,
+                           state="kick")
+            if p.get("head_home", 0.0) < HOME_S:        # head not home long enough yet: stop and wait for it
+                return c(state="glide:wait")
+            return c(GLIDE_VX, 0.0, 0.0, state="glide:phase")   # wrong foot in the air: one more step
+        if ex < GLIDE_WIN[0]:                        # just past the window: back off a little
+            return c(FIND_BACK_VX, 0.0, 0.0, state="glide:back")
+        # steer: heading on the aim, the trunk's sideways offset from the ball's line -> the kicking foot's line
+        lat = float(r @ n)
+        psi_d = math.atan2(k[1], k[0]) - float(np.clip(4.0 * (lat + ty), -0.35, 0.35))
+        e = wrap(psi_d - me.psi)
+        wz = 0.0 if abs(e) < 0.08 else float(np.clip(2.0 * e, -0.7, 0.7))
+        if ex < 0.06 and abs(ey) > GLIDE_TOL_Y:      # close but off to the side: sidestep onto it
+            return c(0.0, math.copysign(0.45, ey), wz, state="glide:side")
+        return c(GLIDE_VX, 0.0, wz)
+
     def ball_play(self, wm, me, mem, p, b):
         """soccer.py's kick cycle with the duel; returns a Cmd (kick set on the tick the kick starts)."""
         t = wm["t"]
         src = p["ball_src"]
         fresh_age = p.get("ball_age", 9.0)
-        if p["ball_src"] == "own" and p["ball"] is not None:
+        if p["ball_src"] in ("own", "mem", "touch") and p["ball"] is not None:
             b = np.asarray(p["ball"], float)
         rel = me.to_body(b)
         dball = float(np.hypot(*rel))
         if mem.state in ("search", "position", "keeper", "support", "block", "mark", "press", "cover", "receive",
-                         "give-and-go", "hold", "wait"):
+                         "give-and-go", "hold", "wait", "find"):
             mem.set_state("approach", t)
             mem.search_dir = 1.0 if math.atan2(rel[1], rel[0]) >= 0 else -1.0
         opp_d = self.nearest_opp(wm, b)
@@ -691,13 +813,28 @@ class TeamTactics:
             return Cmd(vx, vy, wz, head=head if head is not None else look_at(me, b), cam=True,
                        state=state or mem.state)
 
+        # the ball is at the feet but the camera has lost it: look down and bring it into view
+        if dball < FIND_D and mem.state != "ready" and (src in ("mem", "touch") or (src == "team" and fresh_age > 0.3)) \
+                and t > mem.find_block:
+            if mem.state == "find" and t - mem.state_t > FIND_MAX_S:
+                mem.find_block = t + 2.0
+                mem.set_state("duel", t)
+            else:
+                return self.find(me, mem, t, rel)
         # quick kick: the ball is already in a foot's kick window and the aim roughly ahead -> head up, kick
+        # (moving states only when the head is already home: they never stop to wait for it)
+        home_ok = p.get("head_home", 0.0) >= HOME_S
         if mem.state in ("approach", "chase", "duel", "align", "dribble") and own_fresh and abs(eh) < QUICK_H \
+                and (mem.state == "align" or home_ok) \
                 and not (mem.state == "dribble" and float(np.linalg.norm(np.array([wm["dir"] * HX, 0.0]) - b)) > SHOOT_D):
             for foot, ty in (("left", KICK_Y), ("right", -KICK_Y)):
                 ex, ey = rel[0] - KICK_X, rel[1] - ty
                 if QUICK_X[0] < ex < QUICK_X[1] and abs(ey) < QUICK_Y:
                     mem.foot = foot
+                    if home_ok:                      # head already home: kick now, no stop
+                        mem.set_state("kick", t)
+                        return Cmd(head=(0.0, 0.0, None), kick=foot, kind=mem.aim_kind or "forward", mate=mem.aim_mate,
+                                   cam=True, state="kick")
                     mem.kick_at = dict(foot=foot, kind=mem.aim_kind, mate=mem.aim_mate, quick=True)
                     mem.set_state("ready", t)
                     return cmd(head=(0.0, 0.0, None))
@@ -710,18 +847,28 @@ class TeamTactics:
             mem.duel_hist = (mem.duel_hist + [b.copy()])[-nh:]
             if len(mem.duel_hist) == nh and np.linalg.norm(mem.duel_hist[0] - b) < 0.05 and t > mem.detour_until:
                 mem.detour_until, mem.detour_sign, mem.duel_hist = t + 1.2, mem.rng.choice([-1.0, 1.0]), []
-            if t < mem.detour_until:                 # pinned: step round it (60 deg) and try from the side
+            if t < mem.detour_until - 0.8:           # pinned: first step back (frees a ball trapped at the feet) ...
+                return cmd(-0.5, 0.0, 0.0, state="duel:back")
+            if t < mem.detour_until:                 # ... then step round it (60 deg) and try from the side
                 a = phi_d + mem.detour_sign * 1.0
                 target = np.clip(b + 0.22 * np.array([math.cos(a), math.sin(a)]), -lim, lim)
                 vx, vy, wz, _ = go_to(me, target, 1.0)
                 return cmd(vx, vy, wz)
-            if abs(dphi) > 1.0:                      # not behind it: tight orbit
+            if abs(dphi) > 1.0:                      # not behind it: play it from where it is (step / sidestep into
+                sc = self.scramble(wm, me, rel, b)    # it) unless that sends it towards our goal; else tight orbit
+                if sc is not None:
+                    return cmd(*sc, state="duel:scramble")
                 a = phi_d + float(np.clip(dphi, -0.9, 0.9))
                 target = np.clip(b + 0.2 * np.array([math.cos(a), math.sin(a)]), -lim, lim)
                 vx, vy, wz, _ = go_to(me, target, 1.0)
-            else:                                    # behind it: walk through it towards the aim
-                sg = 1.0 if rel[1] > 0 else -1.0
-                vx, vy, wz, _ = go_to(me, b + 0.15 * k - sg * KICK_Y * n, 1.0)
+            else:                                    # behind it: walk through it towards the aim, briskly, the ball
+                sg = 1.0 if rel[1] > 0 else -1.0     # on a foot's line (goes about straight; probe: ~0.9 m/s)
+                kk = self.past_opponent(wm, b, k)
+                nn = np.array([-kk[1], kk[0]])
+                vx, vy, wz, _ = go_to(me, b + 0.15 * kk - sg * FOOT_Y * nn, 1.0)
+                if vx > 0.0 and abs(math.atan2(rel[1], rel[0])) < 0.5:
+                    vx = max(vx, 0.9)
+                return cmd(vx, vy, wz, state="duel:strike")
             return cmd(vx, vy, wz)
         if mem.state in ("approach", "chase"):
             mem.set_state("chase" if dball > 0.6 else "approach", t)
@@ -740,12 +887,22 @@ class TeamTactics:
                         and abs(dphi) < 0.35 and dball < 0.3 and t > mem.dribble_block:
                     mem.set_state("dribble", t)
                     return cmd()
+                bspeed = float(np.hypot(*self.ball_vel()))
+                if abs(dphi) < GLIDE_PHI and dball < GLIDE_D and src in ("own", "mem") and bspeed < 0.25:
+                    if opp_d < STRIKE_OPP:           # pressed: walk through it now (duel = walk-through strike)
+                        mem.set_state("duel", t)
+                        return cmd()
+                    mem.set_state("glide", t)
+                    mem.foot = self.pick_foot(wm, rel, b)
+                    return cmd(head=(0.0, 0.0, None))
                 P = np.clip(b - BEHIND * k, -lim, lim)
                 vx, vy, wz, dd = go_to(me, P, 1.1 if dball > 0.8 else 0.9, face=math.atan2(k[1], k[0]))
                 if src == "own" and (dd < 0.08 or (along < -0.12 and abs(lat) < 0.07 and dball < BEHIND + 0.08)):
                     mem.set_state("align", t)
                     mem.foot = None
             return cmd(vx, vy, wz)
+        if mem.state == "glide":
+            return self.glide(wm, me, mem, p, b, rel, k, n, r, eh, opp_d, dphi)
         if mem.state == "dribble":                   # carry it: walk through the ball towards the goal
             goal = np.array([wm["dir"] * HX, 0.0])
             dg = float(np.linalg.norm(goal - b))
@@ -756,7 +913,7 @@ class TeamTactics:
             kd = unit(goal - b)
             nd = np.array([-kd[1], kd[0]])
             sg = 1.0 if rel[1] > 0 else -1.0
-            vx, vy, wz, _ = go_to(me, b + 0.15 * kd - sg * KICK_Y * nd, 0.75)
+            vx, vy, wz, _ = go_to(me, b + 0.15 * kd - sg * FOOT_Y * nd, 0.75)
             return cmd(vx, vy, wz)
         if mem.state == "align":
             head = (0.0, FOOT_VIEW[1], FOOT_VIEW[0])
@@ -795,7 +952,12 @@ class TeamTactics:
             return cmd(vx, vy, wz, head=head)
         if mem.state == "ready":
             quick = (mem.kick_at or {}).get("quick")
-            if t - mem.state_t >= (QUICK_READY_S if quick else READY_S):
+            ty = KICK_Y if mem.foot == "left" else -KICK_Y
+            if src in ("own", "mem", "touch") and (abs(rel[0] - KICK_X) > 0.06 or abs(rel[1] - ty) > 0.05):
+                mem.set_state("approach", t)             # the ball moved away while the head came up: start again
+                return cmd()
+            if t - mem.state_t >= (QUICK_READY_S if quick else READY_S) or \
+                    (t - mem.state_t >= 0.1 and p.get("head_home", 0.0) >= HOME_S):
                 mem.set_state("kick", t)
                 ka = mem.kick_at or {}
                 return Cmd(head=(0.0, 0.0, None), kick=mem.foot, kind=ka.get("kind") or "forward", mate=ka.get("mate"),
