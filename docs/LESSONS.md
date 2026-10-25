@@ -172,3 +172,8 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   which looked like forgetting. Watching the jumps: both still cleared 15 cm bars cleanly, but leapt further
   (landing 0.6-1.05 m past the bar, against 0.5-0.8 m) and crashed about half a second after landing. A
   harder leap helps on high practice bars; the landing has to be relearned each time. Run 15c relearned it by 8M.
+- **Judge a brain where it will be used.** The 9M jump brain beat 6.5M on the exam (15 cm 95% vs 80%, 25 cm
+  45% vs 40%), but in Bolt's Castle at 20 cm it fell 9-16 times in 8 games where 6.5M fell twice: when 6.5M
+  misses, it touches the bar and stays up; when 9M misses, it crashes on landing. In a game a fall costs a
+  life, so the games keep 6.5M. Bigger updates (run 15f: 16k steps each, ~160 jumps) stopped the collapses
+  that broke runs 15c, 15d and 15e within 500k steps.
