@@ -1,4 +1,9 @@
-"""5-a-side duck football: 11 hybrid ducks (Blue 5, Yellow 5, a referee in black) in one MuJoCo model, on a pitch
+"""BEFORE THE TACTICS REWRITE: match.py as it was (old Player behaviour: only the striker went for the ball, the others
+walked to spots relative to the ball; dropped ball after 20 s), plus the same Metrics as match.py, kept only to reproduce the "before"
+column of the README's before/after table (results_match_activity.json):
+    MUJOCO_GL=osmesa OMP_NUM_THREADS=1 $PY duckbody/hybrid/_match_before.py --one 0 --out before_s0.json
+
+5-a-side duck football: 11 hybrid ducks (Blue 5, Yellow 5, a referee in black) in one MuJoCo model, on a pitch
 scaled from RoboCup Humanoid KidSize. Every duck runs the hybrid runtime (Microduck's brains + runtime_hybrid.py), the
 servo model is BAM's XL330 for all 11 x 14 servos, contacts between ducks are on.
 
