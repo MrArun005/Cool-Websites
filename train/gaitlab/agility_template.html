@@ -17,7 +17,7 @@
   <header style="display:grid;gap:6px">
     <span class="label">Bolt robot dog · a competition on the live simulator</span>
     <h1>Bolt Agility Cup</h1>
-    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through every pole, take each tunnel from the right end, jump the hurdles, and lie on the pause table for the judge's count of five. Every dog jumps for real, with Bolt's jump brain: it stops before the bar, steadies itself and leaps. The judge counts 5 faults for a missed pole, a wrong tunnel entry or a knocked bar, and 1 fault per second over the standard course time. Standard bars are 15 cm. The Championship class is much harder: 12 tighter poles, three tunnels, sharper turns, 20 cm bars and a strict course time, so even the best dogs rarely go clear. The fewest faults wins, then the fastest time. A fall is elimination. Everything runs in your browser, in the same physics as training.</p>
+    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through every pole, take each tunnel from the right end, jump the hurdles, and lie on the pause table for the judge's count of five. Every dog jumps for real, with Bolt's jump brain: it stops before the bar, steadies itself and leaps. The judge counts 5 faults for a missed pole, a wrong tunnel entry or a knocked bar, and 1 fault per second over the standard course time. Standard bars are 15 cm. The Championship class is much harder: 12 tighter poles, three tunnels, sharper turns, 20 cm bars and a strict course time, so even the best dogs rarely go clear. The fewest faults wins, then the fastest time. A fall is elimination, and so is taking more than twice the course time. Everything on the course is solid: the tunnel's walls and roof, the pause table, every weave pole, the hurdle stands and bars, and the posts. Bolt bumps into them instead of passing through. Everything runs in your browser, in the same physics as training.</p>
   </header>
 
   <section class="panel" aria-labelledby="ring">
@@ -107,27 +107,23 @@
     g.position.set(o.entry[0], o.entry[1], 0); g.rotation.z = o.h;
     if (o.kind === "weave") {
       const W = agility.WEAVE, L = W.spacing * (W.poles - 1);
-      g.add(box(L + 0.3, 0.06, 0.03, std("#9aa19c"), L / 2, 0, 0.015));
-      for (let k = 0; k < W.poles; k++) {
-        g.add(post(0.02, 1.0, white, k * W.spacing, 0));
-        for (const z of [0.25, 0.55, 0.85]) g.add(post(0.0215, 0.08, k % 2 ? blue : red, k * W.spacing, 0, z));
-      }
+      g.add(box(L + 0.3, 0.06, 0.006, std("#9aa19c"), L / 2, 0, 0.003));   // the base strip (paint); the poles are solid (props3d.js)
     } else if (o.kind === "tunnel") {
-      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, o.L, 40, 1, true), std("#2f6fb5", { side: THREE.DoubleSide, transparent: true, opacity: 0.45, depthWrite: false }));
-      tube.rotation.z = Math.PI / 2; tube.position.set(o.L / 2, 0, 0.42); g.add(tube);
-      for (let k = 0; k <= 6; k++) { const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.425, 0.012, 8, 40), std(k % 2 ? "#e8b62c" : "#1f4f86")); ring2.rotation.y = Math.PI / 2; ring2.position.set(k * o.L / 6, 0, 0.42); g.add(ring2); }
-    } else if (o.kind === "table") {
-      g.add(box(1.0, 1.0, 0.04, std("#e3620b", { roughness: 0.95 }), 0, 0, 0.02));
-      for (const [x, y] of [[0.47, 0.47], [0.47, -0.47], [-0.47, 0.47], [-0.47, -0.47]]) g.add(box(0.06, 0.06, 0.045, std("#7b5229"), x, y, 0.0225));
-    }   // hurdles: drawn from the physics (hurdles3d.js), where they really stand
+      // the tunnel's walls and roof are solid panels (props3d.js); these hoops trace its arch
+      const T = agility.TUNNEL, R = T.r + T.wall;
+      for (let k = 0; k <= 6; k++) {
+        const c = std(k % 2 ? "#e8b62c" : "#1f4f86"), hoop = new THREE.Mesh(new THREE.TorusGeometry(R, 0.012, 8, 40, Math.PI), c);
+        hoop.rotation.set(Math.PI / 2, Math.PI / 2, 0); hoop.position.set(k * o.L / 6, 0, T.r); g.add(hoop);
+        for (const s of [1, -1]) g.add(mesh(new THREE.CylinderGeometry(0.012, 0.012, T.r, 8), c, [k * o.L / 6, s * R, T.r / 2], [Math.PI / 2, 0, 0]));
+      }
+    }   // the table, poles, tunnel panels and hurdles are solid and drawn from the physics (props3d.js, hurdles3d.js)
     const sign = label(String(o.n), "#ffffff", "#191b1a");   // the judge's number for this obstacle
-    sign.position.set(-0.6, 0.75, 1.05); g.add(sign, post(0.012, 0.9, std("#9aa19c"), -0.6, 0.75));
+    sign.position.set(agility.SIGN[0], agility.SIGN[1], 1.05); g.add(sign);   // on a solid post (props3d.js)
     return g;
   }
   function gate(at, h, text, color) {
     const g = new THREE.Group(); g.position.set(at[0], at[1], 0); g.rotation.z = h;
-    for (const y of [0.9, -0.9]) g.add(post(0.035, 1.3, std(color), 0, y));
-    g.add(box(0.05, 1.86, 0.28, std(color), 0, 0, 1.42));
+    g.add(box(0.05, 1.86, 0.28, std(color), 0, 0, 1.42));   // on two solid posts (props3d.js)
     const s = label(text, color, "#ffffff", 0.5); s.position.set(0, 0, 1.85); g.add(s);
     return g;
   }
@@ -140,7 +136,7 @@
   }
 
   // ---------- the competition ----------
-  let lib, agility, bundle, drawHurdles = () => {}, bolt = null, course = null, round = null, queue = [], results = [], acc = 0, playing = true, speed = 1, seen = 0, bannerUntil = 0, wait = 0;
+  let lib, agility, bundle, drawHurdles = () => {}, drawProps = () => {}, bolt = null, course = null, round = null, queue = [], results = [], acc = 0, playing = true, speed = 1, seen = 0, bannerUntil = 0, wait = 0;
   const dogs = () => Object.keys(bundle.competitors);
   const SPEEDS = [1, 2, 4];
   function setSpeed(s) { speed = s; [...$("speeds").children].forEach((x, i) => x.setAttribute("aria-pressed", String(SPEEDS[i] === s))); }
@@ -177,7 +173,7 @@
   }
   function newCourse() {
     course = agility.buildAgility((Math.random() * 1e9) >>> 0, { cls, jumps: !!bundle.brains.jump });
-    bolt.reset(bundle.start); agility.placeJumps(bolt, course); buildRing();
+    agility.setupCourse(bolt, course, bundle.start); buildRing();   // the course's solid objects go into the physics
     round = null; queue = []; results = []; $("result").hidden = true;
     renderCourse(); renderBoard(); $("log").innerHTML = ""; log(`New ${course.cls} course: ${course.obstacles.length} obstacles, course time ${course.sct} s.`, "info");
     $("hDog").textContent = "–"; $("hObstacle").textContent = "Press Start"; $("hTime").textContent = "0.00 s"; $("hFaults").textContent = "0"; $("hSct").textContent = `${course.sct} s`;
@@ -235,10 +231,10 @@
   }
   async function boot() {
     try {
-      const [l, a, m, b, h3] = await Promise.all([import("./live.js"), import("./agility.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_agility.json").then((x) => x.json()), import("./hurdles3d.js")]);
+      const [l, a, m, b, h3, p3] = await Promise.all([import("./live.js"), import("./agility.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_agility.json").then((x) => x.json()), import("./hurdles3d.js"), import("./props3d.js")]);
       lib = l; agility = a; bundle = b;
       bolt = new lib.Bolt(await m.default(), bundle);
-      drawHurdles = h3.makeHurdles(THREE, scene, bolt, mesh, lin);
+      drawHurdles = h3.makeHurdles(THREE, scene, bolt, mesh, lin); drawProps = p3.makeProps(THREE, scene, bolt, mesh, lin);
     } catch (e) {
       console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
     }
@@ -277,7 +273,7 @@
         } else if ((wait -= dt * speed) <= 0) nextDog();
       }
       if (now > bannerUntil) $("banner").classList.remove("show");
-      drawBolt(); drawHurdles(); follow(); hud();
+      drawBolt(); drawHurdles(); drawProps(); follow(); hud();
       const s = now / 1000, cmd = round ? round.cmd.command : "stand";
       if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (cmd === "walk" ? 9 : 5));
       eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));

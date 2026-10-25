@@ -30,8 +30,8 @@ export function makeHurdles(THREE, scene, bolt, mesh, lin) {
     scene.add(stand, bar);
     return { stand, bar };
   });
-  const d = bolt.data;
   return function draw() {
+    const d = bolt.data;   // read each frame: a new course rebuilds the model (live.js setProps)
     bolt.real.forEach((H, k) => {
       const { stand, bar } = items[k];
       stand.visible = bar.visible = !!H.at;

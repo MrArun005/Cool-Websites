@@ -2,7 +2,7 @@
 //   node agility_test.mjs <mujoco.js> <bolt_live.json> [courses] [standard|championship]
 import fs from "fs";
 import { Bolt } from "./live.js";
-import { buildAgility, Round } from "./agility.js";
+import { buildAgility, Round, setupCourse } from "./agility.js";
 
 const [mujocoJs, bundlePath, courses = "10", cls = "standard"] = process.argv.slice(2);
 const mj = await (await import(mujocoJs)).default();
@@ -14,10 +14,11 @@ for (const [name, spec] of Object.entries(dogs)) {
   let clear = 0, elim = 0, times = [], faults = [], why = {};
   for (let c = 0; c < +courses; c++) {
     const course = buildAgility(500 + c, { cls, jumps: !!bundle.brains.jump });
+    setupCourse(bolt, course, bundle.start);
     const r = new Round(bolt, course, bundle.start, name);
     while (!r.over && r.t < 300) r.step();
     if (!r.over) why["timed out at " + (r.obstacle ? r.obstacle.title : "finish")] = (why["timed out at " + (r.obstacle ? r.obstacle.title : "finish")] || 0) + 1;
-    if (r.phase === "eliminated") { elim++; why["fell at " + (r.obstacle ? r.obstacle.title : "finish")] = (why["fell at " + (r.obstacle ? r.obstacle.title : "finish")] || 0) + 1; continue; }
+    if (r.phase === "eliminated") { elim++; const k = (r.clock > 2 * course.sct ? "too slow at " : "fell at ") + (r.obstacle ? r.obstacle.title : "finish"); why[k] = (why[k] || 0) + 1; continue; }
     if (r.phase !== "finished") continue;
     times.push(r.clock); faults.push(r.total); clear += r.total === 0;
     for (const n of r.notes) why[n] = (why[n] || 0) + 1;

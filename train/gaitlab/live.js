@@ -68,14 +68,40 @@ function pawTrot(phase, step, lift, height, turn, spin, hipX, hipY) {
 }
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+// a prop's orientation (w, x, y, z): turned `yaw` about the vertical, then tilted `roll` about its own x
+export function propQuat(p) {
+  const cz = Math.cos((p.yaw || 0) / 2), sz = Math.sin((p.yaw || 0) / 2), cx = Math.cos((p.roll || 0) / 2), sx = Math.sin((p.roll || 0) / 2);
+  return [cz * cx, cz * sx, sz * sx, sz * cx];
+}
 
 export class Bolt {
   constructor(mj, bundle) {
-    this.mj = mj; this.c = bundle.constants;
-    this.model = mj.MjModel.from_xml_string(bundle.xml);
-    this.data = new mj.MjData(this.model);
+    this.mj = mj; this.c = bundle.constants; this.baseXml = bundle.xml;
     this.brains = { posture: new Brain(bundle.brains.posture), walk: new Brain(bundle.brains.walk) };
     if (bundle.brains.jump) this.brains.jump = new Brain(bundle.brains.jump);   // jump_env.py: a real jump
+    this.build("");
+    this.dt = this.c.dt;
+  }
+  // Solid course objects (tunnel walls, the pause table, poles, posts, towers): static geoms in one body
+  // after the robot, so the robot's geom ids and qpos stay where the brains and the drawing expect them.
+  // props: [{ kind: "box" | "cyl", size: [half sizes] (cyl: [radius, half height]), pos: [x, y, z], yaw }]
+  // in world coordinates. The model is rebuilt; call before reset() for a new course.
+  setProps(props) {
+    this.props = props;
+    const geoms = props.map((p, i) => {
+      const q = propQuat(p);
+      return `<geom name="prop${i}" type="${p.kind === "cyl" ? "cylinder" : "box"}" size="${p.size.join(" ")}" ` +
+        `pos="${p.pos.join(" ")}" quat="${q.join(" ")}" rgba="0.8 0.8 0.8 1"/>`;
+    });
+    this.build(geoms.length ? `<body name="props">${geoms.join("")}</body>` : "");
+  }
+  build(propsXml) {
+    const mj = this.mj;
+    let xml = this.baseXml;
+    if (propsXml) xml = xml.includes('<body name="bar0"') ? xml.replace('<body name="bar0"', propsXml + '<body name="bar0"') : xml.replace("</worldbody>", propsXml + "</worldbody>");
+    if (this.data) { this.data.delete(); this.model.delete(); }
+    this.model = mj.MjModel.from_xml_string(xml);
+    this.data = new mj.MjData(this.model);
     const r = this.model.actuator_ctrlrange;
     this.lo = Array.from({ length: 12 }, (_, i) => r[2 * i]); this.hi = Array.from({ length: 12 }, (_, i) => r[2 * i + 1]);
     this.torso = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_BODY.value, "torso");
@@ -96,8 +122,8 @@ export class Bolt {
       this.real.push({ mocap: this.model.body_mocapid[body], body, bar, q: this.model.jnt_qposadr[joint], v: this.model.jnt_dofadr[joint], geoms, rest: null, at: null });
     }
     this.floor = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_GEOM.value, "floor");
+    this.prop0 = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_GEOM.value, "prop0");   // -1 with no props
     this.aimed = -1;
-    this.dt = this.c.dt;
   }
   // swap in another walk brain (agility competitors), with the gait it was trained on
   useWalk(spec, sharp) {
@@ -173,6 +199,17 @@ export class Bolt {
   barDropped(k) {
     const H = this.real[k], q = this.data.qpos;
     return Math.hypot(q[H.q] - H.rest[0], q[H.q + 1] - H.rest[1], q[H.q + 2] - H.rest[2]) > 0.03;
+  }
+  // which solid course objects (indexes into this.props) Bolt is touching now (not counting the floor)
+  touchingProps() {
+    if (this.prop0 < 0) return [];
+    const n = this.props.length, out = new Set(), cs = this.data.contact;
+    for (let k = 0; k < this.data.ncon; k++) {
+      const c = cs.get(k);
+      for (const g of [c.geom1, c.geom2]) if (g >= this.prop0 && g < this.prop0 + n) out.add(g - this.prop0);
+      c.delete();
+    }
+    cs.delete(); return [...out];
   }
   // where hurdle k's bar is now (position and quaternion), for drawing
   barPose(k) { const q = this.data.qpos, H = this.real[k]; return [q.slice(H.q, H.q + 3), q.slice(H.q + 3, H.q + 7)]; }

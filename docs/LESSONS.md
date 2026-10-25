@@ -208,3 +208,9 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   after landing. Over a second and a half that added up to the -25 for a fall, and a fall ends the episode
   (and the charges), so a twisted Bolt learned to fall: 10 and 8 falls in 12 landings. Rewards for staying
   up must always beat falling, whatever else is wrong; shape the direction before the landing instead.
+- **If it can be seen standing, it must be solid.** The tunnel, pause table, weave poles and posts were
+  pictures: Bolt walked through them and nothing in the tests noticed. Now one list per course builds both
+  the physics (static geoms in a body after the robot, so ids and qpos stay put) and the drawing. Solid
+  objects then exposed what pictures hid: the judge measured "lying down" from the floor, not the 4 cm
+  table; number posts stood on the dogs' approach lines; a blocked dog pushed on forever; and a rigid
+  56 cm body needs a wider line (0.5 m swing) and more time through 12 poles 1 m apart.

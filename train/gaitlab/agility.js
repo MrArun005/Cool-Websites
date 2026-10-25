@@ -17,7 +17,9 @@ export const OBSTACLES = {
 };
 // m: Bolt's body is rigid, so the poles are wider apart than a real 60 cm weave. Bolt follows a smooth
 // wave through them (side: how far it swings out at each pole), at most ~1.4 rad/s of turning.
-export const WEAVE = { poles: 8, spacing: 1.2, side: 0.4, lookahead: 0.5 };   // 0 missed poles in 10 at 0.8 m/s
+// side 0.5: with solid poles, a 0.4 m swing jammed Ace and Blaze in 2 Championship weaves of 10 (1.0 m
+// apart); 0.5 m: 10 of 10 through, no pole missed
+export const WEAVE = { poles: 8, spacing: 1.2, side: 0.5, lookahead: 0.5 };
 export let WEAVE_SPEED = 0.8;   // m/s through the weaves
 export function setWeaveSpeed(v) { WEAVE_SPEED = v; }
 
@@ -53,10 +55,51 @@ export function buildAgility(seed, { jumps = false, cls = "standard" } = {}) {
   // standard course time: the path at the class pace, plus the 5 s on the table and getting on and off it,
   // plus the time each jump takes
   let length = 0, p = [0, 0];
-  for (const o of obstacles) { length += Math.hypot(o.entry[0] - p[0], o.entry[1] - p[1]) + o.L; p = o.exit; }
+  // the weave counted at the pace dogs really go through solid poles (~0.45 m/s: 12 poles took ~26 s)
+  for (const o of obstacles) { length += Math.hypot(o.entry[0] - p[0], o.entry[1] - p[1]) + (o.kind === "weave" ? o.L * C.pace / 0.45 : o.L); p = o.exit; }
   length += Math.hypot(finish[0] - p[0], finish[1] - p[1]);
   const jumpCount = obstacles.filter((o) => o.kind === "jump").length;
   return { seed, cls: C.name, obstacles, finish, finishH: last.h, sct: Math.round(length / C.pace + 9 + JUMP_TIME * jumpCount) };
+}
+
+// The solid course (live.js setProps): everything that stands up is a real object Bolt collides with.
+// The tunnel is an arch (flat sides, a round roof of 8 panels, 0.86 m wide, 0.85 m high; Bolt is 0.24 m
+// wide and ~0.55 m tall), the pause table a 1 m square platform 4 cm high, the weave poles, the gates' and
+// the judge's number posts are poles. In world coordinates for Bolt standing at the start (w = bolt.where()).
+export const TUNNEL = { r: 0.43, wall: 0.012, panels: 8 };
+export const TABLE = { half: 0.5, h: 0.04 };
+// the judge's number post for each obstacle: beside it, off the line dogs come in on (at -0.6 m, 0.75 m
+// to the side it stood on that line: Ace pushed into the tunnel's post until time ran out)
+export const SIGN = [0.2, 1.4];
+export function courseProps(course, w) {
+  const c0 = Math.cos(w.yaw), s0 = Math.sin(w.yaw), out = [];
+  const put = (o, along, side, z, size, kind, look, roll = 0) => {   // a prop in obstacle o's frame
+    const h = o ? o.h : 0, e = o ? o.entry : [0, 0], x = e[0] + Math.cos(h) * along - Math.sin(h) * side, y = e[1] + Math.sin(h) * along + Math.cos(h) * side;
+    out.push({ kind, size, pos: [w.x + c0 * x - s0 * y, w.y + s0 * x + c0 * y, z], yaw: w.yaw + h, roll, look });
+  };
+  const gate = (at, h, color) => { for (const y of [0.9, -0.9]) put({ h, entry: at }, 0, y, 0.65, [0.035, 0.65], "cyl", { color }); };
+  gate([0.3, 0], 0, "#2f8a4c"); gate(course.finish, course.finishH, "#c4372f");
+  for (const o of course.obstacles) {
+    put(o, SIGN[0], SIGN[1], 0.45, [0.012, 0.45], "cyl", { color: "#9aa19c" });   // the judge's number post
+    if (o.kind === "weave") for (let k = 0; k < WEAVE.poles; k++) put(o, k * WEAVE.spacing, 0, 0.5, [0.02, 0.5], "cyl", { color: "#f4f4f0", bands: k % 2 ? "#1f4f86" : "#c4372f" });
+    if (o.kind === "tunnel") {
+      const { r, wall, panels } = TUNNEL, look = { color: "#2f6fb5", opacity: 0.55, tunnel: true };
+      for (const s of [1, -1]) put(o, o.L / 2, s * (r + wall), r / 2, [o.L / 2, wall, r / 2], "box", look);
+      for (let i = 0; i < panels; i++) {
+        const th = (i + 0.5) * Math.PI / panels, chord = 2 * (r + wall) * Math.sin(Math.PI / (2 * panels)) + 0.004;
+        put(o, o.L / 2, (r + wall) * Math.cos(th), r + (r + wall) * Math.sin(th), [o.L / 2, chord / 2, wall], "box", look, th - Math.PI / 2);
+      }
+    }
+    if (o.kind === "table") put(o, 0, 0, TABLE.h / 2, [TABLE.half, TABLE.half, TABLE.h / 2], "box", { color: "#e3620b" });
+  }
+  return out;
+}
+// A new course in the simulator: its solid objects built in, Bolt at the start, the hurdles in place.
+export function setupCourse(bolt, course, start) {
+  bolt.reset(start);
+  bolt.setProps(courseProps(course, bolt.where()));
+  bolt.reset(start);
+  placeJumps(bolt, course);
 }
 
 // Every hurdle on the course is real and solid from the start: solid stands, a bar in its cups (live.js
@@ -107,10 +150,28 @@ export class Round {
     } else {
       this.clock += dt;
       this.play(dt);
+      this.unstick(dt);
+      // the maximum course time, twice the standard: a dog stuck at an obstacle is eliminated
+      if (!this.over && this.clock > 2 * this.course.sct) { this.over = true; this.phase = "eliminated"; this.say(`${this.name}: over the maximum course time, eliminated`, "bad"); }
     }
     const b = this.bolt;
     b.run(this.cmd);
     if (b.fell()) { this.over = true; this.phase = "eliminated"; this.say(`${this.name} fell: eliminated`, "bad"); }
+  }
+  // Objects are solid: a dog pressed against a pole or a wall, going nowhere, is turned away from it and
+  // walked clear for 1.5 s before the handler sends it on again (pushing on into it never got past)
+  unstick(dt) {
+    const b = this.bolt, w = b.where();
+    if (this.free && this.t < this.free.until) { this.cmd = { command: "walk", turn: this.free.turn, speed: 0.3 }; return; }
+    if (this.cmd.command !== "walk") { this.lastPos = null; return; }
+    if (!this.lastPos || this.t - this.lastPos.t > 1.5) {
+      const moved = this.lastPos ? Math.hypot(w.x - this.lastPos.x, w.y - this.lastPos.y) : 1, touching = b.touchingProps();
+      if (moved < 0.1 && touching.length) {
+        const p = b.props[touching[0]].pos, bearing = Math.atan2(p[1] - w.y, p[0] - w.x) - w.yaw;
+        this.free = { until: this.t + 1.5, turn: Math.sin(bearing) > 0 ? -1.2 : 1.2 };   // turn away from it
+      }
+      this.lastPos = { x: w.x, y: w.y, t: this.t };
+    }
   }
   begin() {
     const o = this.obstacle;
@@ -153,7 +214,8 @@ export class Round {
     if (weaving) {   // aim a little way ahead on a smooth wave through the poles, like a handler's line
       const a = Math.min(along + WEAVE.lookahead, (WEAVE.poles - 1) * WEAVE.spacing + 1.2);
       const end = (WEAVE.poles - 1) * WEAVE.spacing;
-      target = [a, a > end ? 0 : -WEAVE.side * Math.cos(Math.PI * Math.max(0, a) / WEAVE.spacing)];
+      // keep swinging until past the last pole (straightening at the pole cut into it)
+      target = [a, a > end + 0.4 ? 0 : -WEAVE.side * Math.cos(Math.PI * Math.max(0, a) / WEAVE.spacing)];
     }
     this.cmd = this.driver.toward(this.world(this.at(o, target[0], target[1])), k.wp === 0 ? 0.9 : cruise, false, dt, weaving ? 1 : 2);
     // move on to the next waypoint once level with this one
@@ -203,7 +265,7 @@ export class Round {
     }
     if (k.stage === "down") {
       this.cmd = { command: "lie", turn: 0, speed: 0.2 };
-      k.held = posture(this.bolt) === "lie" ? k.held + dt : 0;
+      k.held = posture(this.bolt, TABLE.h) === "lie" ? k.held + dt : 0;   // lying on the table, 4 cm up
       const count = Math.max(0, 5 - Math.floor(k.held));
       if (count !== k.count) { k.count = count; if (count > 0) this.say(`Judge: ${count}…`, "count"); }
       if (k.held >= 5) { k.stage = "up"; k.settle = 0; this.say("Judge: go!", "count"); }

@@ -14,9 +14,10 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 // What each posture looks like in the simulator (measured with the posture brain: stand 43 cm level,
 // sit 20.7 cm nose up 30°, lie 12.5 cm level; each settles in under a second).
-export function posture(bolt) {
+// ground: the height of what Bolt stands on (the agility pause table is 4 cm up)
+export function posture(bolt, ground = 0) {
   const R = bolt.rotation(), q = bolt.data.qpos, v = bolt.data.qvel;
-  const h = q[2], pitch = Math.asin(clamp(R[6], -1, 1)), speed = Math.hypot(v[0], v[1]);
+  const h = q[2] - ground, pitch = Math.asin(clamp(R[6], -1, 1)), speed = Math.hypot(v[0], v[1]);
   if (h > 0.18 && h < 0.24 && pitch > 0.35 && pitch < 0.7 && speed < 0.15) return "sit";
   if (h < 0.16 && Math.abs(pitch) < 0.2 && speed < 0.15) return "lie";
   if (h > 0.38 && Math.abs(pitch) < 0.2 && speed < 0.1) return "still";
@@ -175,6 +176,25 @@ export class Jumper {
   }
 }
 
+// The solid castle (live.js setProps): every post, pole, tower and wall Bolt could run into is a real
+// object. Flat things (lines, mats, the bridge plank, the ice) stay paint; the hurdles are their own
+// physics (placeReal). In world coordinates for Bolt standing at the start (w = bolt.where()).
+export function castleProps(castle, w) {
+  const c = Math.cos(w.yaw), s = Math.sin(w.yaw), out = [];
+  const put = (x, y, z, size, kind, look) => out.push({ kind, size, pos: [w.x + c * x - s * y, w.y + s * x + c * y, z], yaw: w.yaw, look });
+  for (const st of castle.stations) {
+    if (st.kind === "sprint") for (const y of [0.5, -0.5]) put(st.end[0], st.end[1] + y, 0.35, [0.025, 0.35], "cyl", { color: "#e3620b" });
+    if (st.kind === "slalom") st.gates.forEach(([x, y], k) => { for (const side of [0.55, -0.55]) put(x, y + side, 0.55, [0.03, 0.55], "cyl", { color: k % 2 ? "#f4f4f0" : "#e3620b", cap: k % 2 ? "#e3620b" : "#f4f4f0" }); });
+    if (st.kind === "gate") {   // the castle: two towers, the walls either side of the doorway, the lintel
+      const [x, y] = st.end, X = x + 1.0, stone = { color: "#d8d2c4" };
+      for (const side of [1.25, -1.25]) put(X, y + side, 1.3, [0.42, 1.3], "cyl", stone);
+      for (const side of [0.75, -0.75]) put(X, y + side, 1.0, [0.2, 0.45, 1.0], "box", stone);
+      put(X, y, 1.65, [0.2, 0.3, 0.35], "box", stone);
+    }
+  }
+  return out;
+}
+
 // One game. Call step() 50 times a second; read state for the screen.
 export class Game {
   // level: 1-5; lives and score carry over from the level before
@@ -182,6 +202,8 @@ export class Game {
   constructor(bolt, seed, start, { level = 1, lives = 3, score = 0, hurdles = !!bolt.brains.jump } = {}) {
     this.L = LEVELS[level - 1];
     this.bolt = bolt; this.castle = buildCastle(seed, this.L, { hurdles }); this.start = start;
+    bolt.reset(start);
+    bolt.setProps(castleProps(this.castle, bolt.where()));   // the course's solid objects, built into the physics
     bolt.reset(start);
     const w = bolt.where();
     this.origin = [w.x, w.y]; this.yaw0 = w.yaw;       // course coordinates start where Bolt stands

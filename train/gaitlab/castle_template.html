@@ -41,7 +41,7 @@
   <header style="display:grid;gap:6px">
     <span class="label">Bolt robot dog · a game on the live simulator</span>
     <h1>Bolt's Castle</h1>
-    <p class="muted" style="margin:0;max-width:72ch">Like Takeshi's Castle: every game builds a new course, and Bolt has to get through it. Sprint, weave through the poles, jump three bars without touching them, cross the narrow bridge without falling in the water, sit in the box, lie on the mat and reach the castle. The guard shouts orders at any moment, and so can you. Bolt really jumps: it stops in front of each bar, steadies itself and leaps, with a jump brain it learned by trial and error. Five levels, each harder: higher bars (12 cm up to 22 cm), tighter time limits, a narrower bridge, more poles, more shouts with less time to obey, and from level 3 an ice rink and the guard's cannon, which shoves Bolt sideways. Bolt has 3 lives: a failed station or a fall costs one. Bolt plays it with its own trained brains, in the same physics as in training, running in your browser.</p>
+    <p class="muted" style="margin:0;max-width:72ch">Like Takeshi's Castle: every game builds a new course, and Bolt has to get through it. Sprint, weave through the poles, jump three bars without touching them, cross the narrow bridge without falling in the water, sit in the box, lie on the mat and reach the castle. The guard shouts orders at any moment, and so can you. Bolt really jumps: it stops in front of each bar, steadies itself and leaps, with a jump brain it learned by trial and error. Five levels, each harder: higher bars (12 cm up to 22 cm), tighter time limits, a narrower bridge, more poles, more shouts with less time to obey, and from level 3 an ice rink and the guard's cannon, which shoves Bolt sideways. Bolt has 3 lives: a failed station or a fall costs one. Everything that stands up is solid: the hurdles, the slalom posts, the finish posts and the castle's towers and walls. Bolt plays it with its own trained brains, in the same physics as in training, running in your browser.</p>
   </header>
 
   <section class="panel" aria-labelledby="play">
@@ -123,14 +123,9 @@
       g.add(box(len, 0.05, 0.006, paint, cx, s.start[1] + 0.5, 0.003), box(len, 0.05, 0.006, paint, cx, s.start[1] - 0.5, 0.003));
       g.add(box(0.08, 1.0, 0.006, std("#2f8a4c"), s.start[0], s.start[1], 0.004), box(0.08, 1.0, 0.006, std("#c4372f"), s.end[0], s.end[1], 0.004));
       g.add(at(decal("RUN", 0.9, 0.45, "#e3620b"), s.start[0] - 0.55, s.start[1]));
-      for (const y of [0.5, -0.5]) { g.add(post(0.025, 0.7, orange, s.end[0], s.end[1] + y)); }
+      // the finish posts are solid (props3d.js)
     } else if (s.kind === "slalom") {
-      s.gates.forEach(([x, y], k) => {
-        for (const side of [0.55, -0.55]) {
-          g.add(post(0.03, 1.1, k % 2 ? white : orange, x, y + side));
-          g.add(at(mesh(new THREE.SphereGeometry(0.05, 16, 12), k % 2 ? orange : white), x, y + side, 1.12));
-        }
-      });
+      // the slalom posts are solid (props3d.js)
       g.add(at(decal("WEAVE", 1.2, 0.4, "#e3620b"), s.gates[0][0] - 1.0, s.gates[0][1]));
     } else if (s.kind === "bridge") {   // the plank is as wide as this level allows
       const len = s.end[0] - s.start[0], cx = (s.start[0] + s.end[0]) / 2, W = 2 * s.halfWidth;
@@ -153,14 +148,12 @@
     } else if (s.kind === "gate") {
       const [x, y] = s.end, stone = std("#d8d2c4", { roughness: 0.9 }), dark = std("#b9b1a1", { roughness: 0.9 }), roof = std("#c4372f");
       const X = x + 1.0;
-      for (const side of [1.25, -1.25]) {
-        g.add(post(0.42, 2.6, stone, X, y + side));
+      for (const side of [1.25, -1.25]) {   // the towers and walls are solid (props3d.js); their tops are decoration
         for (let a = 0; a < 8; a++) g.add(box(0.14, 0.14, 0.18, dark, X + 0.38 * Math.cos(a * Math.PI / 4), y + side + 0.38 * Math.sin(a * Math.PI / 4), 2.68));
         g.add(at(mesh(new THREE.ConeGeometry(0.5, 0.7, 24), roof, null, [Math.PI / 2, 0, 0]), X, y + side, 3.1));
         const flag = mesh(new THREE.PlaneGeometry(0.42, 0.26), std("#e3620b", { side: THREE.DoubleSide }), [X + 0.22, y + side, 3.88], [Math.PI / 2, 0, 0]);
         g.add(flag, at(post(0.015, 0.7, dark, 0, 0), X, y + side, 3.65));
       }
-      g.add(box(0.4, 0.9, 2.0, stone, X, y + 0.75, 1.0), box(0.4, 0.9, 2.0, stone, X, y - 0.75, 1.0), box(0.4, 0.6, 0.7, stone, X, y, 1.65));
       for (let k = -1; k <= 1; k++) g.add(box(0.36, 0.2, 0.2, dark, X, y + k * 0.8, 2.1));
       g.add(at(decal("HOME", 1.0, 0.4, "#c4372f"), x - 0.9, y));
     }
@@ -184,7 +177,7 @@
   }
 
   // ---------- the game ----------
-  let lib, rules, bundle, drawHurdles = () => {}, bolt = null, game = null, acc = 0, playing = true, seen = 0, bannerUntil = 0, ended = false;
+  let lib, rules, bundle, drawHurdles = () => {}, drawProps = () => {}, bolt = null, game = null, acc = 0, playing = true, seen = 0, bannerUntil = 0, ended = false;
   const SHOUT_BUTTONS = [["sit", "Sit!"], ["lie", "Lie down!"], ["still", "Freeze!"]];
   SHOUT_BUTTONS.forEach(([cmd, label]) => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.dataset.cmd = cmd;
@@ -262,10 +255,10 @@
   }
   async function boot() {
     try {
-      const [l, r, m, b, h3] = await Promise.all([import("./live.js"), import("./game.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_live.json").then((x) => x.json()), import("./hurdles3d.js")]);
+      const [l, r, m, b, h3, p3] = await Promise.all([import("./live.js"), import("./game.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_live.json").then((x) => x.json()), import("./hurdles3d.js"), import("./props3d.js")]);
       lib = l; rules = r; bundle = b;
       bolt = new lib.Bolt(await m.default(), bundle);
-      drawHurdles = h3.makeHurdles(THREE, scene, bolt, mesh, lin);
+      drawHurdles = h3.makeHurdles(THREE, scene, bolt, mesh, lin); drawProps = p3.makeProps(THREE, scene, bolt, mesh, lin);
     } catch (e) {
       console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
     }
@@ -303,7 +296,7 @@
       }
       if (game.over && !ended) { ended = true; renderCourse(); setTimeout(endCard, 1400); }
       if (now > bannerUntil) $("banner").classList.remove("show");
-      growCourse(dt); drawBolt(); drawHurdles(); follow(); hud();
+      growCourse(dt); drawBolt(); drawHurdles(); drawProps(); follow(); hud();
       const s = now / 1000, cmd = game.cmd.command;
       if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (cmd === "walk" ? 9 : 5));
       eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));
