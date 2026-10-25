@@ -65,12 +65,12 @@ FOOT_VIEW = (-0.6, 1.1)                     # neck, head pitch: the camera sees 
 CAM_H, CAM_DOWN = 0.21, 0.17                # camera height; the eye looks ~10 deg down at head pitch 0
 
 # ---------------------------------------------------------------- tactics
-DUEL_D = 0.45               # an opponent this close to the ball: no time to line up -> duel (walk through it)
+DUEL_D = 0.35               # an opponent this close to the ball: no time to line up -> duel (walk through it)
 ALIGN_MAX_S = 3.0           # cannot line up in this long -> duel / dribble
 SHOOT_D = 2.4               # shoot from up to this far when the lane is open (was 2.0, any lane)
 AIM_Y = 0.35                # aim this far from the goal centre (posts at 0.65): the side away from the keeper
 DRIBBLE_D = (1.3, 3.2)      # carry the ball (walk through it) towards goal from this far until this close ...
-DRIBBLE_FREE = 0.7          # ... while no opponent is this close to the ball
+DRIBBLE_FREE = 0.55         # ... while no opponent is this close to the ball
 DRIBBLE_MAX_S = 5.0
 LANE_R = 0.18               # an opponent this close to the ball's path blocks it
 PASS_MIN, PASS_MAX = 0.5, 2.2
@@ -79,7 +79,8 @@ RECEIVE_S = 4.0             # a receiver waits for the pass this long
 FOLLOW_S = 3.0              # the kicker keeps the ball (striker bonus) this long after a kick
 ROLE_EVERY = 15             # ticks between role picks (0.3 s)
 SUPPORT_EVERY = 2.5         # support runs re-target this often (s)
-COVER_D = 0.35              # second player: this far goal-side of the ball
+COVER_D = 0.6               # second player: this far goal-side of the ball (outside the duel radius: it closes
+                            # the lane, the striker can still line up)
 CONTEST_D = 0.45            # second player joins the contest when the ball is this close to it and an opponent is on it
 MARK_D = 0.3                # markers stay this far goal-side of their opponent
 SHUFFLE_A, SHUFFLE_T = 0.12, 5.0   # jockeying at a spot: +-12 cm sideways, period 5 s
@@ -543,7 +544,8 @@ class TeamTactics:
         db = float(np.linalg.norm(b - me.pos))
         st = next((x for x in wm["players"] if x["name"] == self.striker), None)
         st_near = st is not None and float(np.linalg.norm(np.asarray(st["pos"], float) - me.pos)) < 0.3
-        if not restricted and db < CONTEST_D and opp_d < 0.6 and not st_near:
+        st_db = float(np.linalg.norm(np.asarray(st["pos"], float) - b)) if st is not None else 9.0
+        if not restricted and db < CONTEST_D and opp_d < min(0.45, st_db) and not st_near:   # they have it: 2 on it
             mem_state = mem.state
             if mem_state not in ("approach", "chase", "duel", "align", "ready", "dribble"):
                 mem.set_state("duel", t)
@@ -702,7 +704,7 @@ class TeamTactics:
         if mem.state in ("approach", "chase") and opp_d < DUEL_D and dball < 0.7:
             mem.set_state("duel", t)
         if mem.state == "duel":
-            if opp_d > DUEL_D + 0.25 and t - mem.state_t > 1.0:
+            if opp_d > DUEL_D + 0.2 and t - mem.state_t > 0.6:
                 mem.set_state("approach", t)
             nh = int(PINNED_S / DT)
             mem.duel_hist = (mem.duel_hist + [b.copy()])[-nh:]
