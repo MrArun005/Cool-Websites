@@ -1,0 +1,1822 @@
+{
+ "summary": {
+  "straight": {
+   "n": 10,
+   "path_m": 10.41,
+   "heading_err_deg_median": 10.04,
+   "heading_err_deg_max": 15.21,
+   "falls": 0,
+   "odometry": {
+    "cm_per_m_median": 8.28,
+    "cm_per_m_max": 12.07,
+    "final_cm_median": 82.7,
+    "max_cm_max": 114.7
+   },
+   "dead_reckoning": {
+    "cm_per_m_median": 7.69,
+    "cm_per_m_max": 15.22,
+    "final_cm_median": 82.0,
+    "max_cm_max": 144.7
+   },
+   "odometry_true_heading": {
+    "cm_per_m_median": 2.45,
+    "cm_per_m_max": 3.32,
+    "final_cm_median": 26.1,
+    "max_cm_max": 36.2
+   },
+   "dead_reckoning_true_heading": {
+    "cm_per_m_median": 5.56,
+    "cm_per_m_max": 9.91,
+    "final_cm_median": 60.3,
+    "max_cm_max": 113.5
+   },
+   "odometry_perfect": {
+    "cm_per_m_median": 2.4,
+    "cm_per_m_max": 3.2,
+    "final_cm_median": 25.2,
+    "max_cm_max": 34.7
+   },
+   "odometry_alpha4": {
+    "cm_per_m_median": 9.12,
+    "cm_per_m_max": 12.59,
+    "final_cm_median": 91.0,
+    "max_cm_max": 119.7
+   },
+   "odometry_v15": {
+    "cm_per_m_median": 9.28,
+    "cm_per_m_max": 13.1,
+    "final_cm_median": 93.3,
+    "max_cm_max": 124.6
+   }
+  },
+  "square": {
+   "n": 10,
+   "path_m": 10.08,
+   "heading_err_deg_median": 9.27,
+   "heading_err_deg_max": 13.13,
+   "falls": 0,
+   "odometry": {
+    "cm_per_m_median": 1.11,
+    "cm_per_m_max": 1.83,
+    "final_cm_median": 10.9,
+    "max_cm_max": 19.1
+   },
+   "dead_reckoning": {
+    "cm_per_m_median": 1.77,
+    "cm_per_m_max": 2.34,
+    "final_cm_median": 17.0,
+    "max_cm_max": 35.0
+   },
+   "odometry_true_heading": {
+    "cm_per_m_median": 0.35,
+    "cm_per_m_max": 0.87,
+    "final_cm_median": 3.4,
+    "max_cm_max": 8.5
+   },
+   "dead_reckoning_true_heading": {
+    "cm_per_m_median": 1.25,
+    "cm_per_m_max": 2.4,
+    "final_cm_median": 12.2,
+    "max_cm_max": 33.8
+   },
+   "odometry_perfect": {
+    "cm_per_m_median": 0.29,
+    "cm_per_m_max": 0.61,
+    "final_cm_median": 3.0,
+    "max_cm_max": 7.2
+   },
+   "odometry_alpha4": {
+    "cm_per_m_median": 1.18,
+    "cm_per_m_max": 1.95,
+    "final_cm_median": 12.1,
+    "max_cm_max": 19.7
+   },
+   "odometry_v15": {
+    "cm_per_m_median": 1.39,
+    "cm_per_m_max": 2.09,
+    "final_cm_median": 13.7,
+    "max_cm_max": 25.5
+   }
+  },
+  "mixed": {
+   "n": 10,
+   "path_m": 6.19,
+   "heading_err_deg_median": 4.02,
+   "heading_err_deg_max": 8.18,
+   "falls": 0,
+   "odometry": {
+    "cm_per_m_median": 1.1,
+    "cm_per_m_max": 3.08,
+    "final_cm_median": 6.8,
+    "max_cm_max": 19.7
+   },
+   "dead_reckoning": {
+    "cm_per_m_median": 3.55,
+    "cm_per_m_max": 10.47,
+    "final_cm_median": 23.4,
+    "max_cm_max": 66.6
+   },
+   "odometry_true_heading": {
+    "cm_per_m_median": 0.83,
+    "cm_per_m_max": 2.13,
+    "final_cm_median": 5.2,
+    "max_cm_max": 13.7
+   },
+   "dead_reckoning_true_heading": {
+    "cm_per_m_median": 3.94,
+    "cm_per_m_max": 9.7,
+    "final_cm_median": 24.8,
+    "max_cm_max": 64.2
+   },
+   "odometry_perfect": {
+    "cm_per_m_median": 0.77,
+    "cm_per_m_max": 2.0,
+    "final_cm_median": 4.8,
+    "max_cm_max": 13.9
+   },
+   "odometry_alpha4": {
+    "cm_per_m_median": 1.21,
+    "cm_per_m_max": 2.43,
+    "final_cm_median": 8.2,
+    "max_cm_max": 15.5
+   },
+   "odometry_v15": {
+    "cm_per_m_median": 1.9,
+    "cm_per_m_max": 3.14,
+    "final_cm_median": 13.6,
+    "max_cm_max": 20.0
+   }
+  },
+  "all": {
+   "n": 30,
+   "path_m": 8.89,
+   "heading_err_deg_median": 7.96,
+   "heading_err_deg_max": 15.21,
+   "falls": 0,
+   "odometry": {
+    "cm_per_m_median": 1.51,
+    "cm_per_m_max": 12.07,
+    "final_cm_median": 14.5,
+    "max_cm_max": 114.7
+   },
+   "dead_reckoning": {
+    "cm_per_m_median": 2.98,
+    "cm_per_m_max": 15.22,
+    "final_cm_median": 27.8,
+    "max_cm_max": 144.7
+   },
+   "odometry_true_heading": {
+    "cm_per_m_median": 0.88,
+    "cm_per_m_max": 3.32,
+    "final_cm_median": 6.3,
+    "max_cm_max": 36.2
+   },
+   "dead_reckoning_true_heading": {
+    "cm_per_m_median": 2.61,
+    "cm_per_m_max": 9.91,
+    "final_cm_median": 23.1,
+    "max_cm_max": 113.5
+   },
+   "odometry_perfect": {
+    "cm_per_m_median": 0.77,
+    "cm_per_m_max": 3.2,
+    "final_cm_median": 5.9,
+    "max_cm_max": 34.7
+   },
+   "odometry_alpha4": {
+    "cm_per_m_median": 1.5,
+    "cm_per_m_max": 12.59,
+    "final_cm_median": 14.2,
+    "max_cm_max": 119.7
+   },
+   "odometry_v15": {
+    "cm_per_m_median": 2.04,
+    "cm_per_m_max": 13.1,
+    "final_cm_median": 15.8,
+    "max_cm_max": 124.6
+   }
+  }
+ },
+ "runs": [
+  {
+   "seed": 0,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 9.946,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.006,
+    "friction": 1.172,
+    "kp": 184.4,
+    "vin": 7.99,
+    "lag": 6
+   },
+   "net_m": 9.902,
+   "heading_err_deg": 6.53,
+   "wall_s": 8.6,
+   "odometry": {
+    "final_cm": 45.8,
+    "max_cm": 45.9,
+    "cm_per_m": 4.6,
+    "z_err_mm": -1.2,
+    "switches": 1077
+   },
+   "dead_reckoning": {
+    "final_cm": 36.0,
+    "max_cm": 37.5,
+    "cm_per_m": 3.62
+   },
+   "odometry_true_heading": {
+    "final_cm": 27.1,
+    "max_cm": 27.1,
+    "cm_per_m": 2.73
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 72.7,
+    "max_cm": 72.7,
+    "cm_per_m": 7.31
+   },
+   "odometry_perfect": {
+    "final_cm": 27.3,
+    "max_cm": 27.3,
+    "cm_per_m": 2.75
+   },
+   "odometry_alpha4": {
+    "final_cm": 59.1,
+    "max_cm": 59.2,
+    "cm_per_m": 5.94
+   },
+   "odometry_v15": {
+    "final_cm": 72.2,
+    "max_cm": 72.3,
+    "cm_per_m": 7.26
+   }
+  },
+  {
+   "seed": 0,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 9.583,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.006,
+    "friction": 1.172,
+    "kp": 184.4,
+    "vin": 7.99,
+    "lag": 6
+   },
+   "net_m": 1.504,
+   "heading_err_deg": 10.81,
+   "wall_s": 9.6,
+   "odometry": {
+    "final_cm": 10.8,
+    "max_cm": 14.6,
+    "cm_per_m": 1.13,
+    "z_err_mm": 0.1,
+    "switches": 1061
+   },
+   "dead_reckoning": {
+    "final_cm": 1.0,
+    "max_cm": 16.9,
+    "cm_per_m": 0.1
+   },
+   "odometry_true_heading": {
+    "final_cm": 8.3,
+    "max_cm": 8.5,
+    "cm_per_m": 0.87
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 13.6,
+    "max_cm": 13.6,
+    "cm_per_m": 1.42
+   },
+   "odometry_perfect": {
+    "final_cm": 5.9,
+    "max_cm": 6.1,
+    "cm_per_m": 0.61
+   },
+   "odometry_alpha4": {
+    "final_cm": 10.1,
+    "max_cm": 13.8,
+    "cm_per_m": 1.06
+   },
+   "odometry_v15": {
+    "final_cm": 20.1,
+    "max_cm": 20.2,
+    "cm_per_m": 2.09
+   }
+  },
+  {
+   "seed": 0,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 6.0,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.006,
+    "friction": 1.172,
+    "kp": 184.4,
+    "vin": 7.99,
+    "lag": 6
+   },
+   "net_m": 3.74,
+   "heading_err_deg": 3.55,
+   "wall_s": 9.8,
+   "odometry": {
+    "final_cm": 2.0,
+    "max_cm": 7.5,
+    "cm_per_m": 0.34,
+    "z_err_mm": 0.6,
+    "switches": 1073
+   },
+   "dead_reckoning": {
+    "final_cm": 32.8,
+    "max_cm": 40.3,
+    "cm_per_m": 5.47
+   },
+   "odometry_true_heading": {
+    "final_cm": 10.4,
+    "max_cm": 11.1,
+    "cm_per_m": 1.74
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 41.9,
+    "max_cm": 47.9,
+    "cm_per_m": 6.98
+   },
+   "odometry_perfect": {
+    "final_cm": 10.3,
+    "max_cm": 10.8,
+    "cm_per_m": 1.71
+   },
+   "odometry_alpha4": {
+    "final_cm": 9.1,
+    "max_cm": 9.4,
+    "cm_per_m": 1.52
+   },
+   "odometry_v15": {
+    "final_cm": 18.4,
+    "max_cm": 18.5,
+    "cm_per_m": 3.06
+   }
+  },
+  {
+   "seed": 1,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 10.456,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.999,
+    "friction": 1.11,
+    "kp": 217.2,
+    "vin": 6.83,
+    "lag": 5
+   },
+   "net_m": 10.398,
+   "heading_err_deg": 8.57,
+   "wall_s": 8.6,
+   "odometry": {
+    "final_cm": 64.4,
+    "max_cm": 64.4,
+    "cm_per_m": 6.16,
+    "z_err_mm": 1.0,
+    "switches": 1078
+   },
+   "dead_reckoning": {
+    "final_cm": 70.1,
+    "max_cm": 70.1,
+    "cm_per_m": 6.71
+   },
+   "odometry_true_heading": {
+    "final_cm": 28.0,
+    "max_cm": 28.0,
+    "cm_per_m": 2.67
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 14.5,
+    "max_cm": 16.0,
+    "cm_per_m": 1.39
+   },
+   "odometry_perfect": {
+    "final_cm": 27.7,
+    "max_cm": 27.8,
+    "cm_per_m": 2.65
+   },
+   "odometry_alpha4": {
+    "final_cm": 72.6,
+    "max_cm": 72.6,
+    "cm_per_m": 6.94
+   },
+   "odometry_v15": {
+    "final_cm": 80.4,
+    "max_cm": 80.4,
+    "cm_per_m": 7.69
+   }
+  },
+  {
+   "seed": 1,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 10.203,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.999,
+    "friction": 1.11,
+    "kp": 217.2,
+    "vin": 6.83,
+    "lag": 5
+   },
+   "net_m": 0.796,
+   "heading_err_deg": 9.62,
+   "wall_s": 9.2,
+   "odometry": {
+    "final_cm": 10.9,
+    "max_cm": 14.4,
+    "cm_per_m": 1.07,
+    "z_err_mm": -0.8,
+    "switches": 1062
+   },
+   "dead_reckoning": {
+    "final_cm": 8.6,
+    "max_cm": 24.9,
+    "cm_per_m": 0.84
+   },
+   "odometry_true_heading": {
+    "final_cm": 3.7,
+    "max_cm": 6.4,
+    "cm_per_m": 0.36
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 5.2,
+    "max_cm": 19.7,
+    "cm_per_m": 0.51
+   },
+   "odometry_perfect": {
+    "final_cm": 2.4,
+    "max_cm": 5.9,
+    "cm_per_m": 0.24
+   },
+   "odometry_alpha4": {
+    "final_cm": 14.9,
+    "max_cm": 15.7,
+    "cm_per_m": 1.46
+   },
+   "odometry_v15": {
+    "final_cm": 11.8,
+    "max_cm": 25.5,
+    "cm_per_m": 1.16
+   }
+  },
+  {
+   "seed": 1,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 5.984,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.999,
+    "friction": 1.11,
+    "kp": 217.2,
+    "vin": 6.83,
+    "lag": 5
+   },
+   "net_m": 1.144,
+   "heading_err_deg": 3.46,
+   "wall_s": 9.3,
+   "odometry": {
+    "final_cm": 1.9,
+    "max_cm": 7.5,
+    "cm_per_m": 0.32,
+    "z_err_mm": 0.2,
+    "switches": 1056
+   },
+   "dead_reckoning": {
+    "final_cm": 13.4,
+    "max_cm": 28.0,
+    "cm_per_m": 2.25
+   },
+   "odometry_true_heading": {
+    "final_cm": 3.9,
+    "max_cm": 7.4,
+    "cm_per_m": 0.64
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 16.9,
+    "max_cm": 28.3,
+    "cm_per_m": 2.82
+   },
+   "odometry_perfect": {
+    "final_cm": 3.8,
+    "max_cm": 7.2,
+    "cm_per_m": 0.63
+   },
+   "odometry_alpha4": {
+    "final_cm": 3.1,
+    "max_cm": 7.5,
+    "cm_per_m": 0.52
+   },
+   "odometry_v15": {
+    "final_cm": 2.4,
+    "max_cm": 6.1,
+    "cm_per_m": 0.4
+   }
+  },
+  {
+   "seed": 2,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 11.449,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.008,
+    "friction": 1.121,
+    "kp": 197.4,
+    "vin": 8.03,
+    "lag": 4
+   },
+   "net_m": 11.41,
+   "heading_err_deg": 7.2,
+   "wall_s": 9.4,
+   "odometry": {
+    "final_cm": 69.5,
+    "max_cm": 69.5,
+    "cm_per_m": 6.07,
+    "z_err_mm": -1.4,
+    "switches": 1072
+   },
+   "dead_reckoning": {
+    "final_cm": 137.0,
+    "max_cm": 137.0,
+    "cm_per_m": 11.96
+   },
+   "odometry_true_heading": {
+    "final_cm": 28.8,
+    "max_cm": 28.8,
+    "cm_per_m": 2.51
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 113.5,
+    "max_cm": 113.5,
+    "cm_per_m": 9.91
+   },
+   "odometry_perfect": {
+    "final_cm": 28.9,
+    "max_cm": 28.9,
+    "cm_per_m": 2.53
+   },
+   "odometry_alpha4": {
+    "final_cm": 75.4,
+    "max_cm": 75.4,
+    "cm_per_m": 6.58
+   },
+   "odometry_v15": {
+    "final_cm": 75.5,
+    "max_cm": 75.5,
+    "cm_per_m": 6.6
+   }
+  },
+  {
+   "seed": 2,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 10.922,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.008,
+    "friction": 1.121,
+    "kp": 197.4,
+    "vin": 8.03,
+    "lag": 4
+   },
+   "net_m": 0.619,
+   "heading_err_deg": 4.6,
+   "wall_s": 10.5,
+   "odometry": {
+    "final_cm": 5.4,
+    "max_cm": 10.4,
+    "cm_per_m": 0.5,
+    "z_err_mm": -0.6,
+    "switches": 1069
+   },
+   "dead_reckoning": {
+    "final_cm": 2.9,
+    "max_cm": 35.0,
+    "cm_per_m": 0.27
+   },
+   "odometry_true_heading": {
+    "final_cm": 1.9,
+    "max_cm": 7.3,
+    "cm_per_m": 0.18
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 7.6,
+    "max_cm": 33.8,
+    "cm_per_m": 0.69
+   },
+   "odometry_perfect": {
+    "final_cm": 1.5,
+    "max_cm": 6.9,
+    "cm_per_m": 0.14
+   },
+   "odometry_alpha4": {
+    "final_cm": 8.6,
+    "max_cm": 8.7,
+    "cm_per_m": 0.79
+   },
+   "odometry_v15": {
+    "final_cm": 8.3,
+    "max_cm": 10.9,
+    "cm_per_m": 0.76
+   }
+  },
+  {
+   "seed": 2,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 6.162,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.008,
+    "friction": 1.121,
+    "kp": 197.4,
+    "vin": 8.03,
+    "lag": 4
+   },
+   "net_m": 2.754,
+   "heading_err_deg": 2.28,
+   "wall_s": 9.0,
+   "odometry": {
+    "final_cm": 4.0,
+    "max_cm": 4.2,
+    "cm_per_m": 0.66,
+    "z_err_mm": -0.7,
+    "switches": 1016
+   },
+   "dead_reckoning": {
+    "final_cm": 40.1,
+    "max_cm": 42.4,
+    "cm_per_m": 6.51
+   },
+   "odometry_true_heading": {
+    "final_cm": 7.1,
+    "max_cm": 7.3,
+    "cm_per_m": 1.16
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 44.4,
+    "max_cm": 44.5,
+    "cm_per_m": 7.2
+   },
+   "odometry_perfect": {
+    "final_cm": 7.0,
+    "max_cm": 7.1,
+    "cm_per_m": 1.14
+   },
+   "odometry_alpha4": {
+    "final_cm": 4.1,
+    "max_cm": 4.1,
+    "cm_per_m": 0.67
+   },
+   "odometry_v15": {
+    "final_cm": 4.4,
+    "max_cm": 5.3,
+    "cm_per_m": 0.71
+   }
+  },
+  {
+   "seed": 3,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 10.832,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 0.988,
+    "kp": 178.8,
+    "vin": 7.69,
+    "lag": 4
+   },
+   "net_m": 10.785,
+   "heading_err_deg": 11.19,
+   "wall_s": 8.6,
+   "odometry": {
+    "final_cm": 101.0,
+    "max_cm": 101.0,
+    "cm_per_m": 9.33,
+    "z_err_mm": -1.0,
+    "switches": 1076
+   },
+   "dead_reckoning": {
+    "final_cm": 82.4,
+    "max_cm": 82.4,
+    "cm_per_m": 7.6
+   },
+   "odometry_true_heading": {
+    "final_cm": 23.9,
+    "max_cm": 23.9,
+    "cm_per_m": 2.21
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 63.6,
+    "max_cm": 65.3,
+    "cm_per_m": 5.87
+   },
+   "odometry_perfect": {
+    "final_cm": 22.9,
+    "max_cm": 22.9,
+    "cm_per_m": 2.11
+   },
+   "odometry_alpha4": {
+    "final_cm": 99.2,
+    "max_cm": 99.2,
+    "cm_per_m": 9.16
+   },
+   "odometry_v15": {
+    "final_cm": 104.7,
+    "max_cm": 104.7,
+    "cm_per_m": 9.66
+   }
+  },
+  {
+   "seed": 3,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 10.599,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 0.988,
+    "kp": 178.8,
+    "vin": 7.69,
+    "lag": 4
+   },
+   "net_m": 1.826,
+   "heading_err_deg": 7.75,
+   "wall_s": 8.9,
+   "odometry": {
+    "final_cm": 12.3,
+    "max_cm": 12.9,
+    "cm_per_m": 1.16,
+    "z_err_mm": -0.4,
+    "switches": 1071
+   },
+   "dead_reckoning": {
+    "final_cm": 20.6,
+    "max_cm": 28.0,
+    "cm_per_m": 1.95
+   },
+   "odometry_true_heading": {
+    "final_cm": 2.9,
+    "max_cm": 4.5,
+    "cm_per_m": 0.28
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 25.4,
+    "max_cm": 28.5,
+    "cm_per_m": 2.4
+   },
+   "odometry_perfect": {
+    "final_cm": 2.7,
+    "max_cm": 4.4,
+    "cm_per_m": 0.26
+   },
+   "odometry_alpha4": {
+    "final_cm": 11.7,
+    "max_cm": 12.3,
+    "cm_per_m": 1.1
+   },
+   "odometry_v15": {
+    "final_cm": 16.2,
+    "max_cm": 16.7,
+    "cm_per_m": 1.53
+   }
+  },
+  {
+   "seed": 3,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 6.291,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 0.988,
+    "kp": 178.8,
+    "vin": 7.69,
+    "lag": 4
+   },
+   "net_m": 0.895,
+   "heading_err_deg": 5.34,
+   "wall_s": 11.2,
+   "odometry": {
+    "final_cm": 5.4,
+    "max_cm": 6.5,
+    "cm_per_m": 0.86,
+    "z_err_mm": -0.6,
+    "switches": 1078
+   },
+   "dead_reckoning": {
+    "final_cm": 8.9,
+    "max_cm": 26.0,
+    "cm_per_m": 1.42
+   },
+   "odometry_true_heading": {
+    "final_cm": 1.5,
+    "max_cm": 6.3,
+    "cm_per_m": 0.24
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 7.1,
+    "max_cm": 27.8,
+    "cm_per_m": 1.14
+   },
+   "odometry_perfect": {
+    "final_cm": 2.0,
+    "max_cm": 6.1,
+    "cm_per_m": 0.32
+   },
+   "odometry_alpha4": {
+    "final_cm": 5.9,
+    "max_cm": 6.3,
+    "cm_per_m": 0.94
+   },
+   "odometry_v15": {
+    "final_cm": 6.7,
+    "max_cm": 7.6,
+    "cm_per_m": 1.06
+   }
+  },
+  {
+   "seed": 4,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 10.505,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 1.144,
+    "kp": 172.5,
+    "vin": 8.06,
+    "lag": 5
+   },
+   "net_m": 10.445,
+   "heading_err_deg": 12.4,
+   "wall_s": 9.7,
+   "odometry": {
+    "final_cm": 96.1,
+    "max_cm": 96.2,
+    "cm_per_m": 9.15,
+    "z_err_mm": -1.2,
+    "switches": 1081
+   },
+   "dead_reckoning": {
+    "final_cm": 85.9,
+    "max_cm": 87.5,
+    "cm_per_m": 8.17
+   },
+   "odometry_true_heading": {
+    "final_cm": 25.1,
+    "max_cm": 25.1,
+    "cm_per_m": 2.39
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 30.0,
+    "max_cm": 30.0,
+    "cm_per_m": 2.86
+   },
+   "odometry_perfect": {
+    "final_cm": 24.3,
+    "max_cm": 24.3,
+    "cm_per_m": 2.31
+   },
+   "odometry_alpha4": {
+    "final_cm": 103.9,
+    "max_cm": 104.0,
+    "cm_per_m": 9.89
+   },
+   "odometry_v15": {
+    "final_cm": 109.5,
+    "max_cm": 109.5,
+    "cm_per_m": 10.43
+   }
+  },
+  {
+   "seed": 4,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 10.126,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 1.144,
+    "kp": 172.5,
+    "vin": 8.06,
+    "lag": 5
+   },
+   "net_m": 1.678,
+   "heading_err_deg": 12.01,
+   "wall_s": 11.9,
+   "odometry": {
+    "final_cm": 15.2,
+    "max_cm": 15.4,
+    "cm_per_m": 1.51,
+    "z_err_mm": 1.1,
+    "switches": 1082
+   },
+   "dead_reckoning": {
+    "final_cm": 17.7,
+    "max_cm": 25.6,
+    "cm_per_m": 1.75
+   },
+   "odometry_true_heading": {
+    "final_cm": 4.7,
+    "max_cm": 5.5,
+    "cm_per_m": 0.47
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 18.9,
+    "max_cm": 20.8,
+    "cm_per_m": 1.87
+   },
+   "odometry_perfect": {
+    "final_cm": 5.9,
+    "max_cm": 6.2,
+    "cm_per_m": 0.58
+   },
+   "odometry_alpha4": {
+    "final_cm": 19.7,
+    "max_cm": 19.7,
+    "cm_per_m": 1.95
+   },
+   "odometry_v15": {
+    "final_cm": 16.5,
+    "max_cm": 17.0,
+    "cm_per_m": 1.63
+   }
+  },
+  {
+   "seed": 4,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 6.353,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 1.144,
+    "kp": 172.5,
+    "vin": 8.06,
+    "lag": 5
+   },
+   "net_m": 3.015,
+   "heading_err_deg": 5.91,
+   "wall_s": 9.8,
+   "odometry": {
+    "final_cm": 16.8,
+    "max_cm": 16.8,
+    "cm_per_m": 2.64,
+    "z_err_mm": -0.5,
+    "switches": 1068
+   },
+   "dead_reckoning": {
+    "final_cm": 37.0,
+    "max_cm": 37.6,
+    "cm_per_m": 5.83
+   },
+   "odometry_true_heading": {
+    "final_cm": 5.6,
+    "max_cm": 5.7,
+    "cm_per_m": 0.88
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 29.1,
+    "max_cm": 29.8,
+    "cm_per_m": 4.57
+   },
+   "odometry_perfect": {
+    "final_cm": 5.7,
+    "max_cm": 5.7,
+    "cm_per_m": 0.89
+   },
+   "odometry_alpha4": {
+    "final_cm": 15.4,
+    "max_cm": 15.5,
+    "cm_per_m": 2.43
+   },
+   "odometry_v15": {
+    "final_cm": 20.0,
+    "max_cm": 20.0,
+    "cm_per_m": 3.14
+   }
+  },
+  {
+   "seed": 5,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 9.466,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.996,
+    "friction": 0.751,
+    "kp": 220.7,
+    "vin": 7.13,
+    "lag": 3
+   },
+   "net_m": 9.433,
+   "heading_err_deg": 9.44,
+   "wall_s": 10.6,
+   "odometry": {
+    "final_cm": 77.5,
+    "max_cm": 77.5,
+    "cm_per_m": 8.19,
+    "z_err_mm": -0.9,
+    "switches": 1105
+   },
+   "dead_reckoning": {
+    "final_cm": 135.5,
+    "max_cm": 135.7,
+    "cm_per_m": 14.31
+   },
+   "odometry_true_heading": {
+    "final_cm": 21.7,
+    "max_cm": 21.8,
+    "cm_per_m": 2.29
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 86.4,
+    "max_cm": 86.5,
+    "cm_per_m": 9.13
+   },
+   "odometry_perfect": {
+    "final_cm": 21.1,
+    "max_cm": 21.1,
+    "cm_per_m": 2.22
+   },
+   "odometry_alpha4": {
+    "final_cm": 86.1,
+    "max_cm": 86.1,
+    "cm_per_m": 9.1
+   },
+   "odometry_v15": {
+    "final_cm": 88.2,
+    "max_cm": 88.2,
+    "cm_per_m": 9.32
+   }
+  },
+  {
+   "seed": 5,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 9.152,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.996,
+    "friction": 0.751,
+    "kp": 220.7,
+    "vin": 7.13,
+    "lag": 3
+   },
+   "net_m": 0.708,
+   "heading_err_deg": 8.16,
+   "wall_s": 11.9,
+   "odometry": {
+    "final_cm": 13.8,
+    "max_cm": 16.5,
+    "cm_per_m": 1.51,
+    "z_err_mm": -0.7,
+    "switches": 1097
+   },
+   "dead_reckoning": {
+    "final_cm": 16.3,
+    "max_cm": 20.0,
+    "cm_per_m": 1.78
+   },
+   "odometry_true_heading": {
+    "final_cm": 3.1,
+    "max_cm": 7.6,
+    "cm_per_m": 0.34
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 4.3,
+    "max_cm": 10.5,
+    "cm_per_m": 0.47
+   },
+   "odometry_perfect": {
+    "final_cm": 3.3,
+    "max_cm": 7.2,
+    "cm_per_m": 0.36
+   },
+   "odometry_alpha4": {
+    "final_cm": 13.5,
+    "max_cm": 15.6,
+    "cm_per_m": 1.48
+   },
+   "odometry_v15": {
+    "final_cm": 10.2,
+    "max_cm": 18.8,
+    "cm_per_m": 1.12
+   }
+  },
+  {
+   "seed": 5,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 6.169,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.996,
+    "friction": 0.751,
+    "kp": 220.7,
+    "vin": 7.13,
+    "lag": 3
+   },
+   "net_m": 1.387,
+   "heading_err_deg": 2.36,
+   "wall_s": 10.0,
+   "odometry": {
+    "final_cm": 8.3,
+    "max_cm": 11.8,
+    "cm_per_m": 1.35,
+    "z_err_mm": -0.2,
+    "switches": 1060
+   },
+   "dead_reckoning": {
+    "final_cm": 14.0,
+    "max_cm": 21.2,
+    "cm_per_m": 2.27
+   },
+   "odometry_true_heading": {
+    "final_cm": 4.8,
+    "max_cm": 8.4,
+    "cm_per_m": 0.78
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 20.4,
+    "max_cm": 21.2,
+    "cm_per_m": 3.31
+   },
+   "odometry_perfect": {
+    "final_cm": 2.4,
+    "max_cm": 6.9,
+    "cm_per_m": 0.39
+   },
+   "odometry_alpha4": {
+    "final_cm": 9.1,
+    "max_cm": 10.2,
+    "cm_per_m": 1.47
+   },
+   "odometry_v15": {
+    "final_cm": 12.2,
+    "max_cm": 13.2,
+    "cm_per_m": 1.98
+   }
+  },
+  {
+   "seed": 6,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 10.827,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 0.703,
+    "kp": 211.6,
+    "vin": 7.86,
+    "lag": 3
+   },
+   "net_m": 10.803,
+   "heading_err_deg": 3.87,
+   "wall_s": 8.0,
+   "odometry": {
+    "final_cm": 46.5,
+    "max_cm": 46.7,
+    "cm_per_m": 4.3,
+    "z_err_mm": -1.5,
+    "switches": 1089
+   },
+   "dead_reckoning": {
+    "final_cm": 53.8,
+    "max_cm": 54.3,
+    "cm_per_m": 4.97
+   },
+   "odometry_true_heading": {
+    "final_cm": 36.0,
+    "max_cm": 36.2,
+    "cm_per_m": 3.32
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 57.0,
+    "max_cm": 57.2,
+    "cm_per_m": 5.26
+   },
+   "odometry_perfect": {
+    "final_cm": 34.7,
+    "max_cm": 34.7,
+    "cm_per_m": 3.2
+   },
+   "odometry_alpha4": {
+    "final_cm": 45.8,
+    "max_cm": 46.0,
+    "cm_per_m": 4.23
+   },
+   "odometry_v15": {
+    "final_cm": 42.7,
+    "max_cm": 42.9,
+    "cm_per_m": 3.94
+   }
+  },
+  {
+   "seed": 6,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 10.402,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 0.703,
+    "kp": 211.6,
+    "vin": 7.86,
+    "lag": 3
+   },
+   "net_m": 1.678,
+   "heading_err_deg": 3.61,
+   "wall_s": 8.9,
+   "odometry": {
+    "final_cm": 5.5,
+    "max_cm": 8.7,
+    "cm_per_m": 0.53,
+    "z_err_mm": -0.7,
+    "switches": 1087
+   },
+   "dead_reckoning": {
+    "final_cm": 19.0,
+    "max_cm": 26.5,
+    "cm_per_m": 1.83
+   },
+   "odometry_true_heading": {
+    "final_cm": 4.6,
+    "max_cm": 5.7,
+    "cm_per_m": 0.45
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 20.0,
+    "max_cm": 24.8,
+    "cm_per_m": 1.92
+   },
+   "odometry_perfect": {
+    "final_cm": 4.8,
+    "max_cm": 5.6,
+    "cm_per_m": 0.47
+   },
+   "odometry_alpha4": {
+    "final_cm": 6.9,
+    "max_cm": 7.8,
+    "cm_per_m": 0.67
+   },
+   "odometry_v15": {
+    "final_cm": 13.2,
+    "max_cm": 13.6,
+    "cm_per_m": 1.27
+   }
+  },
+  {
+   "seed": 6,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 4.573,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 1.005,
+    "friction": 0.703,
+    "kp": 211.6,
+    "vin": 7.86,
+    "lag": 3
+   },
+   "net_m": 0.487,
+   "heading_err_deg": -3.35,
+   "wall_s": 8.9,
+   "odometry": {
+    "final_cm": 2.0,
+    "max_cm": 4.1,
+    "cm_per_m": 0.44,
+    "z_err_mm": 0.3,
+    "switches": 1049
+   },
+   "dead_reckoning": {
+    "final_cm": 5.6,
+    "max_cm": 20.3,
+    "cm_per_m": 1.23
+   },
+   "odometry_true_heading": {
+    "final_cm": 2.5,
+    "max_cm": 4.4,
+    "cm_per_m": 0.54
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 6.0,
+    "max_cm": 20.1,
+    "cm_per_m": 1.32
+   },
+   "odometry_perfect": {
+    "final_cm": 2.9,
+    "max_cm": 4.4,
+    "cm_per_m": 0.64
+   },
+   "odometry_alpha4": {
+    "final_cm": 1.9,
+    "max_cm": 5.1,
+    "cm_per_m": 0.41
+   },
+   "odometry_v15": {
+    "final_cm": 5.2,
+    "max_cm": 6.6,
+    "cm_per_m": 1.14
+   }
+  },
+  {
+   "seed": 7,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 9.506,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.996,
+    "friction": 0.917,
+    "kp": 205.9,
+    "vin": 6.6,
+    "lag": 4
+   },
+   "net_m": 9.449,
+   "heading_err_deg": 15.21,
+   "wall_s": 7.9,
+   "odometry": {
+    "final_cm": 114.7,
+    "max_cm": 114.7,
+    "cm_per_m": 12.07,
+    "z_err_mm": -1.2,
+    "switches": 1066
+   },
+   "dead_reckoning": {
+    "final_cm": 144.7,
+    "max_cm": 144.7,
+    "cm_per_m": 15.22
+   },
+   "odometry_true_heading": {
+    "final_cm": 18.4,
+    "max_cm": 18.6,
+    "cm_per_m": 1.94
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 80.8,
+    "max_cm": 80.8,
+    "cm_per_m": 8.5
+   },
+   "odometry_perfect": {
+    "final_cm": 18.7,
+    "max_cm": 18.8,
+    "cm_per_m": 1.97
+   },
+   "odometry_alpha4": {
+    "final_cm": 119.7,
+    "max_cm": 119.7,
+    "cm_per_m": 12.59
+   },
+   "odometry_v15": {
+    "final_cm": 124.6,
+    "max_cm": 124.6,
+    "cm_per_m": 13.1
+   }
+  },
+  {
+   "seed": 7,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 9.409,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.996,
+    "friction": 0.917,
+    "kp": 205.9,
+    "vin": 6.6,
+    "lag": 4
+   },
+   "net_m": 0.232,
+   "heading_err_deg": 13.13,
+   "wall_s": 9.7,
+   "odometry": {
+    "final_cm": 17.2,
+    "max_cm": 19.1,
+    "cm_per_m": 1.83,
+    "z_err_mm": -0.6,
+    "switches": 1064
+   },
+   "dead_reckoning": {
+    "final_cm": 22.0,
+    "max_cm": 23.1,
+    "cm_per_m": 2.34
+   },
+   "odometry_true_heading": {
+    "final_cm": 2.2,
+    "max_cm": 6.0,
+    "cm_per_m": 0.23
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 6.3,
+    "max_cm": 11.2,
+    "cm_per_m": 0.67
+   },
+   "odometry_perfect": {
+    "final_cm": 2.2,
+    "max_cm": 6.1,
+    "cm_per_m": 0.24
+   },
+   "odometry_alpha4": {
+    "final_cm": 16.6,
+    "max_cm": 18.2,
+    "cm_per_m": 1.76
+   },
+   "odometry_v15": {
+    "final_cm": 14.1,
+    "max_cm": 22.1,
+    "cm_per_m": 1.5
+   }
+  },
+  {
+   "seed": 7,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 5.778,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.996,
+    "friction": 0.917,
+    "kp": 205.9,
+    "vin": 6.6,
+    "lag": 4
+   },
+   "net_m": 1.661,
+   "heading_err_deg": 8.18,
+   "wall_s": 10.8,
+   "odometry": {
+    "final_cm": 8.2,
+    "max_cm": 8.5,
+    "cm_per_m": 1.42,
+    "z_err_mm": -0.0,
+    "switches": 1035
+   },
+   "dead_reckoning": {
+    "final_cm": 6.2,
+    "max_cm": 16.8,
+    "cm_per_m": 1.08
+   },
+   "odometry_true_heading": {
+    "final_cm": 2.6,
+    "max_cm": 5.2,
+    "cm_per_m": 0.45
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 10.3,
+    "max_cm": 15.9,
+    "cm_per_m": 1.78
+   },
+   "odometry_perfect": {
+    "final_cm": 2.0,
+    "max_cm": 4.4,
+    "cm_per_m": 0.34
+   },
+   "odometry_alpha4": {
+    "final_cm": 7.2,
+    "max_cm": 8.4,
+    "cm_per_m": 1.25
+   },
+   "odometry_v15": {
+    "final_cm": 15.4,
+    "max_cm": 15.6,
+    "cm_per_m": 2.66
+   }
+  },
+  {
+   "seed": 8,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 10.493,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.998,
+    "friction": 0.969,
+    "kp": 200.6,
+    "vin": 7.46,
+    "lag": 4
+   },
+   "net_m": 10.459,
+   "heading_err_deg": 11.03,
+   "wall_s": 10.0,
+   "odometry": {
+    "final_cm": 87.9,
+    "max_cm": 87.9,
+    "cm_per_m": 8.37,
+    "z_err_mm": 0.2,
+    "switches": 1064
+   },
+   "dead_reckoning": {
+    "final_cm": 81.6,
+    "max_cm": 83.0,
+    "cm_per_m": 7.78
+   },
+   "odometry_true_heading": {
+    "final_cm": 27.3,
+    "max_cm": 27.3,
+    "cm_per_m": 2.6
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 24.8,
+    "max_cm": 24.8,
+    "cm_per_m": 2.36
+   },
+   "odometry_perfect": {
+    "final_cm": 26.1,
+    "max_cm": 26.1,
+    "cm_per_m": 2.49
+   },
+   "odometry_alpha4": {
+    "final_cm": 96.0,
+    "max_cm": 96.0,
+    "cm_per_m": 9.15
+   },
+   "odometry_v15": {
+    "final_cm": 99.0,
+    "max_cm": 99.0,
+    "cm_per_m": 9.44
+   }
+  },
+  {
+   "seed": 8,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 10.078,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.998,
+    "friction": 0.969,
+    "kp": 200.6,
+    "vin": 7.46,
+    "lag": 4
+   },
+   "net_m": 0.983,
+   "heading_err_deg": 8.91,
+   "wall_s": 10.4,
+   "odometry": {
+    "final_cm": 11.0,
+    "max_cm": 12.8,
+    "cm_per_m": 1.09,
+    "z_err_mm": -0.7,
+    "switches": 1065
+   },
+   "dead_reckoning": {
+    "final_cm": 6.9,
+    "max_cm": 29.4,
+    "cm_per_m": 0.69
+   },
+   "odometry_true_heading": {
+    "final_cm": 2.1,
+    "max_cm": 4.1,
+    "cm_per_m": 0.21
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 10.8,
+    "max_cm": 24.2,
+    "cm_per_m": 1.08
+   },
+   "odometry_perfect": {
+    "final_cm": 2.6,
+    "max_cm": 4.9,
+    "cm_per_m": 0.25
+   },
+   "odometry_alpha4": {
+    "final_cm": 12.6,
+    "max_cm": 14.6,
+    "cm_per_m": 1.25
+   },
+   "odometry_v15": {
+    "final_cm": 15.2,
+    "max_cm": 15.8,
+    "cm_per_m": 1.51
+   }
+  },
+  {
+   "seed": 8,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 8.22,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.998,
+    "friction": 0.969,
+    "kp": 200.6,
+    "vin": 7.46,
+    "lag": 4
+   },
+   "net_m": 4.005,
+   "heading_err_deg": 4.48,
+   "wall_s": 9.3,
+   "odometry": {
+    "final_cm": 16.2,
+    "max_cm": 16.2,
+    "cm_per_m": 1.97,
+    "z_err_mm": -1.5,
+    "switches": 1072
+   },
+   "dead_reckoning": {
+    "final_cm": 39.8,
+    "max_cm": 44.5,
+    "cm_per_m": 4.84
+   },
+   "odometry_true_heading": {
+    "final_cm": 13.7,
+    "max_cm": 13.7,
+    "cm_per_m": 1.67
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 42.6,
+    "max_cm": 42.6,
+    "cm_per_m": 5.18
+   },
+   "odometry_perfect": {
+    "final_cm": 13.9,
+    "max_cm": 13.9,
+    "cm_per_m": 1.69
+   },
+   "odometry_alpha4": {
+    "final_cm": 9.7,
+    "max_cm": 9.7,
+    "cm_per_m": 1.18
+   },
+   "odometry_v15": {
+    "final_cm": 14.9,
+    "max_cm": 14.9,
+    "cm_per_m": 1.81
+   }
+  },
+  {
+   "seed": 9,
+   "course": "straight",
+   "t": 45.0,
+   "path_m": 10.664,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.993,
+    "friction": 0.86,
+    "kp": 180.2,
+    "vin": 7.8,
+    "lag": 5
+   },
+   "net_m": 10.595,
+   "heading_err_deg": 10.63,
+   "wall_s": 9.5,
+   "odometry": {
+    "final_cm": 90.2,
+    "max_cm": 90.2,
+    "cm_per_m": 8.45,
+    "z_err_mm": -0.2,
+    "switches": 1080
+   },
+   "dead_reckoning": {
+    "final_cm": 64.3,
+    "max_cm": 64.3,
+    "cm_per_m": 6.03
+   },
+   "odometry_true_heading": {
+    "final_cm": 24.3,
+    "max_cm": 24.4,
+    "cm_per_m": 2.28
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 53.2,
+    "max_cm": 55.8,
+    "cm_per_m": 4.99
+   },
+   "odometry_perfect": {
+    "final_cm": 24.4,
+    "max_cm": 24.7,
+    "cm_per_m": 2.29
+   },
+   "odometry_alpha4": {
+    "final_cm": 97.3,
+    "max_cm": 97.3,
+    "cm_per_m": 9.13
+   },
+   "odometry_v15": {
+    "final_cm": 98.5,
+    "max_cm": 98.5,
+    "cm_per_m": 9.24
+   }
+  },
+  {
+   "seed": 9,
+   "course": "square",
+   "t": 45.0,
+   "path_m": 10.354,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.993,
+    "friction": 0.86,
+    "kp": 180.2,
+    "vin": 7.8,
+    "lag": 5
+   },
+   "net_m": 1.439,
+   "heading_err_deg": 10.34,
+   "wall_s": 8.7,
+   "odometry": {
+    "final_cm": 10.5,
+    "max_cm": 13.1,
+    "cm_per_m": 1.02,
+    "z_err_mm": -2.1,
+    "switches": 1082
+   },
+   "dead_reckoning": {
+    "final_cm": 22.9,
+    "max_cm": 26.9,
+    "cm_per_m": 2.21
+   },
+   "odometry_true_heading": {
+    "final_cm": 4.7,
+    "max_cm": 5.6,
+    "cm_per_m": 0.46
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 21.3,
+    "max_cm": 26.1,
+    "cm_per_m": 2.06
+   },
+   "odometry_perfect": {
+    "final_cm": 3.3,
+    "max_cm": 3.9,
+    "cm_per_m": 0.32
+   },
+   "odometry_alpha4": {
+    "final_cm": 10.1,
+    "max_cm": 16.1,
+    "cm_per_m": 0.97
+   },
+   "odometry_v15": {
+    "final_cm": 13.3,
+    "max_cm": 15.1,
+    "cm_per_m": 1.28
+   }
+  },
+  {
+   "seed": 9,
+   "course": "mixed",
+   "t": 45.0,
+   "path_m": 6.339,
+   "falls": 0,
+   "body": {
+    "mass_scale_mean": 0.993,
+    "friction": 0.86,
+    "kp": 180.2,
+    "vin": 7.8,
+    "lag": 5
+   },
+   "net_m": 4.703,
+   "heading_err_deg": 5.23,
+   "wall_s": 9.2,
+   "odometry": {
+    "final_cm": 19.5,
+    "max_cm": 19.7,
+    "cm_per_m": 3.08,
+    "z_err_mm": 0.5,
+    "switches": 1016
+   },
+   "dead_reckoning": {
+    "final_cm": 66.4,
+    "max_cm": 66.6,
+    "cm_per_m": 10.47
+   },
+   "odometry_true_heading": {
+    "final_cm": 13.5,
+    "max_cm": 13.6,
+    "cm_per_m": 2.13
+   },
+   "dead_reckoning_true_heading": {
+    "final_cm": 61.5,
+    "max_cm": 64.2,
+    "cm_per_m": 9.7
+   },
+   "odometry_perfect": {
+    "final_cm": 12.7,
+    "max_cm": 12.9,
+    "cm_per_m": 2.0
+   },
+   "odometry_alpha4": {
+    "final_cm": 15.0,
+    "max_cm": 15.3,
+    "cm_per_m": 2.37
+   },
+   "odometry_v15": {
+    "final_cm": 15.0,
+    "max_cm": 15.3,
+    "cm_per_m": 2.37
+   }
+  }
+ ]
+}
