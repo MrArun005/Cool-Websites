@@ -8,7 +8,7 @@ The random numbers inside the tactics (support-run jitter, detour side) come fro
 both sides.
 
     PY=/home/user/cool-websites/.venv/bin/python
-    $PY duckbody/hybrid/live/tactics_check.py OUT.json [seconds=120]
+    $PY duckbody/hybrid/live/tactics_check.py OUT.json [seconds=120] [rng seed=7]
     node duckbody/hybrid/live/tactics_check.mjs OUT.json
 """
 import json

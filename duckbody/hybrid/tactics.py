@@ -14,8 +14,10 @@ Input, the team's world model `wm` (a dict; positions in metres, field frame, x 
     spots       {name: [x, y]}: kick-off spots (READY phase)
     players     list of {"name", "role" ("GK", "D1", "D2", "A1", "A2"), "pos": [x, y], "psi" (heading, rad),
                 "active" (not taken off), "down" (fallen / getting up), "busy" (kicking / hopping: commands ignored),
-                "ball": own estimate [x, y] or None, "ball_src": "own" (own camera, fresh) | "team" | None,
-                "ball_age" (s since that player's own camera saw it)}
+                "ball": own estimate [x, y] or None, "ball_src": "own" (own camera, fresh) | "mem" (ball memory at
+                the feet) | "touch" (leg touch) | "team" | None, "ball_age" (s since that player's own camera saw
+                it), "ball_sig" (m, 1-sigma), "swing" ("left" | "right" | None: the foot in the air), "rising",
+                "head_home" (s the head command has been at home), "moving" (|walk command|)}
     opps        list of {"pos": [x, y], "role", "active"} (opponents as this team perceives them, with noise)
 
 Output per player name: a Cmd. vx, vy, wz go to velstand (`runtime.drive`), head to `runtime.look(yaw, pitch, neck)`,
@@ -30,10 +32,12 @@ The plan, per tick:
     open space with a clear passing lane, defenders mark the most dangerous opponent goal-side or hold the block.
  3. The block (formation) slides with the ball: up and across. Off-ball players face the ball and move: at their
     spot they jockey (a slow sideways shuffle), support runs re-target every ~2.5 s into new space.
- 4. Ball play (soccer.py's kick cycle, faster): approach behind the ball on the line to the aim, align at a foot,
-    head home ~1 s, kick. A quick kick fires from any state when the ball is already in a foot's kick window and the
-    aim is roughly ahead. Duel when an opponent is close: walk through the ball towards the aim. Aim: shoot when the
-    lane is open from <= SHOOT_D, pass to an open teammate further up (lead pass), else forward / clear.
+ 4. Ball play: approach behind the ball on the line to the aim; with room, a glide (head home on the way in, kick on
+    the move from a slow walk when the kicking foot is in the air); in a duel a walk-through strike (curving, the
+    ball on a foot's line, past an opponent on the aim line; a ball beside the duck walked into as it lies); a ball
+    at the feet out of view: look down, step back / sidestep-turn, never a search turn. The old align / head home /
+    standing kick remains the fallback. Aim: shoot when the lane is open from <= SHOOT_D, pass to an open teammate
+    further up (lead pass), else forward / clear.
  5. After a pass the receiver turns to the ball and moves onto its path to meet it; the passer runs forward
     (give-and-go). After any other kick the kicker keeps the ball (follow-up) for a few seconds.
  6. Goalkeeper: on the arc in front of its goal on the line ball -> goal, facing the ball, sliding with it; comes out to

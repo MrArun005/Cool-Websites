@@ -318,15 +318,21 @@ whoever is still off his spot by more than 0.35 m or down is carried there, Robo
 
 | match (seed) | Blue : Yellow | kicks (connected) | shots | passes (completed) | players moving > 70 % | mean moving | distance / player | duels | falls (incl. referee) | dropped balls |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 0 | 0 : 0 | 32 (13) | 19 | 3 (0) | 8/10 | 79 % | 43 m | 40 | 10 | 11 |
-| 1 | 1 : 0 | 30 (20) | 16 | 1 (1) | 8/10 | 78 % | 40 m | 33 | 11 | 10 |
-| 2 | 0 : 0 | 26 (11) | 12 | 0 (0) | 8/10 | 78 % | 40 m | 30 | 5 | 13 |
-| 3 | 0 : 1 | 29 (10) | 19 | 4 (1) | 8/10 | 78 % | 41 m | 33 | 7 | 11 |
-| 4 | 0 : 0 | 40 (20) | 15 | 9 (4) | 8/10 | 76 % | 40 m | 32 | 5 | 11 |
+| 0 | 2 : 2 | 3 (2) | 1 | 1 (1) | 8/10 | 83 % | 48 m | 53 | 7 | 0 |
+| 1 | 0 : 0 | 3 (2) | 2 | 0 (0) | 8/10 | 80 % | 42 m | 33 | 9 | 2 |
+| 2 | 1 : 0 | 2 (0) | 0 | 0 (0) | 8/10 | 82 % | 45 m | 49 | 10 | 2 |
+| 3 | 0 : 0 | 3 (3) | 1 | 0 (0) | 8/10 | 82 % | 47 m | 43 | 12 | 2 |
+| 4 | 0 : 0 | 3 (2) | 1 | 1 (0) | 8/10 | 81 % | 43 m | 38 | 15 | 5 |
 
-2 goals in 5 matches (1 own goal), 17 passes of which 6 completed. "Moving" = the trunk travelled more than 3 cm/s over a 0.5 s window, over the playing time (turning on the spot counts about a third of the time, stepping in place never); "duels" = players of both teams within 0.3 m of the ball at once.
+5 goals in 5 matches (before the stuck-ball / strike rewrite: 2 goals, 1 of them an own goal), 11 dropped balls
+(before: 56), 14 kicks (before: 157, 74 connected): the ball is now mostly moved by walk-through strikes, which the
+kick count does not include. Falls went up: 53 (before 38), most of them the strikers walking through the ball at
+speed into an opponent (b4 10, y5 10); on the shorter 3 x 3 min comparison below they went down (18 -> 12), so
+treat falls as about the same or somewhat worse. "Moving" = the trunk travelled more than 3 cm/s over a 0.5 s window,
+over the playing time (turning on the spot counts about a third of the time, stepping in place never); "duels" =
+players of both teams within 0.3 m of the ball at once.
 
-Falls per duck over all matches: b1 0, b2 4, b3 1, b4 6, b5 6, y1 0, y2 2, y3 4, y4 4, y5 6, ref 5.
+Falls per duck over all matches: b1 3, b2 2, b3 4, b4 10, b5 5, y1 1, y2 5, y3 5, y4 6, y5 10, ref 2.
 
 **Before / after the tactics rewrite** (same seeds 0-2, 2 x 3 min each; before = the earlier behaviour, kept as
 `_match_before.py` with the same measurement code; `results_match_activity.json`):
@@ -489,6 +495,14 @@ What this means, honestly:
   15 cm): the memory, a teammate's view and leg touches carry the ball's position instead, and nobody turns round to
   search; the standing time doubled (find: look down and hold still for a frame).
 - A real running kick would need a new brain (below).
+
+**The live page** (same changes in tactics.js / live_game.js, `tactics_check` 0 differing commands; measured in node
+with the page's own code, seeds 1-3, 1 x 3 min, before = the page at commit 8eda0cd): dropped balls 17 -> 6, stalled
+time about the same (181 s -> 190 s, 34 -> 39 stalls), player time within 15 cm of the ball without a fix 155 s ->
+177 s (the page's visibility model has no self-occlusion and no blind zone at the feet beyond the field of view, so
+it "loses" the ball less than match.py), standing while lost 11 s -> 24 s, kicks 53 -> 6, falls 4 -> 14. So on the
+page the dropped balls go down as in match.py, but the stalls do not, and the ducks fall more: the walk-through
+strikes at drive 0.9 into another duck knock ducks over more often on the page's simplified collision hulls.
 
 **A "walk-kick" brain, trained?** Fine-tuning velstand with PPO in this MuJoCo + BAM harness (same 61-D obs, a
 ball-strike reward) is possible in principle (torch and stable-baselines3 are installed), but the harness runs one
