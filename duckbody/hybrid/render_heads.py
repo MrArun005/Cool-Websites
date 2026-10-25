@@ -1,4 +1,4 @@
-"""Side-by-side picture of the head sizes (README "Lighter head"): each body standing, side view and 3/4 view.
+"""Side-by-side picture of the head sizes and shapes (README "Lighter head"): each body standing; front, side, 3/4.
 
     MUJOCO_GL=osmesa /home/user/cool-websites/.venv/bin/python duckbody/hybrid/render_heads.py [OUT.png]
 """
@@ -12,9 +12,10 @@ import mujoco  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-HEADS = [("_noantenna", "owner head x1 (189 g)"), ("_k85", "x0.85 (159 g)"), ("_k75", "x0.75 (142 g)"),
-         ("_small", "x2/3 (old variant, 189 g)")]
-W, H = 420, 460
+HEADS = [("_noantenna", "owner head x1"), ("_k85", "owner head x0.85"), ("_k75", "owner head x0.75"),
+         ("_small", "x2/3 (old)"), ("_human", "human-like head"), ("_roundduck", "round duck head")]
+VIEWS = ((180, "front"), (90, "side"), (150, "3/4"))
+W, H = 340, 400
 
 
 def shots(suffix):
@@ -29,7 +30,7 @@ def shots(suffix):
     cam.distance = 0.56
     cam.elevation = -8
     out = []
-    for az in (90, 160):                 # side (looking along +y), front three-quarter
+    for az, _ in VIEWS:                  # front (camera ahead, looking back), side, front three-quarter
         cam.azimuth = az
         r.update_scene(d, cam, opt)
         out.append(r.render()[:, :, ::-1].copy())
@@ -41,12 +42,11 @@ def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "light" / "heads_side_by_side.png"
     cols = []
     for suffix, label in HEADS:
-        a, b = shots(suffix)
-        col = np.vstack([a, b])
+        col = np.vstack(shots(suffix))
         cv2.rectangle(col, (0, 0), (W, 34), (255, 255, 255), -1)
-        cv2.putText(col, label, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2, cv2.LINE_AA)
+        cv2.putText(col, label, (8, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (20, 20, 20), 2, cv2.LINE_AA)
         cols.append(col)
-        cols.append(np.full((2 * H, 4, 3), 255, np.uint8))
+        cols.append(np.full((len(VIEWS) * H, 4, 3), 255, np.uint8))
     img = np.hstack(cols[:-1])
     out.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(out), img)

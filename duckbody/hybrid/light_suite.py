@@ -40,6 +40,8 @@ BODIES = {          # suffix -> label, head mass (g), head scale
     "_m100": ("100 g", 100, 1.0),
     "_k85": ("x0.85 (159 g)", 159, 0.85),
     "_k75": ("x0.75 (142 g)", 142, 0.75),
+    "_human": ("human-like head", None, None),              # build_shapes.py; mass build_hybrid.SHAPE_KG
+    "_roundduck": ("round duck head", None, None),
 }
 MATCH_SEEDS = (0, 1)
 
@@ -68,7 +70,8 @@ def run(a):
         (OUT / body).mkdir(parents=True, exist_ok=True)
         todo += [u for u in units(body) if not u[3].exists()]
     # interleave bodies so the long units (matches) of every body start early
-    todo.sort(key=lambda u: (units(u[0]).index(next(x for x in units(u[0]) if x[1] == u[1])), list(BODIES).index(u[0])))
+    rank = {"skills": 0, "course": 1, "follow": 2, "soccer": 3, "match": 4}     # the skills of every body first
+    todo.sort(key=lambda u: (rank[u[1].split("_")[0]], list(BODIES).index(u[0]), u[1]))
     print(f"{len(todo)} units", flush=True)
     env = dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1", MUJOCO_GL="osmesa")
 

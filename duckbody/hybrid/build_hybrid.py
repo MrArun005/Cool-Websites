@@ -126,13 +126,15 @@ def inertial_el(mass, pos, I):
 
 
 def build(md_robot: str, out_name: str, variant: str, report: dict, collision: str = "owner", k: float = 1.0,
-          suffix: str | None = None, head_mass: float | None = None, scale_com: bool = False):
+          suffix: str | None = None, head_mass: float | None = None, scale_com: bool = False, shape: str | None = None):
     """collision: 'owner' (owner's head hulls incl. antennas), 'owner_noantenna' (antennas visual only),
     'microduck' (keep Microduck's own head collision meshes: a pure visual swap). k: owner head scale
     factor on top of the 0.7 mid scale, about the shell centre (1.0 = the owner's mid head).
     Lighter heads (matched variant only): head_mass = head link + jaw mass in kg (default Microduck's 0.1888);
     the inertia about the CoM is scaled with the mass (same shape), and with scale_com the CoM is moved with the
-    shell scale k (about the shell centre) and the inertia also scaled by k^2."""
+    shell scale k (about the shell centre) and the inertia also scaled by k^2.
+    shape: 'human' / 'roundduck' (build_shapes.py, shapes/shapes.json): a new skull in place of the owner's head and
+    Microduck's top shell, on Microduck's own bottom head shell (kept, drawn and colliding); CoM from the parts."""
     # ---- reference models -------------------------------------------------------------------
     md_scene = {"robot_allcollisions.xml": "scene_allcollisions.xml", "robot_groundcontact.xml": "scene.xml"}[md_robot]
     mm = mujoco.MjModel.from_xml_path(str(MD / md_scene))
@@ -185,7 +187,11 @@ def build(md_robot: str, out_name: str, variant: str, report: dict, collision: s
     head = next(b for b in root.iter("body") if b.get("name") == MD_HEAD_BODY)
     md_inertial = head.find("inertial")
     # Hide Microduck's head parts (kept for packaging checks), drop their collision geoms.
+    shp = json.loads((HERE / "shapes" / "shapes.json").read_text())[shape] if shape else None
     for g in list(head.findall("geom")):
+        if shp is not None and g.get("mesh") == "bottom_head_shell":     # the shapes mount on Microduck's bottom shell
+            g.set("name", "md_bottom_head_shell_" + ("vis" if g.get("class") == "visual" else "col"))
+            continue
         if g.get("class") == "visual":
             g.set("group", "4")
             g.set("name", "md_" + g.get("mesh") + f"_{list(head).index(g)}")
@@ -197,7 +203,7 @@ def build(md_robot: str, out_name: str, variant: str, report: dict, collision: s
     ohead = next(b for b in otree.getroot().iter("body") if b.get("name") == OWNER_HEAD_BODY)
     insert_at = list(head).index(md_inertial) + 1
     new = []
-    for g in ohead.findall("geom"):
+    for g in (ohead.findall("geom") if shp is None else []):
         mesh = g.get("mesh")
         if g.get("class") == "visual" and mesh:
             p, q = to_md([float(x) for x in g.get("pos").split()], [float(x) for x in g.get("quat").split()])
@@ -219,23 +225,46 @@ def build(md_robot: str, out_name: str, variant: str, report: dict, collision: s
                 else:
                     el.attrib.update({"contype": "0", "conaffinity": "0", "group": "2", "material": "owner_bill_material"})
                 new.append(el)
+    if shp is not None:
+        ET.SubElement(asset, "mesh", {"name": f"shape_{shape}_skull", "file": f"shapes/{shape}_skull.stl"})
+        ET.SubElement(asset, "material", {"name": f"shape_{shape}_material", "rgba": fmt(shp["spec"]["color"])})
+        new.append(ET.Element("geom", {"type": "mesh", "class": "visual", "name": f"shape_{shape}_skull_vis",
+                                       "mesh": f"shape_{shape}_skull", "material": f"shape_{shape}_material"}))
+        new.append(ET.Element("geom", {"type": "mesh", "class": "collision", "name": f"shape_{shape}_skull_col",
+                                       "mesh": f"shape_{shape}_skull"}))
+        for f in shp["features"]:
+            el = dict(type=f["kind"], size=fmt(f["s"]), pos=fmt(f["c"]))
+            new.append(ET.Element("geom", dict(el, name=f"shape_{f['n']}", contype="0", conaffinity="0", group="2",
+                                               rgba=fmt(f["rgba"]))))
+            if f.get("collide"):
+                new.append(ET.Element("geom", dict(el, name=f"shape_{f['n']}_col", **{"class": "collision"})))
     for i, el in enumerate(new):
         head.insert(insert_at + i, el)
 
     # Mouth: the owner's lower jaw on a hinge (Microduck's head carries a mouth servo too).
     ojaw = ohead.find("body[@name='jaw']")
-    jp, jq = to_md([float(x) for x in ojaw.get("pos").split()], [float(x) for x in ojaw.get("quat").split()])
-    jaw = ET.SubElement(head, "body", {"name": "owner_jaw", "pos": fmt(jp), "quat": fmt(jq)})
     oji = ojaw.find("inertial")
-    ET.SubElement(jaw, "inertial", dict(oji.attrib, pos=ksize(oji.get("pos"))))
+    if shp is None:
+        jp, jq = to_md([float(x) for x in ojaw.get("pos").split()], [float(x) for x in ojaw.get("quat").split()])
+        jaw_ipos = k * np.array([float(x) for x in oji.get("pos").split()])
+    else:                                                    # chin / lower bill of the shape, hinge across the head
+        jp, jq = np.array(shp["jaw"]["pos"]), np.array([1.0, 0, 0, 0])
+        jaw_ipos = np.array(shp["jaw"]["geoms"][0]["c"])
+    jaw = ET.SubElement(head, "body", {"name": "owner_jaw", "pos": fmt(jp), "quat": fmt(jq)})
+    ET.SubElement(jaw, "inertial", dict(oji.attrib, pos=fmt(jaw_ipos)))
     ET.SubElement(jaw, "joint", {"name": "mouth", "type": "hinge", "axis": "0 1 0", "range": f"0 {MOUTH['range']}",
                                  "damping": str(MOUTH["damping"]), "armature": str(MOUTH["armature"]),
                                  "frictionloss": "0"})
     olb = ojaw.find("geom[@name='lower_bill']")
-    ET.SubElement(jaw, "geom", {"name": "owner_lower_bill", "type": "ellipsoid", "size": ksize(olb.get("size")),
+    for g in (shp["jaw"]["geoms"] if shp is not None else []):
+        el = dict(type=g["kind"], size=fmt(g["s"]), pos=fmt(g["c"]))
+        ET.SubElement(jaw, "geom", dict(el, name=f"shape_{g['n']}", contype="0", conaffinity="0", group="2", rgba=fmt(g["rgba"])))
+        ET.SubElement(jaw, "geom", dict(el, name=f"shape_{g['n']}_col", **{"class": "collision"}))
+    if shp is None:
+        ET.SubElement(jaw, "geom", {"name": "owner_lower_bill", "type": "ellipsoid", "size": ksize(olb.get("size")),
                                 "pos": ksize(olb.get("pos")), "contype": "0", "conaffinity": "0", "group": "2",
                                 "material": "owner_bill_material"})
-    if collision != "microduck":
+    if collision != "microduck" and shp is None:
         ET.SubElement(jaw, "geom", {"name": "owner_lower_bill_col", "class": "collision", "type": "ellipsoid",
                                     "size": ksize(olb.get("size")), "pos": ksize(olb.get("pos"))})
     act = root.find("actuator")
@@ -254,9 +283,15 @@ def build(md_robot: str, out_name: str, variant: str, report: dict, collision: s
         M0 = head_mass
         if scale_com:
             c0 = shell_c + k * (c0 - shell_c)
+    if shp is not None:                                      # CoM from the parts (build_shapes.py mass split)
+        ms = shp["mass_g"]
+        cw = np.array(shp["skull_wall_centroid_head_frame"])
+        pm = [(ms["fixed"] + ms["bottom_shell"], c0), (ms["skull_wall"], cw), (ms["flange"], np.array([-0.002, cw[1], cw[2]]))]
+        pm += [(g_, np.array(c)) for g_, c in shp["features_mass"]]
+        c0 = sum(g_ * c for g_, c in pm) / sum(g_ for g_, _ in pm)
     # Jaw (owner's) in the head frame, mouth closed.
     mj = float(oji.get("mass"))
-    cj = jp + quat2mat(jq) @ (k * np.array([float(x) for x in oji.get("pos").split()]))
+    cj = jp + quat2mat(jq) @ jaw_ipos
     Ij = quat2mat(jq) @ np.diag([float(x) for x in oji.get("diaginertia").split()]) @ quat2mat(jq).T
     if variant == "matched":
         Mh = M0 - mj
@@ -318,9 +353,10 @@ def build(md_robot: str, out_name: str, variant: str, report: dict, collision: s
     Mhh, ch_, Ih_ = subtree_inertia(hm, hd, hm.body(MD_HEAD_BODY).id)
     Rh = hd.xmat[hm.body(MD_HEAD_BODY).id].reshape(3, 3)
     ph = hd.xpos[hm.body(MD_HEAD_BODY).id]
-    hl_lo, hl_hi = bbox_in(hm, hd, MD_HEAD_BODY, {"owner_head", "owner_head_bot_sheet"}, group_not=3)
-    ant_lo, ant_hi = bbox_in(hm, hd, MD_HEAD_BODY, {"owner_head", "owner_head_bot_sheet", "owner_antenna",
-                                                    "owner_left_antenna_holder", "owner_right_antenna_holder"}, group_not=3)
+    shell_meshes = {f"shape_{shape}_skull"} if shp is not None else {"owner_head", "owner_head_bot_sheet"}
+    hl_lo, hl_hi = bbox_in(hm, hd, MD_HEAD_BODY, shell_meshes, group_not=3)
+    ant_lo, ant_hi = bbox_in(hm, hd, MD_HEAD_BODY, shell_meshes | {"owner_antenna", "owner_left_antenna_holder",
+                                                                   "owner_right_antenna_holder"}, group_not=3)
     # Microduck's internals (every hidden md_ geom except its outer shells/face) vs the owner's shell box.
     shells = {"top_head_shell", "bottom_head_shell", "face_part", "jaw", "jaw_soft", "soft_mouth_top", "noenoeil"}
     internals = {hm.mesh(hm.geom_dataid[g]).name for g in range(hm.ngeom)
@@ -351,6 +387,7 @@ def build(md_robot: str, out_name: str, variant: str, report: dict, collision: s
         contacts_at_STAND=self_contacts,
         head_roll_joint_world_STAND_m=ph.round(4).tolist(),
         shell_centre_head_frame_m=shell_c.round(5).tolist(), head_k=round(k, 4),
+        **({"shape": shape, "eye_pos_head_frame": shp["eye_pos_head_frame"]} if shp is not None else {}),
     )
     return robot_file, scene_file
 
@@ -372,24 +409,37 @@ VARIANTS = {
     # (ELECTRONICS_KG: 2 XL330, Pi + hat, camera, speaker, supports, wires) + the rest of 189 g scaled by k^2.
     "hybrid_k85": dict(k=0.85, collision="owner_noantenna", head_mass="k2", scale_com=True),
     "hybrid_k75": dict(k=0.75, collision="owner_noantenna", head_mass="k2", scale_com=True),
+    # Head shapes (build_shapes.py): human-like robot head, rounder duck head; mass SHAPE_KG, CoM from the parts.
+    "hybrid_human": dict(collision="owner_noantenna", head_mass="shape", shape="human"),
+    "hybrid_roundduck": dict(collision="owner_noantenna", head_mass="shape", shape="roundduck"),
 }
+SHAPE_KG = 0.1888              # set from the mass sweep (README "Lighter head")
 ELECTRONICS_KG = 0.081         # README "Lighter head": the parts a head cannot do without (estimate)
 MD_HEAD_KG = 0.188766          # Microduck's head link
 
 
 def head_mass_of(kw):
     hm = kw.get("head_mass")
+    if hm == "shape":
+        return SHAPE_KG
     if hm == "k2":
         return ELECTRONICS_KG + (MD_HEAD_KG - ELECTRONICS_KG) * kw["k"] ** 2
     return hm
 
 
 def main():
-    report = {}
+    """build_hybrid.py [variant ...]: all variants, or only those (head_report.json keeps the others' entries)."""
+    import sys
+    only = sys.argv[1:]
+    rp = HERE / "head_report.json"
+    report = json.loads(rp.read_text()) if only and rp.exists() else {}
     for variant, kw in VARIANTS.items():
+        if only and variant not in only:
+            continue
         for md_robot, out in (("robot_allcollisions.xml", "hybrid_allcollisions"), ("robot_groundcontact.xml", "hybrid_groundcontact")):
             r, s = build(md_robot, out, kw.get("mass", "matched"), report, kw.get("collision", "owner"), kw.get("k", 1.0),
-                         "" if variant == "hybrid" else variant[len("hybrid"):], head_mass_of(kw), kw.get("scale_com", False))
+                         "" if variant == "hybrid" else variant[len("hybrid"):], head_mass_of(kw), kw.get("scale_com", False),
+                         kw.get("shape"))
             print("wrote", r.name, s.name)
     (HERE / "head_report.json").write_text(json.dumps(report, indent=1))
     for k, v in report.items():

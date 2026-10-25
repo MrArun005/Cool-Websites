@@ -61,6 +61,8 @@ EYE_POS = (0.020, 0.0, -0.096)      # in the head link (jaw_soft): front of the 
 def _eye_for_body(eye):
     """A smaller head (build_hybrid.py k < 1) carries the eye on its shell: scale it about the shell centre."""
     rep = json.loads((HERE / "head_report.json").read_text()).get(rh.ROBOT.name, {})
+    if "eye_pos_head_frame" in rep:                       # a head shape (build_shapes.py) places its own eye camera
+        return tuple(rep["eye_pos_head_frame"])
     k, c = rep.get("head_k", 1.0), np.array(rep.get("shell_centre_head_frame_m", (0.0, 0.0, 0.0)))
     return tuple(float(v) for v in c + k * (np.array(eye) - c))
 
