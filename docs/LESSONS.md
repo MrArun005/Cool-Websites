@@ -190,3 +190,8 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   20-22 cm; 10M: 0). The exam starts each jump from a settled dog stance on randomised physics and checks
   only the last moment; the game starts after a walk and a stand, then hands over to the standing brain.
   Next time: put the game's start (walk up, stop, stand, hold) and the hand-over into training and the exam.
+- **Look at the picture after every change, not only the numbers.** Adding the ice slab to the game physics
+  shifted every geom id by one, while the drawing list kept the old ids: from then on the castle and agility
+  pages drew Bolt's body on the floor at the start line and every part one place off, so Bolt looked like a
+  pile of legs with no body. All tests passed (they check physics, not drawing); the user spotted it.
+  export_live.py now takes the part ids from the exact model the page runs.

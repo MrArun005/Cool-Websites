@@ -20,6 +20,7 @@ import json
 import pickle
 from pathlib import Path
 
+import mujoco
 import numpy as np
 import torch
 from stable_baselines3 import PPO
@@ -121,10 +122,13 @@ def main():
     start, ref = reference(Policy(args.posture), walk)
     env = BoltEnv(randomize=False, gait_generator="dog", turning=True, speed_control=True, sharp_turns=walk.sharp_turns,
                   hurdles=True)
-    m = env.model
+    xml = MODEL.read_text().replace('<geom name="floor"', HURDLE_XML + '\n    ' + ICE_XML + '\n    <geom name="floor"', 1)
+    # the page draws each part at its geom's pose by id, so the ids must come from the model the page runs
+    # (the ice slab, added for the games, shifted every id by one and drew Bolt's body on the floor)
+    page_model = mujoco.MjModel.from_xml_string(xml)
     bundle = dict(   # the robot plus one hurdle, which the page moves to whichever bar comes next
-        xml=MODEL.read_text().replace('<geom name="floor"', HURDLE_XML + '\n    ' + ICE_XML + '\n    <geom name="floor"', 1),
-        geoms=describe(m),
+        xml=xml,
+        geoms=describe(page_model),
         constants=dict(stand_pose=STAND_POSE.tolist(), dog_pose=STANCES["dog"].tolist(), action_scale=ACTION_SCALE.tolist(),
                        residual_scale=env.RESIDUAL_SCALE, frame_skip=env.frame_skip, dt=env.dt, paw_gait=PAW_GAIT,
                        turn_gain=env.TURN_GAIN, max_turn=env.MAX_TURN, max_speed=env.MAX_SPEED, speed_ref=env.SPEED_REF,
