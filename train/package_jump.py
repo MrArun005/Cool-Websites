@@ -28,7 +28,7 @@ HEIGHTS = (0.10, 0.15, 0.20, 0.25, 0.30)
 
 def check_onnx(policy, path, samples=100):
     import onnxruntime as ort
-    session, env = ort.InferenceSession(str(path)), JumpEnv(randomize=True)
+    session, env = ort.InferenceSession(str(path)), JumpEnv(randomize=True, real=policy.real)
     obs, _ = env.reset(seed=5)
     worst = 0.0
     for _ in range(samples):
@@ -67,8 +67,11 @@ def main():
             rows.append(",".join(m.groups()))
     (out / "curve.csv").write_text("\n".join(rows) + "\n")
     steps = int(re.search(r"(\d+)_steps", ck.name).group(1))
+    layout = OBS_LAYOUT + ([("sin_heading_to_bar_line", 1), ("metres_left_of_bar_line", 1)] if policy.real else [])
     facts = dict(name=args.name, source=str(ck), steps=steps, packaged=dt.date.today().isoformat(), control_hz=50,
-                 obs_size=JumpEnv.OBS, action_size=12, jump_steps=100, obs_layout=[dict(name=n, size=s) for n, s in OBS_LAYOUT],
+                 obs_size=len(layout) and sum(s for _, s in layout), action_size=12, jump_steps=100,
+                 hurdle="real (hurdle.py: solid stands, loose bar in cups)" if policy.real else "solid board",
+                 obs_layout=[dict(name=n, size=s) for n, s in layout],
                  joints=JOINTS, dog_stance=DOG.tolist(), action_scale=ACTION_SCALE.tolist(),
                  control="joint targets = clip(dog_stance + action_scale * action, joint limits)",
                  start="stand in the dog stance on the motors for 0.5 s, 0.55-0.65 m in front of the bar, facing it",
@@ -86,11 +89,11 @@ brains: a game walks Bolt up to the bar, stops it, and hands the motors to this 
 1. Stop 0.55-0.65 m in front of the bar, facing it (within ~7 degrees).
 2. Hold the joint targets at the dog stance for 0.5 s (training always started like this; after a
    posture-brain stand without the hold, 15 cm bars fell about 1 jump in 3).
-3. For 100 control steps (50 Hz): build the {JumpEnv.OBS} inputs below, run `policy.onnx`, set the joint
+3. For 100 control steps (50 Hz): build the {facts["obs_size"]} inputs below, run `policy.onnx`, set the joint
    targets to `clip(dog_stance + action_scale * action)`.
 4. Hand back to the posture brain to stand.
 
-Inputs: {", ".join(f"{n} ({s})" for n, s in OBS_LAYOUT)}.
+Inputs: {", ".join(f"{n} ({s})" for n, s in layout)}.
 
 ## Exam
 
