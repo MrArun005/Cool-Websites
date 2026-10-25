@@ -13,7 +13,10 @@ standing tall. Every moment still in front of the bar costs a little; touching t
 ends the try. Bars start low (8-15 cm) and rise to 45 cm over 4M steps.
 
 Run 15b (paid for standing upright before the jump, bars from 20 cm) learned to stand still and hop in
-place: staying put paid steadily, trying risked touch and fall penalties.
+place: staying put paid steadily, trying risked touch and fall penalties. Run 15c's first 1M steps
+learned to launch (all paws up to 22 cm, 0.4 s in the air) but dived over and crashed every time: the
+clear bonus beat the fall penalty. So most of the bonus now waits for a landing: still upright 0.5 s
+after clearing.
 """
 import gymnasium as gym
 import mujoco
@@ -77,7 +80,8 @@ class JumpEnv(BoltEnv):
         dist, h = self.exam_bar or (self.rng.uniform(0.45, 0.65), self._bar_height())
         self.place_hurdle(dist, h)
         self.t, self.last_action = 0, np.zeros(12)
-        self.touched = self.cleared = False
+        self.touched = self.cleared = self.landed = False
+        self.clear_t = None
         self.best_past = self.paws_past().min()
         return self._obs(), {}
 
@@ -100,17 +104,21 @@ class JumpEnv(BoltEnv):
             reward += 15.0 * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
             self.best_past = max(self.best_past, past.min())
             reward += 0.5 * np.clip(p["vx"], -0.5, 2.0) * upright
-            if past.min() > 0.08:  # all four paws past the bar
+            if past.min() > 0.08:  # all four paws past the bar: a little now, the rest for landing
                 self.cleared = just_cleared = True
-                reward += 15.0 if not self.touched else 4.0
+                self.clear_t = self.t
+                reward += 5.0 if not self.touched else 2.0
         else:  # landed: stand tall and still
+            if not self.landed and self.t - self.clear_t >= 25 and R[2, 2] > 0.85 and p["height"] > 0.3:
+                self.landed = True   # still on its feet half a second after clearing: the real prize
+                reward += 12.0 if not self.touched else 4.0
             speed = np.hypot(p["vx"], p["vy"])
             reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2)
         reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 5e-5 * np.sum(d.actuator_force ** 2)
         self.last_action = a
         fell = R[2, 2] < 0.2
         if fell:
-            reward -= 5.0
+            reward -= 10.0 if self.cleared else 5.0   # diving over and crashing must not pay
         info = dict(p, cleared=self.cleared, touched=self.touched, just_cleared=just_cleared, hits=hits,
                     bar=self.hurdle_h, past=float(past.min()))
         return self._obs(), float(reward), bool(fell), self.t >= self.max_steps, info
