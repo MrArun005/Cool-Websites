@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Duck Football Live</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: the live pitch on top (scoreboard over it), the controls under it, then the referee's calls beside the
+     players' numbers, then what is simulated and what is simplified. Same dark look as the hybrid duck's main page. */
+  :root {
+    --bg: #000000; --panel: #0e0e0e; --ink: #ececec; --muted: #9a9a9a; --line: #262626;
+    --accent: #ff9b33; --good: #5cc278; --bad: #ff7a63; --stage: #070707;
+    --blue: #2161f2; --yellow: #ffd10d; --goal: #ffd90d;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; }
+  [hidden] { display: none !important; }
+  .wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; }
+  header { display: grid; gap: 4px; }
+  h1 { font: 800 clamp(1.6rem, 5vw, 2.4rem)/1.05 var(--display); margin: 0; text-wrap: balance; }
+  h1 .dot { display: inline-block; width: 0.42em; height: 0.42em; border-radius: 50%; background: var(--bad); margin-right: 0.3em; vertical-align: 0.12em; animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) { h1 .dot { animation: none; } }
+  h2 { font: 700 1.05rem/1.2 var(--display); margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0; max-width: 70ch; }
+  .meta { font: 0.8rem var(--mono); color: var(--muted); }
+  a { color: var(--accent); }
+  .stage { position: relative; background: var(--stage); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  canvas#view { display: block; width: 100%; height: min(64vh, 560px); touch-action: none; }
+  .board { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; padding: 6px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.78); border: 1px solid var(--line); font: 600 0.9rem var(--mono); color: var(--ink); pointer-events: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .board .tm { display: inline-flex; align-items: center; gap: 6px; } .board .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .board b { font-size: 1.2rem; } .board .clk { color: var(--muted); }
+  .board .call { padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .board .call.goal { background: var(--goal); color: #222; border-color: #e0b800; }
+  .live { position: absolute; left: 10px; top: 10px; font: 700 0.72rem var(--mono); letter-spacing: 0.08em; color: #fff; background: #c8322a; padding: 2px 7px; border-radius: 5px; pointer-events: none; }
+  .ov { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); padding: 3px 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.7); font: 0.76rem var(--mono); color: var(--ink); pointer-events: none; font-variant-numeric: tabular-nums; }
+  .slow { position: absolute; right: 10px; top: 10px; font: 600 0.75rem var(--mono); color: #222; background: var(--accent); padding: 2px 8px; border-radius: 6px; pointer-events: none; }
+  .loading { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; background: var(--stage); font: 0.9rem var(--mono); color: var(--muted); }
+  .loading .err { color: var(--bad); max-width: 60ch; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .controls button { font: 600 0.85rem var(--body); padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .controls button:hover { border-color: var(--accent); }
+  .controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #111; }
+  .controls button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  .controls .sep { flex: 1 1 auto; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+  ol.calls { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.9rem; max-height: 260px; overflow-y: auto; }
+  ol.calls li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; }
+  ol.calls .tc { font: 0.8rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  ol.calls li.goal { color: var(--goal); font-weight: 700; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+  th, td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.76rem; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  td .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; }
+  dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: 0.9rem; }
+  dt { color: var(--muted); } dd { margin: 0; }
+  @media (max-width: 560px) { .board { font-size: 0.72rem; gap: 6px; padding: 4px 8px; } .board b { font-size: 1rem; } .live { top: 46px; } .slow { top: 46px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="meta"><a href="./">hybrid duck</a> · live 5-a-side, simulated in your browser</div>
+    <h1><span class="dot" aria-hidden="true"></span>Duck Football Live</h1>
+    <p class="lede">Eleven hybrid ducks (your duck head on Microduck's body) play right now, in this browser tab: MuJoCo physics every 5 ms, the XL330 servo model on every joint, Microduck's own walking and kicking brains at 50 Hz, a referee and a GameController. Nothing is recorded. Every match is new, and falls and get-ups happen in the physics.</p>
+  </header>
+
+  <section class="stage" aria-label="Live 3D match. Drag to orbit, scroll or pinch to zoom.">
+    <canvas id="view"></canvas>
+    <span class="live" id="livetag">LIVE</span>
+    <div class="board" id="board"><span class="tm"><i class="sw" style="background:var(--blue)"></i>BLUE</span><b id="score">0 : 0</b><span class="tm">YELLOW<i class="sw" style="background:var(--yellow)"></i></span><span class="clk" id="clock">1H 0:00</span><span class="call" id="call">kick-off</span></div>
+    <span class="slow" id="slow" hidden></span>
+    <div class="ov" id="ov"></div>
+    <div class="loading" id="loading"><div id="loadmsg">Loading the physics engine…</div></div>
+  </section>
+
+  <div class="controls" role="group" aria-label="Match controls">
+    <button id="newmatch" class="primary" type="button">New match</button>
+    <button id="kickoff" type="button">Kick-off</button>
+    <button id="pause" type="button" aria-pressed="false">Pause</button>
+    <button id="speed" type="button" title="Simulation speed">Speed ×1</button>
+    <button id="size" type="button" title="Players per team">5 v 5</button>
+    <span class="sep"></span>
+    <span class="meta" id="perf"></span>
+  </div>
+
+  <div class="cols">
+    <section class="card">
+      <h2>Referee's calls</h2>
+      <ol class="calls" id="calls" aria-live="polite"></ol>
+    </section>
+    <section class="card">
+      <h2>Players</h2>
+      <div class="tablewrap"><table id="players">
+        <thead><tr><th>Duck</th><th>Role</th><th>Doing</th><th>Kicks</th><th>Falls</th></tr></thead><tbody></tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>What runs here, and what is simplified</h2>
+    <dl>
+      <dt>Physics</dt><dd>MuJoCo 3.15 compiled to WebAssembly (Google DeepMind's official build), 5 ms steps, contacts between ducks on. The same model as the Python match: Microduck's body with every part colliding, your head, a 4.5 × 3 m pitch (RoboCup KidSize × 0.5), goals with nets, a 7 cm 20 g ball.</dd>
+      <dt>Servos</dt><dd>BAM's XL330 model on all 154 servos, ported to JavaScript: firmware P loop, DC motor with back-EMF, load-dependent friction, battery sag per duck, 15–30 ms command delay. Every duck gets a random body (mass, grip, servo strength, battery) like Microduck's training.</dd>
+      <dt>Brains</dt><dd>Microduck's ONNX files, unchanged: velstand walks, turns and gets up after a fall; ball_kick_left and ball_kick_right kick; roulade frees a stuck duck. They run from the ONNX weights in plain JavaScript (checked against onnxruntime to 0.000006).</dd>
+      <dt>Tactics</dt><dd>The match code's team tactics, ported line by line (same commands on 60 000 recorded decisions): a striker and a second player on the ball, support runs, marking, passes, a goalkeeper that comes out.</dd>
+      <dt>Simplified</dt><dd>The head cameras are not rendered. A player sees the ball when it is inside its camera's real field of view, not hidden behind another duck and close enough to show as a blob; the position it gets has noise that grows with distance. Self-localization is the true pose plus a drifting error, as in the Python match. On a slow computer the match runs in slow motion rather than skipping physics; the badge on the pitch says how slow.</dd>
+    </dl>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script type="module">
+import loadMujoco from 'https://cdn.jsdelivr.net/npm/@mujoco/mujoco@3.15.0/mujoco.js';
+import { Game } from './live/live_game.js';
+import { MlpPolicy } from './live/onnx_mlp.js';
+
+const $ = id => document.getElementById(id);
+const loadmsg = $('loadmsg');
+const fail = (what, err) => {
+  console.error(err);
+  loadmsg.innerHTML = '';
+  const p = document.createElement('p'); p.className = 'err';
+  p.textContent = `${what}: ${err && err.message ? err.message : err}. This page runs a physics engine (WebAssembly) in the browser; it needs a recent Chrome, Edge, Firefox or Safari with JavaScript on.`;
+  loadmsg.appendChild(p);
+};
+const getBuf = async u => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.arrayBuffer(); };
+const getText = async u => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.text(); };
+const getJson = async u => JSON.parse(await getText(u));
+
+let mj, pols = {}, moves, mesh, models = {};
+try {
+  const wasm = await getBuf('live/mujoco.wasm');                   // the engine's 10 MB binary, shipped with the page
+  mj = await loadMujoco({ wasmBinary: wasm });
+  loadmsg.textContent = 'Loading the ducks\' brains and bodies…';
+  const [pv, pk, pr, pq, mv, ms] = await Promise.all([getBuf('live/policies/velstand.onnx'), getBuf('live/policies/ball_kick_left.onnx'),
+    getBuf('live/policies/ball_kick_right.onnx'), getBuf('live/policies/roulade.onnx'), getJson('live/live_moves.json'), getJson('live/duck_mesh_live.json')]);
+  pols = { velstand: new MlpPolicy(pv, 'velstand'), ball_kick_left: new MlpPolicy(pk, 'ball_kick_left'),
+    ball_kick_right: new MlpPolicy(pr, 'ball_kick_right'), roulade: new MlpPolicy(pq, 'roulade') };
+  moves = mv; mesh = ms;
+} catch (e) { fail('Could not start', e); throw e; }
+const runBrains = (name, X, N) => pols[name].runBatch(X, N);
+async function model(tag) {
+  if (!models[tag]) models[tag] = { xml: await getText(`live/live_model_${tag}.xml`), meta: await getJson(`live/live_meta_${tag}.json`) };
+  return models[tag];
+}
+
+// ---------------------------------------------------------------- three.js scene (MuJoCo is z-up: a root group turns it)
+const canvas = $('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+renderer.shadowMap.enabled = true;
+renderer.setClearColor('#070707');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.02, 40);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.48; controls.minDistance = 0.4; controls.maxDistance = 9;
+controls.target.set(0, 0.05, 0); camera.position.set(0, 2.1, 3.3);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a80, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -3.2, right: 3.2, top: 3.2, bottom: -3.2, near: 0.1, far: 10 });
+scene.add(sun); scene.add(sun.target);
+const sunOff = new THREE.Vector3(1.5, 3.0, 1.0);
+const root = new THREE.Group(); root.rotation.x = -Math.PI / 2; scene.add(root);
+
+function turfTexture(P) {
+  const X = P.hx + P.border, Y = P.hy + P.border, px = 300, cv = document.createElement('canvas');
+  cv.width = Math.round(2 * X * px); cv.height = Math.round(2 * Y * px);
+  const c = cv.getContext('2d'), U = x => (x + X) * px, V = y => (Y - y) * px;
+  c.fillStyle = P.turf; c.fillRect(0, 0, cv.width, cv.height);
+  const n = 12;
+  for (let i = 0; i < n; i++) if (i % 2) { c.fillStyle = 'rgba(255,255,255,0.045)'; c.fillRect(U(-P.hx + 2 * P.hx * i / n), V(Y), 2 * P.hx / n * px, 2 * Y * px); }
+  c.strokeStyle = P.line; c.lineWidth = P.line_w * px; c.fillStyle = P.line;
+  const rect = (x0, y0, x1, y1) => c.strokeRect(U(x0), V(y1), (x1 - x0) * px, (y1 - y0) * px);
+  rect(-P.hx, -P.hy, P.hx, P.hy);
+  c.beginPath(); c.moveTo(U(0), V(P.hy)); c.lineTo(U(0), V(-P.hy)); c.stroke();
+  c.beginPath(); c.arc(U(0), V(0), P.circle_r * px, 0, 7); c.stroke();
+  const dot = (x, y) => { c.beginPath(); c.arc(U(x), V(y), P.line_w * px, 0, 7); c.fill(); };
+  dot(0, 0);
+  for (const s of [1, -1]) {
+    for (const [L, W] of [P.goal_area, P.pen_area]) rect(s > 0 ? P.hx - L : -P.hx, -W / 2, s > 0 ? P.hx : -P.hx + L, W / 2);
+    dot(s * (P.hx - P.pen_mark), 0);
+  }
+  const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; return t;
+}
+function netTexture() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const c = cv.getContext('2d'); c.strokeStyle = 'rgba(235,240,245,0.9)'; c.lineWidth = 3; c.strokeRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+function buildPitch(P) {
+  const g = new THREE.Group();
+  const X = P.hx + P.border, Y = P.hy + P.border;
+  const turf = new THREE.Mesh(new THREE.PlaneGeometry(2 * X, 2 * Y), new THREE.MeshStandardMaterial({ map: turfTexture(P), roughness: 0.95 }));
+  turf.receiveShadow = true; turf.position.z = 0.0005; g.add(turf);
+  const boardM = new THREE.MeshStandardMaterial({ color: P.board, roughness: 0.7 });
+  for (const [x, y, sx, sy] of [[0, Y + P.board_t / 2, 2 * X + 2 * P.board_t, P.board_t], [0, -Y - P.board_t / 2, 2 * X + 2 * P.board_t, P.board_t], [X + P.board_t / 2, 0, P.board_t, 2 * Y], [-X - P.board_t / 2, 0, P.board_t, 2 * Y]]) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, P.board_h), boardM); b.position.set(x, y, P.board_h / 2); b.castShadow = b.receiveShadow = true; g.add(b);
+  }
+  const postM = new THREE.MeshStandardMaterial({ color: P.goal, roughness: 0.4 }), nt = netTexture();
+  for (const s of [1, -1]) {
+    const xp = s * (P.hx + P.post_r), gw = P.goal_w / 2 + P.post_r;
+    for (const sy of [1, -1]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(P.post_r, P.post_r, P.goal_h, 16), postM); c.rotation.x = Math.PI / 2; c.position.set(xp, sy * gw, P.goal_h / 2); c.castShadow = true; g.add(c); }
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(P.post_r, P.post_r, 2 * gw + 2 * P.post_r, 16), postM); bar.position.set(xp, 0, P.goal_h); bar.castShadow = true; g.add(bar);
+    const net = (w, h, rep) => { const t = nt.clone(); t.needsUpdate = true; t.repeat.set(rep[0], rep[1]); return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false })); };
+    const back = net(2 * gw, P.goal_h, [2 * gw / 0.05, P.goal_h / 0.05]); back.rotation.set(Math.PI / 2, Math.PI / 2, 0); back.position.set(s * (P.hx + P.goal_d), 0, P.goal_h / 2); g.add(back);
+    for (const sy of [1, -1]) { const sd = net(P.goal_d, P.goal_h, [P.goal_d / 0.05, P.goal_h / 0.05]); sd.rotation.x = Math.PI / 2; sd.position.set(s * (P.hx + P.goal_d / 2), sy * gw, P.goal_h / 2); g.add(sd); }
+    const top = net(P.goal_d, 2 * gw, [P.goal_d / 0.05, 2 * gw / 0.05]); top.position.set(s * (P.hx + P.goal_d / 2), 0, P.goal_h); g.add(top);
+  }
+  return g;
+}
+
+// the ball, with the finder from the main page: a ring on the grass, an arrow above and a short trail, drawn through
+// the ducks so the 7 cm ball is easy to find
+const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshStandardMaterial({ color: '#f2269e', roughness: 0.4 }));
+ball.castShadow = true; root.add(ball);
+ball.material.emissive = new THREE.Color('#ff2aa8'); ball.material.emissiveIntensity = 0.45;
+const fxMat = c => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.9, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+const ballRing = new THREE.Mesh(new THREE.RingGeometry(0.055, 0.075, 40), fxMat('#ffe14d'));
+const ballArrow = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.07, 16), fxMat('#ff2aa8'));
+ballArrow.geometry.rotateX(-Math.PI / 2);
+const TRAIL = 24, trailPos = new Float32Array(TRAIL * 3);
+const trailGeo = new THREE.BufferGeometry(); trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+const ballTrail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: '#ff8fd0', transparent: true, opacity: 0.8, depthTest: false }));
+for (const o of [ballRing, ballArrow, ballTrail]) { o.renderOrder = 10; o.frustumCulled = false; root.add(o); }
+let trailN = 0, lastBall = null;
+function ballFx(now) {
+  const p = ball.position, pulse = 1 + 0.15 * Math.sin(now / 160);
+  ballRing.position.set(p.x, p.y, 0.002); ballRing.scale.setScalar(pulse);
+  ballArrow.position.set(p.x, p.y, p.z + 0.16 + 0.02 * Math.sin(now / 200));
+  if (lastBall && lastBall.distanceTo(p) > 0.4) trailN = 0;
+  if (!lastBall || lastBall.distanceTo(p) > 0.004) {
+    trailPos.copyWithin(3, 0, (TRAIL - 1) * 3); trailPos[0] = p.x; trailPos[1] = p.y; trailPos[2] = p.z;
+    trailN = Math.min(TRAIL, trailN + 1); trailGeo.attributes.position.needsUpdate = true; trailGeo.setDrawRange(0, trailN);
+    lastBall = p.clone();
+  }
+}
+
+// the ducks: one shared geometry per body part (live/duck_mesh_live.json, ~32k triangles per duck, body frame), placed from MuJoCo's xpos / xquat
+const TEAM = { blue: '#2161f2', yellow: '#ffd10d', ref: '#111111' };
+const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16) / 255);
+const tintable = (body, c) => { if (body === 'jaw_soft' || body === 'owner_jaw') return false; const v = hex(c); return Math.min(...v) > 0.55 && Math.max(...v) - Math.min(...v) < 0.15; };
+const geos = {}, mats = {};
+for (const [name, parts] of Object.entries(mesh.parts)) geos[name] = parts.map(part => {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(part.v.map(x => x * mesh.scale), 3));
+  geo.setIndex(part.f); geo.computeVertexNormals(); return { geo, color: part.color };
+});
+const mat = c => mats[c] || (mats[c] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, metalness: 0.05, flatShading: true }));
+function label(text, color) {
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64;
+  const c = cv.getContext('2d'); c.fillStyle = color; c.beginPath(); c.arc(32, 32, 28, 0, 7); c.fill();
+  c.lineWidth = 4; c.strokeStyle = '#fff'; c.stroke();
+  c.fillStyle = color === TEAM.yellow ? '#111' : '#fff'; c.font = 'bold 34px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, 32, 34);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
+  sp.scale.set(0.08, 0.08, 1); sp.renderOrder = 5; return sp;
+}
+let pitchG = null, duckG = null, ducks3 = [];
+function buildDucks(meta) {
+  if (duckG) { root.remove(duckG); duckG.traverse(o => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } }); }
+  if (pitchG) root.remove(pitchG);
+  pitchG = buildPitch(meta.pitch); root.add(pitchG);
+  duckG = new THREE.Group(); root.add(duckG);
+  ball.scale.setScalar(meta.pitch.ball_r);
+  ducks3 = meta.robots.map(r => {
+    const color = TEAM[r.team] || '#888888';
+    const bodies = r.bodies.map((bid, k) => {
+      const g = new THREE.Group(), name = r.body_names[k];
+      for (const { geo, color: c } of geos[name] || []) { const m = new THREE.Mesh(geo, mat(tintable(name, c) ? color : c)); m.castShadow = true; g.add(m); }
+      duckG.add(g); return { g, bid };
+    });
+    const tag = label(r.team === 'ref' ? 'R' : r.name.slice(1), color); duckG.add(tag);
+    return { bodies, tag, trunk: r.trunk };
+  });
+}
+function drawWorld(w) {
+  const x = w.d.xpos, q = w.d.xquat;
+  for (const dk of ducks3) {
+    for (const { g, bid } of dk.bodies) { g.position.set(x[3 * bid], x[3 * bid + 1], x[3 * bid + 2]); g.quaternion.set(q[4 * bid + 1], q[4 * bid + 2], q[4 * bid + 3], q[4 * bid]); }
+    const t = dk.trunk; dk.tag.position.set(x[3 * t], x[3 * t + 1], Math.max(0.12, x[3 * t + 2]) + 0.27);
+  }
+  const [b] = w.ball(); ball.position.set(b[0], b[1], b[2]);
+}
+
+function resize() {
+  const wd = canvas.clientWidth, ht = canvas.clientHeight;
+  renderer.setSize(wd, ht, false); camera.aspect = wd / ht; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(canvas); resize();
+
+// ---------------------------------------------------------------- the match loop
+const SPEEDS = [0.5, 1, 2, 4];
+let game = null, tag = '5v5', speedK = 1, paused = false, simDebt = 0, last = performance.now(), endAt = null, building = false;
+let fpsN = 0, fpsT = performance.now(), fps = 0, simAcc = 0, wallAcc = 0, rate = 1, simMs = 0;
+const callsEl = $('calls'), tbody = document.querySelector('#players tbody');
+const CALLS = { 'kick-off': 'kick-off', goal: 'GOAL!', 'throw-in': 'throw-in', 'goal kick': 'goal kick', 'corner kick': 'corner', 'dropped ball': 'dropped ball', pickup: 'pick-up', return: 'back in', 'half-time': 'half-time', 'full-time': 'full time', placement: 'placement', whistle: 'whistle', ready: 'ready' };
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function addCall(e) {
+  const li = document.createElement('li');
+  if (e.kind === 'goal') li.className = 'goal';
+  li.innerHTML = `<span class="tc">${e.half}H ${fmt(e.clock)}</span><span></span>`;
+  li.lastChild.textContent = e.text;
+  callsEl.prepend(li);
+  while (callsEl.children.length > 40) callsEl.lastChild.remove();
+}
+async function newMatch(seed = Math.floor(Math.random() * 1e6)) {
+  if (building) return;
+  building = true;
+  $('loading').hidden = false; $('loadmsg').textContent = `Building the pitch and ${tag === '5v5' ? 11 : 7} ducks…`;
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const { xml, meta } = await model(tag);
+    if (game) { try { game.world.d.delete(); game.world.m.delete(); } catch (e) { /* already freed */ } }
+    game = new Game(mj, xml, meta, moves, runBrains, { seed });
+    game.onEvent = addCall;
+    callsEl.innerHTML = '';
+    addCall({ half: 1, clock: 0, kind: 'start', text: `new match (seed ${seed}): ${tag === '5v5' ? '5 v 5' : '3 v 3'}, two halves of 3 minutes` });
+    buildDucks(meta);
+    drawWorld(game.world);
+    simDebt = 0; endAt = null; last = performance.now();
+    $('loading').hidden = true;
+  } catch (e) { fail('Could not build the match', e); }
+  building = false;
+}
+function updateBoard() {
+  const g = game, sc = [g.teams.blue.score, g.teams.yellow.score];
+  $('score').textContent = `${sc[0]} : ${sc[1]}`;
+  $('clock').textContent = `${g.half}H ${fmt(g.clock)}`;
+  const recent = [...g.events].reverse().find(e => CALLS[e.kind]);
+  const showCall = recent && (g.t - recent.t < 5 || g.phase !== 'playing');
+  const text = g.phase === 'end' ? 'full time' : showCall ? CALLS[recent.kind] + (recent.team && recent.kind !== 'pickup' ? ' ' + recent.team : '') : 'play';
+  const call = $('call');
+  if (call.textContent !== text) { call.textContent = text; call.classList.toggle('goal', !!showCall && recent.kind === 'goal'); }
+}
+let tableT = 0;
+function updateTable(now) {
+  if (now - tableT < 500) return; tableT = now;
+  tbody.innerHTML = game.players.map(p => `<tr><td><i class="sw" style="background:${TEAM[p.team.name]}"></i>${p.team.name[0].toUpperCase()}${p.num}</td><td>${p.role}${p.cmd && p.cmd.role === 'striker' ? ' · on the ball' : ''}</td><td>${!p.active() ? 'off (pick-up)' : (p.state || '').replace('contest:', 'contest · ')}</td><td class="num">${p.stats.kicks}</td><td class="num">${p.rt.falls}</td></tr>`).join('');
+}
+const tgt = new THREE.Vector3();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const frameS = (now - last) / 1000, dt = Math.min(0.5, frameS); last = now;
+  if (game && !building) {
+    if (!paused && game.phase !== 'end') {
+      simDebt += dt * SPEEDS[speedK];
+      // the physics gets ~28 ms per frame, more when frames are slow (a slow GPU must not stall the match)
+      const t0 = performance.now(), budget = Math.max(28, 0.6 * frameS * 1000), t0sim = game.t;
+      while (simDebt >= 0.02 && performance.now() - t0 < budget) { game.tick(); simDebt -= 0.02; }
+      if (simDebt > 0.06) simDebt = 0.06;           // can't keep up: slow motion rather than a backlog
+      simMs += performance.now() - t0;
+      simAcc += game.t - t0sim; wallAcc += dt;
+    }
+    if (game.phase === 'end') { if (endAt === null) endAt = now; else if (now - endAt > 10000) newMatch(); }
+    drawWorld(game.world);
+    // broadcast camera: the view follows the ball along the pitch; drag to orbit around it
+    const P = game.P, [b] = game.world.ball();
+    tgt.set(Math.max(-P.hx + 0.6, Math.min(P.hx - 0.6, b[0])), 0.05, -Math.max(-0.5, Math.min(0.5, b[1])) * 0.5);
+    const before = controls.target.clone();
+    controls.target.lerp(tgt, 0.04);
+    camera.position.add(controls.target.clone().sub(before));
+    sun.target.position.copy(controls.target); sun.position.copy(controls.target).add(sunOff);
+    updateBoard(); updateTable(now);
+  }
+  controls.update();
+  ballFx(now);
+  renderer.render(scene, camera);
+  fpsN++;
+  if (now - fpsT > 1000) {
+    fps = fpsN * 1000 / (now - fpsT); fpsN = 0; fpsT = now;
+    rate = wallAcc > 0 ? simAcc / wallAcc : 0;
+    const load = simMs / 10; simAcc = wallAcc = 0; simMs = 0;
+    if (game) {
+      const want = SPEEDS[speedK], slow = !paused && game.phase !== 'end' && rate < want * 0.9;
+      $('slow').hidden = !slow; $('slow').textContent = `slow motion ×${rate.toFixed(2)}`;
+      $('perf').textContent = `${fps.toFixed(0)} fps · sim ×${rate.toFixed(2)} real time · physics ${load.toFixed(0)}% of a core`;
+      const s = game;
+      $('ov').textContent = `${s.players.length / 2} v ${s.players.length / 2} · kicks ${s.kicks.filter(k => k.connected).length}/${s.kicks.length} · falls ${s.rts.reduce((a, r) => a + r.falls, 0)} · ${s.phase}`;
+    }
+    window.__live = { fps, rate, load, summary: game ? game.summary() : null };
+  }
+}
+requestAnimationFrame(frame);
+
+$('newmatch').onclick = () => newMatch();
+$('kickoff').onclick = () => { if (game && game.phase !== 'end') game.restartKickoff(); };
+$('pause').onclick = e => { paused = !paused; e.currentTarget.setAttribute('aria-pressed', paused); e.currentTarget.textContent = paused ? 'Play' : 'Pause'; $('livetag').hidden = paused; };
+$('speed').onclick = e => { speedK = (speedK + 1) % SPEEDS.length; e.currentTarget.textContent = `Speed ×${SPEEDS[speedK]}`; };
+$('size').onclick = e => { tag = tag === '5v5' ? '3v3' : '5v5'; e.currentTarget.textContent = tag === '5v5' ? '5 v 5' : '3 v 3'; newMatch(); };
+window.__liveControl = { newMatch, camera, controls, get game() { return game; } };
+newMatch();
+</script>
+</body>
+</html>
