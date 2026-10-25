@@ -50,8 +50,8 @@ Notes, honestly:
   past 6 deg (they stay at about 90 %).
 - **Lie down** ends belly-down resting on the bill, chest and knees at ~67 deg (this head is 14 cm long, the trunk can't
   get flat). The IMU sees peaks of ~3 g in the fold (median), and velstand's face-down get-up takes it from there.
-- Microduck's other downloaded brains (ball_kick_left/right, alpha_ground_pick, roller, roller_crouch) are in
-  `../microduck_port/policies/` but not used: kicks need a ball, roller ones need the roller feet.
+- Microduck's other downloaded brains (alpha_ground_pick, roller, roller_crouch) are in `../microduck_port/policies/`
+  but not used (roller ones need the roller feet); ball_kick_left/right are used by duck soccer (`soccer.py`).
 - No new policy was trained: every skill works with Microduck's brains plus scripted moves.
 
 Run:
@@ -140,6 +140,73 @@ $PY duckbody/hybrid/course.py [--levels 1,2,3] [--modes walk,course,course_r]   
 $PY duckbody/hybrid/course.py --probe                                           # single obstacles x speeds, ~7 min
 MUJOCO_GL=osmesa $PY duckbody/hybrid/follow.py                                   # ~2 min
 MUJOCO_GL=osmesa $PY duckbody/hybrid/page_data.py DIR --replays                  # page: hurdles, hurdles_typical, follow
+```
+
+## Duck soccer (`soccer.py`)
+
+The duck plays alone on a **2.5 x 1.5 m pitch** with 15 cm boards (6 cm walls kept the ball in, but the get-up rolls
+tumbled the duck over them), a **goal 50 cm wide, 15 cm high** (yellow posts and crossbar, light grey net) at one end
+and a **7 cm, 20 g ball** with rolling friction (from 1 m/s it rolls ~1.7 m). It finds the ball with its head camera,
+walks round behind it, lines it up at one foot, kicks with **Microduck's `ball_kick_left` / `ball_kick_right`**
+(unchanged), chases it and repeats; after a goal it hops and the ball goes back to the centre spot. It gets up by
+itself after falls (the runtime's get-up). Score: goals in a 2-minute match.
+
+**The kick brains on this duck** (`--probe`, `probe_kick_hybrid.json`; ball placed relative to the kicking foot's
+trained spot, 9 cm ahead of the trunk, 4.2 cm to the side; 3 bodies per cell, 0.5 s window as in the manifest):
+
+| ball centre ahead of the trunk | hits (within +-2 cm sideways) | ball speed | rolled in 3 s |
+|---|---|---|---|
+| 6 cm | **18/18** | 1.19 m/s | 1.7 m |
+| 9 cm (trained) | **18/18** | 1.21 m/s | 1.7 m |
+| 12 cm | 8/18 | 0.42 m/s | 0.6 m |
+| 15, 18 cm | 0/18 | - | - |
+
+Up to +-4 cm sideways still hits (59/60 at 6-9 cm), but steers it: in line with the foot it goes ~12 deg outwards,
+2 cm inside ~15 deg inwards, 1 cm inside about straight (the aim). Two things the probe found: the window is only
+~4 cm deep, and **the kick brains do nothing at all if the head is not at home**: with the head down (how the camera
+sees the ball at the feet) 0/4 kicked; 0.6 s after raising it 2/4; 0.8 s 4/4. So the duck lines up with its head
+down, then raises it for 1 s, then kicks. They are blind (as on the robot), so all the aiming is the approach.
+
+How it plays (details in the module docstring):
+- **Ball**: magenta blob in the 160 x 120 head camera at 10 Hz; the ray through its centre meets the floor plane ->
+  ball position relative to the trunk (head joint kinematics + IMU tilt), ~1 cm at the feet. With the head bent
+  down (neck -0.6, head pitch 1.1, inside velstand's trained +-1.1) the camera sees 5-15 cm in front of the feet.
+- **Goal** (camera, not given): the lowest yellow pixel at each side of the goal frame = the two post bases. A
+  landmark with a known position and direction, so one sighting gives position and heading (+-5 deg close, +-12 deg
+  from the far end), blended in 30 %, outliers dropped. In between: heading from the IMU gyro about gravity
+  (200 Hz), position from the twist sent to velstand through its measured speed map. Nets had to be a different
+  colour from the posts (from far away the back corners looked like posts: 25 deg errors).
+- **Behaviour**: search (turn, head nodding from far to the feet) -> approach / chase a point 24 cm behind the ball on
+  the line to the goal, orbiting the ball at 28 cm when it is not behind it -> align with the head down (step until
+  the ball is 8 cm ahead and 3.2 cm to the side of the trunk, nearer foot, heading within 0.15 rad; velstand does
+  not step below ~0.3 forward / 0.4 sideways / 0.5 turning, so it nudges with commands just above that) -> ready
+  (head home 1 s) -> kick -> chase. Can't line up in 8 s (ball against a board): barge into it. Turning blocked 1.5 s
+  (against a board): back up 1 s.
+
+**Results, 10 randomized bodies and kick-offs, 2 minutes each** (`results_soccer_hybrid.json`):
+
+| goals per match (median, range) | matches with a goal | kicks connected (ball > 0.3 m/s) | falls | ball in view (camera frames, median) |
+|---|---|---|---|---|
+| **3** (0-4), 25 in all | 9/10 | **36/48** (75 %) | 1 (got up by itself) | 50 % |
+
+4 of the 25 goals were walked or bounced in rather than kicked within 6 s before. Honestly, what does not work yet:
+- **Corners**: a ball in a corner next to the goal cannot be got behind (the trunk can't get between it and the
+  board), so the duck barges at it until it pops out; the 0-goal match spent most of its 2 minutes there.
+- **Misses** (12/48), most likely: the ball rolls or the feet shuffle a few cm while the head comes up (it can't see the ball
+  then), and from the 4 cm deep kick window; misses cost a re-approach, not a fall.
+- **Slow**: a full cycle (find, go round, align, kick) takes 15-25 s; the alignment nudges take most of it. A walk
+  brain that steps in place at small commands, or a kick brain that accepts a head-down pose, would cut it a lot.
+- Scoring uses the simulator's ball position (it went in the goal); the duck itself never uses ground truth. The
+  sim gyro has no bias; on the robot the goal sightings would also have to correct heading drift (they already can).
+
+Run:
+```
+PY=/home/user/cool-websites/.venv/bin/python
+MUJOCO_GL=osmesa $PY duckbody/hybrid/soccer.py --probe            # kick placement grid, ~1 min, 3 processes
+MUJOCO_GL=osmesa $PY duckbody/hybrid/soccer.py --seeds 0-9        # 10 matches, ~5 min, 3 processes
+MUJOCO_GL=osmesa $PY duckbody/hybrid/soccer.py --trace 1          # one match with a printed trace
+MUJOCO_GL=osmesa $PY duckbody/hybrid/page_data.py DIR --soccer    # page: the soccer replay (the best match, cut to
+                                                                  # 60 s when over 3 MB) + tests/games tables
 ```
 
 ## Microduck's brains on the hybrid head (first study)

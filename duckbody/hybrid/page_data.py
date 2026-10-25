@@ -3,7 +3,8 @@ and the skill queue, from test_skills_hybrid.py (every skill through runtime_hyb
 
     .venv/bin/python duckbody/hybrid/test_skills_hybrid.py --page OUT_DIR     # results + one replay per skill
     .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR [--mesh]           # tests.json, queue.json, skills.json
-    MUJOCO_GL=osmesa .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR --replays   # + hurdle / follow replays
+    MUJOCO_GL=osmesa .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR --replays   # + hurdle / follow / soccer replays
+    MUJOCO_GL=osmesa .venv/bin/python duckbody/hybrid/page_data.py OUT_DIR --soccer    # + only the soccer replay
 
 Writes OUT_DIR/duck_mesh.json (if missing, or with --mesh), tests.json, queue.json, skills.json and rollout.json
 (= the first skill's replay, what the page shows first).
@@ -133,7 +134,7 @@ BRAIN = {"idle": "velstand + head command; jaw from speech", "walk": "velstand 0
          "getup_face_down": "velstand", "getup_back": "velstand", "hop": "scripted, searched; ~1 per s",
          "roll": "roulade, then velstand"}
 ORDER = ["idle", "walk", "run", "squat", "sit_stand", "swag", "sleep_wake", "lie_down", "getup_face_down", "getup_back",
-         "hop", "roll", "hurdles", "hurdles_typical", "follow"]
+         "hop", "roll", "hurdles", "hurdles_typical", "follow", "soccer"]
 
 
 def games():
@@ -163,6 +164,15 @@ def games():
                                brain="head camera + OpenCV colour blob; velstand", layout="hybrid")
         skills["follow"] = dict(success=ok, n=S["n"], note="follow a ball with the head camera")
         g["follow"] = S
+    sp = HERE / "results_soccer_hybrid.json"
+    if sp.exists():
+        S = json.loads(sp.read_text())["summary"]
+        scored = S["matches_with_goals"]
+        tests["soccer"] = dict(success=scored / S["n"], episodes=S["n"],
+                               mean_reward=f"{S['goals_median']:g} goals / 2 min (median), kicks {S['connected']}/{S['kicks']} connect",
+                               brain="head camera + goal sightings; velstand, ball_kick_left/right", layout="hybrid")
+        skills["soccer"] = dict(success=scored, n=S["n"], note="duck soccer: goals in a 2-minute match")
+        g["soccer"] = S
     return tests, skills, g
 
 
@@ -201,6 +211,39 @@ def replays(out):
         checkpoint="hybrid runtime, follow: " + note, ball=r["ball"], ball_r=F.BALL_R, ball_color="#f2269e",
         cam=r["cam"], cam_fps=r["cam_fps"], det=r["det"], curve=[]), separators=(",", ":")))
     print("follow", note, len(r["frames"]), len(r["cam"]))
+    soccer_replay(out)
+
+
+def soccer_replay(out, max_mb=3.0):
+    """The soccer replay: a good match (most goals, fewest falls) of soccer.py's 10, recorded again (same seed, same
+    match); cut to the first 60 s if the file would be over max_mb."""
+    import soccer as S
+    runs = json.loads((HERE / "results_soccer_hybrid.json").read_text())["runs"]
+    pick = max(runs, key=lambda r: (r["goals"], -r["falls"], r["connected"]))
+    r = S.play(pick["seed"], record=True, cam_every=5)
+    nb = len(r["bodies"]) - 1                         # the ball is the last body: drawn from `ball`
+    fps = 25
+
+    def pack(n):
+        fr = [[round(v, 4) for v in f[:nb * 7]] for f in r["frames"][:n]]
+        secs = len(fr) / fps
+        ncam = int(secs * r["cam_fps"])
+        sc = dict(floor_z=0.0, boxes=[dict(pos=[round(v, 4) for v in b["pos"]], size=[round(v, 4) for v in b["size"]],
+                                           quat=b["quat"], color=b["color"]) for b in S.pitch_boxes()])
+        goals = [t for t in r["goal_t"] if t <= secs]
+        kicks = [dict(t=k["t"], foot=k["foot"], connected=k["connected"]) for k in r["kick_log"] if k["t"] <= secs]
+        note = (f"duck soccer, body {r['seed']}: {len(goals)} goals in {secs:.0f} s, {sum(k['connected'] for k in kicks)}/"
+                f"{len(kicks)} kicks connected, {sum(t <= secs for t in r['falls_t'])} falls")
+        return dict(fps=fps, seconds=secs, frames=fr, bodies=r["bodies"][:nb], success=len(goals) > 0, task="soccer",
+                    seed=r["seed"], note=note, checkpoint="hybrid runtime, soccer.py: " + note, ball=r["ball"][:n],
+                    ball_r=S.BALL_R, ball_color="#f2269e", scene=sc, states=r["states"][:n], goals_t=goals, kicks=kicks,
+                    falls_t=[t for t in r["falls_t"] if t <= secs], cam=r["cam"][:ncam], cam_fps=r["cam_fps"],
+                    det=r["det"][:n], view=[-0.55, 1.25, 0.55], match_s=S.T_MATCH, curve=[])
+    data = json.dumps(pack(len(r["frames"])), separators=(",", ":"))
+    if len(data) > max_mb * 1e6:
+        data = json.dumps(pack(60 * fps), separators=(",", ":"))
+    (out / "rollout_soccer.json").write_text(data)
+    print("soccer", pick["seed"], f"{len(data) / 1e6:.2f} MB")
 
 
 def main():
@@ -219,7 +262,7 @@ def main():
         queue.append(dict(task=name, steps=1, state="done", exam={name: dict(success=r["success"] / r["n"])}))
         skills[name] = dict(success=r["success"], n=r["n"], note=r["desc"])
     gt, gs, g = games()
-    for name in ("hurdles", "hurdles_typical", "follow"):
+    for name in ("hurdles", "hurdles_typical", "follow", "soccer"):
         if name in gt:
             tests[name] = gt[name]
             queue.append(dict(task=name, steps=1, state="done", exam={name: dict(success=gt[name]["success"])}))
@@ -228,6 +271,8 @@ def main():
     (out / "games.json").write_text(json.dumps(g))
     if "--replays" in sys.argv:
         replays(out)
+    elif "--soccer" in sys.argv:
+        soccer_replay(out)
     (out / "tests.json").write_text(json.dumps(tests))
     (out / "queue.json").write_text(json.dumps(queue))
     (out / "skills.json").write_text(json.dumps(skills, indent=1))

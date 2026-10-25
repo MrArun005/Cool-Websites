@@ -9,6 +9,8 @@ Brains (Microduck's, unchanged, from ../microduck_port/policies):
     velstand        stand, walk, run, turn, get up from any fall; command = [vx, vy, wz, head(4), body(6)]
     alpha_sitstand  sit (twist.vx = 1) and stand up from sitting (0); head steerable while seated
     roulade         forward roll (all-zero command), given a 2 s slot, then velstand
+    ball_kick_left / ball_kick_right   kick a ball just in front of that foot (blind, all-zero command, 0.5 s
+                    window as the manifest / robot daemon), then velstand (soccer.py)
 Scripted moves (moves_hybrid.py, parameters from search_moves.py -> moves_hybrid.json):
     squat, hop, lie down, swag sit
 Personality: look(yaw, pitch) / idle look-around (head command into the brain, or head targets for scripts),
@@ -68,7 +70,8 @@ GETUP_SETTLE_S = 0.5
 # kick (0.8 s), a long one (1.5 s); velstand gets up after each. Twist wiggles, head swings and the sit pose did not
 # free it (tested on 4 stuck states); the roulades did, but roll 0.1-0.5 m in whatever direction the duck faces.
 UNSTICK_AFTER_S = 2.0
-UNSTICK_SEQ = (("lie_down", "done"), ("roulade", 0.8), ("roulade", 1.5))   # drive after a fall: upright (tilt < 25 deg) this long before walking on
+UNSTICK_SEQ = (("lie_down", "done"), ("roulade", 0.8), ("roulade", 1.5))
+KICK_S = 0.5           # manifest duration_s of ball_kick_left / ball_kick_right (cheatsheet: kick_left 0.5 s)   # drive after a fall: upright (tilt < 25 deg) this long before walking on
 
 # command -> plan: list of (brain, end) where end = seconds, None (stay) or a condition name
 PLANS = {
@@ -93,12 +96,17 @@ PLANS = {
     "jump": [("velstand", 0.4), ("hop", "done"), ("hop_chain", "done"), ("repeat", None)],
     # roulade until it has turned ~1 full roll and is upright again (at most ROLL_SLOT_S), then velstand
     "roll": [("velstand", 0.6), ("roulade", "rolled"), ("velstand", None)],
+    # kicks start from wherever the caller stopped (soccer.py stands still and aligns first)
+    "kick left": [("kick_left", KICK_S), ("velstand", None)],
+    "kick right": [("kick_right", KICK_S), ("velstand", None)],
 }
 ALIASES = {"wake": "wake", "wake up": "wake", "sit down": "sit", "lie": "lie down", "lay down": "lie down",
            "getup": "get up", "get_up": "get up", "stand up": "stand", "forward roll": "roll", "roulade": "roll",
            "swag sit": "swag", "relax": "swag", "hop once": "hop", "jump around": "jump", "go to sleep": "sleep",
-           "stop": "stand", "look around": "idle", "talk": "idle"}
-ONNX = {"velstand": "velstand", "sit": "alpha_sitstand", "sit_stand": "alpha_sitstand", "roulade": "roulade"}
+           "stop": "stand", "look around": "idle", "talk": "idle",
+           "kick": "kick right", "kick_left": "kick left", "kick_right": "kick right"}
+ONNX = {"velstand": "velstand", "sit": "alpha_sitstand", "sit_stand": "alpha_sitstand", "roulade": "roulade",
+        "kick_left": "ball_kick_left", "kick_right": "ball_kick_right"}
 SEATED_SKILLS = {"sit", "swag_in", "swag_hold", "swag_out"}
 
 
@@ -161,7 +169,8 @@ class HybridRuntime:
         if name == "wake":
             name = "stand"
         seated = self.skill in SEATED_SKILLS
-        if name in ("stand", "walk", "run", "turn", "drive", "idle", "hop", "jump", "roll", "squat", "lie down", "get up"):
+        if name in ("stand", "walk", "run", "turn", "drive", "idle", "hop", "jump", "roll", "squat", "lie down", "get up",
+                    "kick left", "kick right"):
             if self.lying() and name not in ("lie down",):
                 name = "get up"                                  # velstand gets up from any fall
             elif prev == "swag" and seated:
@@ -225,7 +234,7 @@ class HybridRuntime:
             return
         if self.mode == "get up" and (self.lying() or self.up_ticks < GETUP_SETTLE_S * HZ):
             return
-        if self.mode in ("hop", "jump", "roll", "lie down", "squat", "sit", "swag", "sleep") and \
+        if self.mode in ("hop", "jump", "roll", "lie down", "squat", "sit", "swag", "sleep", "kick left", "kick right") and \
                 (len(self.plan) > 1 or self.skill != "velstand" or self.plan_t < GETUP_SETTLE_S * HZ):
             return              # let a one-off move (e.g. a celebration hop) finish and settle, then drive again
         self.command("drive", vx, vy, wz)
@@ -257,9 +266,15 @@ class HybridRuntime:
                 v = 0.0
         return v
 
-    def look(self, yaw=0.0, pitch=0.0):
-        """Point the head: yaw + left, pitch + down (rad). Kept inside what the brains were trained with."""
-        self.head_goal[:] = [0.0, float(np.clip(pitch, -0.6, 0.6)), float(np.clip(yaw, -1.2, 1.2)), 0.0]
+    def look(self, yaw=0.0, pitch=0.0, neck=None):
+        """Point the head: yaw + left, pitch + down (rad). Kept inside what the brains were trained with.
+        With `neck` (+ = up, - = forward / down) the pitch may go to 1.1 rad (velstand's trained head range is
+        +-1.1 on neck and head pitch): neck -0.6 and pitch 1.1 look at the feet (soccer.py's foot view)."""
+        if neck is None:
+            self.head_goal[:] = [0.0, float(np.clip(pitch, -0.6, 0.6)), float(np.clip(yaw, -1.2, 1.2)), 0.0]
+        else:
+            self.head_goal[:] = [float(np.clip(neck, -1.1, 1.1)), float(np.clip(pitch, -1.1, 1.1)),
+                                 float(np.clip(yaw, -1.2, 1.2)), 0.0]
 
     def say(self, text):
         """Talk: syllables of the text drive the jaw (on the robot the TTS audio goes to say_audio instead)."""
@@ -310,6 +325,10 @@ class HybridRuntime:
         mvs = self.moves
         if skill in ("velstand", "roulade"):
             return self.policies[skill]
+        if skill in ("kick_left", "kick_right"):
+            if ONNX[skill] not in self.policies:          # loaded on first use
+                self.policies[ONNX[skill]] = Policy(ONNX[skill])
+            return self.policies[ONNX[skill]]
         if skill in ("sit", "sit_stand"):
             return self.policies["alpha_sitstand"]
         sq = dict(SQUAT, **mvs.get("squat", {}))
@@ -405,7 +424,8 @@ class HybridRuntime:
         if self.mode == "sleep" and self.skill == "sit":
             goal[0] += 0.08 * math.sin(2 * math.pi * 0.25 * self.steps * DT)      # slow breathing nod
         quiet = getattr(self.cur, "quiet", False) or self.skill in ("roulade", "sit_stand", "squat_up") \
-            or self.mode in ("get up", "roll", "hop", "jump", "lie down", "sit up", "swag up", "squat up") or self.lying()
+            or self.mode in ("get up", "roll", "hop", "jump", "lie down", "sit up", "swag up", "squat up", "kick left",
+                             "kick right") or self.lying()
         if quiet or (self.mode == "swag" and self.skill == "sit"):     # swag head only once seated
             goal[:] = 0
         step = HEAD_RATE * DT
