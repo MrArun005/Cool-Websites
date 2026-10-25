@@ -185,43 +185,52 @@ def games():
                               mean_reward=f"{goals} goals in {n} matches, kicks {sum(r['connected'] for r in rows)}/{sum(r['kicks'] for r in rows)} connect",
                               brain="11 hybrids: roles, team ball sharing, referee + GameController", layout="hybrid")
         skills["match"] = dict(success=sum(sum(r["score"]) > 0 for r in rows), n=n, note="5-a-side match, 2 x 3 min")
-        g["match"] = dict(rows=rows, decided=decided, n=n,
+        g["match"] = dict(rows=rows, decided=decided, n=n, best=best_match_seed(),
                           falls_per_player={p: sum(r["players"][p]["falls"] for r in runs) for p in runs[0]["players"]})
     return tests, skills, g
 
 
-def match_replay(out, window_s=90.0, max_mb=6.0):
-    """The match replay: the match with the most goals (then most connected kicks) of match.py's results, played
-    again with recording on (same seed = same match), cut to the window_s seconds with the most happening."""
-    import match as MM
+def best_match_seed():
     runs = json.loads((HERE / "results_match_hybrid.json").read_text())["runs"]
-    pick = max(runs, key=lambda r: (sum(r["score"]), sum(k["connected"] for k in r["kicks"])))
-    g = MM.Game(seed=pick["seed"], record=True)
+    return max(runs, key=lambda r: (sum(r["score"]), sum(k["connected"] for k in r["kicks"])))["seed"]
+
+
+def match_replay(out, seed=None, window_s=80.0, max_mb=2.5, result=None):
+    """The replay of match.py's match `seed` (default: the one with the most goals), played again with recording on
+    (same seed = same match, recording changes nothing in the simulation), cut to window_s seconds around its best
+    action: the window with the most happening (a goal 10, a connected shot 4, another connected kick 2, a duel / set
+    piece ~1), counting only what happens from 5 s in to 15 s before the end, so a goal has its build-up and its
+    celebration in the cut. Writes rollout_match_s{seed}.json; with `result`, also the match result (match.py's
+    --one format) to that path."""
+    import match as MM
+    seed = best_match_seed() if seed is None else seed
+    g = MM.Game(seed=seed, record=True)
     r = g.play()
+    if result:
+        Path(result).write_text(json.dumps(r))
     dt = MM.REC_EVERY * 0.02
     fps = 1 / dt
-    n = int(window_s * fps)
-    ev = r["events"]
+    ev, N = r["events"], len(g.frames)
+    n = min(int(window_s * fps), N)
 
     def score(i0):
-        t0, t1 = i0 * dt, (i0 + n) * dt
+        t0, t1 = i0 * dt + 5.0, (i0 + n) * dt - 15.0
         s = 0.0
         for e in ev:
             if t0 <= e["t"] < t1:
-                s += {"goal": 10, "kick-off": 1, "throw-in": 1.5, "corner kick": 2, "goal kick": 1.5, "pickup": 1}.get(e["kind"], 0.3)
+                s += {"goal": 10, "kick-off": 0.5, "throw-in": 1, "corner kick": 1.5, "goal kick": 1,
+                      "pickup": 0.5, "dropped ball": 0.3}.get(e["kind"], 0.2)
         for k in r["kicks"]:
             if t0 <= k["t"] < t1:
-                s += 2 if k["connected"] else 0.5
+                s += (2 if k["connected"] else 0.5) + (2 if k["kind"] == "shot" and k["connected"] else 0)
         return s
-    starts = range(0, max(1, len(g.frames) - n), int(5 * fps))
-    i0 = max(starts, key=score)
+    i0 = max(range(0, max(1, N - n), int(2 * fps)), key=score)
     t0 = i0 * dt
     frames = g.frames[i0:i0 + n]
     secs = len(frames) * dt
-    before = [e for e in ev if e["t"] < t0]
     sc0 = [0, 0]
-    for e in before:
-        if e["kind"] == "goal":
+    for e in ev:
+        if e["kind"] == "goal" and e["t"] < t0:
             sc0 = e["score"]
     robots = []
     for dk in g.world.ducks:
@@ -232,21 +241,34 @@ def match_replay(out, window_s=90.0, max_mb=6.0):
     kicks = [dict(t=round(k["t"] - t0, 2), name=k["name"], team=k["team"], kind=k["kind"], connected=k["connected"])
              for k in r["kicks"] if t0 <= k["t"] < t0 + secs]
     goals_w = [e for e in evw if e["kind"] == "goal" and e["t"] >= 0]
-    note = (f"5-a-side match, seed {r['seed']}: final score BLUE {r['score'][0]} : {r['score'][1]} YELLOW; this part "
-            f"{t0:.0f}-{t0 + secs:.0f} s of {r['sim_s']:.0f} s, {len(goals_w)} goals, "
-            f"{sum(k['connected'] for k in kicks)}/{len(kicks)} kicks connected")
-    data = dict(task="match", fps=fps, seconds=secs, t0=round(t0, 2), frames=frames, clk=g.clk[i0:i0 + n],
-                robots=robots, kin=MM.kinematics(), mesh="duck_mesh_match.json", events=evw, kicks=kicks,
-                score0=sc0, final=r["score"], half_s=MM.HALF_S, ball_r=MM.BALL_R, ball_color="#f2269e",
-                scene=dict(pitch=MM.pitch_info()), success=sum(r["score"]) > 0, seed=r["seed"], note=note,
-                checkpoint="hybrid runtime x 11, match.py: " + note, view=[0.0, 1.45, 2.55], curve=[])
+    what = ", ".join(f"goal {e['team']} {e['half']}H {int(e['clock']) // 60}:{int(e['clock']) % 60:02d}"
+                     f"{' (own goal)' if e.get('own_goal') else ''}" for e in goals_w) or \
+        f"{sum(k['kind'] == 'shot' for k in kicks)} shots, {sum(k['connected'] for k in kicks)} kicks connected"
+    note = (f"5-a-side match, seed {r['seed']}: final score BLUE {r['score'][0]} : {r['score'][1]} YELLOW; this cut "
+            f"{t0:.0f}-{t0 + secs:.0f} s of {r['sim_s']:.0f} s: {what}")
+    data = dict(task="match", match_seed=seed, cut=1, cuts=1, what=what, fps=fps, seconds=secs,
+                t0=round(t0, 2), frames=frames, clk=g.clk[i0:i0 + n], robots=robots, kin=MM.kinematics(),
+                mesh="duck_mesh_match.json", events=evw, kicks=kicks, score0=sc0, final=r["score"], half_s=MM.HALF_S,
+                ball_r=MM.BALL_R, ball_color="#f2269e", scene=dict(pitch=MM.pitch_info()), success=sum(r["score"]) > 0,
+                seed=r["seed"], note=note, checkpoint="hybrid runtime x 11, match.py: " + note, view=[0.0, 1.45, 2.55], curve=[])
     js = json.dumps(data, separators=(",", ":"))
     assert len(js) < max_mb * 1e6, len(js)
-    (out / "rollout_match.json").write_text(js)
+    name = f"rollout_match_s{seed}.json"
+    (out / name).write_text(js)
+    print(name, note, f"{len(js) / 1e6:.2f} MB")
     if not (out / "duck_mesh_match.json").exists():
         mesh(MicroduckSim(str(HERE / "scene_hybrid_allcollisions_noantenna.xml"), seed=0).m, out, max_faces=220,
              fname="duck_mesh_match.json")
-    print("match", note, f"{len(js) / 1e6:.2f} MB")
+
+
+def match_index(out):
+    """The list of match cuts on the page (games.json 'match.replays'), from the rollout_match_s*.json files."""
+    items = []
+    for f in sorted(out.glob("rollout_match_s*.json")):
+        d = json.loads(f.read_text())
+        items.append(dict(file=f.name, seed=d["match_seed"], cut=d.get("cut", 1), cuts=d.get("cuts", 1), final=d["final"],
+                          what=d.get("what", ""), seconds=round(d["seconds"])))
+    return sorted(items, key=lambda x: (x["seed"], x["cut"]))
 
 
 def replays(out):
@@ -321,6 +343,15 @@ def soccer_replay(out, max_mb=3.0):
 
 def main():
     out = Path(sys.argv[1])
+    if "--match-only" in sys.argv:                        # just this match's replay (several in parallel)
+        res = sys.argv[sys.argv.index("--result") + 1] if "--result" in sys.argv else None
+        match_replay(out, int(sys.argv[sys.argv.index("--match-only") + 1]), result=res)
+        return
+    if "--match-index" in sys.argv:                       # matches.json: the page's match selector
+        items = match_index(out)
+        (out / "matches.json").write_text(json.dumps(items))
+        print(json.dumps(items, indent=1))
+        return
     out.mkdir(parents=True, exist_ok=True)
     if "--mesh" in sys.argv or not (out / "duck_mesh.json").exists():
         mesh(MicroduckSim(str(HERE / "scene_hybrid_allcollisions_noantenna.xml"), seed=0).m, out)
@@ -341,6 +372,8 @@ def main():
             queue.append(dict(task=name, steps=1, state="done", exam={name: dict(success=gt[name]["success"])}))
             if name in gs:
                 skills[name] = gs[name]
+    if "match" in g:
+        g["match"]["replays"] = match_index(out)
     (out / "games.json").write_text(json.dumps(g))
     if "--replays" in sys.argv:
         replays(out)

@@ -691,6 +691,7 @@ def speed(seconds=5.0, n=11, render=0):
 
 # ================================================================================================ the game
 import soccer as SO  # noqa: E402  (camera geometry, kick placement, alignment numbers from the single-duck game)
+import tactics as TT  # noqa: E402  (the team tactics: pure Python, see tactics.py)
 
 HALF_S = 180.0              # playing time per half (2 halves, sides swapped at half-time)
 CAM_EVERY = rh.HZ // F.CAM_HZ   # head camera at 10 Hz
@@ -698,17 +699,18 @@ REC_EVERY = 3               # replay frames at 50/3 = 16.7 fps
 WIFI_DELAY, WIFI_NOISE, WIFI_EVERY = 0.2, 0.02, 0.2     # team messages: 200 ms late, 2 cm noise, 5 per second
 LOC_SIGMA, LOC_YAW_SIGMA, LOC_TAU = 0.05, 0.05, 2.0     # self-localization error: 5 cm, 3 deg, 2 s correlation
 OPP_NOISE = 0.06            # where a duck thinks an opponent is (sim truth + this noise; stands in for robot detection)
-DUEL_D = 0.45               # an opponent this close to the ball: no time to line up a kick, dribble / fight for it
-READY_S, SET_S, GOAL_S = 14.0, 1.5, 4.0
+OPP_TAU = 1.0               # ... drifting with this correlation time (a tracker's error, not white noise)
+READY_S, SET_S, GOAL_S = 14.0, 1.0, 3.0
 FREEKICK_S, FREEKICK_D = 10.0, 0.5   # set pieces: opponents keep 0.5 m from the ball for 10 s or until it is played
 KICKOFF_S = 10.0
-NO_PROGRESS_S = 20.0        # ball pinned between ducks this long (moved < 15 cm): dropped ball
+NO_PROGRESS_S = 10.0        # ball untouched / pinned between ducks this long (moved < 15 cm): dropped ball
 PICKUP_DOWN_S, PICKUP_OUT_S, PICKUP_S = 12.0, 8.0, 10.0   # incapable player: down 12 s / off the pitch 8 s -> out 10 s
 OUT_WHISTLE_S = 0.8         # the ball is placed this long after it went out
-QUICK_X, QUICK_Y, QUICK_H = (-0.03, 0.035), 0.03, 0.45   # duel: kick at once if the ball is here (kick window: 6-11 cm
-                            # ahead, +-3 cm off the foot) and the aim within 0.45 rad (soccer.py probe: all hit)
-QUICK_READY_S = 0.8         # head home this long first (probe: 0.6 s 2/4 kicked, 0.8 s 4/4)
 ROLES = ("GK", "D1", "D2", "A1", "A2")
+assert (TT.HX, TT.HY, TT.GOAL_W, TT.PEN_AREA, TT.BORDER, TT.BALL_R) == (HX, HY, GOAL_W, PEN_AREA, BORDER, BALL_R)
+assert (TT.KICK_X, TT.KICK_Y, TT.TOL_X, TT.TOL_Y, TT.TOL_H, TT.BEHIND, TT.AROUND, TT.READY_S, TT.FOOT_VIEW, TT.CAM_H,
+        TT.CAM_DOWN, TT.DT) == (SO.KICK_X, SO.KICK_Y, SO.TOL_X, SO.TOL_Y, SO.TOL_H, SO.BEHIND, SO.AROUND, SO.READY_S,
+                                SO.FOOT_VIEW, SO.CAM_H, F.CAM_DOWN, rh.DT)
 # kick-off spots (team frame: own goal at -x), (x, y): kicking team / other team
 KICKOFF_SPOTS = {True: {"GK": (-HX + 0.3, 0.0), "D1": (-1.3, 0.6), "D2": (-1.3, -0.6), "A1": (-0.22, 0.03), "A2": (-0.7, -0.75)},
                  False: {"GK": (-HX + 0.3, 0.0), "D1": (-1.3, 0.6), "D2": (-1.3, -0.6), "A1": (-0.6, 0.0), "A2": (-0.75, 0.75)}}
@@ -776,12 +778,7 @@ class Player:
         self.rng = np.random.default_rng(1000 * game.seed + duck.i)
         self.err = self.rng.normal(0, 1, 3) * [LOC_SIGMA, LOC_SIGMA, LOC_YAW_SIGMA]
         self.ball_f, self.ball_t, self.misses = None, -99.0, 0
-        self.state, self.state_t = "search", 0.0
-        self.aim, self.aim_kind, self.aim_mate = None, None, None
-        self.foot, self.ok_t, self.kick_at = None, 0.0, None
-        self.search_dir = 1.0
-        self.turn_hist, self.backup_until = [], -1.0
-        self.task = ("idle",)
+        self.state, self.cmd = "search", None
         self.cam_on = False
         self.penalized_until = None
         self.last_sent = -9.0
@@ -856,250 +853,6 @@ class Player:
             self.team.send(t, self.duck.i, self.ball_f, self.ball_t, self.rng)
             self.last_sent = t
 
-    def set_state(self, s):
-        if s != self.state:
-            self.state, self.state_t = s, self.t
-
-    # ------------------------------------------------------------ motion
-    def go_to(self, target, vmax=0.9, face=None):
-        """soccer.Player.go_to: turn towards it, walk when facing it (velstand's dead band respected)."""
-        e = self.to_body(target)
-        d, b = float(np.hypot(*e)), math.atan2(e[1], e[0])
-        if face is not None and d < 0.08:
-            b = wrap(face - self.psi)
-            if abs(b) < 0.12:
-                return 0.0, 0.0, 0.0, d
-        wz = float(np.clip(1.6 * b, -1.0, 1.0))
-        if abs(b) > 0.12 and abs(wz) < 0.6:
-            wz = math.copysign(0.6, b)
-        vx = 0.0
-        if abs(b) < 0.5 and d > 0.04 and not (face is not None and d < 0.08):
-            vx = float(np.clip(0.3 + 1.2 * d, 0.32, vmax))
-        if abs(b) > 0.9 and d < 0.3:
-            vx = 0.0
-        return vx, 0.0, wz, d
-
-    def look_at(self, p):
-        rel = self.to_body(p)
-        d = float(np.hypot(*rel))
-        bear = math.atan2(rel[1], rel[0])
-        if d < 0.24:
-            self.rt.look(float(np.clip(bear, -0.8, 0.8)), SO.FOOT_VIEW[1], neck=SO.FOOT_VIEW[0])
-        else:
-            elev = math.atan2(SO.CAM_H - BALL_R, max(d - 0.04, 0.05))
-            self.rt.look(bear, elev - F.CAM_DOWN)
-
-    def avoid(self, target, others, r=0.4, k=1.2):
-        """Teammate repulsion: push the target away from teammates closer than r."""
-        t = np.array(target, float)
-        for o in others:
-            v = self.pos - o
-            dd = float(np.linalg.norm(v))
-            if 1e-6 < dd < r:
-                t = t + unit(v) * (r - dd) * k
-        return t
-
-    # ------------------------------------------------------------ behaviour
-    def act(self, t):
-        """One 50 Hz tick: the twist for this duck, from its task (set by the game: roles, set pieces)."""
-        self.t = t
-        rt = self.rt
-        if rt.mode == "get up" or rt.lying():
-            self.set_state("get up")
-            return 0.0, 0.0, 0.0
-        if rt.mode in ("kick left", "kick right", "hop"):
-            return 0.0, 0.0, 0.0
-        if self.state in ("get up", "kick"):
-            self.set_state("approach")
-        kind = self.task[0]
-        if kind == "ball":
-            v = self.ball_play(t)
-        elif kind == "keeper":
-            v = self.keeper(t)
-        elif kind == "spot":
-            _, target, face, vmax = self.task
-            mates = [p.pos for p in self.team.players if p is not self and p.active()]
-            target = self.avoid(target, mates)
-            b, _ = self.ball(t)
-            if b is not None:
-                self.look_at(b)
-                if face is None:
-                    face = math.atan2(*(np.asarray(b) - target)[::-1])
-            vx, vy, wz, _ = self.go_to(target, vmax, face=face)
-            v = (vx, vy, wz)
-            self.set_state("position")
-        else:
-            v = (0.0, 0.0, 0.0)
-        return self.reflex(t, v)
-
-    def reflex(self, t, v):
-        """soccer.Player.step's blocked-turn reflex: turning on the spot 1.5 s without the heading moving -> back up 1 s."""
-        vx, vy, wz = v
-        turning = abs(wz) >= 0.5 and vx <= 0.0 and self.rt.mode == "drive"
-        self.turn_hist = (self.turn_hist + [(turning, self.psi)])[-75:]
-        if len(self.turn_hist) == 75 and all(a for a, _ in self.turn_hist) and \
-                abs(wrap(self.turn_hist[-1][1] - self.turn_hist[0][1])) < 0.25:
-            self.backup_until, self.turn_hist = t + 1.0, []
-        if t < self.backup_until:
-            return -0.5, 0.0, 0.0
-        return vx, vy, wz
-
-    def search(self, t):
-        self.set_state("search") if self.state != "search" else None
-        ph = t - self.state_t
-        nod = 0.5 + 0.5 * math.sin(2 * math.pi * 0.5 * ph)
-        self.rt.look(0.6 * self.search_dir, 0.1 + 0.8 * nod, neck=-0.3 * nod)
-        return 0.0, 0.0, 0.9 * self.search_dir
-
-    def ball_play(self, t):
-        """Go for the ball: soccer.py's approach -> align -> ready -> kick, aimed at the goal or a teammate; with an
-        opponent near the ball there is no time to line up: dribble / fight for it (walk through the ball)."""
-        b, src = self.ball(t)
-        if b is None:
-            return self.search(t)
-        b = np.asarray(b, float)
-        rel = self.to_body(b)
-        dball = float(np.hypot(*rel))
-        if self.state in ("search", "position", "keeper"):
-            self.set_state("approach")
-            self.search_dir = 1.0 if math.atan2(rel[1], rel[0]) >= 0 else -1.0
-        opp_d = self.g.nearest_opp(self, b)
-        if self.state in ("approach", "chase", "duel") or self.aim is None:
-            self.aim, self.aim_kind, self.aim_mate = self.g.choose_aim(self, b)
-        k = unit(self.aim - b)
-        n = np.array([-k[1], k[0]])
-        r = self.pos - b
-        along, lat = float(r @ k), float(r @ n)
-        phi_d, phi_p = math.atan2(r[1], r[0]), math.atan2(-k[1], -k[0])
-        dphi = wrap(phi_p - phi_d)
-        lim = np.array([HX + BORDER - 0.12, HY + BORDER - 0.12])
-        if self.state in ("approach", "chase") and opp_d < DUEL_D and dball < 0.7:
-            self.set_state("duel")
-        if self.state == "duel":
-            self.look_at(b)
-            if opp_d > DUEL_D + 0.25 and t - self.state_t > 1.0:
-                self.set_state("approach")
-            eh = wrap(math.atan2(k[1], k[0]) - self.psi)
-            if src == "own" and t - self.ball_t < 0.3 and abs(eh) < QUICK_H:     # quick kick: the ball is already
-                for foot, ty in (("left", SO.KICK_Y), ("right", -SO.KICK_Y)):   # in a foot's kick window
-                    ex, ey = rel[0] - SO.KICK_X, rel[1] - ty
-                    if QUICK_X[0] < ex < QUICK_X[1] and abs(ey) < QUICK_Y:
-                        self.foot = foot
-                        self.kick_at = dict(foot=foot, kind=self.aim_kind, mate=self.aim_mate, quick=True)
-                        self.set_state("ready")
-                        return 0.0, 0.0, 0.0
-            self.duel_hist = (getattr(self, "duel_hist", []) + [b.copy()])[-150:]
-            if len(self.duel_hist) == 150 and np.linalg.norm(self.duel_hist[0] - b) < 0.05 and t > getattr(self, "detour_until", -1):
-                self.detour_until, self.detour_sign, self.duel_hist = t + 1.5, float(self.rng.choice([-1.0, 1.0])), []
-            if t < getattr(self, "detour_until", -1):     # pinned 3 s: step round it (60 deg) and try from the side
-                a = phi_d + self.detour_sign * 1.0
-                target = np.clip(b + 0.22 * np.array([math.cos(a), math.sin(a)]), -lim, lim)
-                vx, vy, wz, _ = self.go_to(target, 1.0)
-                return vx, vy, wz
-            if abs(dphi) > 1.0:                          # not behind it: tight orbit
-                a = phi_d + float(np.clip(dphi, -0.9, 0.9))
-                target = np.clip(b + 0.2 * np.array([math.cos(a), math.sin(a)]), -lim, lim)
-                vx, vy, wz, _ = self.go_to(target, 1.0)
-            else:                                         # behind it: walk through it towards the aim, the ball
-                sg = 1.0 if rel[1] > 0 else -1.0          # in front of the nearer foot (so a quick kick can follow)
-                vx, vy, wz, _ = self.go_to(b + 0.15 * k - sg * SO.KICK_Y * n, 1.0)
-            return vx, vy, wz
-        if self.state in ("approach", "chase"):
-            self.look_at(b)
-            self.set_state("chase" if dball > 0.6 else "approach")
-            if abs(dphi) > 0.6:
-                if abs(dphi) > 2.6:
-                    room = [min(HY + 0.3 - abs((b + sg * SO.AROUND * n)[1]), HX + 0.3 - abs((b + sg * SO.AROUND * n)[0]))
-                            for sg in (1.0, -1.0)]
-                    dphi = abs(dphi) if room[0] >= room[1] else -abs(dphi)
-                a = phi_d + float(np.clip(dphi, -0.9, 0.9))
-                rad = max(SO.AROUND, min(dball, 0.5))
-                target = np.clip(b + rad * np.array([math.cos(a), math.sin(a)]), -lim, lim)
-                vx, vy, wz, d = self.go_to(target, 1.1 if dball > 0.8 else 0.9)
-            else:
-                P = np.clip(b - SO.BEHIND * k, -lim, lim)
-                vx, vy, wz, d = self.go_to(P, 1.1 if dball > 0.8 else 0.9, face=math.atan2(k[1], k[0]))
-                if src == "own" and (d < 0.07 or (along < -0.12 and abs(lat) < 0.06 and dball < SO.BEHIND + 0.06)):
-                    self.set_state("align")
-                    self.foot = None
-            return vx, vy, wz
-        if self.state == "align":
-            self.rt.look(0.0, SO.FOOT_VIEW[1], neck=SO.FOOT_VIEW[0])
-            if dball > SO.BEHIND + 0.15 or along > 0.0:
-                self.set_state("approach")
-                return 0.0, 0.0, 0.0
-            if opp_d < DUEL_D - 0.1 or t - self.state_t > 6.0:   # an opponent is on it / cannot line up: fight for it
-                self.set_state("duel")
-                return 0.0, 0.0, 0.0
-            if self.foot is None:
-                self.foot = "left" if rel[1] > 0 else "right"
-                if b[1] > HY - 0.15:
-                    self.foot = "left" if self.team.dir > 0 else "right"
-                elif b[1] < -HY + 0.15:
-                    self.foot = "right" if self.team.dir > 0 else "left"
-            ty = SO.KICK_Y if self.foot == "left" else -SO.KICK_Y
-            ex, ey = rel[0] - SO.KICK_X, rel[1] - ty
-            eh = wrap(math.atan2(k[1], k[0]) - self.psi)
-            fresh = src == "own" and t - self.ball_t < 0.25
-            vx = vy = wz = 0.0
-            if abs(eh) > 0.3:
-                wz = math.copysign(0.65, eh)
-                if ex > 0.08:
-                    vx = 0.33
-            else:
-                if abs(ex) > SO.TOL_X:
-                    vx = 0.33 if ex > 0 else -0.4
-                if abs(ey) > SO.TOL_Y:
-                    vy = 0.45 if ey > 0 else -0.45
-                if abs(eh) > SO.TOL_H:
-                    wz = math.copysign(0.6, eh)
-            self.ok_t = self.ok_t + rh.DT if (vx == vy == wz == 0.0 and fresh) else 0.0
-            if self.ok_t > 0.3:
-                self.set_state("ready")
-                self.ok_t = 0.0
-                self.kick_at = dict(foot=self.foot, kind=self.aim_kind, mate=self.aim_mate)
-            return vx, vy, wz
-        if self.state == "ready":
-            self.rt.look(0.0, 0.0)
-            if t - self.state_t >= (QUICK_READY_S if (self.kick_at or {}).get("quick") else SO.READY_S):
-                self.set_state("kick")
-                self.g.kick(self, t)
-                self.rt.command(f"kick {self.foot}")
-            return 0.0, 0.0, 0.0
-        self.set_state("approach")
-        return 0.0, 0.0, 0.0
-
-    def keeper(self, t):
-        """Stay in the box on the line ball -> goal centre; go and clear it when it comes into the box near it."""
-        own = np.array([-self.team.dir * HX, 0.0])
-        b, _ = self.ball(t)
-        if b is None:
-            self.rt.look(0.0, 0.15)
-            vx, vy, wz, _ = self.go_to(own + [self.team.dir * 0.3, 0.0], 0.7, face=0.0 if self.team.dir > 0 else math.pi)
-            return vx, vy, wz
-        b = np.asarray(b, float)
-        bt = b * self.team.dir                      # team frame (own goal at -x)
-        in_box = bt[0] < -HX + PEN_AREA[0] + 0.1 and abs(bt[1]) < PEN_AREA[1] / 2 + 0.1
-        near = np.linalg.norm(b - self.pos) < 0.7 or self.g.closest_of_team(self.team, b) is self
-        if self.state in ("approach", "chase", "align", "ready", "duel"):
-            if not in_box and bt[0] > -HX + PEN_AREA[0] + 0.35:
-                self.set_state("keeper")
-            else:
-                return self.ball_play(t)
-        elif in_box and near:
-            self.set_state("approach")
-            return self.ball_play(t)
-        self.set_state("keeper")
-        u = unit(b - own)
-        target = own + u * 0.32
-        tt = target * self.team.dir
-        tt[0] = max(tt[0], -HX + 0.2)
-        tt[1] = float(np.clip(tt[1], -GOAL_W / 2 + 0.12, GOAL_W / 2 - 0.12))
-        target = tt * self.team.dir
-        self.look_at(b)
-        vx, vy, wz, _ = self.go_to(target, 0.8, face=math.atan2(*(b - target)[::-1]))
-        return vx, vy, wz
-
     def active(self):
         return self.penalized_until is None
 
@@ -1151,6 +904,85 @@ class Referee:
         return vx, 0.0, wz
 
 
+MOVE_V, MOVE_WIN = 0.03, 0.5    # "moving": the trunk travelled > 3 cm/s over the last 0.5 s (steps in place don't count)
+MOVE_FAST = 0.10                # "walking briskly": > 10 cm/s over the same window (velstand's top speed ~0.4 m/s)
+DUEL_R, DUEL_GAP = 0.3, 1.0     # duel: players of both teams within 0.3 m of the ball (a new one after 1 s without)
+
+
+class Metrics:
+    """Measurement only (simulator truth, no effect on play): per player the distance walked and the share of
+    playing time it was moving (trunk displacement over 0.5 s windows), duels for the ball, and body contacts
+    between opponents (shoulder-to-shoulder)."""
+
+    def __init__(self, game):
+        self.g = game
+        w = game.world
+        self.owner = np.full(w.m.ngeom, -1)
+        for dk in w.ducks:
+            self.owner[sorted(dk.geoms)] = dk.i
+        self.hist = {p.name: [] for p in game.players}
+        self.per = {p.name: dict(dist=0.0, moving=0, fast=0, samples=0) for p in game.players}
+        self.duels, self.in_duel, self.duel_last = 0, False, -9.0
+        self.bumps, self.bump_last = 0, {}
+        self.play_s = 0.0
+
+    def tick(self):
+        g = self.g
+        if g.phase != "playing":
+            for h in self.hist.values():
+                h.clear()
+            return
+        self.play_s += rh.DT
+        every = int(round(0.1 / rh.DT))
+        if g.k % every == 0:
+            n = int(round(MOVE_WIN / 0.1))
+            for p in g.players:
+                h = self.hist[p.name]
+                if not p.active():
+                    h.clear()
+                    continue
+                q = p.duck.pose()[0].copy()
+                h.append(q)
+                if len(h) > n + 1:
+                    h.pop(0)
+                if len(h) == n + 1:
+                    st = self.per[p.name]
+                    disp = float(np.linalg.norm(h[-1] - h[0]))
+                    st["samples"] += 1
+                    st["moving"] += disp / MOVE_WIN > MOVE_V
+                    st["fast"] += disp / MOVE_WIN > MOVE_FAST
+                    if g.k % (n * every) == 0:
+                        st["dist"] += disp
+        b = g.world.ball()[0][:2]
+        near = {"blue": 9.0, "yellow": 9.0}
+        for p in g.players:
+            if p.active():
+                near[p.team.name] = min(near[p.team.name], float(np.linalg.norm(p.duck.pose()[0] - b)))
+        duel = near["blue"] < DUEL_R and near["yellow"] < DUEL_R
+        if duel:
+            if not self.in_duel and g.t - self.duel_last > DUEL_GAP:
+                self.duels += 1
+            self.duel_last = g.t
+        self.in_duel = duel
+        d = g.world.d
+        team = {dk.i: dk.team for dk in g.world.ducks}
+        for c in d.contact[:d.ncon]:
+            a, b2 = self.owner[c.geom1], self.owner[c.geom2]
+            if a < 0 or b2 < 0 or a == b2 or team[a] == "ref" or team[b2] == "ref" or team[a] == team[b2]:
+                continue
+            key = (min(a, b2), max(a, b2))
+            if g.t - self.bump_last.get(key, -9.0) > 1.0:
+                self.bumps += 1
+            self.bump_last[key] = g.t
+
+    def result(self):
+        per = {}
+        for n, st in self.per.items():
+            per[n] = dict(dist_m=round(st["dist"], 2), moving=round(st["moving"] / max(1, st["samples"]), 3),
+                          fast=round(st["fast"] / max(1, st["samples"]), 3))
+        return dict(players=per, duels=self.duels, bumps=self.bumps, play_s=round(self.play_s, 1))
+
+
 class Game:
     """The match: world, 10 players + referee, the GameController (states, rules, clock, score, events)."""
 
@@ -1172,6 +1004,8 @@ class Game:
             p = Player(self, dk, rt, tm, ROLES[num - 1], num)
             tm.players.append(p)
             self.players.append(p)
+        self.opp_err = {}
+        self.tactics = {tn: TT.TeamTactics(seed * 10 + k) for k, tn in enumerate(self.teams)}
         self.ren = make_renderer(w.m)
         w.touch_hook = self._touch
         self.t, self.k = 0.0, 0
@@ -1187,6 +1021,7 @@ class Game:
         self.ball_moved_from = None
         self.log = log
         self.place_kickoff(teleport=True)
+        self.metrics = Metrics(self)
 
     # ---------------------------------------------------------------- helpers
     def ev(self, kind, team=None, text="", **kw):
@@ -1203,48 +1038,6 @@ class Game:
             if p.duck.i == i:
                 return p
         return None
-
-    def nearest_opp(self, pl, b):
-        """Distance from the ball to the nearest opponent, as this player perceives them (truth + noise)."""
-        best = 9.0
-        for p in self.teams[self.other(pl.team.name)].players:
-            if not p.active():
-                continue
-            q, _ = p.duck.pose()
-            best = min(best, float(np.linalg.norm(q + pl.rng.normal(0, OPP_NOISE, 2) * 0.3 - b)))
-        return best
-
-    def closest_of_team(self, team, b):
-        ps = [p for p in team.players if p.active() and not p.rt.lying()]
-        return min(ps, key=lambda p: np.linalg.norm(p.pos - b)) if ps else None
-
-    def choose_aim(self, pl, b):
-        """Shoot at the goal (away from the keeper); if an opponent blocks the line and a teammate further up is open,
-        pass to him. Returns (aim point, kind, mate index)."""
-        d = pl.team.dir
-        opp = self.teams[self.other(pl.team.name)]
-        gk = next((p for p in opp.players if p.role == "GK"), None)
-        gy = gk.duck.pose()[0][1] if gk is not None else 0.0
-        goal = np.array([d * HX, float(np.clip(-0.8 * gy, -0.4, 0.4))])
-        opps = [p.duck.pose()[0] + pl.rng.normal(0, OPP_NOISE, 2) for p in opp.players if p.active() and p.role != "GK"]
-        dg = float(np.linalg.norm(goal - b))
-        blocked = any(seg_dist(b, goal, q)[0] < 0.18 and 0.03 < seg_dist(b, goal, q)[1] and np.linalg.norm(q - b) < 1.5 for q in opps)
-        own_half = b[0] * d < -0.75
-        if blocked and dg > 0.9:
-            best, bs = None, -9.0
-            for m in pl.team.players:
-                if m is pl or m.role == "GK" or not m.active() or m.rt.lying():
-                    continue
-                fwd, dist = (m.pos[0] - b[0]) * d, float(np.linalg.norm(m.pos - b))
-                if fwd > -0.3 and 0.5 < dist < 2.0 and all(seg_dist(b, m.pos, q)[0] > 0.2 for q in opps):
-                    sc = fwd - 0.3 * dist
-                    if sc > bs:
-                        best, bs = m, sc
-            if best is not None:
-                return best.pos + np.array([d * 0.15, 0.0]), "pass", best.duck.i
-        if pl.role == "GK" or own_half:
-            return goal, "clearance", None
-        return goal, ("shot" if dg < 2.0 else "forward"), None
 
     # ---------------------------------------------------------------- touches, kicks
     def _touch(self):
@@ -1279,13 +1072,15 @@ class Game:
                 sp["touched"] = True
         self.touch_now = set()
 
-    def kick(self, p, t):
+    def kick(self, p, t, foot, kind, mate):
         b, _ = self.world.ball()
-        kind = p.kick_at.get("kind") or "forward"
-        self.kicks.append(dict(t=round(t, 2), who=p.duck.i, name=p.name, team=p.team.name, foot=p.foot, kind=kind,
-                               mate=p.kick_at.get("mate"), b0=[round(float(v), 3) for v in b[:2]], vmax=0.0, connected=False))
+        kind = kind or "forward"
+        mate_i = next((q.duck.i for q in self.players if q.name == mate), None) if mate else None
+        self.kicks.append(dict(t=round(t, 2), who=p.duck.i, name=p.name, team=p.team.name, foot=foot, kind=kind,
+                               mate=mate_i, b0=[round(float(v), 3) for v in b[:2]], vmax=0.0, connected=False))
         p.stats["kicks"] += 1
-        p.stats[{"shot": "shots", "pass": "passes", "clearance": "clearances"}.get(kind, "kicks")] += 1 if kind in ("shot", "pass", "clearance") else 0
+        if kind in ("shot", "pass", "clearance"):
+            p.stats[{"shot": "shots", "pass": "passes", "clearance": "clearances"}[kind]] += 1
 
     # ---------------------------------------------------------------- set-ups
     def spot(self, team, role, kicking):
@@ -1347,84 +1142,47 @@ class Game:
         self.reset_rt(p.rt)
         p.penalized_until = self.t + PICKUP_S
         p.stats["pickups"] += 1
-        p.task = ("idle",)
         p.down_since = p.out_since = None
-        if self.team_striker(tm) is p:
-            tm.striker = None
         self.ev("pickup", tm.name, f"{p.name} {why}: off for {PICKUP_S:.0f} s", who=p.name)
 
-    def team_striker(self, tm):
-        return tm.striker
+    # ---------------------------------------------------------------- tactics (tactics.py: pure Python)
+    def world_model(self, tm):
+        """What tactics.TeamTactics gets: this team's own estimates (poses with localization error, own camera / team
+        ball), opponents as perceived (truth + a drifting OPP_NOISE error, OPP_TAU correlation), the GameController's state."""
+        t = self.t
+        phase = self.phase if self.phase in ("playing", "ready", "set") else "other"
+        sp = self.setpiece
+        players = []
+        for p in tm.players:
+            b, src = p.ball(t)
+            players.append(dict(name=p.name, role=p.role, pos=p.pos, psi=p.psi, active=p.active(),
+                                down=p.rt.mode == "get up" or p.rt.lying(),
+                                busy=p.rt.mode in ("kick left", "kick right", "hop"),
+                                ball=None if b is None else np.asarray(b, float), ball_src=src,
+                                ball_age=t - p.ball_t))
+        opps = []
+        a = rh.DT / OPP_TAU
+        for q in self.teams[self.other(tm.name)].players:
+            e = self.opp_err.setdefault((tm.name, q.name), self.rng.normal(0, OPP_NOISE, 2))
+            e += -a * e + math.sqrt(2 * a) * self.rng.normal(0, OPP_NOISE, 2)
+            opps.append(dict(pos=q.duck.pose()[0] + e, role=q.role, active=q.active()))
+        return dict(t=t, phase=phase, dir=tm.dir, ball=None if tm.ball is None or t - tm.ball_t > 4.0 else tm.ball,
+                    setpiece=None if sp is None else dict(kind=sp["kind"], ours=sp["team"] == tm.name,
+                                                          ball=sp["ball"], radius=sp["radius"]),
+                    spots={p.name: self.spot(tm, p.role, tm.name == self.kickoff_team) for p in tm.players},
+                    players=players, opps=opps)
 
-    # ---------------------------------------------------------------- roles
-    def assign(self):
-        """Each team: the best-placed field player goes for the ball (striker), the others take formation spots
-        relative to the (shared) ball estimate; the goalkeeper keeps goal."""
-        for tm in self.teams.values():
-            d = tm.dir
-            ests = [p.ball(self.t)[0] for p in tm.players if p.active()]
-            ests = [e for e in ests if e is not None]
-            b = np.asarray(ests[0] if ests else (tm.ball if tm.ball is not None else (0.0, 0.0)), float)
-            if tm.ball is not None:
-                b = np.asarray(tm.ball, float)
-            for p in tm.players:                              # a striker's own fresh view beats the shared one
-                if p is tm.striker and p.ball(self.t)[1] == "own":
-                    b = np.asarray(p.ball(self.t)[0], float)
-            cands = [p for p in tm.players if p.role != "GK" and p.active()]
-            sp = self.setpiece
-            restricted = sp is not None and sp["team"] != tm.name
-
-            def cost(p):
-                c = np.linalg.norm(p.pos - b) / 0.3
-                e = p.to_body(b)
-                c += abs(math.atan2(e[1], e[0])) / 1.2
-                if p.rt.lying() or p.rt.mode == "get up":
-                    c += 8.0
-                if p.role.startswith("D") and b[0] * d > 0.3:
-                    c += 3.0
-                if p is tm.striker:
-                    c -= 1.5
-                return c
-            if cands and (self.k % 25 == 0 or tm.striker is None or not tm.striker.active()):
-                tm.striker = min(cands, key=cost)
-            bt = b * d
-            spots = {"A1": (np.clip(bt[0] - 0.5, -0.6, HX - 0.6), np.clip(bt[1] + 0.75, -HY + 0.3, HY - 0.3)),
-                     "A2": (np.clip(bt[0] - 0.5, -0.6, HX - 0.6), np.clip(bt[1] - 0.75, -HY + 0.3, HY - 0.3)),
-                     "D1": (np.clip((bt[0] - HX) / 2 - 0.2, -HX + 0.6, -0.4), np.clip(0.5 + 0.25 * bt[1], -HY + 0.3, HY - 0.3)),
-                     "D2": (np.clip((bt[0] - HX) / 2 - 0.2, -HX + 0.6, -0.4), np.clip(-0.5 + 0.25 * bt[1], -HY + 0.3, HY - 0.3))}
-            for p in tm.players:
-                if not p.active():
-                    p.task = ("idle",)
-                    p.cam_on = False
-                    continue
-                if p.role == "GK":
-                    p.task = ("keeper",)
-                    p.cam_on = True
-                    if restricted:
-                        p.task = ("spot", self.keep_out(np.array([-d * (HX - 0.3), 0.0]), sp), None, 0.7)
-                    continue
-                if p is tm.striker:
-                    p.cam_on = True
-                    if restricted:                         # stand off between the ball and own goal
-                        bb = np.asarray(sp["ball"], float)
-                        u = unit(np.array([-d * HX, 0.0]) - bb)
-                        p.task = ("spot", bb + u * (sp["radius"] + 0.12), None, 0.9)
-                    else:
-                        p.task = ("ball",)
-                    continue
-                p.cam_on = False
-                s = np.array(spots[p.role], float) * d
-                if restricted:
-                    s = self.keep_out(s, sp)
-                p.task = ("spot", s, None, 0.8)
-
-    def keep_out(self, s, sp):
-        bb = np.asarray(sp["ball"], float)
-        v = s - bb
-        r = sp["radius"] + 0.1
-        if np.linalg.norm(v) < r:
-            s = bb + unit(v if np.linalg.norm(v) > 1e-3 else np.array([-1.0, 0.0])) * r
-        return s
+    def apply(self, p, c, t):
+        """One player's tactics.Cmd -> its runtime (velstand twist, head) and, on a kick, the kick brain."""
+        p.cmd, p.state = c, c.state
+        p.cam_on = bool(c.cam) and p.active()
+        if c.head is not None:
+            p.rt.look(*c.head)
+        if c.kick:
+            self.kick(p, t, c.kick, c.kind, c.mate)
+            p.rt.command(f"kick {c.kick}")
+            return
+        p.rt.drive(c.vx, c.vy, c.wz)
 
     # ---------------------------------------------------------------- the GameController
     def award(self, kind, team, pos):
@@ -1511,7 +1269,7 @@ class Game:
         elif self.phase == "ready":
             done = all(np.linalg.norm(p.duck.pose()[0] - self.spot(p.team, p.role, p.team.name == self.kickoff_team)) < 0.25
                        for p in self.players if p.active())
-            if t - self.phase_t > READY_S or (done and t - self.phase_t > 3.0):
+            if t - self.phase_t > READY_S or (done and t - self.phase_t > 2.0):
                 self.phase, self.phase_t = "set", t
                 self.manual_placement()
                 for tm in self.teams.values():
@@ -1575,36 +1333,25 @@ class Game:
         for tm in self.teams.values():
             tm.deliver(t)
         playing = self.phase == "playing"
-        if playing:
-            self.assign()
-        elif self.phase in ("ready", "set"):
-            for p in self.players:
-                if p.active():
-                    p.task = ("spot", self.spot(p.team, p.role, p.team.name == self.kickoff_team),
-                              0.0 if p.team.dir > 0 else math.pi, 0.8)
-                    p.cam_on = False
-                    if self.phase == "set":
-                        p.task = ("idle",)
-        else:
-            for p in self.players:
-                p.task, p.cam_on = ("idle",), False
+        cmds = {}
+        for tm in self.teams.values():
+            cmds.update(self.tactics[tm.name].step(self.world_model(tm)))
+        for p in self.players:
+            p.cam_on = bool(cmds[p.name].cam) and p.active() and playing
         if self.k % CAM_EVERY == 0 and playing:
             mujoco.mj_forward(w.m, w.d)
             for p in self.players:
-                if p.cam_on and p.active():
+                if p.cam_on:
                     p.see(render_eye(self.ren, w.d, p.duck.cam), t)
         for p in self.players:
             if p.cam_on:
                 p.share(t)
-        for p, rt in zip(self.players, [p.rt for p in self.players]):
-            if p.active() and self.phase in ("playing", "ready"):
-                v = p.act(t)
-            else:
-                v = (0.0, 0.0, 0.0)
-                if self.phase == "goal" or not p.active():
-                    b = w.ball()[0][:2]
-                    p.look_at(b)
-            rt.drive(*v)
+        for p in self.players:
+            c = cmds[p.name]
+            if not (p.active() and self.phase in ("playing", "ready")):
+                c.vx = c.vy = c.wz = 0.0
+                c.kick = None
+            self.apply(p, c, t)
         self.ref.rt.drive(*self.ref.act(t))
         for rt in self.rts:
             rt.tick_brain()
@@ -1621,11 +1368,12 @@ class Game:
                     kc["connected"] = True
                     self.by_index(kc["who"]).stats["connected"] += 1
         self.rules()
+        self.metrics.tick()
         if self.record and self.k % REC_EVERY == 0:
             self.frames.append(self.frame())
             self.clk.append([int(round(self.clock * 10)), self.half, "gsrpe".index(self.phase[0]) if self.phase[0] in "gsrpe" else 0])
         if self.trace and self.k % 100 == 0:
-            st = " ".join(f"{p.name}:{p.state[:5]}{'*' if p is p.team.striker else ''}" for p in self.players)
+            st = " ".join(f"{p.name}:{p.state[:5]}{'*' if p.cmd is not None and p.cmd.role == 'striker' else ''}" for p in self.players)
             print(f"t {t:6.1f} {self.phase:8s} {self.half}H {self.clock:5.1f} ball {b[0]:+.2f},{b[1]:+.2f} "
                   f"score {self.teams['blue'].score}:{self.teams['yellow'].score} | {st}", flush=True)
         self.k += 1
@@ -1673,7 +1421,7 @@ class Game:
                     placements=cnt("placement"), events=self.events, sim_s=round(sim_s, 1),
                     playing_s=round(self.half_s * self.halves, 1), wall_s=round(getattr(self, "wall", 0.0), 1),
                     rtf=round(sim_s / max(1e-6, getattr(self, "wall", 1.0)), 3),
-                    bodies={dk.name: dk.dr for dk in self.world.ducks})
+                    bodies={dk.name: dk.dr for dk in self.world.ducks}, metrics=self.metrics.result())
 
 
 def kinematics():

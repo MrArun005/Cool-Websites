@@ -236,35 +236,67 @@ cameras at 10 Hz **0.8-0.86 x real time** on a free CPU (rendering 18 ms per cam
 below ran 3 at a time next to other jobs on 4 CPUs: **0.39-0.40 x real time**, ~15.5 min per match (6 min of play
 plus stoppages).
 
-**Players** (`Player`, 50 Hz):
-- **Roles**: goalkeeper, 2 defenders, 2 attackers. Every 0.5 s each team picks the field player best placed for the
-  ball (distance, turn needed, fallen +8, a defender when the ball is in the other half +3, the current one -1.5) as
-  striker: only he goes for the ball. The others take spots relative to the ball (attackers 0.5 m behind it, 0.75 m
-  to each side; defenders halfway back to their goal) with teammate repulsion (0.4 m). Both teams' strikers go for
-  the same ball, so they meet and push.
-- **Ball play** (soccer.py's): approach a point behind the ball on the line to the aim, align it at a foot with the
-  head down, head home, kick with `ball_kick_left/right`. The aim is the goal (the side away from the keeper); if an
-  opponent blocks the line and a teammate further up is open, a **pass** to him; from the own half or by the keeper,
-  a clearance. **Duel**: with an opponent within 0.45 m of the ball there is no time to line up: walk through the
-  ball towards the aim, with the ball in front of one foot, and kick at once if it is in that foot's kick window
-  (6-11 cm ahead, +-3 cm) and the aim within 0.45 rad (0.8 s head-up first); pinned 3 s: step round it.
-- **Goalkeeper**: stays in front of its goal on the line ball -> goal centre (0.32 m out), facing the ball; goes and
-  clears when the ball is in its penalty area near it (or it is the closest of its team).
-- **Team world model** (RoboCup team communication): only the **striker and the goalkeeper render their head
-  cameras** (160 x 120, 10 Hz, soccer.py's colour blob and floor ray); they share the ball over "wifi" (5 per second,
-  200 ms late, 2 cm noise) and the others play on that shared estimate. Rendering 10 cameras would halve the speed
-  again. Honestly: the head cameras draw the pitch, the ball and **box proxies of the ducks** (one box per part, for
-  occlusion), not the full meshes (OSMesa: 1.2 s per frame with 11 full ducks, 18 ms with boxes).
+**Players.** Each duck's estimation stays in `match.py` (`Player`: self-localization, its head camera, team
+messages); every decision is in **`tactics.py`**, pure Python (math + numpy, no MuJoCo), so the in-browser match can
+port it line by line:
+
+```
+tac = tactics.TeamTactics(seed)      # one per team: the team's shared brain (roles, pass calls, per-player memory)
+cmds = tac.step(wm)                  # 50 Hz; wm = this team's world model, cmds = {name: Cmd}
+Cmd: vx, vy, wz (-> velstand via runtime.drive), head = (yaw, pitch, neck) (-> runtime.look),
+     kick = None | "left" | "right" (-> ball_kick_left/right), kind (shot / pass / clearance / forward), mate,
+     cam (render this player's head camera), state, role
+wm:  t, phase ("playing" | "ready" | "set" | other), dir (+1 attacks +x), ball (team estimate or None),
+     setpiece (None | kind, ours, ball, radius), spots (kick-off spots),
+     players [name, role, pos, psi, active, down, busy, ball (own estimate), ball_src ("own" | "team"), ball_age],
+     opps [pos, role, active]   (as this team perceives them)
+```
+`Game.world_model()` builds `wm` from the team's own (noisy) estimates, `Game.apply()` sends each `Cmd` to the duck's
+runtime. What `step()` does each tick:
+- **Roles** (re-picked every 0.3 s, with hysteresis): the goalkeeper keeps goal; the **striker** (lowest cost:
+  distance at 0.3 m/s + turn at 1.2 rad/s, fallen +8, defender in the other half +2.5, the current striker -1.5,
+  a pass receiver -6, the last kicker following up its kick -2) plays the ball; the **second** (next lowest) presses
+  goal-side of the ball (0.35 m, on the other side from the striker) when the opponents have it or it is in our half,
+  stays 0.55 m back for the rebound when we have it up the pitch, and **joins the contest** when the ball comes within
+  0.45 m with an opponent on it: two on the ball, one challenging, one covering. The other two do their role's job.
+- **The block slides with the ball** (up and across): defenders at 0.45 x ball depth - 1.2 m, 0.35 x ball width
+  +-0.45 m; attackers 0.4 m ahead of the ball, 0.4 x ball width +-0.7 m. At their spot players **jockey** (+-12 cm
+  sideways, 5 s period) facing the ball, stepping forwards, backwards or sideways instead of turning away from it.
+- **Attackers make support runs**: every 2.5 s (or when there) a new target among 21 points 0.7-1.3 m from the ball,
+  scored by forwardness, distance from the nearest opponent, a clear passing lane from the ball, room from teammates,
+  closeness to goal, how far it is to run, and never the spot it is on.
+- **Defenders mark**: the most dangerous opponent in or near our half (not the one on the ball), 0.3 m goal-side of
+  him; with no threat they hold the sliding block.
+- **Ball play** (soccer.py's cycle, faster): approach behind the ball on the line to the aim, align at a foot (0.2 s
+  held, was 0.3; give up after 3 s, was 6), head home 1 s (the kick brains are blind), kick. A **quick kick** fires
+  from any state (approach, align, duel) when the ball is already in a foot's kick window (6-11 cm ahead, +-3 cm) and
+  the aim within 0.45 rad (head home 0.8 s). **Duel** (an opponent within 0.45 m of the ball): walk through the
+  ball towards the aim; pinned 3 s: step round it.
+- **Aim**: shoot when the lane is open and the goal within 1.6 m; **pass** to an open teammate further up (ahead
+  > 0.15 m, 0.5-2.2 m away, lane clear by 0.2 m, nobody within 0.35 m of him) when the shot is blocked or out of range
+  or he is 0.9 m closer to goal, led 0.2 m towards the goal; else shoot from up to 2.4 m (open lane), else forward,
+  or a clearance from our own third.
+- **Receiving**: the receiver is told (team communication), becomes striker, turns to face the ball and steps onto
+  its path to meet it; the passer runs forward into space (give-and-go). After any other kick the kicker keeps the
+  ball for 3 s: it follows its kick up instead of standing.
+- **Goalkeeper**: on an arc in front of its goal (0.25-0.45 m out, further when the ball is far) on the line ball ->
+  goal centre, facing the ball and sliding with it; comes out to claim a ball in its box that is within 0.7 m or
+  that it reaches before any opponent.
+- **Reflex**: turning on the spot 1.5 s without the heading changing (blocked by a duck or a post): back up 1 s.
+- **Cameras**: the goalkeeper, the striker, a pass receiver and the second when within 1 m of the ball render their
+  head cameras (160 x 120, 10 Hz, soccer.py's colour blob and floor ray) and share the ball over "wifi" (5 per
+  second, 200 ms late, 2 cm noise); the others play on that shared estimate. Opponents are perceived with a drifting
+  6 cm error (1 s correlation), standing in for robot detection.
 
 **Referee and GameController** (`Referee`, `Game.rules`, on the simulator's truth like the human referee + GameController):
 the referee duck walks with play ~0.8 m from the ball at its side (off the line of play), keeps 0.4 m from players,
 turns its head to the ball, hops after a goal. Calls: **kick-off** (teams on their spots, opponents outside the
 centre circle until the ball moves 15 cm or 10 s), **goal** (ball fully over the line between the posts under the
-bar; scorer and teammates within 0.8 m hop; then READY: players walk back to their kick-off spots, 14 s, then SET:
+bar; scorer and teammates within 0.8 m hop; 3 s later READY: players walk back to their kick-off spots, up to 14 s (2 s once all are there), then SET (1 s):
 whoever is still off his spot by more than 0.35 m or down is carried there, RoboCup's manual placement), **throw-in**
 (ball over the touch line: placed on the line where it went out for the other team of the last toucher, opponents
 0.5 m away for 10 s or until it is played), **goal kick / corner** (over the goal line, by who touched it last),
-**dropped ball** (ball pinned between ducks 20 s: both teams 0.5 m away for 3 s; our rule), **pick-up** (a duck down
+**dropped ball** (the ball untouched or pinned between ducks, moving less than 15 cm, for 10 s: both teams 0.5 m away for 3 s; our rule), **pick-up** (a duck down
 12 s or off the pitch 8 s is taken off for 10 s and put back at the touch line in its own half), two halves of
 **3 min playing time** with ends changed at half-time (ducks carried to the new spots). Every call is logged with a
 "whistle".
