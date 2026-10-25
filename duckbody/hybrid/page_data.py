@@ -24,6 +24,7 @@ sys.path.insert(0, str(HERE))
 from harness import MicroduckSim, Policy  # noqa: E402
 from evaluate import upright  # noqa: E402
 from evaluate_hybrid import BODIES  # noqa: E402
+import runtime_hybrid as rh  # noqa: E402
 
 BODY = "hybrid_noantenna"
 
@@ -257,7 +258,7 @@ def match_replay(out, seed=None, window_s=80.0, max_mb=2.5, result=None):
     (out / name).write_text(js)
     print(name, note, f"{len(js) / 1e6:.2f} MB")
     if not (out / "duck_mesh_match.json").exists():
-        mesh(MicroduckSim(str(HERE / "scene_hybrid_allcollisions_noantenna.xml"), seed=0).m, out, max_faces=220,
+        mesh(MicroduckSim(str(rh.SCENE), seed=0).m, out, max_faces=220,
              fname="duck_mesh_match.json")
 
 
@@ -354,7 +355,7 @@ def main():
         return
     out.mkdir(parents=True, exist_ok=True)
     if "--mesh" in sys.argv or not (out / "duck_mesh.json").exists():
-        mesh(MicroduckSim(str(HERE / "scene_hybrid_allcollisions_noantenna.xml"), seed=0).m, out)
+        mesh(MicroduckSim(str(rh.SCENE), seed=0).m, out)
     res = json.loads((HERE / "results_skills_hybrid.json").read_text())
     tests, queue, skills = {}, [], {}
     for name in ORDER:

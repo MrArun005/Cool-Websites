@@ -47,7 +47,7 @@ from harness import (BAM_KP_FW, BAM_VIN, BAM_VIN_DROP_GAIN, BAM_VIN_MIN, BAM_STI
                      NOISE, TIMESTEP, Policy)
 import mujoco  # noqa: E402
 
-ROBOT_XML = HERE / "hybrid_allcollisions_noantenna.xml"     # the body every skill was tested on (no antennas)
+ROBOT_XML = rh.ROBOT          # the body every skill was tested on (default: no antennas; HYBRID_BODY picks a variant)
 
 # ---------------------------------------------------------------------------------------------- the pitch
 S = 0.5                                   # KidSize x 0.5
@@ -613,7 +613,7 @@ def check(seconds=4.0):
     dk = w.ducks[0]
     dk.obs_noise, dk.delay = False, False
     dk.reset_state()
-    sim = Hm.MicroduckSim(str(ROBOT_XML.parent / "scene_hybrid_allcollisions_noantenna.xml"), delay=False, obs_noise=False)
+    sim = Hm.MicroduckSim(str(rh.SCENE), delay=False, obs_noise=False)
     sim.place("standing", joint_noise=0.0)
     q0 = sim.d.qpos.copy()
     sim.d.qpos[3:7] = [1, 0, 0, 0]

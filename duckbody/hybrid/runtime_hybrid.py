@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 import sys
 from pathlib import Path
@@ -35,7 +36,11 @@ from harness import DEFAULT_POSE, MicroduckSim, Policy  # noqa: E402
 from mouth import MAX_OPEN, MouthSync  # noqa: E402
 import moves_hybrid as mv  # noqa: E402
 
-SCENE = HERE / "scene_hybrid_allcollisions_noantenna.xml"   # every part collides; antennas drawn only
+# The body: scene_hybrid_allcollisions<BODY>.xml (every part collides; antennas drawn only). HYBRID_BODY=<suffix>
+# picks another build_hybrid.py variant for every script that imports this (tests, games, match, page data).
+BODY = os.environ.get("HYBRID_BODY", "_noantenna")
+SCENE = HERE / f"scene_hybrid_allcollisions{BODY}.xml"
+ROBOT = HERE / f"hybrid_allcollisions{BODY}.xml"
 MOVES = HERE / "moves_hybrid.json"
 HZ, DT = 50, 0.02
 

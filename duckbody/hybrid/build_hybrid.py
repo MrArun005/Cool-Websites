@@ -126,10 +126,13 @@ def inertial_el(mass, pos, I):
 
 
 def build(md_robot: str, out_name: str, variant: str, report: dict, collision: str = "owner", k: float = 1.0,
-          suffix: str | None = None):
+          suffix: str | None = None, head_mass: float | None = None, scale_com: bool = False):
     """collision: 'owner' (owner's head hulls incl. antennas), 'owner_noantenna' (antennas visual only),
     'microduck' (keep Microduck's own head collision meshes: a pure visual swap). k: owner head scale
-    factor on top of the 0.7 mid scale, about the shell centre (1.0 = the owner's mid head)."""
+    factor on top of the 0.7 mid scale, about the shell centre (1.0 = the owner's mid head).
+    Lighter heads (matched variant only): head_mass = head link + jaw mass in kg (default Microduck's 0.1888);
+    the inertia about the CoM is scaled with the mass (same shape), and with scale_com the CoM is moved with the
+    shell scale k (about the shell centre) and the inertia also scaled by k^2."""
     # ---- reference models -------------------------------------------------------------------
     md_scene = {"robot_allcollisions.xml": "scene_allcollisions.xml", "robot_groundcontact.xml": "scene.xml"}[md_robot]
     mm = mujoco.MjModel.from_xml_path(str(MD / md_scene))
@@ -245,6 +248,12 @@ def build(md_robot: str, out_name: str, variant: str, report: dict, collision: s
     c0 = mm.body_ipos[hb_m].copy()
     Rq = quat2mat(mm.body_iquat[hb_m])
     I0 = Rq @ np.diag(mm.body_inertia[hb_m]) @ Rq.T
+    shell_c = (m_lo + m_hi) / 2                              # shell centre in the head frame (= scaling centre)
+    if head_mass is not None:                                # lighter head: same shape, mass and inertia scaled
+        I0 = I0 * (head_mass / M0) * (k ** 2 if scale_com else 1.0)
+        M0 = head_mass
+        if scale_com:
+            c0 = shell_c + k * (c0 - shell_c)
     # Jaw (owner's) in the head frame, mouth closed.
     mj = float(oji.get("mass"))
     cj = jp + quat2mat(jq) @ (k * np.array([float(x) for x in oji.get("pos").split()]))
@@ -341,6 +350,7 @@ def build(md_robot: str, out_name: str, variant: str, report: dict, collision: s
         owner_shell_box_rel_head_roll_world_mm=world_box(Rh, hl_lo, hl_hi),
         contacts_at_STAND=self_contacts,
         head_roll_joint_world_STAND_m=ph.round(4).tolist(),
+        shell_centre_head_frame_m=shell_c.round(5).tolist(), head_k=round(k, 4),
     )
     return robot_file, scene_file
 
@@ -353,7 +363,25 @@ VARIANTS = {
     "hybrid_ownermass_noantenna": dict(mass="ownermass", collision="owner_noantenna"),
     "hybrid_mdcollision": dict(collision="microduck"),           # owner head drawn, Microduck's head collides (control)
     "hybrid_small": dict(k=2 / 3, collision="owner_noantenna"),  # owner head shrunk to Microduck's head width, no antennas
+    # Lighter heads (README "Lighter head"): no antennas, Microduck's head CoM, mass and inertia scaled.
+    "hybrid_m160": dict(collision="owner_noantenna", head_mass=0.160),
+    "hybrid_m140": dict(collision="owner_noantenna", head_mass=0.140),
+    "hybrid_m120": dict(collision="owner_noantenna", head_mass=0.120),
+    "hybrid_m100": dict(collision="owner_noantenna", head_mass=0.100),
+    # Smaller heads: shell, bill and jaw scaled by k about the shell centre, CoM moved with it, mass = fixed parts
+    # (ELECTRONICS_KG: 2 XL330, Pi + hat, camera, speaker, supports, wires) + the rest of 189 g scaled by k^2.
+    "hybrid_k85": dict(k=0.85, collision="owner_noantenna", head_mass="k2", scale_com=True),
+    "hybrid_k75": dict(k=0.75, collision="owner_noantenna", head_mass="k2", scale_com=True),
 }
+ELECTRONICS_KG = 0.081         # README "Lighter head": the parts a head cannot do without (estimate)
+MD_HEAD_KG = 0.188766          # Microduck's head link
+
+
+def head_mass_of(kw):
+    hm = kw.get("head_mass")
+    if hm == "k2":
+        return ELECTRONICS_KG + (MD_HEAD_KG - ELECTRONICS_KG) * kw["k"] ** 2
+    return hm
 
 
 def main():
@@ -361,7 +389,7 @@ def main():
     for variant, kw in VARIANTS.items():
         for md_robot, out in (("robot_allcollisions.xml", "hybrid_allcollisions"), ("robot_groundcontact.xml", "hybrid_groundcontact")):
             r, s = build(md_robot, out, kw.get("mass", "matched"), report, kw.get("collision", "owner"), kw.get("k", 1.0),
-                         "" if variant == "hybrid" else variant[len("hybrid"):])
+                         "" if variant == "hybrid" else variant[len("hybrid"):], head_mass_of(kw), kw.get("scale_com", False))
             print("wrote", r.name, s.name)
     (HERE / "head_report.json").write_text(json.dumps(report, indent=1))
     for k, v in report.items():

@@ -5,7 +5,7 @@
 Body randomization per run (harness.MicroduckSim.randomize_body, Microduck's training ranges): mass and
 inertia x0.95-1.05 per body, trunk and head CoM +-3 mm, contact friction x0.7-1.3, servo kp x0.85-1.15,
 battery 6.5-8.2 V, command delay 3-6 physics steps; plus the observation noise of their actor.
-Body: scene_hybrid_allcollisions_noantenna.xml (every part collides, antennas drawn only).
+Body: runtime_hybrid.SCENE (every part collides, antennas drawn only; HYBRID_BODY=<suffix> picks a build_hybrid.py variant).
 
 Writes results_skills_hybrid.json (per skill: successes, per-run numbers). With --page DIR it also writes one
 replay per skill (DIR/rollout_<skill>.json, the first successful seed) and DIR/tests.json + DIR/queue.json.

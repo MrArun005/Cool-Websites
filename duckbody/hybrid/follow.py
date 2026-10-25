@@ -56,6 +56,16 @@ BALL_RGB = (0.95, 0.15, 0.65)       # magenta: not in the scene (floor blue/grey
 W, H, FOVY = 160, 120, 49.0
 CAM_HZ = 10
 EYE_POS = (0.020, 0.0, -0.096)      # in the head link (jaw_soft): front of the owner's head, above the bill
+
+
+def _eye_for_body(eye):
+    """A smaller head (build_hybrid.py k < 1) carries the eye on its shell: scale it about the shell centre."""
+    rep = json.loads((HERE / "head_report.json").read_text()).get(rh.ROBOT.name, {})
+    k, c = rep.get("head_k", 1.0), np.array(rep.get("shell_centre_head_frame_m", (0.0, 0.0, 0.0)))
+    return tuple(float(v) for v in c + k * (np.array(eye) - c))
+
+
+EYE_POS = _eye_for_body(EYE_POS)
 EYE_QUAT = (0.7071068, 0.0, 0.0, -0.7071068)   # camera -z = head -z (forward), camera up = head +x
 T_RUN = 60.0
 STOP_D = 0.15                       # wanted distance camera -> ball centre

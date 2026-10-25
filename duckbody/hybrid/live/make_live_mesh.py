@@ -15,8 +15,10 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent.parent / "microduck_port"))
+sys.path.insert(0, str(HERE.parent))
 import mujoco  # noqa: E402
 from harness import MicroduckSim  # noqa: E402
+import runtime_hybrid as rh  # noqa: E402  (rh.SCENE: the body, HYBRID_BODY picks a variant)
 
 
 def cluster(v, f, cell):
@@ -38,7 +40,7 @@ def cluster(v, f, cell):
 def main():
     out = Path(sys.argv[1])
     cell = float(sys.argv[2]) / 1000 if len(sys.argv) > 2 else 0.003
-    m = MicroduckSim(str((HERE.parent / "scene_hybrid_allcollisions_noantenna.xml").resolve()), seed=0).m
+    m = MicroduckSim(str(rh.SCENE.resolve()), seed=0).m
     parts, before, after = {}, 0, 0
     for g in range(m.ngeom):
         b = m.geom_bodyid[g]
