@@ -21,7 +21,11 @@ after clearing. By 2.5M it cleared 25 cm bars and landed, but touched the bar ev
 its top), so touching now costs 5 at once and 1 per step, and only clean jumps earn the big bonuses.
 At 6.5M it jumped 15 cm bars clean 11 times in 12 and 20 cm 9 in 12; by 7M it had collapsed (0 clean even
 at 10 cm) right after the coach raised the practice bars from 13 to 20 cm in 1M steps. Run 15d resumes
-from 6.5M with a third of the learning rate and a coach half as quick to raise the bar.
+from 6.5M with a third of the learning rate and a coach half as quick to raise the bar: it dipped the
+same way at 7M and stayed down. Watching the jumps showed why: both still cleared 15 cm bars cleanly, but
+leapt harder and crashed half a second after landing, because a crash after clearing (-10) cost less than
+the clear bonus plus the progress pay. Run 15e: a crash after clearing costs 25, and speed before the bar
+is paid only up to 1 m/s (was 2).
 """
 import gymnasium as gym
 import mujoco
@@ -118,7 +122,7 @@ class JumpEnv(BoltEnv):
             reward -= 0.1  # every moment still in front of the bar costs a little
             reward += 15.0 * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
             self.best_past = max(self.best_past, past.min())
-            reward += 0.5 * np.clip(p["vx"], -0.5, 2.0) * upright
+            reward += 0.5 * np.clip(p["vx"], -0.5, 1.0) * upright
             # tuck: a paw passing over the bar (within 12 cm of it) should be above it, with 3 cm to spare.
             # At 4-5M it cleared and landed 11 times in 12 at 10-12 cm, but the trailing rear legs clipped
             # the bar, so clean jumps stayed rare and the practice bar stuck at 10-12 cm.
@@ -140,7 +144,7 @@ class JumpEnv(BoltEnv):
         self.last_action = a
         fell = R[2, 2] < 0.2
         if fell:
-            reward -= 10.0 if self.cleared else 5.0   # diving over and crashing must not pay
+            reward -= 25.0 if self.cleared else 5.0   # diving over and crashing must not pay (15c/15d: -10 did)
         if (fell or self.t >= self.max_steps) and self.exam_bar is None:
             self._grade(self.landed and not self.touched)
         info = dict(p, cleared=self.cleared, touched=self.touched, just_cleared=just_cleared, hits=hits,
