@@ -1,0 +1,1285 @@
+{
+ "before": [
+  {
+   "seed": 0,
+   "score": [
+    1,
+    0
+   ],
+   "teams": {
+    "blue": {
+     "score": 1,
+     "kicks": 25,
+     "connected": 20,
+     "shots": 11,
+     "passes": 1,
+     "passes_completed": 0,
+     "clearances": 4,
+     "falls": 2,
+     "touches": 48
+    },
+    "yellow": {
+     "score": 0,
+     "kicks": 20,
+     "connected": 12,
+     "shots": 5,
+     "passes": 3,
+     "passes_completed": 0,
+     "clearances": 3,
+     "falls": 4,
+     "touches": 62
+    }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 22.47,
+      "moving": 0.485,
+      "fast": 0.22
+     },
+     "b2": {
+      "dist_m": 30.54,
+      "moving": 0.701,
+      "fast": 0.288
+     },
+     "b3": {
+      "dist_m": 25.79,
+      "moving": 0.538,
+      "fast": 0.253
+     },
+     "b4": {
+      "dist_m": 41.56,
+      "moving": 0.694,
+      "fast": 0.406
+     },
+     "b5": {
+      "dist_m": 41.79,
+      "moving": 0.775,
+      "fast": 0.411
+     },
+     "y1": {
+      "dist_m": 19.47,
+      "moving": 0.439,
+      "fast": 0.183
+     },
+     "y2": {
+      "dist_m": 28.56,
+      "moving": 0.622,
+      "fast": 0.29
+     },
+     "y3": {
+      "dist_m": 31.95,
+      "moving": 0.627,
+      "fast": 0.315
+     },
+     "y4": {
+      "dist_m": 41.85,
+      "moving": 0.749,
+      "fast": 0.419
+     },
+     "y5": {
+      "dist_m": 42.93,
+      "moving": 0.791,
+      "fast": 0.424
+     }
+    },
+    "duels": 34,
+    "bumps": 91,
+    "play_s": 360.0
+   },
+   "players": {
+    "b1": {
+     "role": "GK",
+     "falls": 1,
+     "kicks": 2,
+     "connected": 1,
+     "shots": 0,
+     "passes": 1,
+     "passes_completed": 0,
+     "touches": 7,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b2": {
+     "role": "D1",
+     "falls": 1,
+     "kicks": 4,
+     "connected": 3,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 12,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b3": {
+     "role": "D2",
+     "falls": 0,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 0,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b4": {
+     "role": "A1",
+     "falls": 0,
+     "kicks": 16,
+     "connected": 13,
+     "shots": 10,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 23,
+     "goals": 1,
+     "own_goals": 0
+    },
+    "b5": {
+     "role": "A2",
+     "falls": 0,
+     "kicks": 3,
+     "connected": 3,
+     "shots": 1,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 6,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y1": {
+     "role": "GK",
+     "falls": 1,
+     "kicks": 3,
+     "connected": 2,
+     "shots": 0,
+     "passes": 1,
+     "passes_completed": 0,
+     "touches": 13,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y2": {
+     "role": "D1",
+     "falls": 0,
+     "kicks": 2,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 6,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y3": {
+     "role": "D2",
+     "falls": 0,
+     "kicks": 2,
+     "connected": 1,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 9,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y4": {
+     "role": "A1",
+     "falls": 1,
+     "kicks": 6,
+     "connected": 5,
+     "shots": 2,
+     "passes": 2,
+     "passes_completed": 0,
+     "touches": 10,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y5": {
+     "role": "A2",
+     "falls": 2,
+     "kicks": 7,
+     "connected": 4,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 24,
+     "goals": 0,
+     "own_goals": 0
+    }
+   },
+   "dropped_balls": 1,
+   "pickups": 1,
+   "sim_s": 378.3
+  },
+  {
+   "seed": 1,
+   "score": [
+    0,
+    0
+   ],
+   "teams": {
+    "blue": {
+     "score": 0,
+     "kicks": 16,
+     "connected": 9,
+     "shots": 8,
+     "passes": 1,
+     "passes_completed": 0,
+     "clearances": 0,
+     "falls": 0,
+     "touches": 62
+    },
+    "yellow": {
+     "score": 0,
+     "kicks": 16,
+     "connected": 6,
+     "shots": 3,
+     "passes": 1,
+     "passes_completed": 0,
+     "clearances": 2,
+     "falls": 1,
+     "touches": 51
+    }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 20.11,
+      "moving": 0.444,
+      "fast": 0.172
+     },
+     "b2": {
+      "dist_m": 25.33,
+      "moving": 0.545,
+      "fast": 0.25
+     },
+     "b3": {
+      "dist_m": 26.42,
+      "moving": 0.586,
+      "fast": 0.255
+     },
+     "b4": {
+      "dist_m": 41.9,
+      "moving": 0.764,
+      "fast": 0.431
+     },
+     "b5": {
+      "dist_m": 39.95,
+      "moving": 0.721,
+      "fast": 0.413
+     },
+     "y1": {
+      "dist_m": 24.61,
+      "moving": 0.63,
+      "fast": 0.22
+     },
+     "y2": {
+      "dist_m": 28.31,
+      "moving": 0.582,
+      "fast": 0.279
+     },
+     "y3": {
+      "dist_m": 25.73,
+      "moving": 0.66,
+      "fast": 0.238
+     },
+     "y4": {
+      "dist_m": 38.83,
+      "moving": 0.801,
+      "fast": 0.405
+     },
+     "y5": {
+      "dist_m": 39.21,
+      "moving": 0.698,
+      "fast": 0.393
+     }
+    },
+    "duels": 44,
+    "bumps": 88,
+    "play_s": 360.0
+   },
+   "players": {
+    "b1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 0,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b2": {
+     "role": "D1",
+     "falls": 0,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 0,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b3": {
+     "role": "D2",
+     "falls": 0,
+     "kicks": 1,
+     "connected": 1,
+     "shots": 0,
+     "passes": 1,
+     "passes_completed": 0,
+     "touches": 5,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b4": {
+     "role": "A1",
+     "falls": 0,
+     "kicks": 12,
+     "connected": 6,
+     "shots": 6,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 45,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b5": {
+     "role": "A2",
+     "falls": 0,
+     "kicks": 3,
+     "connected": 2,
+     "shots": 2,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 12,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 1,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 4,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y2": {
+     "role": "D1",
+     "falls": 0,
+     "kicks": 3,
+     "connected": 2,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 10,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y3": {
+     "role": "D2",
+     "falls": 0,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 2,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y4": {
+     "role": "A1",
+     "falls": 1,
+     "kicks": 11,
+     "connected": 4,
+     "shots": 3,
+     "passes": 1,
+     "passes_completed": 0,
+     "touches": 23,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y5": {
+     "role": "A2",
+     "falls": 0,
+     "kicks": 1,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 12,
+     "goals": 0,
+     "own_goals": 0
+    }
+   },
+   "dropped_balls": 1,
+   "pickups": 0,
+   "sim_s": 363.1
+  },
+  {
+   "seed": 2,
+   "score": [
+    0,
+    0
+   ],
+   "teams": {
+    "blue": {
+     "score": 0,
+     "kicks": 15,
+     "connected": 8,
+     "shots": 6,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 4,
+     "falls": 4,
+     "touches": 51
+    },
+    "yellow": {
+     "score": 0,
+     "kicks": 19,
+     "connected": 9,
+     "shots": 2,
+     "passes": 2,
+     "passes_completed": 0,
+     "clearances": 8,
+     "falls": 7,
+     "touches": 58
+    }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 16.55,
+      "moving": 0.409,
+      "fast": 0.146
+     },
+     "b2": {
+      "dist_m": 22.78,
+      "moving": 0.6,
+      "fast": 0.208
+     },
+     "b3": {
+      "dist_m": 23.28,
+      "moving": 0.508,
+      "fast": 0.236
+     },
+     "b4": {
+      "dist_m": 38.54,
+      "moving": 0.796,
+      "fast": 0.397
+     },
+     "b5": {
+      "dist_m": 39.15,
+      "moving": 0.755,
+      "fast": 0.377
+     },
+     "y1": {
+      "dist_m": 24.6,
+      "moving": 0.543,
+      "fast": 0.244
+     },
+     "y2": {
+      "dist_m": 20.68,
+      "moving": 0.506,
+      "fast": 0.195
+     },
+     "y3": {
+      "dist_m": 32.14,
+      "moving": 0.708,
+      "fast": 0.328
+     },
+     "y4": {
+      "dist_m": 35.12,
+      "moving": 0.684,
+      "fast": 0.363
+     },
+     "y5": {
+      "dist_m": 33.51,
+      "moving": 0.737,
+      "fast": 0.337
+     }
+    },
+    "duels": 37,
+    "bumps": 105,
+    "play_s": 360.0
+   },
+   "players": {
+    "b1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 1,
+     "connected": 1,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 1,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b2": {
+     "role": "D1",
+     "falls": 1,
+     "kicks": 2,
+     "connected": 1,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 3,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b3": {
+     "role": "D2",
+     "falls": 0,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 1,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b4": {
+     "role": "A1",
+     "falls": 2,
+     "kicks": 10,
+     "connected": 4,
+     "shots": 5,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 37,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b5": {
+     "role": "A2",
+     "falls": 1,
+     "kicks": 2,
+     "connected": 2,
+     "shots": 1,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 9,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 5,
+     "connected": 3,
+     "shots": 0,
+     "passes": 1,
+     "passes_completed": 0,
+     "touches": 11,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y2": {
+     "role": "D1",
+     "falls": 1,
+     "kicks": 1,
+     "connected": 1,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 1,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y3": {
+     "role": "D2",
+     "falls": 2,
+     "kicks": 9,
+     "connected": 4,
+     "shots": 0,
+     "passes": 1,
+     "passes_completed": 0,
+     "touches": 31,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y4": {
+     "role": "A1",
+     "falls": 2,
+     "kicks": 4,
+     "connected": 1,
+     "shots": 2,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 10,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y5": {
+     "role": "A2",
+     "falls": 2,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 5,
+     "goals": 0,
+     "own_goals": 0
+    }
+   },
+   "dropped_balls": 2,
+   "pickups": 0,
+   "sim_s": 363.1
+  }
+ ],
+ "after": [
+  {
+   "seed": 0,
+   "score": [
+    0,
+    0
+   ],
+   "teams": {
+    "blue": {
+     "score": 0,
+     "kicks": 22,
+     "connected": 7,
+     "shots": 17,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 0,
+     "falls": 5,
+     "touches": 61
+    },
+    "yellow": {
+     "score": 0,
+     "kicks": 10,
+     "connected": 6,
+     "shots": 2,
+     "passes": 3,
+     "passes_completed": 0,
+     "clearances": 2,
+     "falls": 4,
+     "touches": 48
+    }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 18.57,
+      "moving": 0.541,
+      "fast": 0.176
+     },
+     "b2": {
+      "dist_m": 52.23,
+      "moving": 0.886,
+      "fast": 0.581
+     },
+     "b3": {
+      "dist_m": 48.03,
+      "moving": 0.866,
+      "fast": 0.539
+     },
+     "b4": {
+      "dist_m": 40.4,
+      "moving": 0.755,
+      "fast": 0.412
+     },
+     "b5": {
+      "dist_m": 48.44,
+      "moving": 0.855,
+      "fast": 0.53
+     },
+     "y1": {
+      "dist_m": 23.18,
+      "moving": 0.587,
+      "fast": 0.203
+     },
+     "y2": {
+      "dist_m": 42.54,
+      "moving": 0.833,
+      "fast": 0.477
+     },
+     "y3": {
+      "dist_m": 46.28,
+      "moving": 0.841,
+      "fast": 0.483
+     },
+     "y4": {
+      "dist_m": 49.84,
+      "moving": 0.845,
+      "fast": 0.518
+     },
+     "y5": {
+      "dist_m": 57.17,
+      "moving": 0.868,
+      "fast": 0.594
+     }
+    },
+    "duels": 40,
+    "bumps": 166,
+    "play_s": 360.0
+   },
+   "players": {
+    "b1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 0,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b2": {
+     "role": "D1",
+     "falls": 0,
+     "kicks": 4,
+     "connected": 0,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 6,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b3": {
+     "role": "D2",
+     "falls": 0,
+     "kicks": 3,
+     "connected": 2,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 11,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b4": {
+     "role": "A1",
+     "falls": 2,
+     "kicks": 14,
+     "connected": 5,
+     "shots": 10,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 33,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b5": {
+     "role": "A2",
+     "falls": 3,
+     "kicks": 1,
+     "connected": 0,
+     "shots": 1,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 11,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 1,
+     "connected": 1,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 5,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y2": {
+     "role": "D1",
+     "falls": 0,
+     "kicks": 3,
+     "connected": 2,
+     "shots": 0,
+     "passes": 3,
+     "passes_completed": 0,
+     "touches": 11,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y3": {
+     "role": "D2",
+     "falls": 1,
+     "kicks": 2,
+     "connected": 1,
+     "shots": 1,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 14,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y4": {
+     "role": "A1",
+     "falls": 1,
+     "kicks": 4,
+     "connected": 2,
+     "shots": 1,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 15,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y5": {
+     "role": "A2",
+     "falls": 2,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 3,
+     "goals": 0,
+     "own_goals": 0
+    }
+   },
+   "dropped_balls": 11,
+   "pickups": 0,
+   "sim_s": 362.1
+  },
+  {
+   "seed": 1,
+   "score": [
+    1,
+    0
+   ],
+   "teams": {
+    "blue": {
+     "score": 1,
+     "kicks": 14,
+     "connected": 11,
+     "shots": 8,
+     "passes": 1,
+     "passes_completed": 1,
+     "clearances": 4,
+     "falls": 4,
+     "touches": 59
+    },
+    "yellow": {
+     "score": 0,
+     "kicks": 16,
+     "connected": 9,
+     "shots": 8,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 4,
+     "falls": 3,
+     "touches": 62
+    }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 20.35,
+      "moving": 0.558,
+      "fast": 0.203
+     },
+     "b2": {
+      "dist_m": 44.26,
+      "moving": 0.823,
+      "fast": 0.47
+     },
+     "b3": {
+      "dist_m": 44.95,
+      "moving": 0.839,
+      "fast": 0.492
+     },
+     "b4": {
+      "dist_m": 44.53,
+      "moving": 0.808,
+      "fast": 0.503
+     },
+     "b5": {
+      "dist_m": 42.62,
+      "moving": 0.802,
+      "fast": 0.462
+     },
+     "y1": {
+      "dist_m": 19.34,
+      "moving": 0.591,
+      "fast": 0.19
+     },
+     "y2": {
+      "dist_m": 42.81,
+      "moving": 0.833,
+      "fast": 0.441
+     },
+     "y3": {
+      "dist_m": 45.98,
+      "moving": 0.861,
+      "fast": 0.497
+     },
+     "y4": {
+      "dist_m": 45.26,
+      "moving": 0.874,
+      "fast": 0.518
+     },
+     "y5": {
+      "dist_m": 46.13,
+      "moving": 0.825,
+      "fast": 0.503
+     }
+    },
+    "duels": 33,
+    "bumps": 150,
+    "play_s": 360.0
+   },
+   "players": {
+    "b1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 1,
+     "connected": 1,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 3,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b2": {
+     "role": "D1",
+     "falls": 2,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 7,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b3": {
+     "role": "D2",
+     "falls": 0,
+     "kicks": 6,
+     "connected": 4,
+     "shots": 2,
+     "passes": 1,
+     "passes_completed": 1,
+     "touches": 18,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b4": {
+     "role": "A1",
+     "falls": 1,
+     "kicks": 1,
+     "connected": 0,
+     "shots": 1,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 5,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b5": {
+     "role": "A2",
+     "falls": 1,
+     "kicks": 6,
+     "connected": 6,
+     "shots": 5,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 26,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 0,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y2": {
+     "role": "D1",
+     "falls": 0,
+     "kicks": 4,
+     "connected": 2,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 9,
+     "goals": 0,
+     "own_goals": 1
+    },
+    "y3": {
+     "role": "D2",
+     "falls": 1,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 0,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y4": {
+     "role": "A1",
+     "falls": 1,
+     "kicks": 3,
+     "connected": 1,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 15,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y5": {
+     "role": "A2",
+     "falls": 1,
+     "kicks": 9,
+     "connected": 6,
+     "shots": 5,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 38,
+     "goals": 0,
+     "own_goals": 0
+    }
+   },
+   "dropped_balls": 10,
+   "pickups": 0,
+   "sim_s": 380.1
+  },
+  {
+   "seed": 2,
+   "score": [
+    0,
+    0
+   ],
+   "teams": {
+    "blue": {
+     "score": 0,
+     "kicks": 11,
+     "connected": 3,
+     "shots": 4,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 3,
+     "falls": 2,
+     "touches": 59
+    },
+    "yellow": {
+     "score": 0,
+     "kicks": 15,
+     "connected": 8,
+     "shots": 8,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 1,
+     "falls": 3,
+     "touches": 65
+    }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 16.44,
+      "moving": 0.503,
+      "fast": 0.14
+     },
+     "b2": {
+      "dist_m": 42.42,
+      "moving": 0.841,
+      "fast": 0.442
+     },
+     "b3": {
+      "dist_m": 42.87,
+      "moving": 0.832,
+      "fast": 0.477
+     },
+     "b4": {
+      "dist_m": 44.84,
+      "moving": 0.847,
+      "fast": 0.497
+     },
+     "b5": {
+      "dist_m": 48.75,
+      "moving": 0.848,
+      "fast": 0.504
+     },
+     "y1": {
+      "dist_m": 17.99,
+      "moving": 0.535,
+      "fast": 0.175
+     },
+     "y2": {
+      "dist_m": 44.67,
+      "moving": 0.856,
+      "fast": 0.506
+     },
+     "y3": {
+      "dist_m": 43.65,
+      "moving": 0.863,
+      "fast": 0.504
+     },
+     "y4": {
+      "dist_m": 46.49,
+      "moving": 0.83,
+      "fast": 0.502
+     },
+     "y5": {
+      "dist_m": 46.8,
+      "moving": 0.829,
+      "fast": 0.466
+     }
+    },
+    "duels": 30,
+    "bumps": 193,
+    "play_s": 360.0
+   },
+   "players": {
+    "b1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 0,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b2": {
+     "role": "D1",
+     "falls": 1,
+     "kicks": 2,
+     "connected": 1,
+     "shots": 1,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 4,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b3": {
+     "role": "D2",
+     "falls": 0,
+     "kicks": 5,
+     "connected": 1,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 19,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b4": {
+     "role": "A1",
+     "falls": 1,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 15,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "b5": {
+     "role": "A2",
+     "falls": 0,
+     "kicks": 4,
+     "connected": 1,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 21,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y1": {
+     "role": "GK",
+     "falls": 0,
+     "kicks": 1,
+     "connected": 1,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 1,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y2": {
+     "role": "D1",
+     "falls": 0,
+     "kicks": 1,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 8,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y3": {
+     "role": "D2",
+     "falls": 0,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 2,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y4": {
+     "role": "A1",
+     "falls": 1,
+     "kicks": 6,
+     "connected": 4,
+     "shots": 5,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 27,
+     "goals": 0,
+     "own_goals": 0
+    },
+    "y5": {
+     "role": "A2",
+     "falls": 2,
+     "kicks": 7,
+     "connected": 3,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "touches": 27,
+     "goals": 0,
+     "own_goals": 0
+    }
+   },
+   "dropped_balls": 13,
+   "pickups": 0,
+   "sim_s": 362.1
+  }
+ ],
+ "note": "Same seeds 0-2, 2 x 3 min. before = the match before the tactics rewrite (_match_before.py: old Player behaviour, dropped ball after 20 s without progress); after = match.py + tactics.py. Metrics: Metrics in match.py."
+}

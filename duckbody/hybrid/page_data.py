@@ -198,8 +198,8 @@ def best_match_seed():
 def match_replay(out, seed=None, window_s=80.0, max_mb=2.5, result=None):
     """The replay of match.py's match `seed` (default: the one with the most goals), played again with recording on
     (same seed = same match, recording changes nothing in the simulation), cut to window_s seconds around its best
-    action: the window with the most happening (a goal 10, a connected shot 4, another connected kick 2, a duel / set
-    piece ~1), counting only what happens from 5 s in to 15 s before the end, so a goal has its build-up and its
+    action: the window with the most happening (a goal 100, i.e. always the goal when there is one; a connected shot 4,
+    another connected kick 2, a set piece ~1), counting only what happens from 5 s in to 15 s before the end, so a goal has its build-up and its
     celebration in the cut. Writes rollout_match_s{seed}.json; with `result`, also the match result (match.py's
     --one format) to that path."""
     import match as MM
@@ -218,7 +218,7 @@ def match_replay(out, seed=None, window_s=80.0, max_mb=2.5, result=None):
         s = 0.0
         for e in ev:
             if t0 <= e["t"] < t1:
-                s += {"goal": 10, "kick-off": 0.5, "throw-in": 1, "corner kick": 1.5, "goal kick": 1,
+                s += {"goal": 100, "kick-off": 0.5, "throw-in": 1, "corner kick": 1.5, "goal kick": 1,
                       "pickup": 0.5, "dropped ball": 0.3}.get(e["kind"], 0.2)
         for k in r["kicks"]:
             if t0 <= k["t"] < t1:

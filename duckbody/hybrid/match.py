@@ -1503,6 +1503,12 @@ def summarize(runs):
                          falls=sum(p["falls"] for p in r["players"].values()), throw_ins=r["throw_ins"],
                          goal_kicks=r["goal_kicks"], corners=r["corners"], pickups=r["pickups"], placements=r["placements"],
                          rtf=r["rtf"], wall_s=r["wall_s"], sim_s=r["sim_s"]))
+        m = r.get("metrics")
+        if m:
+            mv = [p["moving"] for p in m["players"].values()]
+            rows[-1].update(moving=round(sum(mv) / len(mv), 3), moving_over_70=sum(v > 0.7 for v in mv),
+                            dist_m=round(sum(p["dist_m"] for p in m["players"].values()) / len(mv), 1),
+                            duels=m["duels"], bumps=m["bumps"])
     return rows
 
 

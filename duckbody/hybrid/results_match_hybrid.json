@@ -3,44 +3,54 @@
   {
    "seed": 0,
    "score": [
-    1,
-    0
-   ],
-   "kicks": 45,
-   "connected": 32,
-   "shots": 16,
-   "passes": 4,
-   "passes_completed": 0,
-   "falls": 7,
-   "throw_ins": 0,
-   "goal_kicks": 0,
-   "corners": 0,
-   "pickups": 1,
-   "placements": 0,
-   "rtf": 0.4,
-   "wall_s": 944.9,
-   "sim_s": 378.3
-  },
-  {
-   "seed": 1,
-   "score": [
     0,
     0
    ],
    "kicks": 32,
-   "connected": 15,
-   "shots": 11,
-   "passes": 2,
+   "connected": 13,
+   "shots": 19,
+   "passes": 3,
    "passes_completed": 0,
-   "falls": 1,
-   "throw_ins": 1,
-   "goal_kicks": 1,
+   "falls": 10,
+   "throw_ins": 0,
+   "goal_kicks": 0,
    "corners": 0,
    "pickups": 0,
    "placements": 0,
-   "rtf": 0.394,
-   "wall_s": 920.9,
-   "sim_s": 363.1
+   "rtf": 0.518,
+   "wall_s": 698.4,
+   "sim_s": 362.1,
+   "moving": 0.788,
+   "moving_over_70": 8,
+   "dist_m": 42.7,
+   "duels": 40,
+   "bumps": 166
+  },
+  {
+   "seed": 1,
+   "score": [
+    1,
+    0
+   ],
+   "kicks": 30,
+   "connected": 20,
+   "shots": 16,
+   "passes": 1,
+   "passes_completed": 1,
+   "falls": 11,
+   "throw_ins": 0,
+   "goal_kicks": 0,
+   "corners": 0,
+   "pickups": 0,
+   "placements": 1,
+   "rtf": 0.826,
+   "wall_s": 460.1,
+   "sim_s": 380.1,
+   "moving": 0.781,
+   "moving_over_70": 8,
+   "dist_m": 39.6,
+   "duels": 33,
+   "bumps": 150
   },
   {
    "seed": 2,
@@ -48,20 +58,25 @@
     0,
     0
    ],
-   "kicks": 34,
-   "connected": 17,
-   "shots": 8,
-   "passes": 2,
+   "kicks": 26,
+   "connected": 11,
+   "shots": 12,
+   "passes": 0,
    "passes_completed": 0,
-   "falls": 11,
-   "throw_ins": 0,
+   "falls": 5,
+   "throw_ins": 4,
    "goal_kicks": 0,
    "corners": 0,
    "pickups": 0,
    "placements": 0,
-   "rtf": 0.388,
-   "wall_s": 935.7,
-   "sim_s": 363.1
+   "rtf": 0.505,
+   "wall_s": 717.1,
+   "sim_s": 362.1,
+   "moving": 0.778,
+   "moving_over_70": 8,
+   "dist_m": 39.5,
+   "duels": 30,
+   "bumps": 193
   },
   {
    "seed": 3,
@@ -69,116 +84,88 @@
     0,
     1
    ],
-   "kicks": 45,
-   "connected": 21,
-   "shots": 20,
-   "passes": 1,
-   "passes_completed": 0,
-   "falls": 3,
-   "throw_ins": 2,
-   "goal_kicks": 2,
+   "kicks": 29,
+   "connected": 10,
+   "shots": 19,
+   "passes": 4,
+   "passes_completed": 1,
+   "falls": 7,
+   "throw_ins": 0,
+   "goal_kicks": 0,
    "corners": 0,
    "pickups": 0,
    "placements": 0,
-   "rtf": 0.389,
-   "wall_s": 965.8,
-   "sim_s": 375.5
+   "rtf": 0.579,
+   "wall_s": 652.6,
+   "sim_s": 377.6,
+   "moving": 0.785,
+   "moving_over_70": 8,
+   "dist_m": 41.0,
+   "duels": 33,
+   "bumps": 170
   },
   {
    "seed": 4,
    "score": [
     0,
-    2
+    0
    ],
-   "kicks": 45,
-   "connected": 22,
-   "shots": 17,
-   "passes": 5,
-   "passes_completed": 0,
-   "falls": 4,
-   "throw_ins": 0,
+   "kicks": 40,
+   "connected": 20,
+   "shots": 15,
+   "passes": 9,
+   "passes_completed": 4,
+   "falls": 5,
+   "throw_ins": 1,
    "goal_kicks": 0,
    "corners": 0,
    "pickups": 0,
-   "placements": 1,
-   "rtf": 0.392,
-   "wall_s": 1011.0,
-   "sim_s": 396.4
+   "placements": 0,
+   "rtf": 0.562,
+   "wall_s": 644.2,
+   "sim_s": 362.1,
+   "moving": 0.763,
+   "moving_over_70": 8,
+   "dist_m": 39.5,
+   "duels": 32,
+   "bumps": 145
   }
  ],
  "runs": [
   {
    "seed": 0,
    "score": [
-    1,
+    0,
     0
    ],
    "teams": {
     "blue": {
-     "score": 1,
-     "kicks": 25,
-     "connected": 20,
-     "shots": 11,
-     "passes": 1,
+     "score": 0,
+     "kicks": 22,
+     "connected": 7,
+     "shots": 17,
+     "passes": 0,
      "passes_completed": 0,
-     "clearances": 4,
-     "falls": 2,
-     "touches": 48
+     "clearances": 0,
+     "falls": 5,
+     "touches": 61
     },
     "yellow": {
      "score": 0,
-     "kicks": 20,
-     "connected": 12,
-     "shots": 5,
+     "kicks": 10,
+     "connected": 6,
+     "shots": 2,
      "passes": 3,
      "passes_completed": 0,
-     "clearances": 3,
+     "clearances": 2,
      "falls": 4,
-     "touches": 62
+     "touches": 48
     }
    },
    "players": {
     "b1": {
      "team": "blue",
      "role": "GK",
-     "falls": 1,
-     "unsticks": 3,
-     "kicks": 2,
-     "connected": 1,
-     "shots": 0,
-     "passes": 1,
-     "passes_completed": 0,
-     "clearances": 1,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 7,
-     "pickups": 1,
-     "frames_seen": 1569,
-     "frames": 3500,
-     "ball_in_view": 0.448
-    },
-    "b2": {
-     "team": "blue",
-     "role": "D1",
-     "falls": 1,
-     "unsticks": 0,
-     "kicks": 4,
-     "connected": 3,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 2,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 12,
-     "pickups": 0,
-     "frames_seen": 425,
-     "frames": 955,
-     "ball_in_view": 0.445
-    },
-    "b3": {
-     "team": "blue",
-     "role": "D2",
      "falls": 0,
      "unsticks": 0,
      "kicks": 0,
@@ -191,92 +178,92 @@
      "own_goals": 0,
      "touches": 0,
      "pickups": 0,
-     "frames_seen": 145,
-     "frames": 215,
-     "ball_in_view": 0.674
+     "frames_seen": 875,
+     "frames": 3600,
+     "ball_in_view": 0.243
+    },
+    "b2": {
+     "team": "blue",
+     "role": "D1",
+     "falls": 0,
+     "unsticks": 0,
+     "kicks": 4,
+     "connected": 0,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 6,
+     "pickups": 0,
+     "frames_seen": 257,
+     "frames": 569,
+     "ball_in_view": 0.452
+    },
+    "b3": {
+     "team": "blue",
+     "role": "D2",
+     "falls": 0,
+     "unsticks": 0,
+     "kicks": 3,
+     "connected": 2,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 11,
+     "pickups": 0,
+     "frames_seen": 340,
+     "frames": 654,
+     "ball_in_view": 0.52
     },
     "b4": {
      "team": "blue",
      "role": "A1",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 16,
-     "connected": 13,
+     "falls": 2,
+     "unsticks": 2,
+     "kicks": 14,
+     "connected": 5,
      "shots": 10,
      "passes": 0,
      "passes_completed": 0,
-     "clearances": 1,
-     "goals": 1,
+     "clearances": 0,
+     "goals": 0,
      "own_goals": 0,
-     "touches": 23,
+     "touches": 33,
      "pickups": 0,
-     "frames_seen": 1107,
-     "frames": 1877,
-     "ball_in_view": 0.59
+     "frames_seen": 1532,
+     "frames": 2840,
+     "ball_in_view": 0.539
     },
     "b5": {
      "team": "blue",
      "role": "A2",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 3,
-     "connected": 3,
+     "falls": 3,
+     "unsticks": 2,
+     "kicks": 1,
+     "connected": 0,
      "shots": 1,
      "passes": 0,
      "passes_completed": 0,
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 6,
+     "touches": 11,
      "pickups": 0,
-     "frames_seen": 228,
-     "frames": 553,
-     "ball_in_view": 0.412
+     "frames_seen": 1369,
+     "frames": 2294,
+     "ball_in_view": 0.597
     },
     "y1": {
      "team": "yellow",
      "role": "GK",
-     "falls": 1,
-     "unsticks": 0,
-     "kicks": 3,
-     "connected": 2,
-     "shots": 0,
-     "passes": 1,
-     "passes_completed": 0,
-     "clearances": 2,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 13,
-     "pickups": 0,
-     "frames_seen": 1834,
-     "frames": 3600,
-     "ball_in_view": 0.509
-    },
-    "y2": {
-     "team": "yellow",
-     "role": "D1",
      "falls": 0,
      "unsticks": 0,
-     "kicks": 2,
-     "connected": 0,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 6,
-     "pickups": 0,
-     "frames_seen": 126,
-     "frames": 395,
-     "ball_in_view": 0.319
-    },
-    "y3": {
-     "team": "yellow",
-     "role": "D2",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 2,
+     "kicks": 1,
      "connected": 1,
      "shots": 0,
      "passes": 0,
@@ -284,49 +271,87 @@
      "clearances": 1,
      "goals": 0,
      "own_goals": 0,
-     "touches": 9,
+     "touches": 5,
      "pickups": 0,
-     "frames_seen": 257,
-     "frames": 545,
-     "ball_in_view": 0.472
+     "frames_seen": 2019,
+     "frames": 3590,
+     "ball_in_view": 0.562
+    },
+    "y2": {
+     "team": "yellow",
+     "role": "D1",
+     "falls": 0,
+     "unsticks": 0,
+     "kicks": 3,
+     "connected": 2,
+     "shots": 0,
+     "passes": 3,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 11,
+     "pickups": 0,
+     "frames_seen": 955,
+     "frames": 1863,
+     "ball_in_view": 0.513
+    },
+    "y3": {
+     "team": "yellow",
+     "role": "D2",
+     "falls": 1,
+     "unsticks": 1,
+     "kicks": 2,
+     "connected": 1,
+     "shots": 1,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 1,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 14,
+     "pickups": 0,
+     "frames_seen": 1073,
+     "frames": 2096,
+     "ball_in_view": 0.512
     },
     "y4": {
      "team": "yellow",
      "role": "A1",
      "falls": 1,
-     "unsticks": 1,
-     "kicks": 6,
-     "connected": 5,
-     "shots": 2,
-     "passes": 2,
+     "unsticks": 0,
+     "kicks": 4,
+     "connected": 2,
+     "shots": 1,
+     "passes": 0,
      "passes_completed": 0,
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 10,
+     "touches": 15,
      "pickups": 0,
-     "frames_seen": 372,
-     "frames": 930,
-     "ball_in_view": 0.4
+     "frames_seen": 1324,
+     "frames": 2057,
+     "ball_in_view": 0.644
     },
     "y5": {
      "team": "yellow",
      "role": "A2",
      "falls": 2,
      "unsticks": 0,
-     "kicks": 7,
-     "connected": 4,
-     "shots": 3,
+     "kicks": 0,
+     "connected": 0,
+     "shots": 0,
      "passes": 0,
      "passes_completed": 0,
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 24,
+     "touches": 3,
      "pickups": 0,
-     "frames_seen": 835,
-     "frames": 1730,
-     "ball_in_view": 0.483
+     "frames_seen": 402,
+     "frames": 559,
+     "ball_in_view": 0.719
     },
     "ref": {
      "team": "ref",
@@ -335,40 +360,10 @@
      "unsticks": 1
     }
    },
-   "goals": [
-    {
-     "t": 29.34,
-     "half": 1,
-     "clock": 27.8,
-     "kind": "goal",
-     "team": "blue",
-     "text": "GOAL blue (b4), 1:0",
-     "scorer": "b4",
-     "own_goal": false,
-     "score": [
-      1,
-      0
-     ]
-    }
-   ],
+   "goals": [],
    "kicks": [
     {
-     "t": 5.92,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.554,
-      -0.2
-     ],
-     "vmax": 0.345,
-     "connected": true
-    },
-    {
-     "t": 10.02,
+     "t": 2.72,
      "who": 3,
      "name": "b4",
      "team": "blue",
@@ -376,391 +371,14 @@
      "kind": "shot",
      "mate": null,
      "b0": [
-      1.029,
-      -0.245
+      0.256,
+      -0.003
      ],
-     "vmax": 0.41,
+     "vmax": 0.745,
      "connected": true
     },
     {
-     "t": 13.3,
-     "who": 5,
-     "name": "y1",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.212,
-      -0.303
-     ],
-     "vmax": 0.362,
-     "connected": true
-    },
-    {
-     "t": 27.4,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.651,
-      -0.517
-     ],
-     "vmax": 0.747,
-     "connected": true
-    },
-    {
-     "t": 27.5,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "pass",
-     "mate": 9,
-     "b0": [
-      1.651,
-      -0.517
-     ],
-     "vmax": 0.747,
-     "connected": true,
-     "result": "intercepted"
-    },
-    {
-     "t": 58.28,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.484,
-      -0.172
-     ],
-     "vmax": 0.938,
-     "connected": true
-    },
-    {
-     "t": 64.18,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.735,
-      -0.461
-     ],
-     "vmax": 0.73,
-     "connected": true
-    },
-    {
-     "t": 67.82,
-     "who": 6,
-     "name": "y2",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.087,
-      -0.122
-     ],
-     "vmax": 0.202,
-     "connected": false
-    },
-    {
-     "t": 85.94,
-     "who": 6,
-     "name": "y2",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.04,
-      0.012
-     ],
-     "vmax": 0.0,
-     "connected": false
-    },
-    {
-     "t": 86.1,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.04,
-      0.012
-     ],
-     "vmax": 0.0,
-     "connected": false
-    },
-    {
-     "t": 97.74,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.448,
-      0.086
-     ],
-     "vmax": 0.261,
-     "connected": false
-    },
-    {
-     "t": 101.52,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.937,
-      -0.36
-     ],
-     "vmax": 0.543,
-     "connected": true
-    },
-    {
-     "t": 111.32,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.313,
-      -0.751
-     ],
-     "vmax": 1.243,
-     "connected": true
-    },
-    {
-     "t": 112.1,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.782,
-      -0.236
-     ],
-     "vmax": 1.012,
-     "connected": true
-    },
-    {
-     "t": 119.92,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.436,
-      1.013
-     ],
-     "vmax": 0.223,
-     "connected": false
-    },
-    {
-     "t": 120.64,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.527,
-      0.974
-     ],
-     "vmax": 0.065,
-     "connected": false
-    },
-    {
-     "t": 123.24,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.911,
-      0.824
-     ],
-     "vmax": 0.462,
-     "connected": true
-    },
-    {
-     "t": 127.1,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.524,
-      0.509
-     ],
-     "vmax": 0.748,
-     "connected": true
-    },
-    {
-     "t": 134.18,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.957,
-      0.822
-     ],
-     "vmax": 0.0,
-     "connected": false
-    },
-    {
-     "t": 137.28,
-     "who": 5,
-     "name": "y1",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.917,
-      0.851
-     ],
-     "vmax": 0.992,
-     "connected": true
-    },
-    {
-     "t": 152.74,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.902,
-      -0.163
-     ],
-     "vmax": 0.537,
-     "connected": true
-    },
-    {
-     "t": 156.96,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.673,
-      -0.398
-     ],
-     "vmax": 0.498,
-     "connected": true
-    },
-    {
-     "t": 167.08,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      2.018,
-      -0.265
-     ],
-     "vmax": 1.542,
-     "connected": true
-    },
-    {
-     "t": 183.2,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.773,
-      0.922
-     ],
-     "vmax": 0.553,
-     "connected": true
-    },
-    {
-     "t": 187.46,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.398,
-      0.314
-     ],
-     "vmax": 0.481,
-     "connected": true
-    },
-    {
-     "t": 189.5,
-     "who": 5,
-     "name": "y1",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "pass",
-     "mate": 8,
-     "b0": [
-      1.411,
-      0.068
-     ],
-     "vmax": 0.296,
-     "connected": false,
-     "result": "intercepted"
-    },
-    {
-     "t": 195.34,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.255,
-      -0.308
-     ],
-     "vmax": 0.405,
-     "connected": true
-    },
-    {
-     "t": 202.2,
+     "t": 4.28,
      "who": 8,
      "name": "y4",
      "team": "yellow",
@@ -769,103 +387,285 @@
      "mate": null,
      "b0": [
       0.139,
-      -0.021
+      -0.034
      ],
-     "vmax": 0.019,
-     "connected": false
-    },
-    {
-     "t": 204.64,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.741,
-      0.014
-     ],
-     "vmax": 0.772,
+     "vmax": 0.505,
      "connected": true
     },
     {
-     "t": 209.9,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
+     "t": 5.18,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
      "foot": "right",
      "kind": "shot",
      "mate": null,
      "b0": [
-      1.613,
-      0.078
+      0.245,
+      -0.236
      ],
-     "vmax": 0.926,
-     "connected": true
+     "vmax": 0.279,
+     "connected": false
     },
     {
-     "t": 210.68,
-     "who": 0,
-     "name": "b1",
+     "t": 21.16,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.331,
+      -0.432
+     ],
+     "vmax": 0.1,
+     "connected": false
+    },
+    {
+     "t": 40.74,
+     "who": 3,
+     "name": "b4",
      "team": "blue",
      "foot": "left",
-     "kind": "clearance",
+     "kind": "shot",
      "mate": null,
      "b0": [
-      1.248,
-      0.039
+      1.147,
+      -0.884
      ],
-     "vmax": 0.452,
+     "vmax": 0.261,
+     "connected": false
+    },
+    {
+     "t": 58.7,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.82,
+      -0.242
+     ],
+     "vmax": 0.562,
      "connected": true
     },
     {
-     "t": 234.34,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
+     "t": 78.72,
+     "who": 7,
+     "name": "y3",
+     "team": "yellow",
      "foot": "right",
      "kind": "clearance",
      "mate": null,
      "b0": [
-      1.372,
-      -0.358
+      0.719,
+      1.36
      ],
-     "vmax": 0.4,
+     "vmax": 0.393,
      "connected": true
     },
     {
-     "t": 238.4,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      0.792,
-      -0.435
-     ],
-     "vmax": 0.408,
-     "connected": true
-    },
-    {
-     "t": 259.18,
-     "who": 1,
-     "name": "b2",
+     "t": 88.32,
+     "who": 3,
+     "name": "b4",
      "team": "blue",
      "foot": "left",
      "kind": "forward",
      "mate": null,
      "b0": [
-      0.103,
-      0.005
+      0.535,
+      0.768
+     ],
+     "vmax": 0.65,
+     "connected": true
+    },
+    {
+     "t": 107.6,
+     "who": 6,
+     "name": "y2",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "pass",
+     "mate": 8,
+     "b0": [
+      1.022,
+      0.207
+     ],
+     "vmax": 0.794,
+     "connected": true,
+     "result": "intercepted"
+    },
+    {
+     "t": 108.8,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.269,
+      0.068
+     ],
+     "vmax": 0.119,
+     "connected": false
+    },
+    {
+     "t": 112.58,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.554,
+      -0.107
+     ],
+     "vmax": 0.192,
+     "connected": false
+    },
+    {
+     "t": 120.6,
+     "who": 5,
+     "name": "y1",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.809,
+      0.025
+     ],
+     "vmax": 0.359,
+     "connected": true
+    },
+    {
+     "t": 122.14,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.886,
+      0.109
+     ],
+     "vmax": 0.087,
+     "connected": false
+    },
+    {
+     "t": 124.74,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.844,
+      0.083
+     ],
+     "vmax": 0.553,
+     "connected": true
+    },
+    {
+     "t": 129.0,
+     "who": 6,
+     "name": "y2",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "pass",
+     "mate": 8,
+     "b0": [
+      1.143,
+      0.474
+     ],
+     "vmax": 0.072,
+     "connected": false
+    },
+    {
+     "t": 162.58,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.89,
+      -0.066
+     ],
+     "vmax": 0.369,
+     "connected": true
+    },
+    {
+     "t": 168.34,
+     "who": 6,
+     "name": "y2",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "pass",
+     "mate": 8,
+     "b0": [
+      1.628,
+      -0.585
+     ],
+     "vmax": 0.522,
+     "connected": true,
+     "result": "intercepted"
+    },
+    {
+     "t": 178.12,
+     "who": 1,
+     "name": "b2",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.396,
+      0.265
      ],
      "vmax": 0.0,
      "connected": false
     },
     {
-     "t": 279.18,
+     "t": 184.7,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.074,
+      -0.007
+     ],
+     "vmax": 0.512,
+     "connected": true
+    },
+    {
+     "t": 205.56,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.053,
+      0.33
+     ],
+     "vmax": 0.263,
+     "connected": false
+    },
+    {
+     "t": 232.56,
      "who": 1,
      "name": "b2",
      "team": "blue",
@@ -873,172 +673,186 @@
      "kind": "forward",
      "mate": null,
      "b0": [
-      -0.143,
-      0.37
+      0.05,
+      0.119
      ],
-     "vmax": 1.094,
-     "connected": true
-    },
-    {
-     "t": 280.84,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.182,
-      0.371
-     ],
-     "vmax": 0.137,
+     "vmax": 0.262,
      "connected": false
     },
     {
-     "t": 283.86,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
+     "t": 235.3,
+     "who": 1,
+     "name": "b2",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
      "mate": null,
      "b0": [
-      0.329,
-      0.403
+      -0.221,
+      0.268
      ],
-     "vmax": 0.14,
+     "vmax": 0.122,
      "connected": false
     },
     {
-     "t": 300.0,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.734,
-      0.413
-     ],
-     "vmax": 0.365,
-     "connected": true
-    },
-    {
-     "t": 307.94,
-     "who": 0,
-     "name": "b1",
+     "t": 238.46,
+     "who": 1,
+     "name": "b2",
      "team": "blue",
-     "foot": "left",
-     "kind": "pass",
-     "mate": 4,
-     "b0": [
-      1.455,
-      0.354
-     ],
-     "vmax": 0.027,
-     "connected": false,
-     "result": "intercepted"
-    },
-    {
-     "t": 320.42,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
      "foot": "right",
      "kind": "shot",
      "mate": null,
      "b0": [
-      0.946,
-      0.587
+      -0.378,
+      0.361
      ],
-     "vmax": 1.057,
-     "connected": true
+     "vmax": 0.068,
+     "connected": false
     },
     {
-     "t": 329.42,
-     "who": 4,
-     "name": "b5",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.464,
-      0.09
-     ],
-     "vmax": 0.588,
-     "connected": true
-    },
-    {
-     "t": 344.82,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.044,
-      -0.357
-     ],
-     "vmax": 0.358,
-     "connected": true
-    },
-    {
-     "t": 355.6,
-     "who": 4,
-     "name": "b5",
+     "t": 250.2,
+     "who": 3,
+     "name": "b4",
      "team": "blue",
      "foot": "left",
      "kind": "forward",
      "mate": null,
      "b0": [
-      0.278,
-      -0.409
+      -0.162,
+      0.84
      ],
-     "vmax": 0.462,
+     "vmax": 0.008,
+     "connected": false
+    },
+    {
+     "t": 270.48,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.28,
+      1.159
+     ],
+     "vmax": 0.105,
+     "connected": false
+    },
+    {
+     "t": 272.92,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.329,
+      1.158
+     ],
+     "vmax": 0.28,
+     "connected": false
+    },
+    {
+     "t": 276.98,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.329,
+      1.054
+     ],
+     "vmax": 0.329,
      "connected": true
     },
     {
-     "t": 355.76,
+     "t": 288.04,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "left",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.071,
+      1.15
+     ],
+     "vmax": 0.0,
+     "connected": false
+    },
+    {
+     "t": 319.5,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.154,
+      0.5
+     ],
+     "vmax": 0.112,
+     "connected": false
+    },
+    {
+     "t": 332.1,
      "who": 8,
      "name": "y4",
      "team": "yellow",
      "foot": "left",
-     "kind": "pass",
-     "mate": 9,
-     "b0": [
-      0.278,
-      -0.409
-     ],
-     "vmax": 0.462,
-     "connected": true
-    },
-    {
-     "t": 377.18,
-     "who": 4,
-     "name": "b5",
-     "team": "blue",
-     "foot": "left",
      "kind": "forward",
      "mate": null,
      "b0": [
-      0.378,
-      -0.771
+      -0.286,
+      0.316
      ],
-     "vmax": 0.365,
+     "vmax": 0.13,
+     "connected": false
+    },
+    {
+     "t": 342.62,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.085,
+      0.277
+     ],
+     "vmax": 0.712,
      "connected": true
+    },
+    {
+     "t": 343.3,
+     "who": 7,
+     "name": "y3",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.105,
+      0.22
+     ],
+     "vmax": 0.186,
+     "connected": false
     }
    ],
    "throw_ins": 0,
    "goal_kicks": 0,
    "corners": 0,
-   "pickups": 1,
+   "pickups": 0,
    "placements": 0,
    "events": [
     {
-     "t": 1.52,
+     "t": 1.02,
      "half": 1,
      "clock": 0.0,
      "kind": "kick-off",
@@ -1046,37 +860,67 @@
      "text": "kick-off blue"
     },
     {
-     "t": 29.34,
+     "t": 15.42,
      "half": 1,
-     "clock": 27.8,
-     "kind": "goal",
-     "team": "blue",
-     "text": "GOAL blue (b4), 1:0",
-     "scorer": "b4",
-     "own_goal": false,
-     "score": [
-      1,
-      0
+     "clock": 14.4,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.33,
+      -0.39
      ]
     },
     {
-     "t": 33.34,
+     "t": 34.7,
      "half": 1,
-     "clock": 27.8,
-     "kind": "ready",
-     "team": "yellow",
-     "text": "players to kick-off positions"
+     "clock": 33.7,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.9,
+      -0.99
+     ]
     },
     {
-     "t": 44.58,
+     "t": 53.8,
      "half": 1,
-     "clock": 27.8,
-     "kind": "kick-off",
-     "team": "yellow",
-     "text": "kick-off yellow"
+     "clock": 52.8,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.15,
+      -1.17
+     ]
     },
     {
-     "t": 196.76,
+     "t": 99.82,
+     "half": 1,
+     "clock": 98.8,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.02,
+      0.21
+     ]
+    },
+    {
+     "t": 145.56,
+     "half": 1,
+     "clock": 144.5,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.18,
+      0.56
+     ]
+    },
+    {
+     "t": 181.02,
      "half": 1,
      "clock": 180.0,
      "kind": "whistle",
@@ -1084,7 +928,7 @@
      "text": "end of half 1"
     },
     {
-     "t": 196.76,
+     "t": 181.02,
      "half": 2,
      "clock": 0.0,
      "kind": "half-time",
@@ -1092,7 +936,7 @@
      "text": "half-time: teams change ends"
     },
     {
-     "t": 198.28,
+     "t": 182.04,
      "half": 2,
      "clock": 0.0,
      "kind": "kick-off",
@@ -1100,37 +944,79 @@
      "text": "kick-off yellow"
     },
     {
-     "t": 326.3,
+     "t": 199.02,
      "half": 2,
-     "clock": 128.0,
-     "kind": "pickup",
-     "team": "blue",
-     "text": "b1 down too long: off for 10 s",
-     "who": "b1"
-    },
-    {
-     "t": 336.3,
-     "half": 2,
-     "clock": 138.0,
-     "kind": "return",
-     "team": "blue",
-     "text": "b1 back in",
-     "who": "b1"
-    },
-    {
-     "t": 377.56,
-     "half": 2,
-     "clock": 179.3,
+     "clock": 17.0,
      "kind": "dropped ball",
      "team": null,
      "text": "dropped ball",
      "pos": [
-      0.4,
-      -0.8
+      -0.21,
+      0.46
      ]
     },
     {
-     "t": 378.28,
+     "t": 222.0,
+     "half": 2,
+     "clock": 40.0,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.19,
+      0.09
+     ]
+    },
+    {
+     "t": 254.64,
+     "half": 2,
+     "clock": 72.6,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.22,
+      0.79
+     ]
+    },
+    {
+     "t": 289.0,
+     "half": 2,
+     "clock": 107.0,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.07,
+      1.15
+     ]
+    },
+    {
+     "t": 336.38,
+     "half": 2,
+     "clock": 154.3,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.18,
+      0.26
+     ]
+    },
+    {
+     "t": 354.38,
+     "half": 2,
+     "clock": 172.3,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.07,
+      0.15
+     ]
+    },
+    {
+     "t": 362.04,
      "half": 2,
      "clock": 180.0,
      "kind": "whistle",
@@ -1138,21 +1024,21 @@
      "text": "end of half 2"
     },
     {
-     "t": 378.28,
+     "t": 362.04,
      "half": 2,
      "clock": 180.0,
      "kind": "full-time",
      "team": null,
-     "text": "full time 1:0"
+     "text": "full time 0:0"
     }
    ],
-   "sim_s": 378.3,
+   "sim_s": 362.1,
    "playing_s": 360.0,
-   "wall_s": 944.9,
-   "rtf": 0.4,
+   "wall_s": 698.4,
+   "rtf": 0.518,
    "bodies": {
     "b1": {
-     "lag": 3,
+     "lag": 4,
      "mass_scale_mean": 1.001,
      "friction": 1.102,
      "kp": 208.8,
@@ -1228,36 +1114,93 @@
      "kp": 212.2,
      "vin": 7.9
     }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 18.57,
+      "moving": 0.541,
+      "fast": 0.176
+     },
+     "b2": {
+      "dist_m": 52.23,
+      "moving": 0.886,
+      "fast": 0.581
+     },
+     "b3": {
+      "dist_m": 48.03,
+      "moving": 0.866,
+      "fast": 0.539
+     },
+     "b4": {
+      "dist_m": 40.4,
+      "moving": 0.755,
+      "fast": 0.412
+     },
+     "b5": {
+      "dist_m": 48.44,
+      "moving": 0.855,
+      "fast": 0.53
+     },
+     "y1": {
+      "dist_m": 23.18,
+      "moving": 0.587,
+      "fast": 0.203
+     },
+     "y2": {
+      "dist_m": 42.54,
+      "moving": 0.833,
+      "fast": 0.477
+     },
+     "y3": {
+      "dist_m": 46.28,
+      "moving": 0.841,
+      "fast": 0.483
+     },
+     "y4": {
+      "dist_m": 49.84,
+      "moving": 0.845,
+      "fast": 0.518
+     },
+     "y5": {
+      "dist_m": 57.17,
+      "moving": 0.868,
+      "fast": 0.594
+     }
+    },
+    "duels": 40,
+    "bumps": 166,
+    "play_s": 360.0
    }
   },
   {
    "seed": 1,
    "score": [
-    0,
+    1,
     0
    ],
    "teams": {
     "blue": {
-     "score": 0,
-     "kicks": 16,
-     "connected": 9,
+     "score": 1,
+     "kicks": 14,
+     "connected": 11,
      "shots": 8,
      "passes": 1,
-     "passes_completed": 0,
-     "clearances": 0,
-     "falls": 0,
-     "touches": 62
+     "passes_completed": 1,
+     "clearances": 4,
+     "falls": 4,
+     "touches": 59
     },
     "yellow": {
      "score": 0,
      "kicks": 16,
-     "connected": 6,
-     "shots": 3,
-     "passes": 1,
+     "connected": 9,
+     "shots": 8,
+     "passes": 0,
      "passes_completed": 0,
-     "clearances": 2,
-     "falls": 1,
-     "touches": 51
+     "clearances": 4,
+     "falls": 3,
+     "touches": 62
     }
    },
    "players": {
@@ -1266,25 +1209,25 @@
      "role": "GK",
      "falls": 0,
      "unsticks": 0,
-     "kicks": 0,
-     "connected": 0,
+     "kicks": 1,
+     "connected": 1,
      "shots": 0,
      "passes": 0,
      "passes_completed": 0,
-     "clearances": 0,
+     "clearances": 1,
      "goals": 0,
      "own_goals": 0,
-     "touches": 0,
+     "touches": 3,
      "pickups": 0,
-     "frames_seen": 1468,
-     "frames": 3600,
-     "ball_in_view": 0.408
+     "frames_seen": 1594,
+     "frames": 3589,
+     "ball_in_view": 0.444
     },
     "b2": {
      "team": "blue",
      "role": "D1",
-     "falls": 0,
-     "unsticks": 0,
+     "falls": 2,
+     "unsticks": 2,
      "kicks": 0,
      "connected": 0,
      "shots": 0,
@@ -1293,110 +1236,72 @@
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 0,
+     "touches": 7,
      "pickups": 0,
-     "frames_seen": 25,
-     "frames": 40,
-     "ball_in_view": 0.625
+     "frames_seen": 442,
+     "frames": 791,
+     "ball_in_view": 0.559
     },
     "b3": {
      "team": "blue",
      "role": "D2",
      "falls": 0,
      "unsticks": 0,
-     "kicks": 1,
-     "connected": 1,
-     "shots": 0,
+     "kicks": 6,
+     "connected": 4,
+     "shots": 2,
      "passes": 1,
+     "passes_completed": 1,
+     "clearances": 2,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 18,
+     "pickups": 0,
+     "frames_seen": 735,
+     "frames": 1207,
+     "ball_in_view": 0.609
+    },
+    "b4": {
+     "team": "blue",
+     "role": "A1",
+     "falls": 1,
+     "unsticks": 0,
+     "kicks": 1,
+     "connected": 0,
+     "shots": 1,
+     "passes": 0,
      "passes_completed": 0,
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
      "touches": 5,
      "pickups": 0,
-     "frames_seen": 69,
-     "frames": 170,
-     "ball_in_view": 0.406
-    },
-    "b4": {
-     "team": "blue",
-     "role": "A1",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 12,
-     "connected": 6,
-     "shots": 6,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 45,
-     "pickups": 0,
-     "frames_seen": 1365,
-     "frames": 2975,
-     "ball_in_view": 0.459
+     "frames_seen": 1343,
+     "frames": 2137,
+     "ball_in_view": 0.628
     },
     "b5": {
      "team": "blue",
      "role": "A2",
-     "falls": 0,
+     "falls": 1,
      "unsticks": 0,
-     "kicks": 3,
-     "connected": 2,
-     "shots": 2,
+     "kicks": 6,
+     "connected": 6,
+     "shots": 5,
      "passes": 0,
      "passes_completed": 0,
-     "clearances": 0,
+     "clearances": 1,
      "goals": 0,
      "own_goals": 0,
-     "touches": 12,
+     "touches": 26,
      "pickups": 0,
-     "frames_seen": 261,
-     "frames": 415,
-     "ball_in_view": 0.629
+     "frames_seen": 1122,
+     "frames": 2361,
+     "ball_in_view": 0.475
     },
     "y1": {
      "team": "yellow",
      "role": "GK",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 1,
-     "connected": 0,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 1,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 4,
-     "pickups": 0,
-     "frames_seen": 1884,
-     "frames": 3600,
-     "ball_in_view": 0.523
-    },
-    "y2": {
-     "team": "yellow",
-     "role": "D1",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 3,
-     "connected": 2,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 1,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 10,
-     "pickups": 0,
-     "frames_seen": 551,
-     "frames": 1010,
-     "ball_in_view": 0.546
-    },
-    "y3": {
-     "team": "yellow",
-     "role": "D2",
      "falls": 0,
      "unsticks": 0,
      "kicks": 0,
@@ -1407,37 +1312,37 @@
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 2,
+     "touches": 0,
      "pickups": 0,
-     "frames_seen": 96,
-     "frames": 231,
-     "ball_in_view": 0.416
+     "frames_seen": 1646,
+     "frames": 3599,
+     "ball_in_view": 0.457
     },
-    "y4": {
+    "y2": {
      "team": "yellow",
-     "role": "A1",
-     "falls": 1,
-     "unsticks": 3,
-     "kicks": 11,
-     "connected": 4,
-     "shots": 3,
-     "passes": 1,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 23,
-     "pickups": 0,
-     "frames_seen": 883,
-     "frames": 1809,
-     "ball_in_view": 0.488
-    },
-    "y5": {
-     "team": "yellow",
-     "role": "A2",
+     "role": "D1",
      "falls": 0,
      "unsticks": 0,
-     "kicks": 1,
+     "kicks": 4,
+     "connected": 2,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 3,
+     "goals": 0,
+     "own_goals": 1,
+     "touches": 9,
+     "pickups": 0,
+     "frames_seen": 682,
+     "frames": 1252,
+     "ball_in_view": 0.545
+    },
+    "y3": {
+     "team": "yellow",
+     "role": "D2",
+     "falls": 1,
+     "unsticks": 1,
+     "kicks": 0,
      "connected": 0,
      "shots": 0,
      "passes": 0,
@@ -1445,159 +1350,91 @@
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 12,
+     "touches": 0,
      "pickups": 0,
-     "frames_seen": 256,
-     "frames": 550,
-     "ball_in_view": 0.465
+     "frames_seen": 861,
+     "frames": 1382,
+     "ball_in_view": 0.623
+    },
+    "y4": {
+     "team": "yellow",
+     "role": "A1",
+     "falls": 1,
+     "unsticks": 0,
+     "kicks": 3,
+     "connected": 1,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 15,
+     "pickups": 0,
+     "frames_seen": 907,
+     "frames": 1785,
+     "ball_in_view": 0.508
+    },
+    "y5": {
+     "team": "yellow",
+     "role": "A2",
+     "falls": 1,
+     "unsticks": 2,
+     "kicks": 9,
+     "connected": 6,
+     "shots": 5,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 1,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 38,
+     "pickups": 0,
+     "frames_seen": 1289,
+     "frames": 2130,
+     "ball_in_view": 0.605
     },
     "ref": {
      "team": "ref",
      "role": "referee",
-     "falls": 0,
-     "unsticks": 0
+     "falls": 4,
+     "unsticks": 2
     }
    },
-   "goals": [],
+   "goals": [
+    {
+     "t": 75.74,
+     "half": 1,
+     "clock": 74.7,
+     "kind": "goal",
+     "team": "blue",
+     "text": "GOAL blue (y2, own goal), 1:0",
+     "scorer": "y2",
+     "own_goal": true,
+     "score": [
+      1,
+      0
+     ]
+    }
+   ],
    "kicks": [
     {
-     "t": 4.64,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.222,
-      0.009
-     ],
-     "vmax": 0.264,
-     "connected": false
-    },
-    {
-     "t": 22.66,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.267,
-      -0.324
-     ],
-     "vmax": 0.094,
-     "connected": false
-    },
-    {
-     "t": 24.4,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.244,
-      -0.334
-     ],
-     "vmax": 0.425,
-     "connected": true
-    },
-    {
-     "t": 25.26,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.04,
-      -0.393
-     ],
-     "vmax": 0.125,
-     "connected": false
-    },
-    {
-     "t": 35.56,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.816,
-      -0.779
-     ],
-     "vmax": 0.402,
-     "connected": true
-    },
-    {
-     "t": 44.28,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "pass",
-     "mate": 9,
-     "b0": [
-      0.96,
-      -0.788
-     ],
-     "vmax": 0.209,
-     "connected": false,
-     "result": "intercepted"
-    },
-    {
-     "t": 63.52,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.114,
-      0.029
-     ],
-     "vmax": 0.455,
-     "connected": true
-    },
-    {
-     "t": 88.66,
-     "who": 3,
-     "name": "b4",
+     "t": 20.76,
+     "who": 2,
+     "name": "b3",
      "team": "blue",
      "foot": "left",
      "kind": "shot",
      "mate": null,
      "b0": [
-      1.715,
-      0.016
+      0.101,
+      -0.22
      ],
-     "vmax": 0.501,
+     "vmax": 1.306,
      "connected": true
     },
     {
-     "t": 96.42,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      2.114,
-      0.284
-     ],
-     "vmax": 1.177,
-     "connected": true
-    },
-    {
-     "t": 105.16,
+     "t": 43.96,
      "who": 4,
      "name": "b5",
      "team": "blue",
@@ -1605,44 +1442,14 @@
      "kind": "shot",
      "mate": null,
      "b0": [
-      2.199,
-      -1.162
+      0.853,
+      -0.76
      ],
-     "vmax": 0.204,
-     "connected": false
-    },
-    {
-     "t": 108.52,
-     "who": 4,
-     "name": "b5",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      2.322,
-      -0.84
-     ],
-     "vmax": 0.332,
+     "vmax": 1.366,
      "connected": true
     },
     {
-     "t": 143.96,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.363,
-      0.193
-     ],
-     "vmax": 0.077,
-     "connected": false
-    },
-    {
-     "t": 157.56,
+     "t": 56.66,
      "who": 6,
      "name": "y2",
      "team": "yellow",
@@ -1650,149 +1457,149 @@
      "kind": "clearance",
      "mate": null,
      "b0": [
-      1.146,
-      0.568
+      1.396,
+      -0.791
      ],
-     "vmax": 0.097,
+     "vmax": 0.002,
      "connected": false
     },
     {
-     "t": 163.18,
+     "t": 95.74,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.334,
+      0.118
+     ],
+     "vmax": 0.474,
+     "connected": true
+    },
+    {
+     "t": 105.06,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.89,
+      0.348
+     ],
+     "vmax": 0.021,
+     "connected": false
+    },
+    {
+     "t": 128.52,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.354,
+      -0.854
+     ],
+     "vmax": 0.386,
+     "connected": true
+    },
+    {
+     "t": 132.46,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.688,
+      -0.611
+     ],
+     "vmax": 0.095,
+     "connected": false
+    },
+    {
+     "t": 148.52,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.913,
+      -0.666
+     ],
+     "vmax": 0.44,
+     "connected": true
+    },
+    {
+     "t": 156.42,
      "who": 6,
      "name": "y2",
      "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
+     "foot": "left",
+     "kind": "clearance",
      "mate": null,
      "b0": [
-      0.357,
-      0.593
+      1.009,
+      -0.56
      ],
-     "vmax": 0.502,
-     "connected": true
+     "vmax": 0.115,
+     "connected": false
     },
     {
-     "t": 171.2,
+     "t": 158.86,
      "who": 6,
      "name": "y2",
      "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
+     "foot": "left",
+     "kind": "clearance",
      "mate": null,
      "b0": [
-      0.226,
-      0.707
+      0.763,
+      -0.502
      ],
-     "vmax": 0.663,
+     "vmax": 0.303,
      "connected": true
     },
     {
-     "t": 184.58,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.28,
-      0.025
-     ],
-     "vmax": 0.456,
-     "connected": true
-    },
-    {
-     "t": 187.08,
-     "who": 8,
-     "name": "y4",
+     "t": 168.42,
+     "who": 6,
+     "name": "y2",
      "team": "yellow",
      "foot": "left",
      "kind": "forward",
      "mate": null,
      "b0": [
-      -0.225,
-      0.149
+      0.574,
+      -0.449
      ],
-     "vmax": 0.029,
-     "connected": false
-    },
-    {
-     "t": 205.78,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.061,
-      0.564
-     ],
-     "vmax": 0.334,
+     "vmax": 1.067,
      "connected": true
     },
     {
-     "t": 210.18,
-     "who": 3,
-     "name": "b4",
+     "t": 181.46,
+     "who": 2,
+     "name": "b3",
      "team": "blue",
      "foot": "left",
-     "kind": "forward",
+     "kind": "clearance",
      "mate": null,
      "b0": [
-      -0.373,
-      0.508
+      -1.205,
+      -0.494
      ],
-     "vmax": 0.291,
-     "connected": false
-    },
-    {
-     "t": 217.86,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.282,
-      0.201
-     ],
-     "vmax": 0.275,
-     "connected": false
-    },
-    {
-     "t": 230.7,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.009,
-      0.237
-     ],
-     "vmax": 0.208,
-     "connected": false
-    },
-    {
-     "t": 239.56,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.079,
-      0.328
-     ],
-     "vmax": 0.647,
+     "vmax": 0.968,
      "connected": true
     },
     {
-     "t": 243.84,
+     "t": 183.4,
      "who": 8,
      "name": "y4",
      "team": "yellow",
@@ -1800,44 +1607,29 @@
      "kind": "shot",
      "mate": null,
      "b0": [
-      0.612,
-      0.087
+      -1.097,
+      -0.443
      ],
-     "vmax": 0.212,
+     "vmax": 0.018,
      "connected": false
     },
     {
-     "t": 250.9,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.965,
-      -0.002
-     ],
-     "vmax": 0.255,
-     "connected": false
-    },
-    {
-     "t": 278.1,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
+     "t": 185.68,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
      "foot": "left",
-     "kind": "shot",
+     "kind": "clearance",
      "mate": null,
      "b0": [
-      1.36,
-      0.275
+      -1.103,
+      -0.444
      ],
-     "vmax": 0.412,
-     "connected": true
+     "vmax": 0.081,
+     "connected": false
     },
     {
-     "t": 292.98,
+     "t": 188.28,
      "who": 2,
      "name": "b3",
      "team": "blue",
@@ -1845,44 +1637,90 @@
      "kind": "pass",
      "mate": 4,
      "b0": [
-      0.481,
-      0.944
+      -1.119,
+      -0.429
      ],
-     "vmax": 0.742,
-     "connected": true
+     "vmax": 0.967,
+     "connected": true,
+     "result": "completed"
     },
     {
-     "t": 301.32,
+     "t": 202.34,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.0,
+      0.0
+     ],
+     "vmax": 0.0,
+     "connected": false
+    },
+    {
+     "t": 207.86,
      "who": 4,
      "name": "b5",
      "team": "blue",
      "foot": "right",
-     "kind": "forward",
+     "kind": "shot",
      "mate": null,
      "b0": [
-      -0.393,
-      1.531
+      -0.449,
+      0.146
      ],
-     "vmax": 1.379,
+     "vmax": 0.414,
      "connected": true
     },
     {
-     "t": 312.06,
-     "who": 5,
-     "name": "y1",
+     "t": 226.02,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.654,
+      0.3
+     ],
+     "vmax": 0.778,
+     "connected": true
+    },
+    {
+     "t": 236.9,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.762,
+      0.466
+     ],
+     "vmax": 0.338,
+     "connected": true
+    },
+    {
+     "t": 265.16,
+     "who": 9,
+     "name": "y5",
      "team": "yellow",
      "foot": "right",
      "kind": "clearance",
      "mate": null,
      "b0": [
-      -1.352,
-      -0.065
+      -0.86,
+      0.942
      ],
-     "vmax": 0.052,
-     "connected": false
+     "vmax": 1.244,
+     "connected": true
     },
     {
-     "t": 318.84,
+     "t": 270.78,
      "who": 9,
      "name": "y5",
      "team": "yellow",
@@ -1890,66 +1728,156 @@
      "kind": "forward",
      "mate": null,
      "b0": [
-      -0.006,
-      -0.575
+      -0.502,
+      0.299
      ],
-     "vmax": 0.146,
+     "vmax": 0.0,
      "connected": false
     },
     {
-     "t": 323.9,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
+     "t": 276.48,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
      "kind": "forward",
      "mate": null,
      "b0": [
-      -0.238,
-      -0.288
+      -0.345,
+      0.219
      ],
-     "vmax": 0.216,
+     "vmax": 0.24,
      "connected": false
     },
     {
-     "t": 327.44,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
+     "t": 280.1,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.219,
+      0.158
+     ],
+     "vmax": 0.53,
+     "connected": true
+    },
+    {
+     "t": 284.9,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
      "foot": "left",
      "kind": "shot",
      "mate": null,
      "b0": [
-      -0.317,
-      -0.333
+      0.259,
+      -0.159
      ],
-     "vmax": 1.251,
+     "vmax": 1.193,
      "connected": true
     },
     {
-     "t": 355.66,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
+     "t": 313.04,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
      "foot": "right",
      "kind": "shot",
      "mate": null,
      "b0": [
-      -1.094,
-      -0.786
+      0.526,
+      -0.963
      ],
-     "vmax": 0.066,
+     "vmax": 0.866,
+     "connected": true
+    },
+    {
+     "t": 324.32,
+     "who": 0,
+     "name": "b1",
+     "team": "blue",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.594,
+      -0.371
+     ],
+     "vmax": 0.684,
+     "connected": true
+    },
+    {
+     "t": 324.72,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.473,
+      -0.246
+     ],
+     "vmax": 0.654,
+     "connected": true
+    },
+    {
+     "t": 342.76,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.863,
+      0.308
+     ],
+     "vmax": 1.085,
+     "connected": true
+    },
+    {
+     "t": 342.84,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      0.863,
+      0.308
+     ],
+     "vmax": 1.085,
+     "connected": true
+    },
+    {
+     "t": 369.24,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.09,
+      -0.246
+     ],
+     "vmax": 0.231,
      "connected": false
     }
    ],
-   "throw_ins": 1,
-   "goal_kicks": 1,
+   "throw_ins": 0,
+   "goal_kicks": 0,
    "corners": 0,
    "pickups": 0,
-   "placements": 0,
+   "placements": 1,
    "events": [
     {
-     "t": 1.52,
+     "t": 1.02,
      "half": 1,
      "clock": 0.0,
      "kind": "kick-off",
@@ -1957,27 +1885,96 @@
      "text": "kick-off yellow"
     },
     {
-     "t": 108.38,
+     "t": 34.26,
      "half": 1,
-     "clock": 106.9,
-     "kind": "whistle",
+     "clock": 33.2,
+     "kind": "dropped ball",
      "team": null,
-     "text": "ball out over the goal line"
-    },
-    {
-     "t": 109.18,
-     "half": 1,
-     "clock": 107.7,
-     "kind": "goal kick",
-     "team": "yellow",
-     "text": "goal kick yellow",
+     "text": "dropped ball",
      "pos": [
-      1.75,
-      -0.75
+      0.85,
+      -0.76
      ]
     },
     {
-     "t": 181.52,
+     "t": 57.82,
+     "half": 1,
+     "clock": 56.8,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.4,
+      -0.79
+     ]
+    },
+    {
+     "t": 70.82,
+     "half": 1,
+     "clock": 69.8,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.43,
+      -0.79
+     ]
+    },
+    {
+     "t": 75.74,
+     "half": 1,
+     "clock": 74.7,
+     "kind": "goal",
+     "team": "blue",
+     "text": "GOAL blue (y2, own goal), 1:0",
+     "scorer": "y2",
+     "own_goal": true,
+     "score": [
+      1,
+      0
+     ]
+    },
+    {
+     "t": 78.76,
+     "half": 1,
+     "clock": 74.7,
+     "kind": "ready",
+     "team": "yellow",
+     "text": "players to kick-off positions"
+    },
+    {
+     "t": 92.78,
+     "half": 1,
+     "clock": 74.7,
+     "kind": "placement",
+     "team": null,
+     "text": "manual placement: b5",
+     "who": [
+      "b5"
+     ]
+    },
+    {
+     "t": 93.8,
+     "half": 1,
+     "clock": 74.7,
+     "kind": "kick-off",
+     "team": "yellow",
+     "text": "kick-off yellow"
+    },
+    {
+     "t": 140.8,
+     "half": 1,
+     "clock": 121.7,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.73,
+      -0.6
+     ]
+    },
+    {
+     "t": 199.08,
      "half": 1,
      "clock": 180.0,
      "kind": "whistle",
@@ -1985,7 +1982,7 @@
      "text": "end of half 1"
     },
     {
-     "t": 181.52,
+     "t": 199.08,
      "half": 2,
      "clock": 0.0,
      "kind": "half-time",
@@ -1993,7 +1990,7 @@
      "text": "half-time: teams change ends"
     },
     {
-     "t": 183.04,
+     "t": 200.1,
      "half": 2,
      "clock": 0.0,
      "kind": "kick-off",
@@ -2001,39 +1998,79 @@
      "text": "kick-off blue"
     },
     {
-     "t": 271.72,
+     "t": 218.24,
      "half": 2,
-     "clock": 88.7,
+     "clock": 18.1,
      "kind": "dropped ball",
      "team": null,
      "text": "dropped ball",
      "pos": [
-      1.12,
-      0.06
+      -0.61,
+      0.3
      ]
     },
     {
-     "t": 329.28,
+     "t": 255.38,
      "half": 2,
-     "clock": 146.2,
-     "kind": "whistle",
+     "clock": 55.3,
+     "kind": "dropped ball",
      "team": null,
-     "text": "ball out over the touch line"
-    },
-    {
-     "t": 330.1,
-     "half": 2,
-     "clock": 147.1,
-     "kind": "throw-in",
-     "team": "yellow",
-     "text": "throw-in yellow",
+     "text": "dropped ball",
      "pos": [
-      -1.17,
-      -1.48
+      -0.72,
+      0.84
      ]
     },
     {
-     "t": 363.04,
+     "t": 305.3,
+     "half": 2,
+     "clock": 105.2,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.59,
+      -0.87
+     ]
+    },
+    {
+     "t": 336.52,
+     "half": 2,
+     "clock": 136.4,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.86,
+      0.31
+     ]
+    },
+    {
+     "t": 362.16,
+     "half": 2,
+     "clock": 162.1,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.09,
+      -0.23
+     ]
+    },
+    {
+     "t": 375.18,
+     "half": 2,
+     "clock": 175.1,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.03,
+      -0.27
+     ]
+    },
+    {
+     "t": 380.1,
      "half": 2,
      "clock": 180.0,
      "kind": "whistle",
@@ -2041,18 +2078,18 @@
      "text": "end of half 2"
     },
     {
-     "t": 363.04,
+     "t": 380.1,
      "half": 2,
      "clock": 180.0,
      "kind": "full-time",
      "team": null,
-     "text": "full time 0:0"
+     "text": "full time 1:0"
     }
    ],
-   "sim_s": 363.1,
+   "sim_s": 380.1,
    "playing_s": 360.0,
-   "wall_s": 920.9,
-   "rtf": 0.394,
+   "wall_s": 460.1,
+   "rtf": 0.826,
    "bodies": {
     "b1": {
      "lag": 5,
@@ -2131,6 +2168,63 @@
      "kp": 222.5,
      "vin": 7.21
     }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 20.35,
+      "moving": 0.558,
+      "fast": 0.203
+     },
+     "b2": {
+      "dist_m": 44.26,
+      "moving": 0.823,
+      "fast": 0.47
+     },
+     "b3": {
+      "dist_m": 44.95,
+      "moving": 0.839,
+      "fast": 0.492
+     },
+     "b4": {
+      "dist_m": 44.53,
+      "moving": 0.808,
+      "fast": 0.503
+     },
+     "b5": {
+      "dist_m": 42.62,
+      "moving": 0.802,
+      "fast": 0.462
+     },
+     "y1": {
+      "dist_m": 19.34,
+      "moving": 0.591,
+      "fast": 0.19
+     },
+     "y2": {
+      "dist_m": 42.81,
+      "moving": 0.833,
+      "fast": 0.441
+     },
+     "y3": {
+      "dist_m": 45.98,
+      "moving": 0.861,
+      "fast": 0.497
+     },
+     "y4": {
+      "dist_m": 45.26,
+      "moving": 0.874,
+      "fast": 0.518
+     },
+     "y5": {
+      "dist_m": 46.13,
+      "moving": 0.825,
+      "fast": 0.503
+     }
+    },
+    "duels": 33,
+    "bumps": 150,
+    "play_s": 360.0
    }
   },
   {
@@ -2142,25 +2236,25 @@
    "teams": {
     "blue": {
      "score": 0,
-     "kicks": 15,
-     "connected": 8,
-     "shots": 6,
+     "kicks": 11,
+     "connected": 3,
+     "shots": 4,
      "passes": 0,
      "passes_completed": 0,
-     "clearances": 4,
-     "falls": 4,
-     "touches": 51
+     "clearances": 3,
+     "falls": 2,
+     "touches": 59
     },
     "yellow": {
      "score": 0,
-     "kicks": 19,
-     "connected": 9,
-     "shots": 2,
-     "passes": 2,
+     "kicks": 15,
+     "connected": 8,
+     "shots": 8,
+     "passes": 0,
      "passes_completed": 0,
-     "clearances": 8,
-     "falls": 7,
-     "touches": 58
+     "clearances": 1,
+     "falls": 3,
+     "touches": 65
     }
    },
    "players": {
@@ -2169,19 +2263,19 @@
      "role": "GK",
      "falls": 0,
      "unsticks": 0,
-     "kicks": 1,
-     "connected": 1,
+     "kicks": 0,
+     "connected": 0,
      "shots": 0,
      "passes": 0,
      "passes_completed": 0,
-     "clearances": 1,
+     "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 1,
+     "touches": 0,
      "pickups": 0,
-     "frames_seen": 1199,
+     "frames_seen": 1908,
      "frames": 3600,
-     "ball_in_view": 0.333
+     "ball_in_view": 0.53
     },
     "b2": {
      "team": "blue",
@@ -2190,23 +2284,42 @@
      "unsticks": 0,
      "kicks": 2,
      "connected": 1,
-     "shots": 0,
+     "shots": 1,
      "passes": 0,
      "passes_completed": 0,
-     "clearances": 2,
+     "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 3,
+     "touches": 4,
      "pickups": 0,
-     "frames_seen": 52,
-     "frames": 85,
-     "ball_in_view": 0.612
+     "frames_seen": 827,
+     "frames": 1378,
+     "ball_in_view": 0.6
     },
     "b3": {
      "team": "blue",
      "role": "D2",
      "falls": 0,
      "unsticks": 0,
+     "kicks": 5,
+     "connected": 1,
+     "shots": 0,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 3,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 19,
+     "pickups": 0,
+     "frames_seen": 1165,
+     "frames": 2167,
+     "ball_in_view": 0.538
+    },
+    "b4": {
+     "team": "blue",
+     "role": "A1",
+     "falls": 1,
+     "unsticks": 2,
      "kicks": 0,
      "connected": 0,
      "shots": 0,
@@ -2215,73 +2328,35 @@
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 1,
+     "touches": 15,
      "pickups": 0,
-     "frames_seen": 34,
-     "frames": 90,
-     "ball_in_view": 0.378
+     "frames_seen": 661,
+     "frames": 1287,
+     "ball_in_view": 0.514
     },
-    "b4": {
+    "b5": {
      "team": "blue",
-     "role": "A1",
-     "falls": 2,
+     "role": "A2",
+     "falls": 0,
      "unsticks": 0,
-     "kicks": 10,
-     "connected": 4,
-     "shots": 5,
+     "kicks": 4,
+     "connected": 1,
+     "shots": 3,
      "passes": 0,
      "passes_completed": 0,
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 37,
+     "touches": 21,
      "pickups": 0,
-     "frames_seen": 1504,
-     "frames": 2935,
-     "ball_in_view": 0.512
-    },
-    "b5": {
-     "team": "blue",
-     "role": "A2",
-     "falls": 1,
-     "unsticks": 2,
-     "kicks": 2,
-     "connected": 2,
-     "shots": 1,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 1,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 9,
-     "pickups": 0,
-     "frames_seen": 290,
-     "frames": 490,
-     "ball_in_view": 0.592
+     "frames_seen": 894,
+     "frames": 1737,
+     "ball_in_view": 0.515
     },
     "y1": {
      "team": "yellow",
      "role": "GK",
      "falls": 0,
-     "unsticks": 0,
-     "kicks": 5,
-     "connected": 3,
-     "shots": 0,
-     "passes": 1,
-     "passes_completed": 0,
-     "clearances": 4,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 11,
-     "pickups": 0,
-     "frames_seen": 2040,
-     "frames": 3600,
-     "ball_in_view": 0.567
-    },
-    "y2": {
-     "team": "yellow",
-     "role": "D1",
-     "falls": 1,
      "unsticks": 0,
      "kicks": 1,
      "connected": 1,
@@ -2293,53 +2368,34 @@
      "own_goals": 0,
      "touches": 1,
      "pickups": 0,
-     "frames_seen": 68,
-     "frames": 150,
-     "ball_in_view": 0.453
+     "frames_seen": 1286,
+     "frames": 3590,
+     "ball_in_view": 0.358
     },
-    "y3": {
+    "y2": {
      "team": "yellow",
-     "role": "D2",
-     "falls": 2,
-     "unsticks": 2,
-     "kicks": 9,
-     "connected": 4,
+     "role": "D1",
+     "falls": 0,
+     "unsticks": 0,
+     "kicks": 1,
+     "connected": 0,
      "shots": 0,
-     "passes": 1,
-     "passes_completed": 0,
-     "clearances": 3,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 31,
-     "pickups": 0,
-     "frames_seen": 1023,
-     "frames": 2141,
-     "ball_in_view": 0.478
-    },
-    "y4": {
-     "team": "yellow",
-     "role": "A1",
-     "falls": 2,
-     "unsticks": 2,
-     "kicks": 4,
-     "connected": 1,
-     "shots": 2,
      "passes": 0,
      "passes_completed": 0,
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 10,
+     "touches": 8,
      "pickups": 0,
-     "frames_seen": 324,
-     "frames": 849,
-     "ball_in_view": 0.382
+     "frames_seen": 605,
+     "frames": 1029,
+     "ball_in_view": 0.588
     },
-    "y5": {
+    "y3": {
      "team": "yellow",
-     "role": "A2",
-     "falls": 2,
-     "unsticks": 2,
+     "role": "D2",
+     "falls": 0,
+     "unsticks": 0,
      "kicks": 0,
      "connected": 0,
      "shots": 0,
@@ -2348,11 +2404,49 @@
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 5,
+     "touches": 2,
      "pickups": 0,
-     "frames_seen": 261,
-     "frames": 460,
-     "ball_in_view": 0.567
+     "frames_seen": 504,
+     "frames": 655,
+     "ball_in_view": 0.769
+    },
+    "y4": {
+     "team": "yellow",
+     "role": "A1",
+     "falls": 1,
+     "unsticks": 1,
+     "kicks": 6,
+     "connected": 4,
+     "shots": 5,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 27,
+     "pickups": 0,
+     "frames_seen": 1247,
+     "frames": 2560,
+     "ball_in_view": 0.487
+    },
+    "y5": {
+     "team": "yellow",
+     "role": "A2",
+     "falls": 2,
+     "unsticks": 2,
+     "kicks": 7,
+     "connected": 3,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 27,
+     "pickups": 0,
+     "frames_seen": 1267,
+     "frames": 2037,
+     "ball_in_view": 0.622
     },
     "ref": {
      "team": "ref",
@@ -2364,525 +2458,404 @@
    "goals": [],
    "kicks": [
     {
-     "t": 7.46,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.618,
-      -0.179
-     ],
-     "vmax": 0.379,
-     "connected": true
-    },
-    {
-     "t": 36.64,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.077,
-      0.099
-     ],
-     "vmax": 0.244,
-     "connected": false
-    },
-    {
-     "t": 37.3,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.005,
-      0.115
-     ],
-     "vmax": 0.12,
-     "connected": false
-    },
-    {
-     "t": 39.56,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.02,
-      0.123
-     ],
-     "vmax": 0.388,
-     "connected": true
-    },
-    {
-     "t": 39.84,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.009,
-      0.128
-     ],
-     "vmax": 0.388,
-     "connected": true
-    },
-    {
-     "t": 50.16,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.004,
-      0.027
-     ],
-     "vmax": 0.0,
-     "connected": false
-    },
-    {
-     "t": 58.24,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.065,
-      0.028
-     ],
-     "vmax": 0.104,
-     "connected": false
-    },
-    {
-     "t": 60.88,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.428,
-      0.179
-     ],
-     "vmax": 0.321,
-     "connected": true
-    },
-    {
-     "t": 73.44,
-     "who": 5,
-     "name": "y1",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "pass",
-     "mate": 9,
-     "b0": [
-      1.126,
-      0.506
-     ],
-     "vmax": 0.405,
-     "connected": true
-    },
-    {
-     "t": 126.78,
-     "who": 5,
-     "name": "y1",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.203,
-      1.003
-     ],
-     "vmax": 0.119,
-     "connected": false
-    },
-    {
-     "t": 129.68,
-     "who": 5,
-     "name": "y1",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.079,
-      0.96
-     ],
-     "vmax": 0.605,
-     "connected": true
-    },
-    {
-     "t": 143.96,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.58,
-      0.375
-     ],
-     "vmax": 0.0,
-     "connected": false
-    },
-    {
-     "t": 169.06,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.733,
-      -0.187
-     ],
-     "vmax": 0.219,
-     "connected": false
-    },
-    {
-     "t": 187.4,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.0,
-      0.0
-     ],
-     "vmax": 1.227,
-     "connected": true
-    },
-    {
-     "t": 193.3,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.225,
-      0.292
-     ],
-     "vmax": 0.243,
-     "connected": false
-    },
-    {
-     "t": 202.84,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.835,
-      0.327
-     ],
-     "vmax": 0.101,
-     "connected": false
-    },
-    {
-     "t": 205.96,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.488,
-      0.321
-     ],
-     "vmax": 0.282,
-     "connected": false
-    },
-    {
-     "t": 214.78,
-     "who": 0,
-     "name": "b1",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.726,
-      0.256
-     ],
-     "vmax": 0.826,
-     "connected": true
-    },
-    {
-     "t": 238.7,
+     "t": 37.66,
      "who": 4,
      "name": "b5",
      "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      0.943,
-      0.192
-     ],
-     "vmax": 1.246,
-     "connected": true
-    },
-    {
-     "t": 243.02,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      0.794,
-      -0.063
-     ],
-     "vmax": 0.224,
-     "connected": false
-    },
-    {
-     "t": 246.12,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      0.584,
-      0.001
-     ],
-     "vmax": 0.93,
-     "connected": true
-    },
-    {
-     "t": 255.08,
-     "who": 4,
-     "name": "b5",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.856,
-      0.094
-     ],
-     "vmax": 0.606,
-     "connected": true
-    },
-    {
-     "t": 262.92,
-     "who": 5,
-     "name": "y1",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.019,
-      -0.45
-     ],
-     "vmax": 0.263,
-     "connected": false
-    },
-    {
-     "t": 263.36,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -0.934,
-      -0.478
-     ],
-     "vmax": 0.138,
-     "connected": false
-    },
-    {
-     "t": 266.56,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -0.686,
-      -0.482
-     ],
-     "vmax": 0.314,
-     "connected": true
-    },
-    {
-     "t": 274.4,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.312,
-      -0.328
-     ],
-     "vmax": 0.187,
-     "connected": false
-    },
-    {
-     "t": 290.18,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.373,
-      -0.34
-     ],
-     "vmax": 0.959,
-     "connected": true
-    },
-    {
-     "t": 304.5,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "pass",
-     "mate": 8,
-     "b0": [
-      -0.656,
-      -0.914
-     ],
-     "vmax": 0.533,
-     "connected": true,
-     "result": "intercepted"
-    },
-    {
-     "t": 307.5,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
      "foot": "right",
      "kind": "shot",
      "mate": null,
      "b0": [
-      -0.758,
-      -0.646
-     ],
-     "vmax": 0.011,
-     "connected": false
-    },
-    {
-     "t": 311.22,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.76,
-      -0.642
+      0.487,
+      0.004
      ],
      "vmax": 0.0,
      "connected": false
     },
     {
-     "t": 333.22,
+     "t": 44.98,
      "who": 5,
      "name": "y1",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.175,
-      0.274
-     ],
-     "vmax": 0.548,
-     "connected": true
-    },
-    {
-     "t": 333.98,
-     "who": 7,
-     "name": "y3",
      "team": "yellow",
      "foot": "right",
      "kind": "clearance",
      "mate": null,
      "b0": [
-      -1.32,
-      0.411
+      1.295,
+      0.189
      ],
-     "vmax": 0.497,
+     "vmax": 1.113,
      "connected": true
     },
     {
-     "t": 340.84,
+     "t": 54.34,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.381,
+      1.411
+     ],
+     "vmax": 0.15,
+     "connected": false
+    },
+    {
+     "t": 58.1,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.455,
+      1.396
+     ],
+     "vmax": 0.0,
+     "connected": false
+    },
+    {
+     "t": 81.28,
+     "who": 1,
+     "name": "b2",
+     "team": "blue",
+     "foot": "left",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.772,
+      0.39
+     ],
+     "vmax": 0.0,
+     "connected": false
+    },
+    {
+     "t": 94.32,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.901,
+      0.277
+     ],
+     "vmax": 0.304,
+     "connected": true
+    },
+    {
+     "t": 95.88,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      -0.844,
+      0.232
+     ],
+     "vmax": 0.037,
+     "connected": false
+    },
+    {
+     "t": 98.86,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      -0.708,
+      0.13
+     ],
+     "vmax": 0.242,
+     "connected": false
+    },
+    {
+     "t": 108.74,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.572,
+      -0.218
+     ],
+     "vmax": 0.331,
+     "connected": true
+    },
+    {
+     "t": 111.68,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.304,
+      -0.267
+     ],
+     "vmax": 0.199,
+     "connected": false
+    },
+    {
+     "t": 143.46,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.361,
+      -0.051
+     ],
+     "vmax": 0.851,
+     "connected": true
+    },
+    {
+     "t": 147.06,
+     "who": 1,
+     "name": "b2",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.188,
+      0.388
+     ],
+     "vmax": 0.455,
+     "connected": true
+    },
+    {
+     "t": 164.24,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.443,
+      0.646
+     ],
+     "vmax": 0.0,
+     "connected": false
+    },
+    {
+     "t": 175.24,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.017,
+      0.302
+     ],
+     "vmax": 0.067,
+     "connected": false
+    },
+    {
+     "t": 183.84,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.342,
+      -0.076
+     ],
+     "vmax": 0.407,
+     "connected": true
+    },
+    {
+     "t": 188.14,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.751,
+      0.082
+     ],
+     "vmax": 0.175,
+     "connected": false
+    },
+    {
+     "t": 191.42,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.131,
+      0.243
+     ],
+     "vmax": 0.214,
+     "connected": false
+    },
+    {
+     "t": 220.18,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.854,
+      0.215
+     ],
+     "vmax": 0.657,
+     "connected": true
+    },
+    {
+     "t": 244.84,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.324,
+      0.779
+     ],
+     "vmax": 0.475,
+     "connected": true
+    },
+    {
+     "t": 248.18,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      0.754,
+      0.745
+     ],
+     "vmax": 0.265,
+     "connected": false
+    },
+    {
+     "t": 255.74,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.115,
+      0.808
+     ],
+     "vmax": 0.374,
+     "connected": true
+    },
+    {
+     "t": 284.1,
      "who": 6,
      "name": "y2",
      "team": "yellow",
-     "foot": "left",
-     "kind": "clearance",
+     "foot": "right",
+     "kind": "forward",
      "mate": null,
      "b0": [
-      -1.444,
-      0.651
+      -0.236,
+      0.567
      ],
-     "vmax": 0.564,
-     "connected": true
+     "vmax": 0.044,
+     "connected": false
     },
     {
-     "t": 359.0,
-     "who": 3,
-     "name": "b4",
+     "t": 300.68,
+     "who": 4,
+     "name": "b5",
      "team": "blue",
-     "foot": "left",
+     "foot": "right",
      "kind": "shot",
      "mate": null,
      "b0": [
-      -2.158,
-      -0.073
+      -0.234,
+      0.481
      ],
-     "vmax": 0.101,
+     "vmax": 0.0,
+     "connected": false
+    },
+    {
+     "t": 307.66,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.286,
+      0.803
+     ],
+     "vmax": 0.779,
+     "connected": true
+    },
+    {
+     "t": 327.22,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.299,
+      1.363
+     ],
+     "vmax": 0.434,
+     "connected": true
+    },
+    {
+     "t": 337.38,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "left",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.591,
+      1.48
+     ],
+     "vmax": 0.257,
      "connected": false
     }
    ],
-   "throw_ins": 0,
+   "throw_ins": 4,
    "goal_kicks": 0,
    "corners": 0,
    "pickups": 0,
    "placements": 0,
    "events": [
     {
-     "t": 1.52,
+     "t": 1.02,
      "half": 1,
      "clock": 0.0,
      "kind": "kick-off",
@@ -2890,31 +2863,151 @@
      "text": "kick-off blue"
     },
     {
-     "t": 50.34,
+     "t": 15.76,
      "half": 1,
-     "clock": 48.8,
+     "clock": 14.7,
      "kind": "dropped ball",
      "team": null,
      "text": "dropped ball",
      "pos": [
-      -0.0,
-      0.03
+      0.58,
+      -0.27
      ]
     },
     {
-     "t": 104.06,
+     "t": 31.2,
      "half": 1,
-     "clock": 102.5,
+     "clock": 30.2,
      "kind": "dropped ball",
      "team": null,
      "text": "dropped ball",
      "pos": [
-      0.5,
-      0.93
+      0.49,
+      0.0
      ]
     },
     {
-     "t": 181.52,
+     "t": 61.66,
+     "half": 1,
+     "clock": 60.6,
+     "kind": "whistle",
+     "team": null,
+     "text": "ball out over the touch line"
+    },
+    {
+     "t": 62.48,
+     "half": 1,
+     "clock": 61.5,
+     "kind": "throw-in",
+     "team": "blue",
+     "text": "throw-in blue",
+     "pos": [
+      -0.43,
+      1.48
+     ]
+    },
+    {
+     "t": 63.04,
+     "half": 1,
+     "clock": 62.0,
+     "kind": "whistle",
+     "team": null,
+     "text": "ball out over the touch line"
+    },
+    {
+     "t": 63.84,
+     "half": 1,
+     "clock": 62.8,
+     "kind": "throw-in",
+     "team": "blue",
+     "text": "throw-in blue",
+     "pos": [
+      -0.42,
+      1.48
+     ]
+    },
+    {
+     "t": 67.56,
+     "half": 1,
+     "clock": 66.5,
+     "kind": "whistle",
+     "team": null,
+     "text": "ball out over the touch line"
+    },
+    {
+     "t": 68.38,
+     "half": 1,
+     "clock": 67.4,
+     "kind": "throw-in",
+     "team": "yellow",
+     "text": "throw-in yellow",
+     "pos": [
+      -0.31,
+      1.48
+     ]
+    },
+    {
+     "t": 82.6,
+     "half": 1,
+     "clock": 81.6,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.77,
+      0.39
+     ]
+    },
+    {
+     "t": 121.94,
+     "half": 1,
+     "clock": 120.9,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.18,
+      -0.16
+     ]
+    },
+    {
+     "t": 134.96,
+     "half": 1,
+     "clock": 133.9,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.15,
+      -0.15
+     ]
+    },
+    {
+     "t": 159.44,
+     "half": 1,
+     "clock": 158.4,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.44,
+      0.65
+     ]
+    },
+    {
+     "t": 178.18,
+     "half": 1,
+     "clock": 177.2,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.01,
+      0.29
+     ]
+    },
+    {
+     "t": 181.02,
      "half": 1,
      "clock": 180.0,
      "kind": "whistle",
@@ -2922,7 +3015,7 @@
      "text": "end of half 1"
     },
     {
-     "t": 181.52,
+     "t": 181.02,
      "half": 2,
      "clock": 0.0,
      "kind": "half-time",
@@ -2930,7 +3023,7 @@
      "text": "half-time: teams change ends"
     },
     {
-     "t": 183.04,
+     "t": 182.04,
      "half": 2,
      "clock": 0.0,
      "kind": "kick-off",
@@ -2938,7 +3031,99 @@
      "text": "kick-off yellow"
     },
     {
-     "t": 363.04,
+     "t": 201.68,
+     "half": 2,
+     "clock": 19.6,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.24,
+      0.32
+     ]
+    },
+    {
+     "t": 214.36,
+     "half": 2,
+     "clock": 32.3,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.85,
+      0.21
+     ]
+    },
+    {
+     "t": 236.32,
+     "half": 2,
+     "clock": 54.3,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.24,
+      0.77
+     ]
+    },
+    {
+     "t": 267.6,
+     "half": 2,
+     "clock": 85.6,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.46,
+      0.89
+     ]
+    },
+    {
+     "t": 293.88,
+     "half": 2,
+     "clock": 111.8,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.22,
+      0.56
+     ]
+    },
+    {
+     "t": 328.66,
+     "half": 2,
+     "clock": 146.6,
+     "kind": "whistle",
+     "team": null,
+     "text": "ball out over the touch line"
+    },
+    {
+     "t": 329.48,
+     "half": 2,
+     "clock": 147.4,
+     "kind": "throw-in",
+     "team": "blue",
+     "text": "throw-in blue",
+     "pos": [
+      0.59,
+      1.48
+     ]
+    },
+    {
+     "t": 352.12,
+     "half": 2,
+     "clock": 170.1,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.27,
+      1.17
+     ]
+    },
+    {
+     "t": 362.04,
      "half": 2,
      "clock": 180.0,
      "kind": "whistle",
@@ -2946,7 +3131,7 @@
      "text": "end of half 2"
     },
     {
-     "t": 363.04,
+     "t": 362.04,
      "half": 2,
      "clock": 180.0,
      "kind": "full-time",
@@ -2954,10 +3139,10 @@
      "text": "full time 0:0"
     }
    ],
-   "sim_s": 363.1,
+   "sim_s": 362.1,
    "playing_s": 360.0,
-   "wall_s": 935.7,
-   "rtf": 0.388,
+   "wall_s": 717.1,
+   "rtf": 0.505,
    "bodies": {
     "b1": {
      "lag": 5,
@@ -3036,6 +3221,63 @@
      "kp": 220.2,
      "vin": 7.09
     }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 16.44,
+      "moving": 0.503,
+      "fast": 0.14
+     },
+     "b2": {
+      "dist_m": 42.42,
+      "moving": 0.841,
+      "fast": 0.442
+     },
+     "b3": {
+      "dist_m": 42.87,
+      "moving": 0.832,
+      "fast": 0.477
+     },
+     "b4": {
+      "dist_m": 44.84,
+      "moving": 0.847,
+      "fast": 0.497
+     },
+     "b5": {
+      "dist_m": 48.75,
+      "moving": 0.848,
+      "fast": 0.504
+     },
+     "y1": {
+      "dist_m": 17.99,
+      "moving": 0.535,
+      "fast": 0.175
+     },
+     "y2": {
+      "dist_m": 44.67,
+      "moving": 0.856,
+      "fast": 0.506
+     },
+     "y3": {
+      "dist_m": 43.65,
+      "moving": 0.863,
+      "fast": 0.504
+     },
+     "y4": {
+      "dist_m": 46.49,
+      "moving": 0.83,
+      "fast": 0.502
+     },
+     "y5": {
+      "dist_m": 46.8,
+      "moving": 0.829,
+      "fast": 0.466
+     }
+    },
+    "duels": 30,
+    "bumps": 193,
+    "play_s": 360.0
    }
   },
   {
@@ -3047,217 +3289,217 @@
    "teams": {
     "blue": {
      "score": 0,
-     "kicks": 21,
-     "connected": 8,
-     "shots": 3,
-     "passes": 1,
+     "kicks": 10,
+     "connected": 3,
+     "shots": 7,
+     "passes": 2,
      "passes_completed": 0,
-     "clearances": 13,
-     "falls": 3,
-     "touches": 56
+     "clearances": 0,
+     "falls": 4,
+     "touches": 63
     },
     "yellow": {
      "score": 1,
-     "kicks": 24,
-     "connected": 13,
-     "shots": 17,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 1,
-     "falls": 0,
-     "touches": 60
+     "kicks": 19,
+     "connected": 7,
+     "shots": 12,
+     "passes": 2,
+     "passes_completed": 1,
+     "clearances": 2,
+     "falls": 3,
+     "touches": 62
     }
    },
    "players": {
     "b1": {
      "team": "blue",
      "role": "GK",
-     "falls": 1,
+     "falls": 0,
      "unsticks": 0,
-     "kicks": 3,
-     "connected": 1,
+     "kicks": 0,
+     "connected": 0,
      "shots": 0,
-     "passes": 1,
+     "passes": 0,
      "passes_completed": 0,
-     "clearances": 2,
+     "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 9,
+     "touches": 11,
      "pickups": 0,
-     "frames_seen": 2238,
+     "frames_seen": 1642,
      "frames": 3600,
-     "ball_in_view": 0.622
+     "ball_in_view": 0.456
     },
     "b2": {
      "team": "blue",
      "role": "D1",
-     "falls": 0,
+     "falls": 1,
      "unsticks": 0,
-     "kicks": 6,
-     "connected": 3,
+     "kicks": 2,
+     "connected": 0,
      "shots": 0,
-     "passes": 0,
+     "passes": 2,
      "passes_completed": 0,
-     "clearances": 6,
+     "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 14,
+     "touches": 6,
      "pickups": 0,
-     "frames_seen": 648,
-     "frames": 1340,
-     "ball_in_view": 0.484
+     "frames_seen": 771,
+     "frames": 1385,
+     "ball_in_view": 0.557
     },
     "b3": {
      "team": "blue",
      "role": "D2",
      "falls": 1,
-     "unsticks": 0,
-     "kicks": 5,
-     "connected": 2,
+     "unsticks": 2,
+     "kicks": 0,
+     "connected": 0,
      "shots": 0,
      "passes": 0,
      "passes_completed": 0,
-     "clearances": 5,
+     "clearances": 0,
      "goals": 0,
-     "own_goals": 1,
-     "touches": 8,
+     "own_goals": 0,
+     "touches": 1,
      "pickups": 0,
-     "frames_seen": 205,
-     "frames": 400,
-     "ball_in_view": 0.512
+     "frames_seen": 633,
+     "frames": 1113,
+     "ball_in_view": 0.569
     },
     "b4": {
      "team": "blue",
      "role": "A1",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 7,
+     "falls": 1,
+     "unsticks": 2,
+     "kicks": 5,
      "connected": 2,
+     "shots": 4,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 32,
+     "pickups": 0,
+     "frames_seen": 978,
+     "frames": 2331,
+     "ball_in_view": 0.42
+    },
+    "b5": {
+     "team": "blue",
+     "role": "A2",
+     "falls": 1,
+     "unsticks": 2,
+     "kicks": 3,
+     "connected": 1,
      "shots": 3,
      "passes": 0,
      "passes_completed": 0,
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 21,
+     "touches": 13,
      "pickups": 0,
-     "frames_seen": 658,
-     "frames": 1405,
-     "ball_in_view": 0.468
-    },
-    "b5": {
-     "team": "blue",
-     "role": "A2",
-     "falls": 1,
-     "unsticks": 0,
-     "kicks": 0,
-     "connected": 0,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 4,
-     "pickups": 0,
-     "frames_seen": 225,
-     "frames": 455,
-     "ball_in_view": 0.495
+     "frames_seen": 876,
+     "frames": 1675,
+     "ball_in_view": 0.523
     },
     "y1": {
      "team": "yellow",
      "role": "GK",
      "falls": 0,
      "unsticks": 0,
-     "kicks": 0,
+     "kicks": 2,
      "connected": 0,
      "shots": 0,
-     "passes": 0,
+     "passes": 1,
      "passes_completed": 0,
-     "clearances": 0,
+     "clearances": 1,
      "goals": 0,
      "own_goals": 0,
-     "touches": 0,
+     "touches": 2,
      "pickups": 0,
-     "frames_seen": 873,
-     "frames": 3600,
-     "ball_in_view": 0.242
+     "frames_seen": 1493,
+     "frames": 3580,
+     "ball_in_view": 0.417
     },
     "y2": {
      "team": "yellow",
      "role": "D1",
-     "falls": 0,
+     "falls": 1,
      "unsticks": 0,
-     "kicks": 0,
-     "connected": 0,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
+     "kicks": 2,
+     "connected": 2,
+     "shots": 1,
+     "passes": 1,
+     "passes_completed": 1,
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 0,
+     "touches": 10,
      "pickups": 0,
-     "frames_seen": 0,
-     "frames": 0,
-     "ball_in_view": 0.0
+     "frames_seen": 543,
+     "frames": 1097,
+     "ball_in_view": 0.495
     },
     "y3": {
      "team": "yellow",
      "role": "D2",
-     "falls": 0,
+     "falls": 1,
      "unsticks": 0,
-     "kicks": 0,
-     "connected": 0,
-     "shots": 0,
+     "kicks": 5,
+     "connected": 1,
+     "shots": 3,
      "passes": 0,
      "passes_completed": 0,
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 0,
+     "touches": 11,
      "pickups": 0,
-     "frames_seen": 0,
-     "frames": 0,
-     "ball_in_view": 0.0
+     "frames_seen": 517,
+     "frames": 1138,
+     "ball_in_view": 0.454
     },
     "y4": {
      "team": "yellow",
      "role": "A1",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 21,
-     "connected": 11,
-     "shots": 15,
+     "falls": 1,
+     "unsticks": 1,
+     "kicks": 6,
+     "connected": 2,
+     "shots": 4,
      "passes": 0,
      "passes_completed": 0,
      "clearances": 1,
      "goals": 0,
      "own_goals": 0,
-     "touches": 52,
+     "touches": 13,
      "pickups": 0,
-     "frames_seen": 1498,
-     "frames": 3110,
-     "ball_in_view": 0.482
+     "frames_seen": 1323,
+     "frames": 2285,
+     "ball_in_view": 0.579
     },
     "y5": {
      "team": "yellow",
      "role": "A2",
      "falls": 0,
      "unsticks": 0,
-     "kicks": 3,
+     "kicks": 4,
      "connected": 2,
-     "shots": 2,
+     "shots": 4,
      "passes": 0,
      "passes_completed": 0,
      "clearances": 0,
-     "goals": 0,
+     "goals": 1,
      "own_goals": 0,
-     "touches": 8,
+     "touches": 26,
      "pickups": 0,
-     "frames_seen": 230,
-     "frames": 490,
-     "ball_in_view": 0.469
+     "frames_seen": 1248,
+     "frames": 1981,
+     "ball_in_view": 0.63
     },
     "ref": {
      "team": "ref",
@@ -3268,14 +3510,14 @@
    },
    "goals": [
     {
-     "t": 216.38,
-     "half": 2,
-     "clock": 33.3,
+     "t": 105.92,
+     "half": 1,
+     "clock": 104.9,
      "kind": "goal",
      "team": "yellow",
-     "text": "GOAL yellow (b3, own goal), 0:1",
-     "scorer": "b3",
-     "own_goal": true,
+     "text": "GOAL yellow (y5), 0:1",
+     "scorer": "y5",
+     "own_goal": false,
      "score": [
       0,
       1
@@ -3284,67 +3526,37 @@
    ],
    "kicks": [
     {
-     "t": 4.44,
+     "t": 2.6,
      "who": 8,
      "name": "y4",
      "team": "yellow",
-     "foot": "left",
+     "foot": "right",
      "kind": "forward",
      "mate": null,
      "b0": [
-      -0.43,
-      0.017
+      -0.218,
+      0.006
      ],
-     "vmax": 0.98,
+     "vmax": 0.786,
      "connected": true
     },
     {
-     "t": 11.44,
+     "t": 4.98,
      "who": 3,
      "name": "b4",
      "team": "blue",
-     "foot": "left",
+     "foot": "right",
      "kind": "shot",
      "mate": null,
      "b0": [
-      0.415,
-      0.399
+      -0.032,
+      -0.029
      ],
-     "vmax": 0.023,
-     "connected": false
+     "vmax": 0.435,
+     "connected": true
     },
     {
-     "t": 25.88,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.334,
-      0.648
-     ],
-     "vmax": 0.097,
-     "connected": false
-    },
-    {
-     "t": 26.94,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.374,
-      0.644
-     ],
-     "vmax": 0.15,
-     "connected": false
-    },
-    {
-     "t": 41.38,
+     "t": 11.2,
      "who": 3,
      "name": "b4",
      "team": "blue",
@@ -3352,44 +3564,14 @@
      "kind": "forward",
      "mate": null,
      "b0": [
-      -0.089,
-      -0.203
+      -0.221,
+      -0.344
      ],
-     "vmax": 0.0,
+     "vmax": 0.115,
      "connected": false
     },
     {
-     "t": 43.84,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.051,
-      -0.111
-     ],
-     "vmax": 0.229,
-     "connected": false
-    },
-    {
-     "t": 50.78,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.676,
-      0.384
-     ],
-     "vmax": 0.412,
-     "connected": true
-    },
-    {
-     "t": 55.06,
+     "t": 19.44,
      "who": 8,
      "name": "y4",
      "team": "yellow",
@@ -3397,404 +3579,59 @@
      "kind": "shot",
      "mate": null,
      "b0": [
-      -1.299,
-      0.463
-     ],
-     "vmax": 0.241,
-     "connected": false
-    },
-    {
-     "t": 71.54,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.124,
-      -0.229
-     ],
-     "vmax": 0.102,
-     "connected": false
-    },
-    {
-     "t": 78.78,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.128,
-      -0.289
-     ],
-     "vmax": 0.186,
-     "connected": false
-    },
-    {
-     "t": 82.08,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.314,
-      -0.258
-     ],
-     "vmax": 0.151,
-     "connected": false
-    },
-    {
-     "t": 89.92,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.422,
-      -0.287
-     ],
-     "vmax": 0.757,
-     "connected": true
-    },
-    {
-     "t": 94.94,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -0.898,
-      -0.282
-     ],
-     "vmax": 0.129,
-     "connected": false
-    },
-    {
-     "t": 100.58,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -0.655,
-      -0.139
-     ],
-     "vmax": 0.454,
-     "connected": true
-    },
-    {
-     "t": 106.22,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.399,
-      0.101
-     ],
-     "vmax": 0.511,
-     "connected": true
-    },
-    {
-     "t": 114.8,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.051,
-      0.562
-     ],
-     "vmax": 0.925,
-     "connected": true
-    },
-    {
-     "t": 132.28,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.145,
-      1.069
-     ],
-     "vmax": 0.365,
-     "connected": true
-    },
-    {
-     "t": 159.9,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.563,
-      1.27
+      -0.393,
+      -0.382
      ],
      "vmax": 0.208,
      "connected": false
     },
     {
-     "t": 163.74,
+     "t": 23.74,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.378,
+      -0.399
+     ],
+     "vmax": 0.73,
+     "connected": true
+    },
+    {
+     "t": 41.98,
+     "who": 6,
+     "name": "y2",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.416,
+      -0.053
+     ],
+     "vmax": 1.186,
+     "connected": true
+    },
+    {
+     "t": 74.0,
      "who": 1,
      "name": "b2",
      "team": "blue",
      "foot": "right",
-     "kind": "clearance",
-     "mate": null,
+     "kind": "pass",
+     "mate": 4,
      "b0": [
-      -1.565,
-      1.107
+      -1.353,
+      0.956
      ],
-     "vmax": 0.095,
+     "vmax": 0.25,
      "connected": false
     },
     {
-     "t": 166.84,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.379,
-      0.782
-     ],
-     "vmax": 0.29,
-     "connected": false
-    },
-    {
-     "t": 174.0,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.272,
-      0.501
-     ],
-     "vmax": 0.062,
-     "connected": false
-    },
-    {
-     "t": 188.4,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.21,
-      0.068
-     ],
-     "vmax": 0.41,
-     "connected": true
-    },
-    {
-     "t": 193.52,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.863,
-      0.401
-     ],
-     "vmax": 0.364,
-     "connected": true
-    },
-    {
-     "t": 197.74,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.089,
-      0.555
-     ],
-     "vmax": 0.333,
-     "connected": true
-    },
-    {
-     "t": 197.8,
-     "who": 2,
-     "name": "b3",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.088,
-      0.555
-     ],
-     "vmax": 0.333,
-     "connected": true
-    },
-    {
-     "t": 201.06,
-     "who": 2,
-     "name": "b3",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      0.776,
-      0.655
-     ],
-     "vmax": 0.161,
-     "connected": false
-    },
-    {
-     "t": 208.84,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.212,
-      0.509
-     ],
-     "vmax": 0.142,
-     "connected": false
-    },
-    {
-     "t": 212.56,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.367,
-      0.505
-     ],
-     "vmax": 0.15,
-     "connected": false
-    },
-    {
-     "t": 236.86,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.056,
-      0.386
-     ],
-     "vmax": 0.424,
-     "connected": true
-    },
-    {
-     "t": 249.34,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.263,
-      0.645
-     ],
-     "vmax": 0.483,
-     "connected": true
-    },
-    {
-     "t": 254.24,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.852,
-      0.587
-     ],
-     "vmax": 0.183,
-     "connected": false
-    },
-    {
-     "t": 257.98,
-     "who": 8,
-     "name": "y4",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -0.939,
-      0.547
-     ],
-     "vmax": 0.974,
-     "connected": true
-    },
-    {
-     "t": 258.94,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.569,
-      -0.045
-     ],
-     "vmax": 0.717,
-     "connected": true
-    },
-    {
-     "t": 268.72,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.07,
-      -0.794
-     ],
-     "vmax": 0.006,
-     "connected": false
-    },
-    {
-     "t": 287.1,
+     "t": 99.6,
      "who": 9,
      "name": "y5",
      "team": "yellow",
@@ -3802,44 +3639,120 @@
      "kind": "shot",
      "mate": null,
      "b0": [
-      0.694,
-      -0.46
+      -1.638,
+      1.145
      ],
-     "vmax": 0.329,
-     "connected": true
+     "vmax": 0.0,
+     "connected": false
     },
     {
-     "t": 292.42,
+     "t": 105.5,
      "who": 9,
      "name": "y5",
      "team": "yellow",
-     "foot": "right",
+     "foot": "left",
      "kind": "shot",
      "mate": null,
      "b0": [
-      1.044,
-      -0.13
+      -2.236,
+      0.439
      ],
-     "vmax": 0.356,
+     "vmax": 0.308,
      "connected": true
     },
     {
-     "t": 296.88,
-     "who": 0,
-     "name": "b1",
-     "team": "blue",
-     "foot": "right",
+     "t": 136.74,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
      "kind": "clearance",
      "mate": null,
      "b0": [
-      1.129,
-      0.051
+      0.966,
+      -0.45
+     ],
+     "vmax": 0.262,
+     "connected": false
+    },
+    {
+     "t": 166.52,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.362,
+      0.017
      ],
      "vmax": 0.184,
      "connected": false
     },
     {
-     "t": 317.72,
+     "t": 172.74,
+     "who": 5,
+     "name": "y1",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "pass",
+     "mate": 9,
+     "b0": [
+      1.41,
+      0.247
+     ],
+     "vmax": 0.083,
+     "connected": false,
+     "result": "intercepted"
+    },
+    {
+     "t": 174.78,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.431,
+      0.272
+     ],
+     "vmax": 0.394,
+     "connected": true
+    },
+    {
+     "t": 176.08,
+     "who": 5,
+     "name": "y1",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.468,
+      0.072
+     ],
+     "vmax": 0.11,
+     "connected": false
+    },
+    {
+     "t": 181.06,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.201,
+      0.056
+     ],
+     "vmax": 0.177,
+     "connected": false
+    },
+    {
+     "t": 200.68,
      "who": 8,
      "name": "y4",
      "team": "yellow",
@@ -3847,14 +3760,44 @@
      "kind": "shot",
      "mate": null,
      "b0": [
-      2.076,
-      1.442
+      -0.112,
+      0.108
      ],
-     "vmax": 0.392,
-     "connected": true
+     "vmax": 0.042,
+     "connected": false
     },
     {
-     "t": 332.68,
+     "t": 200.74,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.11,
+      0.109
+     ],
+     "vmax": 0.036,
+     "connected": false
+    },
+    {
+     "t": 204.3,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.109,
+      0.136
+     ],
+     "vmax": 0.001,
+     "connected": false
+    },
+    {
+     "t": 204.42,
      "who": 8,
      "name": "y4",
      "team": "yellow",
@@ -3862,112 +3805,173 @@
      "kind": "shot",
      "mate": null,
      "b0": [
-      2.138,
-      1.293
+      -0.109,
+      0.136
      ],
-     "vmax": 0.368,
+     "vmax": 0.001,
+     "connected": false
+    },
+    {
+     "t": 208.36,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.685,
+      0.519
+     ],
+     "vmax": 0.406,
      "connected": true
     },
     {
-     "t": 336.16,
-     "who": 8,
-     "name": "y4",
+     "t": 249.3,
+     "who": 6,
+     "name": "y2",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "pass",
+     "mate": 8,
+     "b0": [
+      -0.712,
+      -0.381
+     ],
+     "vmax": 0.307,
+     "connected": true,
+     "result": "completed"
+    },
+    {
+     "t": 258.82,
+     "who": 7,
+     "name": "y3",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.231,
+      0.148
+     ],
+     "vmax": 0.216,
+     "connected": false
+    },
+    {
+     "t": 262.54,
+     "who": 7,
+     "name": "y3",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.025,
+      0.258
+     ],
+     "vmax": 0.231,
+     "connected": false
+    },
+    {
+     "t": 266.18,
+     "who": 7,
+     "name": "y3",
      "team": "yellow",
      "foot": "left",
      "kind": "shot",
      "mate": null,
      "b0": [
-      2.303,
-      0.736
+      0.426,
+      0.148
      ],
-     "vmax": 0.144,
+     "vmax": 0.063,
      "connected": false
     },
     {
-     "t": 340.84,
-     "who": 2,
-     "name": "b3",
-     "team": "blue",
+     "t": 297.94,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
      "foot": "left",
-     "kind": "clearance",
+     "kind": "shot",
      "mate": null,
      "b0": [
-      1.599,
-      0.696
+      1.381,
+      -0.346
      ],
-     "vmax": 0.366,
+     "vmax": 0.293,
+     "connected": false
+    },
+    {
+     "t": 300.68,
+     "who": 9,
+     "name": "y5",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.407,
+      -0.34
+     ],
+     "vmax": 0.685,
      "connected": true
     },
     {
-     "t": 348.78,
-     "who": 2,
-     "name": "b3",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.126,
-      0.549
-     ],
-     "vmax": 0.172,
-     "connected": false
-    },
-    {
-     "t": 351.42,
-     "who": 2,
-     "name": "b3",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      0.992,
-      0.38
-     ],
-     "vmax": 0.125,
-     "connected": false
-    },
-    {
-     "t": 361.24,
-     "who": 0,
-     "name": "b1",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.696,
-      -0.028
-     ],
-     "vmax": 0.217,
-     "connected": false
-    },
-    {
-     "t": 366.3,
-     "who": 0,
-     "name": "b1",
+     "t": 316.68,
+     "who": 1,
+     "name": "b2",
      "team": "blue",
      "foot": "left",
      "kind": "pass",
      "mate": 3,
      "b0": [
-      1.476,
-      -0.07
+      1.435,
+      -0.547
      ],
-     "vmax": 0.417,
-     "connected": true,
+     "vmax": 0.0,
+     "connected": false,
      "result": "intercepted"
+    },
+    {
+     "t": 370.94,
+     "who": 7,
+     "name": "y3",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.271,
+      0.048
+     ],
+     "vmax": 0.105,
+     "connected": false
+    },
+    {
+     "t": 374.6,
+     "who": 7,
+     "name": "y3",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.302,
+      0.036
+     ],
+     "vmax": 0.458,
+     "connected": true
     }
    ],
-   "throw_ins": 2,
-   "goal_kicks": 2,
+   "throw_ins": 0,
+   "goal_kicks": 0,
    "corners": 0,
    "pickups": 0,
    "placements": 0,
    "events": [
     {
-     "t": 1.52,
+     "t": 1.02,
      "half": 1,
      "clock": 0.0,
      "kind": "kick-off",
@@ -3975,27 +3979,85 @@
      "text": "kick-off yellow"
     },
     {
-     "t": 124.0,
+     "t": 34.56,
      "half": 1,
-     "clock": 122.5,
-     "kind": "whistle",
+     "clock": 33.5,
+     "kind": "dropped ball",
      "team": null,
-     "text": "ball out over the goal line"
-    },
-    {
-     "t": 124.82,
-     "half": 1,
-     "clock": 123.3,
-     "kind": "goal kick",
-     "team": "blue",
-     "text": "goal kick blue",
+     "text": "dropped ball",
      "pos": [
-      -1.75,
-      0.75
+      -0.39,
+      -0.26
      ]
     },
     {
-     "t": 181.52,
+     "t": 65.8,
+     "half": 1,
+     "clock": 64.8,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -1.95,
+      0.62
+     ]
+    },
+    {
+     "t": 85.42,
+     "half": 1,
+     "clock": 84.4,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -1.23,
+      1.07
+     ]
+    },
+    {
+     "t": 105.92,
+     "half": 1,
+     "clock": 104.9,
+     "kind": "goal",
+     "team": "yellow",
+     "text": "GOAL yellow (y5), 0:1",
+     "scorer": "y5",
+     "own_goal": false,
+     "score": [
+      0,
+      1
+     ]
+    },
+    {
+     "t": 108.94,
+     "half": 1,
+     "clock": 104.9,
+     "kind": "ready",
+     "team": "blue",
+     "text": "players to kick-off positions"
+    },
+    {
+     "t": 121.46,
+     "half": 1,
+     "clock": 104.9,
+     "kind": "kick-off",
+     "team": "blue",
+     "text": "kick-off blue"
+    },
+    {
+     "t": 147.66,
+     "half": 1,
+     "clock": 131.1,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.97,
+      -0.48
+     ]
+    },
+    {
+     "t": 196.56,
      "half": 1,
      "clock": 180.0,
      "kind": "whistle",
@@ -4003,7 +4065,7 @@
      "text": "end of half 1"
     },
     {
-     "t": 181.52,
+     "t": 196.56,
      "half": 2,
      "clock": 0.0,
      "kind": "half-time",
@@ -4011,7 +4073,7 @@
      "text": "half-time: teams change ends"
     },
     {
-     "t": 183.04,
+     "t": 197.58,
      "half": 2,
      "clock": 0.0,
      "kind": "kick-off",
@@ -4019,97 +4081,91 @@
      "text": "kick-off blue"
     },
     {
-     "t": 216.38,
+     "t": 225.58,
      "half": 2,
-     "clock": 33.3,
-     "kind": "goal",
-     "team": "yellow",
-     "text": "GOAL yellow (b3, own goal), 0:1",
-     "scorer": "b3",
-     "own_goal": true,
-     "score": [
-      0,
-      1
-     ]
-    },
-    {
-     "t": 220.4,
-     "half": 2,
-     "clock": 33.3,
-     "kind": "ready",
-     "team": "blue",
-     "text": "players to kick-off positions"
-    },
-    {
-     "t": 228.78,
-     "half": 2,
-     "clock": 33.3,
-     "kind": "kick-off",
-     "team": "blue",
-     "text": "kick-off blue"
-    },
-    {
-     "t": 306.32,
-     "half": 2,
-     "clock": 110.9,
-     "kind": "whistle",
+     "clock": 28.0,
+     "kind": "dropped ball",
      "team": null,
-     "text": "ball out over the touch line"
-    },
-    {
-     "t": 307.12,
-     "half": 2,
-     "clock": 111.7,
-     "kind": "throw-in",
-     "team": "yellow",
-     "text": "throw-in yellow",
+     "text": "dropped ball",
      "pos": [
-      1.92,
-      1.48
+      -1.16,
+      0.86
      ]
     },
     {
-     "t": 318.04,
+     "t": 238.6,
      "half": 2,
-     "clock": 122.6,
-     "kind": "whistle",
+     "clock": 41.0,
+     "kind": "dropped ball",
      "team": null,
-     "text": "ball out over the touch line"
-    },
-    {
-     "t": 318.84,
-     "half": 2,
-     "clock": 123.4,
-     "kind": "throw-in",
-     "team": "yellow",
-     "text": "throw-in yellow",
+     "text": "dropped ball",
      "pos": [
-      2.12,
-      1.48
+      -1.16,
+      0.86
      ]
     },
     {
-     "t": 336.12,
+     "t": 276.66,
      "half": 2,
-     "clock": 140.7,
-     "kind": "whistle",
+     "clock": 79.1,
+     "kind": "dropped ball",
      "team": null,
-     "text": "ball out over the goal line"
-    },
-    {
-     "t": 336.92,
-     "half": 2,
-     "clock": 141.5,
-     "kind": "goal kick",
-     "team": "blue",
-     "text": "goal kick blue",
+     "text": "dropped ball",
      "pos": [
-      1.75,
-      0.75
+      0.34,
+      0.09
      ]
     },
     {
-     "t": 375.44,
+     "t": 289.68,
+     "half": 2,
+     "clock": 92.1,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.34,
+      0.09
+     ]
+    },
+    {
+     "t": 311.46,
+     "half": 2,
+     "clock": 113.9,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.43,
+      -0.55
+     ]
+    },
+    {
+     "t": 350.7,
+     "half": 2,
+     "clock": 153.1,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.23,
+      0.21
+     ]
+    },
+    {
+     "t": 363.72,
+     "half": 2,
+     "clock": 166.1,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.21,
+      0.11
+     ]
+    },
+    {
+     "t": 377.58,
      "half": 2,
      "clock": 180.0,
      "kind": "whistle",
@@ -4117,7 +4173,7 @@
      "text": "end of half 2"
     },
     {
-     "t": 375.44,
+     "t": 377.58,
      "half": 2,
      "clock": 180.0,
      "kind": "full-time",
@@ -4125,10 +4181,10 @@
      "text": "full time 0:1"
     }
    ],
-   "sim_s": 375.5,
+   "sim_s": 377.6,
    "playing_s": 360.0,
-   "wall_s": 965.8,
-   "rtf": 0.389,
+   "wall_s": 652.6,
+   "rtf": 0.579,
    "bodies": {
     "b1": {
      "lag": 5,
@@ -4207,61 +4263,194 @@
      "kp": 199.9,
      "vin": 7.54
     }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 21.97,
+      "moving": 0.614,
+      "fast": 0.22
+     },
+     "b2": {
+      "dist_m": 46.19,
+      "moving": 0.826,
+      "fast": 0.506
+     },
+     "b3": {
+      "dist_m": 46.63,
+      "moving": 0.846,
+      "fast": 0.507
+     },
+     "b4": {
+      "dist_m": 44.01,
+      "moving": 0.821,
+      "fast": 0.463
+     },
+     "b5": {
+      "dist_m": 47.97,
+      "moving": 0.856,
+      "fast": 0.537
+     },
+     "y1": {
+      "dist_m": 20.23,
+      "moving": 0.598,
+      "fast": 0.183
+     },
+     "y2": {
+      "dist_m": 42.94,
+      "moving": 0.829,
+      "fast": 0.473
+     },
+     "y3": {
+      "dist_m": 45.61,
+      "moving": 0.852,
+      "fast": 0.505
+     },
+     "y4": {
+      "dist_m": 47.41,
+      "moving": 0.825,
+      "fast": 0.502
+     },
+     "y5": {
+      "dist_m": 47.36,
+      "moving": 0.783,
+      "fast": 0.485
+     }
+    },
+    "duels": 33,
+    "bumps": 170,
+    "play_s": 360.0
    }
   },
   {
    "seed": 4,
    "score": [
     0,
-    2
+    0
    ],
    "teams": {
     "blue": {
      "score": 0,
-     "kicks": 19,
-     "connected": 9,
-     "shots": 5,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 7,
-     "falls": 3,
-     "touches": 62
+     "kicks": 22,
+     "connected": 10,
+     "shots": 7,
+     "passes": 6,
+     "passes_completed": 1,
+     "clearances": 5,
+     "falls": 2,
+     "touches": 92
     },
     "yellow": {
-     "score": 2,
-     "kicks": 26,
-     "connected": 13,
-     "shots": 12,
-     "passes": 5,
-     "passes_completed": 0,
-     "clearances": 0,
-     "falls": 1,
-     "touches": 57
+     "score": 0,
+     "kicks": 18,
+     "connected": 10,
+     "shots": 8,
+     "passes": 3,
+     "passes_completed": 3,
+     "clearances": 4,
+     "falls": 3,
+     "touches": 54
     }
    },
    "players": {
     "b1": {
      "team": "blue",
      "role": "GK",
-     "falls": 1,
-     "unsticks": 2,
-     "kicks": 6,
-     "connected": 1,
+     "falls": 0,
+     "unsticks": 0,
+     "kicks": 0,
+     "connected": 0,
      "shots": 0,
      "passes": 0,
      "passes_completed": 0,
-     "clearances": 6,
+     "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 20,
+     "touches": 3,
      "pickups": 0,
-     "frames_seen": 1559,
+     "frames_seen": 1443,
      "frames": 3600,
-     "ball_in_view": 0.433
+     "ball_in_view": 0.401
     },
     "b2": {
      "team": "blue",
      "role": "D1",
+     "falls": 0,
+     "unsticks": 0,
+     "kicks": 1,
+     "connected": 0,
+     "shots": 0,
+     "passes": 1,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 26,
+     "pickups": 0,
+     "frames_seen": 727,
+     "frames": 1224,
+     "ball_in_view": 0.594
+    },
+    "b3": {
+     "team": "blue",
+     "role": "D2",
+     "falls": 0,
+     "unsticks": 0,
+     "kicks": 10,
+     "connected": 5,
+     "shots": 2,
+     "passes": 2,
+     "passes_completed": 1,
+     "clearances": 5,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 39,
+     "pickups": 0,
+     "frames_seen": 1140,
+     "frames": 1695,
+     "ball_in_view": 0.673
+    },
+    "b4": {
+     "team": "blue",
+     "role": "A1",
+     "falls": 1,
+     "unsticks": 1,
+     "kicks": 7,
+     "connected": 5,
+     "shots": 2,
+     "passes": 3,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 18,
+     "pickups": 0,
+     "frames_seen": 1051,
+     "frames": 1835,
+     "ball_in_view": 0.573
+    },
+    "b5": {
+     "team": "blue",
+     "role": "A2",
+     "falls": 1,
+     "unsticks": 3,
+     "kicks": 4,
+     "connected": 0,
+     "shots": 3,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 6,
+     "pickups": 0,
+     "frames_seen": 980,
+     "frames": 1670,
+     "ball_in_view": 0.587
+    },
+    "y1": {
+     "team": "yellow",
+     "role": "GK",
      "falls": 0,
      "unsticks": 0,
      "kicks": 1,
@@ -4272,93 +4461,74 @@
      "clearances": 1,
      "goals": 0,
      "own_goals": 0,
-     "touches": 20,
+     "touches": 6,
      "pickups": 0,
-     "frames_seen": 294,
-     "frames": 635,
-     "ball_in_view": 0.463
-    },
-    "b3": {
-     "team": "blue",
-     "role": "D2",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 0,
-     "connected": 0,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 0,
-     "pickups": 0,
-     "frames_seen": 269,
-     "frames": 523,
-     "ball_in_view": 0.514
-    },
-    "b4": {
-     "team": "blue",
-     "role": "A1",
-     "falls": 1,
-     "unsticks": 0,
-     "kicks": 12,
-     "connected": 7,
-     "shots": 5,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 21,
-     "pickups": 0,
-     "frames_seen": 687,
-     "frames": 1412,
-     "ball_in_view": 0.487
-    },
-    "b5": {
-     "team": "blue",
-     "role": "A2",
-     "falls": 1,
-     "unsticks": 0,
-     "kicks": 0,
-     "connected": 0,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 1,
-     "pickups": 0,
-     "frames_seen": 564,
-     "frames": 1030,
-     "ball_in_view": 0.548
-    },
-    "y1": {
-     "team": "yellow",
-     "role": "GK",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 0,
-     "connected": 0,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 3,
-     "pickups": 0,
-     "frames_seen": 1513,
-     "frames": 3600,
-     "ball_in_view": 0.42
+     "frames_seen": 1220,
+     "frames": 3590,
+     "ball_in_view": 0.34
     },
     "y2": {
      "team": "yellow",
      "role": "D1",
+     "falls": 1,
+     "unsticks": 0,
+     "kicks": 3,
+     "connected": 1,
+     "shots": 0,
+     "passes": 2,
+     "passes_completed": 2,
+     "clearances": 1,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 10,
+     "pickups": 0,
+     "frames_seen": 561,
+     "frames": 1129,
+     "ball_in_view": 0.497
+    },
+    "y3": {
+     "team": "yellow",
+     "role": "D2",
+     "falls": 1,
+     "unsticks": 0,
+     "kicks": 3,
+     "connected": 1,
+     "shots": 0,
+     "passes": 1,
+     "passes_completed": 1,
+     "clearances": 2,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 11,
+     "pickups": 0,
+     "frames_seen": 784,
+     "frames": 1305,
+     "ball_in_view": 0.601
+    },
+    "y4": {
+     "team": "yellow",
+     "role": "A1",
      "falls": 0,
      "unsticks": 0,
+     "kicks": 11,
+     "connected": 7,
+     "shots": 8,
+     "passes": 0,
+     "passes_completed": 0,
+     "clearances": 0,
+     "goals": 0,
+     "own_goals": 0,
+     "touches": 19,
+     "pickups": 0,
+     "frames_seen": 1228,
+     "frames": 2212,
+     "ball_in_view": 0.555
+    },
+    "y5": {
+     "team": "yellow",
+     "role": "A2",
+     "falls": 1,
+     "unsticks": 3,
      "kicks": 0,
      "connected": 0,
      "shots": 0,
@@ -4367,68 +4537,11 @@
      "clearances": 0,
      "goals": 0,
      "own_goals": 0,
-     "touches": 0,
+     "touches": 8,
      "pickups": 0,
-     "frames_seen": 0,
-     "frames": 0,
-     "ball_in_view": 0.0
-    },
-    "y3": {
-     "team": "yellow",
-     "role": "D2",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 2,
-     "connected": 1,
-     "shots": 0,
-     "passes": 0,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 2,
-     "pickups": 0,
-     "frames_seen": 49,
-     "frames": 85,
-     "ball_in_view": 0.576
-    },
-    "y4": {
-     "team": "yellow",
-     "role": "A1",
-     "falls": 1,
-     "unsticks": 1,
-     "kicks": 1,
-     "connected": 1,
-     "shots": 0,
-     "passes": 1,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 0,
-     "own_goals": 0,
-     "touches": 3,
-     "pickups": 0,
-     "frames_seen": 232,
-     "frames": 464,
-     "ball_in_view": 0.5
-    },
-    "y5": {
-     "team": "yellow",
-     "role": "A2",
-     "falls": 0,
-     "unsticks": 0,
-     "kicks": 23,
-     "connected": 11,
-     "shots": 12,
-     "passes": 4,
-     "passes_completed": 0,
-     "clearances": 0,
-     "goals": 2,
-     "own_goals": 0,
-     "touches": 49,
-     "pickups": 0,
-     "frames_seen": 1483,
-     "frames": 3051,
-     "ball_in_view": 0.486
+     "frames_seen": 948,
+     "frames": 1810,
+     "ball_in_view": 0.524
     },
     "ref": {
      "team": "ref",
@@ -4437,69 +4550,10 @@
      "unsticks": 0
     }
    },
-   "goals": [
-    {
-     "t": 70.1,
-     "half": 1,
-     "clock": 68.6,
-     "kind": "goal",
-     "team": "yellow",
-     "text": "GOAL yellow (y5), 0:1",
-     "scorer": "y5",
-     "own_goal": false,
-     "score": [
-      0,
-      1
-     ]
-    },
-    {
-     "t": 352.22,
-     "half": 2,
-     "clock": 149.6,
-     "kind": "goal",
-     "team": "yellow",
-     "text": "GOAL yellow (y5), 0:2",
-     "scorer": "y5",
-     "own_goal": false,
-     "score": [
-      0,
-      2
-     ]
-    }
-   ],
+   "goals": [],
    "kicks": [
     {
-     "t": 5.52,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.263,
-      -0.024
-     ],
-     "vmax": 0.042,
-     "connected": false
-    },
-    {
-     "t": 8.52,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      0.677,
-      -0.114
-     ],
-     "vmax": 0.387,
-     "connected": true
-    },
-    {
-     "t": 13.32,
+     "t": 2.5,
      "who": 3,
      "name": "b4",
      "team": "blue",
@@ -4507,600 +4561,44 @@
      "kind": "shot",
      "mate": null,
      "b0": [
-      1.213,
-      -0.182
+      0.124,
+      0.018
      ],
-     "vmax": 0.272,
-     "connected": false
-    },
-    {
-     "t": 16.52,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.625,
-      -0.075
-     ],
-     "vmax": 0.998,
+     "vmax": 0.758,
      "connected": true
     },
     {
-     "t": 27.12,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.572,
-      -0.058
-     ],
-     "vmax": 1.226,
-     "connected": true
-    },
-    {
-     "t": 39.48,
-     "who": 0,
-     "name": "b1",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.485,
-      0.464
-     ],
-     "vmax": 0.0,
-     "connected": false
-    },
-    {
-     "t": 39.8,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.485,
-      0.464
-     ],
-     "vmax": 0.0,
-     "connected": false
-    },
-    {
-     "t": 42.42,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.485,
-      0.464
-     ],
-     "vmax": 0.227,
-     "connected": false
-    },
-    {
-     "t": 42.96,
-     "who": 0,
-     "name": "b1",
-     "team": "blue",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.485,
-      0.464
-     ],
-     "vmax": 0.23,
-     "connected": false
-    },
-    {
-     "t": 50.62,
-     "who": 0,
-     "name": "b1",
-     "team": "blue",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.431,
-      0.485
-     ],
-     "vmax": 0.821,
-     "connected": true
-    },
-    {
-     "t": 52.02,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.666,
-      0.119
-     ],
-     "vmax": 0.203,
-     "connected": false
-    },
-    {
-     "t": 69.66,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -2.214,
-      -0.648
-     ],
-     "vmax": 0.522,
-     "connected": true
-    },
-    {
-     "t": 96.28,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.063,
-      0.036
-     ],
-     "vmax": 0.871,
-     "connected": true
-    },
-    {
-     "t": 111.82,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.299,
-      0.855
-     ],
-     "vmax": 0.267,
-     "connected": false
-    },
-    {
-     "t": 119.8,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.434,
-      0.368
-     ],
-     "vmax": 0.152,
-     "connected": false
-    },
-    {
-     "t": 122.66,
-     "who": 7,
-     "name": "y3",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.147,
-      0.442
-     ],
-     "vmax": 0.747,
-     "connected": true
-    },
-    {
-     "t": 129.22,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.807,
-      0.252
-     ],
-     "vmax": 0.227,
-     "connected": false
-    },
-    {
-     "t": 138.84,
-     "who": 1,
-     "name": "b2",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      -1.472,
-      0.338
-     ],
-     "vmax": 1.202,
-     "connected": true
-    },
-    {
-     "t": 138.96,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -1.472,
-      0.338
-     ],
-     "vmax": 1.202,
-     "connected": true
-    },
-    {
-     "t": 144.52,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "pass",
-     "mate": 8,
-     "b0": [
-      -1.244,
-      0.235
-     ],
-     "vmax": 0.174,
-     "connected": false,
-     "result": "intercepted"
-    },
-    {
-     "t": 153.62,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.676,
-      0.047
-     ],
-     "vmax": 0.255,
-     "connected": false
-    },
-    {
-     "t": 170.56,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      -0.735,
-      -0.259
-     ],
-     "vmax": 0.151,
-     "connected": false
-    },
-    {
-     "t": 183.84,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.582,
-      -0.196
-     ],
-     "vmax": 0.432,
-     "connected": true
-    },
-    {
-     "t": 207.48,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.558,
-      0.356
-     ],
-     "vmax": 0.376,
-     "connected": true
-    },
-    {
-     "t": 226.9,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.302,
-      -0.249
-     ],
-     "vmax": 0.538,
-     "connected": true
-    },
-    {
-     "t": 232.64,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
-     "foot": "right",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.368,
-      -0.512
-     ],
-     "vmax": 0.861,
-     "connected": true
-    },
-    {
-     "t": 234.62,
+     "t": 4.24,
      "who": 8,
      "name": "y4",
      "team": "yellow",
      "foot": "right",
-     "kind": "pass",
-     "mate": 9,
-     "b0": [
-      -0.78,
-      -0.955
-     ],
-     "vmax": 0.352,
-     "connected": true
-    },
-    {
-     "t": 248.08,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
      "kind": "forward",
      "mate": null,
      "b0": [
-      -0.146,
-      -0.476
+      0.003,
+      0.1
      ],
-     "vmax": 0.343,
-     "connected": true
-    },
-    {
-     "t": 252.18,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.07,
-      -0.131
-     ],
-     "vmax": 0.211,
+     "vmax": 0.262,
      "connected": false
     },
     {
-     "t": 264.32,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "pass",
-     "mate": 8,
-     "b0": [
-      -0.606,
-      0.382
-     ],
-     "vmax": 0.223,
-     "connected": false
-    },
-    {
-     "t": 274.56,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.63,
-      0.368
-     ],
-     "vmax": 0.114,
-     "connected": false
-    },
-    {
-     "t": 279.26,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      -0.581,
-      0.347
-     ],
-     "vmax": 0.0,
-     "connected": false
-    },
-    {
-     "t": 297.9,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "pass",
-     "mate": 8,
-     "b0": [
-      -0.507,
-      0.265
-     ],
-     "vmax": 0.211,
-     "connected": false
-    },
-    {
-     "t": 301.92,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "pass",
-     "mate": 8,
-     "b0": [
-      -0.263,
-      0.667
-     ],
-     "vmax": 0.43,
-     "connected": true
-    },
-    {
-     "t": 307.94,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "forward",
-     "mate": null,
-     "b0": [
-      0.367,
-      0.853
-     ],
-     "vmax": 0.538,
-     "connected": true
-    },
-    {
-     "t": 312.24,
-     "who": 9,
-     "name": "y5",
+     "t": 7.98,
+     "who": 8,
+     "name": "y4",
      "team": "yellow",
      "foot": "right",
      "kind": "shot",
      "mate": null,
      "b0": [
-      1.174,
-      0.442
+      -0.328,
+      0.262
      ],
-     "vmax": 0.518,
-     "connected": true
-    },
-    {
-     "t": 319.0,
-     "who": 0,
-     "name": "b1",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.402,
-      0.077
-     ],
-     "vmax": 0.022,
+     "vmax": 0.12,
      "connected": false
     },
     {
-     "t": 321.56,
-     "who": 0,
-     "name": "b1",
-     "team": "blue",
-     "foot": "right",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.317,
-      0.032
-     ],
-     "vmax": 0.046,
-     "connected": false
-    },
-    {
-     "t": 324.42,
-     "who": 0,
-     "name": "b1",
-     "team": "blue",
-     "foot": "left",
-     "kind": "clearance",
-     "mate": null,
-     "b0": [
-      1.283,
-      0.019
-     ],
-     "vmax": 0.003,
-     "connected": false
-    },
-    {
-     "t": 340.54,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.247,
-      -0.304
-     ],
-     "vmax": 0.393,
-     "connected": true
-    },
-    {
-     "t": 343.18,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "right",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      1.454,
-      -0.263
-     ],
-     "vmax": 0.552,
-     "connected": true
-    },
-    {
-     "t": 351.92,
-     "who": 9,
-     "name": "y5",
-     "team": "yellow",
-     "foot": "left",
-     "kind": "shot",
-     "mate": null,
-     "b0": [
-      2.217,
-      -0.198
-     ],
-     "vmax": 0.414,
-     "connected": true
-    },
-    {
-     "t": 370.24,
+     "t": 29.48,
      "who": 3,
      "name": "b4",
      "team": "blue",
@@ -5108,51 +4606,568 @@
      "kind": "forward",
      "mate": null,
      "b0": [
-      -0.153,
-      0.009
+      -0.028,
+      0.628
      ],
-     "vmax": 0.009,
-     "connected": false
+     "vmax": 0.36,
+     "connected": true
     },
     {
-     "t": 373.22,
-     "who": 3,
-     "name": "b4",
-     "team": "blue",
+     "t": 35.38,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
      "foot": "left",
      "kind": "forward",
      "mate": null,
      "b0": [
-      -0.385,
-      -0.05
+      -0.172,
+      0.77
+     ],
+     "vmax": 0.028,
+     "connected": false
+    },
+    {
+     "t": 39.34,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      -0.121,
+      0.701
      ],
      "vmax": 0.195,
      "connected": false
     },
     {
-     "t": 376.32,
-     "who": 3,
-     "name": "b4",
+     "t": 49.88,
+     "who": 2,
+     "name": "b3",
      "team": "blue",
      "foot": "right",
      "kind": "shot",
      "mate": null,
      "b0": [
-      -0.723,
-      -0.103
+      -0.095,
+      0.658
      ],
-     "vmax": 0.303,
+     "vmax": 0.501,
      "connected": true
+    },
+    {
+     "t": 51.56,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      -0.162,
+      0.679
+     ],
+     "vmax": 0.428,
+     "connected": true
+    },
+    {
+     "t": 54.56,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.004,
+      0.777
+     ],
+     "vmax": 0.371,
+     "connected": true
+    },
+    {
+     "t": 58.38,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.529,
+      0.873
+     ],
+     "vmax": 0.528,
+     "connected": true
+    },
+    {
+     "t": 65.26,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.12,
+      0.41
+     ],
+     "vmax": 0.432,
+     "connected": true
+    },
+    {
+     "t": 71.82,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "left",
+     "kind": "pass",
+     "mate": 4,
+     "b0": [
+      1.427,
+      0.173
+     ],
+     "vmax": 0.666,
+     "connected": true,
+     "result": "intercepted"
+    },
+    {
+     "t": 81.32,
+     "who": 6,
+     "name": "y2",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "pass",
+     "mate": 8,
+     "b0": [
+      1.803,
+      0.187
+     ],
+     "vmax": 0.825,
+     "connected": true,
+     "result": "completed"
+    },
+    {
+     "t": 84.76,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.757,
+      0.199
+     ],
+     "vmax": 0.079,
+     "connected": false
+    },
+    {
+     "t": 99.74,
+     "who": 5,
+     "name": "y1",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.71,
+      0.232
+     ],
+     "vmax": 0.437,
+     "connected": true
+    },
+    {
+     "t": 109.04,
+     "who": 7,
+     "name": "y3",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.876,
+      0.056
+     ],
+     "vmax": 0.222,
+     "connected": false
+    },
+    {
+     "t": 112.1,
+     "who": 7,
+     "name": "y3",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.522,
+      -0.117
+     ],
+     "vmax": 0.65,
+     "connected": true
+    },
+    {
+     "t": 135.56,
+     "who": 6,
+     "name": "y2",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "pass",
+     "mate": 8,
+     "b0": [
+      1.59,
+      -0.127
+     ],
+     "vmax": 0.023,
+     "connected": false,
+     "result": "completed"
+    },
+    {
+     "t": 135.84,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.589,
+      -0.122
+     ],
+     "vmax": 0.01,
+     "connected": false
+    },
+    {
+     "t": 139.24,
+     "who": 7,
+     "name": "y3",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "pass",
+     "mate": 9,
+     "b0": [
+      1.504,
+      -0.275
+     ],
+     "vmax": 0.133,
+     "connected": false,
+     "result": "completed"
+    },
+    {
+     "t": 150.02,
+     "who": 1,
+     "name": "b2",
+     "team": "blue",
+     "foot": "right",
+     "kind": "pass",
+     "mate": 4,
+     "b0": [
+      0.038,
+      0.75
+     ],
+     "vmax": 0.106,
+     "connected": false
+    },
+    {
+     "t": 160.56,
+     "who": 6,
+     "name": "y2",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.732,
+      0.489
+     ],
+     "vmax": 0.066,
+     "connected": false
+    },
+    {
+     "t": 161.24,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.743,
+      0.477
+     ],
+     "vmax": 0.01,
+     "connected": false
+    },
+    {
+     "t": 167.78,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.55,
+      0.354
+     ],
+     "vmax": 0.121,
+     "connected": false
+    },
+    {
+     "t": 192.96,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.175,
+      0.569
+     ],
+     "vmax": 1.108,
+     "connected": true
+    },
+    {
+     "t": 193.8,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.744,
+      0.934
+     ],
+     "vmax": 0.82,
+     "connected": true
+    },
+    {
+     "t": 206.42,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "right",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.489,
+      1.48
+     ],
+     "vmax": 0.0,
+     "connected": false
+    },
+    {
+     "t": 209.98,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.164,
+      1.275
+     ],
+     "vmax": 0.07,
+     "connected": false
+    },
+    {
+     "t": 213.56,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "pass",
+     "mate": 4,
+     "b0": [
+      1.141,
+      1.261
+     ],
+     "vmax": 0.0,
+     "connected": false,
+     "result": "intercepted"
+    },
+    {
+     "t": 216.84,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.038,
+      0.973
+     ],
+     "vmax": 0.405,
+     "connected": true
+    },
+    {
+     "t": 242.02,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.628,
+      1.14
+     ],
+     "vmax": 0.079,
+     "connected": false
+    },
+    {
+     "t": 247.52,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "left",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      1.636,
+      0.547
+     ],
+     "vmax": 0.536,
+     "connected": true
+    },
+    {
+     "t": 275.3,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "right",
+     "kind": "pass",
+     "mate": 3,
+     "b0": [
+      1.238,
+      0.038
+     ],
+     "vmax": 1.272,
+     "connected": true,
+     "result": "completed"
+    },
+    {
+     "t": 281.36,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "pass",
+     "mate": 4,
+     "b0": [
+      0.913,
+      -0.052
+     ],
+     "vmax": 0.0,
+     "connected": false,
+     "result": "intercepted"
+    },
+    {
+     "t": 282.62,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.913,
+      -0.052
+     ],
+     "vmax": 0.633,
+     "connected": true
+    },
+    {
+     "t": 303.6,
+     "who": 8,
+     "name": "y4",
+     "team": "yellow",
+     "foot": "right",
+     "kind": "shot",
+     "mate": null,
+     "b0": [
+      0.574,
+      -0.021
+     ],
+     "vmax": 0.612,
+     "connected": true
+    },
+    {
+     "t": 322.94,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.208,
+      -0.472
+     ],
+     "vmax": 0.0,
+     "connected": false
+    },
+    {
+     "t": 325.48,
+     "who": 2,
+     "name": "b3",
+     "team": "blue",
+     "foot": "left",
+     "kind": "clearance",
+     "mate": null,
+     "b0": [
+      1.208,
+      -0.472
+     ],
+     "vmax": 0.613,
+     "connected": true
+    },
+    {
+     "t": 344.6,
+     "who": 3,
+     "name": "b4",
+     "team": "blue",
+     "foot": "right",
+     "kind": "pass",
+     "mate": 4,
+     "b0": [
+      0.533,
+      -0.852
+     ],
+     "vmax": 0.504,
+     "connected": true
+    },
+    {
+     "t": 361.38,
+     "who": 4,
+     "name": "b5",
+     "team": "blue",
+     "foot": "right",
+     "kind": "forward",
+     "mate": null,
+     "b0": [
+      0.039,
+      -0.87
+     ],
+     "vmax": 0.097,
+     "connected": false
     }
    ],
-   "throw_ins": 0,
+   "throw_ins": 1,
    "goal_kicks": 0,
    "corners": 0,
    "pickups": 0,
-   "placements": 1,
+   "placements": 0,
    "events": [
     {
-     "t": 1.52,
+     "t": 1.02,
      "half": 1,
      "clock": 0.0,
      "kind": "kick-off",
@@ -5160,48 +5175,67 @@
      "text": "kick-off blue"
     },
     {
-     "t": 70.1,
+     "t": 19.92,
      "half": 1,
-     "clock": 68.6,
-     "kind": "goal",
-     "team": "yellow",
-     "text": "GOAL yellow (y5), 0:1",
-     "scorer": "y5",
-     "own_goal": false,
-     "score": [
-      0,
-      1
-     ]
-    },
-    {
-     "t": 74.12,
-     "half": 1,
-     "clock": 68.6,
-     "kind": "ready",
-     "team": "blue",
-     "text": "players to kick-off positions"
-    },
-    {
-     "t": 88.14,
-     "half": 1,
-     "clock": 68.6,
-     "kind": "placement",
+     "clock": 18.9,
+     "kind": "dropped ball",
      "team": null,
-     "text": "manual placement: y4",
-     "who": [
-      "y4"
+     "text": "dropped ball",
+     "pos": [
+      -0.2,
+      0.6
      ]
     },
     {
-     "t": 89.66,
+     "t": 40.38,
      "half": 1,
-     "clock": 68.6,
-     "kind": "kick-off",
-     "team": "blue",
-     "text": "kick-off blue"
+     "clock": 39.4,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      -0.09,
+      0.66
+     ]
     },
     {
-     "t": 201.08,
+     "t": 91.6,
+     "half": 1,
+     "clock": 90.6,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.73,
+      0.26
+     ]
+    },
+    {
+     "t": 124.32,
+     "half": 1,
+     "clock": 123.3,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.68,
+      -0.43
+     ]
+    },
+    {
+     "t": 180.42,
+     "half": 1,
+     "clock": 179.4,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.35,
+      0.39
+     ]
+    },
+    {
+     "t": 181.02,
      "half": 1,
      "clock": 180.0,
      "kind": "whistle",
@@ -5209,7 +5243,7 @@
      "text": "end of half 1"
     },
     {
-     "t": 201.08,
+     "t": 181.02,
      "half": 2,
      "clock": 0.0,
      "kind": "half-time",
@@ -5217,7 +5251,7 @@
      "text": "half-time: teams change ends"
     },
     {
-     "t": 202.6,
+     "t": 182.04,
      "half": 2,
      "clock": 0.0,
      "kind": "kick-off",
@@ -5225,37 +5259,99 @@
      "text": "kick-off yellow"
     },
     {
-     "t": 352.22,
+     "t": 195.4,
      "half": 2,
-     "clock": 149.6,
-     "kind": "goal",
-     "team": "yellow",
-     "text": "GOAL yellow (y5), 0:2",
-     "scorer": "y5",
-     "own_goal": false,
-     "score": [
-      0,
-      2
+     "clock": 13.4,
+     "kind": "whistle",
+     "team": null,
+     "text": "ball out over the touch line"
+    },
+    {
+     "t": 196.2,
+     "half": 2,
+     "clock": 14.2,
+     "kind": "throw-in",
+     "team": "blue",
+     "text": "throw-in blue",
+     "pos": [
+      1.49,
+      1.48
      ]
     },
     {
-     "t": 356.24,
+     "t": 233.06,
      "half": 2,
-     "clock": 149.6,
-     "kind": "ready",
-     "team": "blue",
-     "text": "players to kick-off positions"
+     "clock": 51.0,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.59,
+      1.16
+     ]
     },
     {
-     "t": 365.98,
+     "t": 261.92,
      "half": 2,
-     "clock": 149.6,
-     "kind": "kick-off",
-     "team": "blue",
-     "text": "kick-off blue"
+     "clock": 79.9,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.95,
+      0.34
+     ]
     },
     {
-     "t": 396.36,
+     "t": 294.88,
+     "half": 2,
+     "clock": 112.8,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.56,
+      -0.02
+     ]
+    },
+    {
+     "t": 315.9,
+     "half": 2,
+     "clock": 133.9,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      1.21,
+      -0.47
+     ]
+    },
+    {
+     "t": 337.08,
+     "half": 2,
+     "clock": 155.0,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.56,
+      -0.82
+     ]
+    },
+    {
+     "t": 356.1,
+     "half": 2,
+     "clock": 174.1,
+     "kind": "dropped ball",
+     "team": null,
+     "text": "dropped ball",
+     "pos": [
+      0.12,
+      -0.9
+     ]
+    },
+    {
+     "t": 362.04,
      "half": 2,
      "clock": 180.0,
      "kind": "whistle",
@@ -5263,18 +5359,18 @@
      "text": "end of half 2"
     },
     {
-     "t": 396.36,
+     "t": 362.04,
      "half": 2,
      "clock": 180.0,
      "kind": "full-time",
      "team": null,
-     "text": "full time 0:2"
+     "text": "full time 0:0"
     }
    ],
-   "sim_s": 396.4,
+   "sim_s": 362.1,
    "playing_s": 360.0,
-   "wall_s": 1011.0,
-   "rtf": 0.392,
+   "wall_s": 644.2,
+   "rtf": 0.562,
    "bodies": {
     "b1": {
      "lag": 5,
@@ -5333,7 +5429,7 @@
      "vin": 7.64
     },
     "y4": {
-     "lag": 5,
+     "lag": 3,
      "mass_scale_mean": 1.013,
      "friction": 1.231,
      "kp": 200.6,
@@ -5353,6 +5449,63 @@
      "kp": 222.9,
      "vin": 7.46
     }
+   },
+   "metrics": {
+    "players": {
+     "b1": {
+      "dist_m": 17.88,
+      "moving": 0.54,
+      "fast": 0.153
+     },
+     "b2": {
+      "dist_m": 42.79,
+      "moving": 0.851,
+      "fast": 0.459
+     },
+     "b3": {
+      "dist_m": 42.65,
+      "moving": 0.835,
+      "fast": 0.446
+     },
+     "b4": {
+      "dist_m": 45.7,
+      "moving": 0.818,
+      "fast": 0.487
+     },
+     "b5": {
+      "dist_m": 47.46,
+      "moving": 0.808,
+      "fast": 0.489
+     },
+     "y1": {
+      "dist_m": 19.85,
+      "moving": 0.552,
+      "fast": 0.176
+     },
+     "y2": {
+      "dist_m": 41.23,
+      "moving": 0.832,
+      "fast": 0.437
+     },
+     "y3": {
+      "dist_m": 46.29,
+      "moving": 0.831,
+      "fast": 0.497
+     },
+     "y4": {
+      "dist_m": 42.24,
+      "moving": 0.748,
+      "fast": 0.428
+     },
+     "y5": {
+      "dist_m": 48.51,
+      "moving": 0.815,
+      "fast": 0.51
+     }
+    },
+    "duels": 32,
+    "bumps": 145,
+    "play_s": 360.0
    }
   }
  ]

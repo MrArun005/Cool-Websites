@@ -233,8 +233,9 @@ and the 11 ducks share one copy of the collision meshes (MuJoCo would hold 11 co
 
 **Speed**: 11 ducks alone run at **3.2 x real time** (physics + BAM 1.2 s, brains 0.3 s per 5 s); with the 4 head
 cameras at 10 Hz **0.8-0.86 x real time** on a free CPU (rendering 18 ms per camera frame, OSMesa). The matches
-below ran 3 at a time next to other jobs on 4 CPUs: **0.39-0.40 x real time**, ~15.5 min per match (6 min of play
-plus stoppages).
+below ran 3 at a time on 4 CPUs: **0.5-0.8 x real time** (one numpy thread per process: `OMP_NUM_THREADS=1`),
+~8-12 min per match (6 min of play plus stoppages; the goalkeeper, striker, a receiver and a second player near the
+ball render their cameras).
 
 **Players.** Each duck's estimation stays in `match.py` (`Player`: self-localization, its head camera, team
 messages); every decision is in **`tactics.py`**, pure Python (math + numpy, no MuJoCo), so the in-browser match can
@@ -256,9 +257,10 @@ runtime. What `step()` does each tick:
 - **Roles** (re-picked every 0.3 s, with hysteresis): the goalkeeper keeps goal; the **striker** (lowest cost:
   distance at 0.3 m/s + turn at 1.2 rad/s, fallen +8, defender in the other half +2.5, the current striker -1.5,
   a pass receiver -6, the last kicker following up its kick -2) plays the ball; the **second** (next lowest) presses
-  goal-side of the ball (0.35 m, on the other side from the striker) when the opponents have it or it is in our half,
-  stays 0.55 m back for the rebound when we have it up the pitch, and **joins the contest** when the ball comes within
-  0.45 m with an opponent on it: two on the ball, one challenging, one covering. The other two do their role's job.
+  goal-side of the ball (0.6 m, on the other side from the striker, just outside the duel radius so it closes the
+  lane without forcing a duel) when the opponents have it or it is in our half, stays 0.55 m back for the rebound
+  when we have it up the pitch, and **joins the contest** when the ball comes within 0.45 m with an opponent nearer
+  to it than our striker: two on the ball, one challenging, one covering. The other two do their role's job.
 - **The block slides with the ball** (up and across): defenders at 0.45 x ball depth - 1.2 m, 0.35 x ball width
   +-0.45 m; attackers 0.4 m ahead of the ball, 0.4 x ball width +-0.7 m. At their spot players **jockey** (+-12 cm
   sideways, 5 s period) facing the ball, stepping forwards, backwards or sideways instead of turning away from it.
@@ -270,12 +272,15 @@ runtime. What `step()` does each tick:
 - **Ball play** (soccer.py's cycle, faster): approach behind the ball on the line to the aim, align at a foot (0.2 s
   held, was 0.3; give up after 3 s, was 6), head home 1 s (the kick brains are blind), kick. A **quick kick** fires
   from any state (approach, align, duel) when the ball is already in a foot's kick window (6-11 cm ahead, +-3 cm) and
-  the aim within 0.45 rad (head home 0.8 s). **Duel** (an opponent within 0.45 m of the ball): walk through the
-  ball towards the aim; pinned 3 s: step round it.
-- **Aim**: shoot when the lane is open and the goal within 1.6 m; **pass** to an open teammate further up (ahead
-  > 0.15 m, 0.5-2.2 m away, lane clear by 0.2 m, nobody within 0.35 m of him) when the shot is blocked or out of range
-  or he is 0.9 m closer to goal, led 0.2 m towards the goal; else shoot from up to 2.4 m (open lane), else forward,
-  or a clearance from our own third.
+  the aim within 0.45 rad (head home 0.8 s). **Duel** (an opponent within 0.35 m of the ball): walk through the
+  ball towards the aim; pinned 1.5 s: step round it (60 deg) and try from the side. **Dribble** when uncontested
+  (behind the ball, 1.3-3.2 m from goal, nobody within 0.55 m): walk through it towards the goal for up to 5 s, then
+  line up the shot.
+- **Aim**: the goal corner away from the keeper (0.35 m off centre; the near corner when he is central). Shoot when
+  the lane is open and the goal within 1.6 m; **pass** to an open teammate further up (ahead > 0.15 m, 0.5-2.2 m
+  away, lane clear by 0.2 m, nobody within 0.35 m of him) when the shot is blocked or out of range or he is 0.9 m
+  closer to goal, led 0.2 m towards the goal; else shoot from up to 2.4 m, else forward, or a clearance from our own
+  third.
 - **Receiving**: the receiver is told (team communication), becomes striker, turns to face the ball and steps onto
   its path to meet it; the passer runs forward into space (give-and-go). After any other kick the kicker keeps the
   ball for 3 s: it follows its kick up instead of standing.
@@ -283,6 +288,10 @@ runtime. What `step()` does each tick:
   goal centre, facing the ball and sliding with it; comes out to claim a ball in its box that is within 0.7 m or
   that it reaches before any opponent.
 - **Reflex**: turning on the spot 1.5 s without the heading changing (blocked by a duck or a post): back up 1 s.
+- **Give way and caution**: a teammate in the corridor ahead (0.35 m, +-0.2 m) -> stop and sidestep (the striker
+  has right of way, then the keeper); another duck within 0.4 m ahead -> at most 0.6 forward command (0.75 for the
+  player fighting for the ball), within 0.3 m -> turn at most 0.75 rad/s. Off-ball targets keep 0.4 m from
+  teammates. Without these the first version fell about 4x as often as before.
 - **Cameras**: the goalkeeper, the striker, a pass receiver and the second when within 1 m of the ball render their
   head cameras (160 x 120, 10 Hz, soccer.py's colour blob and floor ray) and share the ball over "wifi" (5 per
   second, 200 ms late, 2 cm noise); the others play on that shared estimate. Opponents are perceived with a drifting
@@ -301,11 +310,40 @@ whoever is still off his spot by more than 0.35 m or down is carried there, Robo
 **3 min playing time** with ends changed at half-time (ducks carried to the new spots). Every call is logged with a
 "whistle".
 
-**Results, RESULTS_N matches (seeds RESULTS_SEEDS), 2 x 3 min** (`results_match_hybrid.json`):
+**Results, 5 matches (seeds 0-4), 2 x 3 min, with the tactics above** (`results_match_hybrid.json`; these are also the 5 page replays):
 
-RESULTS_TABLE
+| match (seed) | Blue : Yellow | kicks (connected) | shots | passes (completed) | players moving > 70 % | mean moving | distance / player | duels | falls (incl. referee) | dropped balls |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0 | 0 : 0 | 32 (13) | 19 | 3 (0) | 8/10 | 79 % | 43 m | 40 | 10 | 11 |
+| 1 | 1 : 0 | 30 (20) | 16 | 1 (1) | 8/10 | 78 % | 40 m | 33 | 11 | 10 |
+| 2 | 0 : 0 | 26 (11) | 12 | 0 (0) | 8/10 | 78 % | 40 m | 30 | 5 | 13 |
+| 3 | 0 : 1 | 29 (10) | 19 | 4 (1) | 8/10 | 78 % | 41 m | 33 | 7 | 11 |
+| 4 | 0 : 0 | 40 (20) | 15 | 9 (4) | 8/10 | 76 % | 40 m | 32 | 5 | 11 |
 
-Falls per duck over all matches: RESULTS_FALLS.
+2 goals in 5 matches (1 own goal), 17 passes of which 6 completed. "Moving" = the trunk travelled more than 3 cm/s over a 0.5 s window, over the playing time (turning on the spot counts about a third of the time, stepping in place never); "duels" = players of both teams within 0.3 m of the ball at once.
+
+Falls per duck over all matches: b1 0, b2 4, b3 1, b4 6, b5 6, y1 0, y2 2, y3 4, y4 4, y5 6, ref 5.
+
+**Before / after the tactics rewrite** (same seeds 0-2, 2 x 3 min each; before = the earlier behaviour, kept as
+`_match_before.py` with the same measurement code; `results_match_activity.json`):
+
+
+
+What changed, honestly:
+- **Everybody moves.** Field players are moving 80-86 % of the playing time (before 54-75 %), 8 of 10 players over
+  70 %; the two keepers stay near 55 % (they hold their line when the ball is far away). Defenders walk ~45 m a
+  match instead of ~26 m, and about half the time briskly (> 10 cm/s) instead of a quarter.
+- **More contact**: opponents touch bodies 1.8x as often (509 vs 284), falls 21 vs 18 (the crowd speed limits keep
+  that close; without them the first version fell ~4x as often). Duels at the ball about the same (103 vs 115).
+- **Goals did not go up**: 1 vs 1 on these seeds (2 vs 4 over all 5 seeds). The defence got better too (markers
+  goal-side, a second player pressing, a keeper that comes out), so the strikers meet a crowd: most kicks are quick
+  kicks in duels and arrive weak (0.1-0.5 m/s), and clean lined-up kicks (~1.2 m/s) are rare. Shots 47 vs 35 (a
+  goal-bound kick from up to 2.4 m now counts as a shot, before 2.0 m). Passes 4 (1 completed) vs 8 (0); over all 5
+  matches 17 passes, 6 completed.
+- **Dropped balls** went from 4 to 34: the referee now restarts after 10 s without the ball moving 15 cm (before
+  20 s), and most of those are balls pinned between ducks in a duel.
+- Tried and dropped (no more goals in 3 x 3 min tests): sending the second player into the box when we attack,
+  support runs pulled towards the goal, defenders marking only in their own half.
 
 What is realistic, and what isn't:
 - Realistic: the physics and servos are exactly single-duck's (checked), every duck uses Microduck's brains through
@@ -314,13 +352,13 @@ What is realistic, and what isn't:
 - **Self-localization is simulated**: each duck's pose is the simulator's truth plus a slowly drifting error (5 cm,
   3 deg, 2 s correlation), standing in for the line/goal particle filter a RoboCup robot runs (soccer.py has a real
   one on a single goal; with two identical white goals and 11 ducks that is a project of its own).
-- **Opponents' positions** come from the truth with 6 cm noise (stands in for robot detection), used for duels and
-  for choosing a pass. Teammates' positions are their own (noisy) estimates, as over team communication.
+- **Opponents' positions** come from the truth with a drifting 6 cm error (1 s correlation; stands in for robot
+  detection), used for duels, marking, support runs and choosing a pass. Teammates' positions are their own (noisy) estimates, as over team communication.
 - On a referee placement (kick-off, throw-in...) the teams are told where the ball is.
 - The referee is choreography; its calls are the GameController's, made on the truth.
-- Low scoring: shots connect but from 1.5-2 m a 1.2 m/s kick rolls out before the line or the keeper is in the way,
-  duels pin the ball for long stretches, and passes don't arrive (the receiver isn't facing it, opponents step in):
-  RESULTS_PASSES. Real KidSize games are low scoring too, but these numbers are mostly the slow kick cycle (lining
+- Low scoring: a clean 1.2 m/s kick rolls ~1.6-2 m, so shots from 2 m die near the line or the keeper is in the way;
+  under pressure most kicks are quick kicks in duels that arrive weak, duels pin the ball, and passes are rare:
+  17 passes, 6 completed, in 5 matches. Real KidSize games are low scoring too, but these numbers are mostly the slow kick cycle (lining
   up takes seconds) and the blind 0.5 s kick brains.
 - Not modelled: the ball leaving the ground, penalty kicks, fouls (pushing is legal here), robot heat / battery drain.
 
@@ -331,12 +369,15 @@ MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --check                       # ph
 MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --one 0 --out m0.json         # one match per process (~1 GB each)
 $PY duckbody/hybrid/match.py --merge m0.json m1.json ...                    # -> results_match_hybrid.json
 MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --trace 0 --t 60 --halves 1   # one short match with a printed trace
-MUJOCO_GL=osmesa $PY duckbody/hybrid/page_data.py DIR --match               # page: 90 s of the best match
+MUJOCO_GL=osmesa $PY duckbody/hybrid/page_data.py DIR --match-only 0 --result m0.json   # page: one match, recorded
+                                                                            # (and its result), cut to 80 s round its best action
+$PY duckbody/hybrid/page_data.py DIR --match-index                          # page: matches.json for the Match 1-5 selector
 ```
-Page replay (`rollout_match.json`, ~2 MB): frames carry per duck the free joint and 15 joint angles (ints), the page
+Page replays (`rollout_match_s0.json` ... `_s4.json`, ~1.4 MB each, picked with the Match 1-5 buttons, `matches.json`): frames carry per duck the free joint and 15 joint angles (ints), the page
 rebuilds every body by forward kinematics from `kin` (checked against MuJoCo: `--check`) and draws the 11 ducks from
 one light mesh (`duck_mesh_match.json`) with team colours and numbers, the pitch, a broadcast camera following the
-ball, and a scoreboard with the match clock and the referee's last call.
+ball, a scoreboard with the match clock and the referee's last call, and a ball finder (a ring on the grass, an
+arrow above the ball and a short trail, drawn through the ducks) so the 7 cm ball is easy to find under a duck.
 
 ## Microduck's brains on the hybrid head (first study)
 
