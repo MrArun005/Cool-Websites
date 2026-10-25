@@ -168,3 +168,7 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
 - **Start a learned skill the way it was practised.** The jump brain always began from 0.5 s of holding the dog
   stance. Jumping straight after the standing brain fell 1 time in 3 at 15 cm; holding the stance first, 0 in 6.
   Stopping 0.83 m from the bar (training used 0.45-0.65 m) still mostly worked, but stopping at 0.6 m was better.
+- **Look at what a "collapsed" brain actually does.** Run 15c at 7M and 15d at 7M scored 0 on the jump exam,
+  which looked like forgetting. Watching the jumps: both still cleared 15 cm bars cleanly, but leapt further
+  (landing 0.6-1.05 m past the bar, against 0.5-0.8 m) and crashed about half a second after landing. A
+  harder leap helps on high practice bars; the landing has to be relearned each time. Run 15c relearned it by 8M.
