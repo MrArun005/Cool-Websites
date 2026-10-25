@@ -72,7 +72,11 @@ FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 # that cleared 15 and 25 cm bars 48 times in 48 at 0.3-1.0 m/s on randomised physics. (A hand-made
 # bounding leap, run 14, reared up and tipped over backwards in every variant tried.)
 HURDLE_HALF = 0.3           # m: the bar is a 60 cm box, sunk into the floor to show any height up to 60 cm
-HURDLE_XML = f'<geom name="hurdle" type="box" size="0.025 0.6 {HURDLE_HALF}" pos="100 0 0" rgba="0.89 0.38 0.04 1"/>'
+# The bar is a mocap body (moved through data.mocap_pos). Moving a plain world geom at run time is not
+# reliable in MuJoCo: a ball dropped on a moved 30 cm box fell straight through it, and the dog's legs
+# went through bars without a touch being counted (the "48 in 48 clean" step-overs were not real).
+HURDLE_XML = (f'<body name="hurdle" mocap="true" pos="100 0 -1"><geom name="hurdle" type="box" '
+              f'size="0.025 0.6 {HURDLE_HALF}" rgba="0.89 0.38 0.04 1"/></body>')
 HURDLE_MARGIN = 0.07        # m of paw clearance over the bar
 HURDLE_ZONE = (-0.7, 1.0)   # m: high steps from 1.0 m before the bar until the body is 0.7 m past it
 
@@ -203,10 +207,10 @@ class BoltEnv(gym.Env):
         fwd = R[:2, 0] / np.linalg.norm(R[:2, 0])
         self.hurdle_dir, self.hurdle_h = fwd, height
         self.hurdle_at = self.data.qpos[:2] + fwd * ahead
-        g = self.model.geom("hurdle").id
-        self.model.geom_pos[g] = [self.hurdle_at[0], self.hurdle_at[1], height - HURDLE_HALF]  # sunk to show `height`
+        k = self.model.body_mocapid[self.model.body("hurdle").id]
+        self.data.mocap_pos[k] = [self.hurdle_at[0], self.hurdle_at[1], height - HURDLE_HALF]  # sunk to show `height`
         yaw = np.arctan2(fwd[1], fwd[0])
-        self.model.geom_quat[g] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+        self.data.mocap_quat[k] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
         mujoco.mj_forward(self.model, self.data)
 
     def hurdle_ahead(self):
@@ -432,7 +436,7 @@ class BoltEnv(gym.Env):
         self.phase = self.phase0
         if self.hurdles:  # park the hurdle until someone places it
             self.hurdle_at = np.array([100.0, 0.0])
-            self.model.geom_pos[self.model.geom("hurdle").id] = [100.0, 0.0, -1.0]
+            self.data.mocap_pos[self.model.body_mocapid[self.model.body("hurdle").id]] = [100.0, 0.0, -1.0]
         if (self.handover_brain and self.randomize and COMMANDS[self.command] == "walk" and not start_lying
                 and self.rng.random() < 0.5):
             self._stand_then_hand_over(int(self.rng.integers(60, 150)))

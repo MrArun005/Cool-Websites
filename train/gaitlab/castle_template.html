@@ -41,7 +41,7 @@
   <header style="display:grid;gap:6px">
     <span class="label">Bolt robot dog · a game on the live simulator</span>
     <h1>Bolt's Castle</h1>
-    <p class="muted" style="margin:0;max-width:72ch">Like Takeshi's Castle: every game builds a new course, and Bolt has to get through it. Sprint, weave through the poles, get over three hurdles without touching a bar, cross the narrow bridge without falling in the water, sit in the box, lie on the mat and reach the castle. The guard shouts orders at any moment, and so can you. One fall and Bolt is out. Bolt plays it with its own trained brains, in the same physics as in training, running in your browser.</p>
+    <p class="muted" style="margin:0;max-width:72ch">Like Takeshi's Castle: every game builds a new course, and Bolt has to get through it. Sprint, weave through the poles, get over three hurdles without touching a bar, cross the narrow bridge without falling in the water, sit in the box, lie on the mat and reach the castle. The guard shouts orders at any moment, and so can you. Five levels, each harder: tighter time limits, a narrower bridge, more poles, more shouts with less time to obey, and from level 3 an ice rink and the guard's cannon, which shoves Bolt sideways. Bolt has 3 lives: a failed station or a fall costs one. Bolt plays it with its own trained brains, in the same physics as in training, running in your browser.</p>
   </header>
 
   <section class="panel" aria-labelledby="play">
@@ -49,13 +49,15 @@
     <div class="stage" id="stage">
       <div class="loading" id="loading">Loading…</div>
       <div class="hud tl"><span class="label">Station</span><b id="hStation">–</b><span class="muted" id="hHow"></span></div>
-      <div class="hud tr"><span class="label">Score</span><b id="hScore">0</b><span class="label">Time</span><b id="hTime">0.0 s</b><span class="label">Doing</span><b id="hDoing">–</b></div>
+      <div class="hud tr"><span class="label">Level</span><b id="hLevel">1</b><span class="label">Lives</span><b id="hLives" style="color:var(--bad)">♥♥♥</b><span class="label">Score</span><b id="hScore">0</b><span class="label">Time</span><b id="hTime">0.0 s</b><span class="label">Doing</span><b id="hDoing">–</b></div>
       <div class="banner" id="banner" aria-live="polite"></div>
-      <div class="result" id="result" hidden><div class="card"><span class="label" id="rLabel"></span><h2 id="rTitle"></h2><b class="mono" id="rScore"></b><ul id="rList"></ul><button class="btn" type="button" id="again">New castle</button></div></div>
+      <div class="result" id="result" hidden><div class="card"><span class="label" id="rLabel"></span><h2 id="rTitle"></h2><b class="mono" id="rScore"></b><ul id="rList"></ul><button class="btn" type="button" id="again">New castle</button><button class="btn" type="button" id="next" hidden>Next level</button></div></div>
       <div class="hint"><span id="gridNote">grid = 50 cm</span> · drag to turn the view, scroll or pinch to zoom</div>
     </div>
     <div class="controls">
       <button class="btn" id="new" type="button">New castle</button>
+      <span class="label">Level</span>
+      <div class="chips" id="levels" role="group" aria-label="Start at level"></div>
       <button class="btn" id="pause" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Pause</button>
       <span class="label">Shout</span>
       <div class="chips shouts" id="shouts" role="group" aria-label="Shout a command"></div>
@@ -130,11 +132,11 @@
         }
       });
       g.add(at(decal("WEAVE", 1.2, 0.4, "#e3620b"), s.gates[0][0] - 1.0, s.gates[0][1]));
-    } else if (s.kind === "bridge") {
-      const len = s.end[0] - s.start[0], cx = (s.start[0] + s.end[0]) / 2;
+    } else if (s.kind === "bridge") {   // the plank is as wide as this level allows
+      const len = s.end[0] - s.start[0], cx = (s.start[0] + s.end[0]) / 2, W = 2 * s.halfWidth;
       g.add(at(mesh(new THREE.PlaneGeometry(len + 0.6, 2.6), std("#1f6fc4", { transparent: true, opacity: 0.95, roughness: 0.12, metalness: 0.15 })), cx, s.start[1], 0.002));
-      g.add(box(len + 0.6, 0.6, 0.008, std("#a0703c", { roughness: 0.9 }), cx, s.start[1], 0.005));
-      for (let k = 0; k <= len + 0.6; k += 0.4) g.add(box(0.015, 0.6, 0.009, std("#7b5229"), s.start[0] - 0.3 + k, s.start[1], 0.0052));
+      g.add(box(len + 0.6, W, 0.008, std("#a0703c", { roughness: 0.9 }), cx, s.start[1], 0.005));
+      for (let k = 0; k <= len + 0.6; k += 0.4) g.add(box(0.015, W, 0.009, std("#7b5229"), s.start[0] - 0.3 + k, s.start[1], 0.0052));
       g.add(at(decal("SLOWLY", 1.2, 0.4, "#3d8fd6"), s.start[0] - 0.9, s.start[1]));
     } else if (s.kind === "hurdles") {   // three striped bars on wing posts
       for (const [x, y, h] of s.bars) {
@@ -142,6 +144,11 @@
         for (let k = 0; k < 4; k++) g.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 16), k % 2 ? white : std("#c4372f"), [x, y - 0.45 + 0.3 * k, h]));
       }
       g.add(at(decal("OVER", 1.0, 0.4, "#c4372f"), s.bars[0][0] - 1.0, s.bars[0][1]));
+    } else if (s.kind === "ice") {   // the rink: the same 2 m x 1.4 m slab the physics uses, and the spot to sit on
+      const [x, y] = s.rink;
+      g.add(box(2.0, 1.4, 0.01, std("#cfe9f7", { roughness: 0.05, metalness: 0.1 }), x, y, 0.005));
+      g.add(at(mesh(new THREE.RingGeometry(0.32, 0.38, 40), new THREE.MeshBasicMaterial({ color: lin("#2f6fb5"), toneMapped: false })), s.end[0], s.end[1], 0.0115));
+      g.add(at(decal("ICE", 0.8, 0.4, "#2f6fb5"), x - 1.4, y));
     } else if (s.kind === "sit" || s.kind === "lie") {
       const [x, y] = s.end, col = s.kind === "sit" ? "#e3620b" : "#2f6fb5";
       if (s.kind === "lie") g.add(box(1.1, 0.8, 0.01, std(col, { roughness: 0.95 }), x, y, 0.005));
@@ -194,7 +201,7 @@
   }
   function renderCourse() {
     const items = game.castle.stations.map((s, i) => {
-      const r = game.results.filter((x) => x.kind !== "shout")[i];
+      const r = game.results.filter((x) => x.kind !== "shout" && x.kind !== "fall")[i];
       const cls = r ? (r.passed ? "pass" : "fail") : i === game.index && !game.over ? "now" : "";
       return `<li class="${cls}">${r ? (r.passed ? "✓ " : "✗ ") : ""}${s.title}</li>`;
     });
@@ -207,19 +214,27 @@
     const list = $("log"); if (list.firstElementChild && list.firstElementChild.classList.contains("muted")) list.innerHTML = "";
     list.prepend(li); while (list.children.length > 12) list.lastChild.remove();
   }
-  function newGame() {
-    game = new rules.Game(bolt, (Math.random() * 1e9) >>> 0, bundle.start);
+  let startLevel = 1;
+  [1, 2, 3, 4, 5].forEach((n) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = String(n);
+    b.setAttribute("aria-pressed", String(n === startLevel));
+    b.addEventListener("click", () => { startLevel = n; [...$("levels").children].forEach((x, i) => x.setAttribute("aria-pressed", String(i + 1 === n))); if (bolt) newGame(); });
+    $("levels").append(b);
+  });
+  function newGame(level = startLevel, lives = 3, score = 0) {
+    game = new rules.Game(bolt, (Math.random() * 1e9) >>> 0, bundle.start, { level, lives, score });
     buildCourse(); seen = 0; acc = 0; ended = false; playing = true; $("pause").textContent = "Pause";
     $("result").hidden = true; $("log").innerHTML = ""; renderCourse(); resetView();
-    banner("READY…", "info");
+    banner(`LEVEL ${level}: ${game.L.name.toUpperCase()}`, "info");
   }
   function endCard() {
-    const won = game.phase === "finished";
-    $("rLabel").textContent = won ? "Castle reached" : "Out!";
-    $("rTitle").textContent = won ? "BOLT MADE IT!" : "ELIMINATED!";
-    $("rScore").textContent = `${game.score} points · ${game.t.toFixed(0)} s`;
-    $("rList").innerHTML = game.results.map((r) => `<li class="${r.passed ? "" : "muted"}">${r.passed ? "✓" : "✗"} ${r.title}${r.note ? " · " + r.note : ""}</li>`).join("")
-      + (won ? "" : `<li class="muted">Fell during: ${game.shout ? "a shout" : game.station.title}</li>`);
+    const won = game.phase === "finished", last = game.L.n === 5;
+    $("rLabel").textContent = won ? `Level ${game.L.n} · ${game.L.name}` : `Level ${game.L.n} · out of lives`;
+    $("rTitle").textContent = won ? (last ? "CHAMPION OF THE CASTLE!" : `LEVEL ${game.L.n} CLEARED!`) : "ELIMINATED!";
+    $("rScore").textContent = `${game.score} points · ${"♥".repeat(Math.max(0, game.lives))}${game.lives > 0 ? " left" : ""}`;
+    $("rList").innerHTML = game.results.map((r) => `<li class="${r.passed ? "" : "muted"}">${r.passed ? "✓" : "✗"} ${r.title}${r.note ? " · " + r.note : ""}</li>`).join("");
+    $("next").hidden = !(won && !last);
+    $("again").textContent = won && !last ? "Start over" : "New castle";
     $("result").hidden = false;
   }
   function resetView() {
@@ -238,8 +253,10 @@
   }
   const DOING = { stand: "standing", walk: "walking", sit: "sitting", lie: "lying" };
   function hud() {
-    const s = game.shout ? { title: `Guard: ${rules.SHOUTS[game.shout.cmd]}`, how: "Obey within 5 s and hold it for 2 s" } : game.over ? null : game.station;
-    $("hStation").textContent = game.phase === "ready" ? "Get ready" : s ? s.title : game.phase === "finished" ? "Castle reached!" : "Out!";
+    const s = game.shout ? { title: `Guard: ${rules.SHOUTS[game.shout.cmd]}`, how: `Obey within ${game.L.obey} s and hold it for 2 s` } : game.over ? null : game.station;
+    $("hLevel").textContent = `${game.L.n} · ${game.L.name}`;
+    $("hLives").textContent = "♥".repeat(Math.max(0, game.lives)) + "♡".repeat(Math.max(0, 3 - game.lives));
+    $("hStation").textContent = game.phase === "ready" ? "Get ready" : s ? s.title : game.phase === "finished" ? `Level ${game.L.n} cleared!` : "Out!";
     $("hHow").textContent = game.phase === "ready" ? "The course is being built…" : s ? s.how : "";
     $("hScore").textContent = String(game.score);
     $("hTime").textContent = `${game.t.toFixed(1)} s`;
@@ -259,6 +276,7 @@
   }
   $("new").addEventListener("click", () => bolt && newGame());
   $("again").addEventListener("click", () => bolt && newGame());
+  $("next").addEventListener("click", () => bolt && game && newGame(game.L.n + 1, game.lives, game.score));
   $("pause").addEventListener("click", () => { playing = !playing; $("pause").textContent = playing ? "Pause" : "Play"; });
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -282,6 +300,7 @@
       if (wasReady && game.phase === "run") banner("GO!", "good");
       while (seen < game.events.length) {
         const e = game.events[seen++]; log(e);
+        if (e.text.startsWith("Bolt fell!") && !game.over) resetView();   // restarted at the station
         if (e.kind !== "station") banner(e.text.length > 22 ? e.text.split(":")[0].split("!")[0] + (e.kind === "bad" ? "" : "!") : e.text, e.kind);
         renderCourse();
       }

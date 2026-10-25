@@ -12,7 +12,7 @@ import { Driver, posture, rng } from "./game.js";
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 export const OBSTACLES = {
-  weave: { title: "Weave poles", how: "Weave through all 8 poles, first pole on the left shoulder" },
+  weave: { title: "Weave poles", how: "Weave through every pole, first pole on the left shoulder" },
   tunnel: { title: "Tunnel", how: "Run through the tunnel, in at the near end" },
   table: { title: "Pause table", how: "Lie down on the table while the judge counts 5" },
   jump: { title: "Hurdle", how: "Get over the 20 cm bar without knocking it" },
@@ -25,17 +25,25 @@ export function setWeaveSpeed(v) { WEAVE_SPEED = v; }
 
 // The course: obstacles along a winding path from the start line (course coordinates: x ahead of
 // Bolt at the start, y to its left). Each obstacle has an entry point, a heading and a length.
-export const BAR = 0.2;   // m: hurdle height (Bolt steps over it with a high trot)
-export function buildAgility(seed, { jumps = true } = {}) {
-  const r = rng(seed);
-  const kinds = ["weave", "tunnel", "table", "tunnel"].concat(jumps ? ["jump", "jump"] : []);
+export const BAR = 0.2;   // m: hurdle height
+// Classes: Standard, and Championship (12 tighter weave poles, three tunnels, sharper turns, a stricter
+// course time). Hurdles stay out until Bolt can jump: with solid bars, the trot touched even a 5 cm bar
+// every time (the bars only looked clearable while MuJoCo was missing collisions with moved geoms).
+export const CLASSES = {
+  standard: { name: "Standard", poles: 8, spacing: 1.2, tunnels: 2, turn: 0.9, pace: 0.55 },
+  championship: { name: "Championship", poles: 12, spacing: 1.0, tunnels: 3, turn: 1.2, pace: 0.65 },
+};
+export function buildAgility(seed, { jumps = false, cls = "standard" } = {}) {
+  const r = rng(seed), C = CLASSES[cls];
+  WEAVE.poles = C.poles; WEAVE.spacing = C.spacing;
+  const kinds = ["weave", "table"].concat(Array(C.tunnels).fill("tunnel"), jumps ? ["jump", "jump"] : []);
   for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
   if (kinds[0] === "table") kinds.push(kinds.shift());              // a course never opens with the table
   let x = 0.5, y = 0, h = 0;
   const obstacles = kinds.map((kind, n) => {
     // up to ~50° between obstacles; a hurdle gets a straighter, longer run-up (high-stepping while
     // turning hard tipped Bolt over: 2 falls in 24 rounds before this)
-    h += n === 0 ? (r() * 2 - 1) * 0.3 : (r() * 2 - 1) * (kind === "jump" ? 0.5 : 0.9);
+    h += n === 0 ? (r() * 2 - 1) * 0.3 : (r() * 2 - 1) * (kind === "jump" ? 0.5 : C.turn);
     const gap = kind === "weave" ? 2.6 : kind === "jump" ? 3.0 : 2.2, L = kind === "weave" ? WEAVE.spacing * (WEAVE.poles - 1) : kind === "tunnel" ? 3.0 : 0;
     const entry = [x + gap * Math.cos(h), y + gap * Math.sin(h)];
     const exit = [entry[0] + L * Math.cos(h), entry[1] + L * Math.sin(h)];
@@ -48,7 +56,7 @@ export function buildAgility(seed, { jumps = true } = {}) {
   let length = 0, p = [0, 0];
   for (const o of obstacles) { length += Math.hypot(o.entry[0] - p[0], o.entry[1] - p[1]) + o.L; p = o.exit; }
   length += Math.hypot(finish[0] - p[0], finish[1] - p[1]);
-  return { seed, obstacles, finish, finishH: last.h, sct: Math.round(length / 0.55 + 9) };
+  return { seed, cls: C.name, obstacles, finish, finishH: last.h, sct: Math.round(length / C.pace + 9) };
 }
 
 // One competitor's round. Call step() 50 times a second.

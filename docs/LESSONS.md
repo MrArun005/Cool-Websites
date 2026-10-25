@@ -151,3 +151,9 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
 - **Handlers matter as much as brains.** In the agility course, point-to-point steering zigzagged through the
   weaves at 0.3 m/s; a smooth line through the poles went 0.8 m/s with no misses. High-stepping while turning
   hard toppled Bolt twice in 24 rounds; a straight run-up and gentle steering over the bar fixed it.
+- **Never move a plain world geom at run time.** MuJoCo missed collisions with a hurdle box moved through
+  `model.geom_pos`: a ball dropped on it fell through, and Bolt's legs passed through bars uncounted. That made
+  "stepping over 25 cm bars: 48 in 48" and the clean game hurdles fake. Movable things (the bar, the ice) are now
+  mocap bodies moved through `data.mocap_pos`; a dropped ball and a bar under the dog both collide. Honest result:
+  the trot touches even a 5 cm bar every time (it does not place its paws around the bar), so hurdles wait
+  for the jump brain. Test a new physics object with a simple drop test before trusting any result on it.

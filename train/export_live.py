@@ -29,10 +29,10 @@ from evaluate import Policy, reset_standing
 from record3d import describe
 from reference_gait import HIP_X, HIP_Y
 
-# Game hazards, only in the browser bundle: an ice slab 1 cm thick whose low friction wins over the paws'
-# (higher contact priority), parked out of the way until a game puts it on the course.
-ICE_XML = ('<geom name="ice" type="box" size="1.0 0.7 0.005" pos="100 0 -1" friction="0.15 0.005 0.0001" '
-           'priority="1" rgba="0.75 0.9 1 1"/>')
+# Game hazards, only in the browser bundle: an ice slab 2 m x 1.4 m, 1 cm thick, whose low friction wins
+# over the paws' (higher contact priority). A mocap body, parked out of the way until a game places it.
+ICE_XML = ('<body name="ice" mocap="true" pos="100 0 -1"><geom name="ice" type="box" size="1.0 0.7 0.005" '
+           'friction="0.15 0.005 0.0001" priority="1" rgba="0.75 0.9 1 1"/></body>')
 
 # The reference run: (command, steps, turn rad/s, speed m/s[, hurdle height placed 1.5 m ahead]): sit, lie,
 # walk, step over a hurdle, run, turn sharply, brake, stand

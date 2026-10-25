@@ -1,10 +1,13 @@
 // Bolt's Castle: a Takeshi's Castle-style course for Bolt, run on the live simulator (live.js).
 //
 // Each game builds a new course from shuffled stations: a sprint, a slalom between poles, a narrow
-// bridge to cross slowly, a box to sit in, a mat to lie on, and the castle gate at the end. The castle
-// guard also shouts surprise commands at any moment ("SIT!", "LIE DOWN!", "FREEZE!"), and so can the
-// viewer. A fall eliminates Bolt. Bolt plays on its own: a course runner steers its trained brains
-// from station to station, the same way the follow layer does. game_test.mjs plays many games headless.
+// bridge to cross slowly, a box to sit in, a mat to lie on, from level 3 an ice rink to stop and sit on,
+// and the castle gate at the end. The guard shouts surprise commands at any moment ("SIT!", "LIE DOWN!",
+// "FREEZE!"), and so can the viewer; from level 3 his cannon shoves Bolt sideways. Five levels, each
+// harder (LEVELS); 3 lives: a failed station or a fall costs one (after a fall Bolt restarts at that
+// station). Bolt plays on its own: a course runner steers its trained brains from station to station.
+// Every hazard is real physics (live.js): the shoves are forces, the ice is low friction.
+// game_test.mjs plays many games headless.
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -20,14 +23,26 @@ export function posture(bolt) {
   return "moving";
 }
 
+// How hard each level is. Measured limits (12M walk brain, live.js): shoves up to 60 N sideways never
+// toppled Bolt, 80 N toppled it 6 times in 10; on ice of friction 0.06, braking from 1 m/s and sitting
+// toppled it 4 times in 6, at 0.12 never.
+export const LEVELS = [
+  { n: 1, name: "Rookie", sprint: 7.0, bridge: 0.30, gates: 4, gateSide: 0.9, gateR: 0.45, shouts: 2, obey: 5.0, cannon: 0, shots: 0, ice: 0 },
+  { n: 2, name: "Contender", sprint: 6.4, bridge: 0.24, gates: 5, gateSide: 1.0, gateR: 0.40, shouts: 3, obey: 4.0, cannon: 0, shots: 0, ice: 0 },
+  { n: 3, name: "Challenger", sprint: 6.0, bridge: 0.20, gates: 6, gateSide: 1.1, gateR: 0.38, shouts: 4, obey: 3.5, cannon: 50, shots: 2, ice: 0.12 },
+  { n: 4, name: "Warrior", sprint: 5.6, bridge: 0.17, gates: 6, gateSide: 1.2, gateR: 0.35, shouts: 5, obey: 3.0, cannon: 65, shots: 3, ice: 0.08 },
+  { n: 5, name: "Takeshi", sprint: 5.3, bridge: 0.15, gates: 7, gateSide: 1.3, gateR: 0.32, shouts: 6, obey: 2.5, cannon: 75, shots: 4, ice: 0.06 },
+];
+
 export const STATIONS = {
-  sprint: { title: "Sprint", say: "RUN!", how: "Cover 6 m in under 7 s" },
-  slalom: { title: "Slalom", say: "WEAVE!", how: "Pass between every pair of poles" },
-  bridge: { title: "Narrow bridge", say: "SLOWLY…", how: "Cross the 4 m plank without stepping off or rushing" },
-  sit: { title: "Sit box", say: "SIT!", how: "Stop in the box and sit for 2 s" },
-  lie: { title: "Lie-down mat", say: "LIE DOWN!", how: "Stop on the mat and lie down for 2 s" },
-  hurdles: { title: "Hurdles", say: "OVER!", how: "Get over 3 bars without touching them" },
-  gate: { title: "Castle gate", say: "HOME!", how: "Reach the castle" },
+  sprint: { title: "Sprint", say: "RUN!", how: (L) => `Cover 6 m in under ${L.sprint} s` },
+  slalom: { title: "Slalom", say: "WEAVE!", how: (L) => `Pass between all ${L.gates} pairs of poles` },
+  bridge: { title: "Narrow bridge", say: "SLOWLY…", how: (L) => `Cross the 4 m plank (${Math.round(L.bridge * 200)} cm wide) without stepping off or rushing` },
+  ice: { title: "Ice rink", say: "SIT ON THE ICE!", how: () => "Run onto the ice, stop on the spot and sit for 2 s without slipping off" },
+  sit: { title: "Sit box", say: "SIT!", how: () => "Stop in the box and sit for 2 s" },
+  lie: { title: "Lie-down mat", say: "LIE DOWN!", how: () => "Stop on the mat and lie down for 2 s" },
+  hurdles: { title: "Hurdles", say: "OVER!", how: () => "Get over 3 bars without touching them" },
+  gate: { title: "Castle gate", say: "HOME!", how: () => "Reach the castle" },
 };
 export const SHOUTS = { sit: "SIT!", lie: "LIE DOWN!", still: "FREEZE!" };
 
@@ -44,31 +59,35 @@ export function rng(seed) {
 }
 
 // The course, in course coordinates: x forward from Bolt's start, y to its left.
-export function buildCastle(seed) {
-  const r = rng(seed), kinds = ["sprint", "slalom", "bridge", "sit", "lie", "hurdles"];
+// Hurdles stay out until Bolt can jump: with solid bars, stepping over touched even a 5 cm bar every time.
+export function buildCastle(seed, L = LEVELS[0], { hurdles = false } = {}) {
+  const r = rng(seed), kinds = ["sprint", "slalom", "bridge", "sit", "lie"].concat(L.ice ? ["ice"] : [], hurdles ? ["hurdles"] : []);
   for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
   kinds.push("gate");
   let x = 2.5, y = 0;
   const stations = kinds.map((kind) => {
     y = clamp(y + (r() * 2 - 1) * 1.2, -2, 2);   // each station a little to one side: Bolt must steer
     let s;
-    if (kind === "sprint") s = { kind, start: [x, y], end: [x + 6, y], limit: 7 };
-    else if (kind === "bridge") s = { kind, start: [x, y], end: [x + 4, y], halfWidth: 0.3, maxSpeed: 0.6 };
+    if (kind === "sprint") s = { kind, start: [x, y], end: [x + 6, y], limit: L.sprint };
+    else if (kind === "bridge") s = { kind, start: [x, y], end: [x + 4, y], halfWidth: L.bridge, maxSpeed: 0.6 };
+    else if (kind === "ice") s = { kind, start: [x, y], end: [x + 0.9, y], rink: [x + 0.9, y], radius: 0.4, mu: L.ice };
     else if (kind === "hurdles") {   // three bars 3 m apart, 15-25 cm high (the trot steps over them)
       s = { kind, bars: [0, 1, 2].map((k) => [x + 1.5 + 3 * k, y, Math.round((0.15 + 0.1 * r()) * 100) / 100]) };
       s.start = [x, y]; s.end = [x + 8.5, y];
     }
     else if (kind === "slalom") {
       const side = r() < 0.5 ? 1 : -1;
-      s = { kind, gates: [0, 1, 2, 3].map((k) => [x + 1 + 2.5 * k, y + side * (k % 2 ? -0.9 : 0.9)]) };
-      s.start = s.gates[0]; s.end = s.gates[3];
+      s = { kind, gates: Array.from({ length: L.gates }, (_, k) => [x + 1 + 2.5 * k, y + side * (k % 2 ? -L.gateSide : L.gateSide)]), radius: L.gateR };
+      s.start = s.gates[0]; s.end = s.gates[L.gates - 1];
     } else s = { kind, start: [x, y], end: [x, y], radius: 0.5 };
     x = s.end[0] + (kind === "slalom" ? 3.0 : 2.5);
-    return { ...s, ...STATIONS[kind] };
+    return { ...s, title: STATIONS[kind].title, say: STATIONS[kind].say, how: STATIONS[kind].how(L) };
   });
-  // two surprise shouts from the guard, at random moments of the run
-  const shouts = [8 + 18 * r(), 30 + 25 * r()].map((t) => ({ t, cmd: ["sit", "lie", "still"][Math.floor(r() * 3)] }));
-  return { seed, stations, shouts };
+  // surprise shouts from the guard, and cannon shots from level 3, at random moments of the run
+  const moments = (n, from, to) => Array.from({ length: n }, (_, i) => from + ((i + r()) / Math.max(1, n)) * (to - from));
+  const shouts = moments(L.shouts, 6, 70).map((t) => ({ t, cmd: ["sit", "lie", "still"][Math.floor(r() * 3)] }));
+  const shots = moments(L.shots, 10, 75).map((t) => ({ t, side: r() < 0.5 ? 1 : -1 }));
+  return { seed, level: L, stations, shouts, shots };
 }
 
 // Drives Bolt to points: turn toward the point first, then speed up; brake before stopping.
@@ -89,16 +108,33 @@ export class Driver {
 
 // One game. Call step() 50 times a second; read state for the screen.
 export class Game {
-  constructor(bolt, seed, start) {
-    this.bolt = bolt; this.castle = buildCastle(seed);
+  // level: 1-5; lives and score carry over from the level before
+  constructor(bolt, seed, start, { level = 1, lives = 3, score = 0, hurdles = false } = {}) {
+    this.L = LEVELS[level - 1];
+    this.bolt = bolt; this.castle = buildCastle(seed, this.L, { hurdles }); this.start = start;
     bolt.reset(start);
     const w = bolt.where();
     this.origin = [w.x, w.y]; this.yaw0 = w.yaw;       // course coordinates start where Bolt stands
     this.driver = new Driver(bolt);
-    this.t = 0; this.index = 0; this.score = 0; this.results = [];
-    this.phase = "ready"; this.task = null; this.shout = null; this.events = []; this.over = false;
+    this.t = 0; this.index = 0; this.score = score; this.lives = lives; this.results = [];
+    this.phase = "ready"; this.task = null; this.shout = null; this.events = []; this.over = false; this.readyFor = 2;
     this.cmd = { command: "stand", turn: 0, speed: 0.2 };
     this.pendingShouts = this.castle.shouts.slice();
+    this.pendingShots = this.castle.shots.slice();
+    this.falls = 0;
+  }
+  loseLife(why) {
+    this.lives -= 1;
+    this.say(`${why} ${this.lives > 0 ? `${this.lives} ${this.lives === 1 ? "life" : "lives"} left.` : "No lives left."}`, "bad");
+    if (this.lives <= 0) { this.over = true; this.phase = "eliminated"; this.say("ELIMINATED!", "bad"); }
+    return this.lives > 0;
+  }
+  // after a fall: Bolt starts that station again, standing 1.5 m before it
+  respawn() {
+    const s = this.station, before = [s.start[0] - 1.5, s.start[1]];
+    this.bolt.teleport(this.start, this.world(before), this.yaw0);
+    this.shout = null; this.driver.speed = 0.2; this.phase = "ready"; this.readyFor = this.t + 2;
+    this.cmd = { command: "stand", turn: 0, speed: 0.2 };
   }
   raise([x, y, h]) { this.bolt.setHurdle(this.world([x, y]), this.yaw0, h); }   // a bar at a course spot, across the course
   // course <-> world coordinates
@@ -124,34 +160,46 @@ export class Game {
     const dt = this.bolt.dt;
     if (this.over) return;
     this.t += dt;
-    if (this.phase === "ready") {          // stand for 2 s at the start line
+    if (this.phase === "ready") {          // stand for 2 s at the start line (or after a restart)
       this.cmd = { command: "stand", turn: 0, speed: 0.2 };
-      if (this.t >= 2) { this.phase = "run"; this.begin(); }
+      if (this.t >= this.readyFor) { this.phase = "run"; this.begin(); }
     } else {
       while (this.pendingShouts.length && this.t >= this.pendingShouts[0].t + 2) this.shoutNow(this.pendingShouts.shift().cmd);
+      while (this.pendingShots.length && this.t >= this.pendingShots[0].t + 2) {   // the guard's cannon
+        const shot = this.pendingShots.shift();
+        this.bolt.shove(shot.side * this.L.cannon, 0, 0.2);
+        this.say(`CANNON! ${this.L.cannon} N from the ${shot.side > 0 ? "right" : "left"}`, "shot");
+      }
       if (this.shout) this.obey(dt); else this.play(dt);
     }
     const c = this.cmd, b = this.bolt;
     b.setCommand(c.command);
     if (c.command === "walk") { b.setTurn(c.turn); b.setSpeed(c.speed); }
     b.tick();
-    if (b.fell()) { this.over = true; this.phase = "eliminated"; this.say("ELIMINATED!", "bad"); }
+    if (b.fell()) {
+      this.falls += 1;
+      this.results.push({ kind: "fall", title: `Fell at ${this.shout ? "a shout" : this.station.title}`, passed: false, note: "" });
+      if (this.loseLife("Bolt fell!")) this.respawn();
+    }
   }
 
   begin() {
     const s = this.station;
     this.task = { stage: "approach", since: this.t, held: 0, gate: 0, bad: 0, timer: null, settle: 0 };
+    if (s.kind === "ice") this.bolt.setIce(this.world(s.rink), this.yaw0, s.mu);   // the rink: real low friction
     this.say(`${s.title}: ${s.how}`, "station");
   }
   finish(passed, note) {
     const s = this.station;
+    if (s.kind === "ice") this.bolt.setIce([1e3, 0], 0, 1.0, false);
     this.results.push({ kind: s.kind, title: s.title, passed, note });
-    if (passed) this.score += s.kind === "gate" ? 50 : 100;
+    if (passed) this.score += (s.kind === "gate" ? 50 : 100) * this.L.n;
     this.say(passed ? `${s.title}: passed!${note ? " " + note : ""}` : `${s.title}: failed. ${note || ""}`, passed ? "good" : "bad");
+    if (!passed && !this.loseLife("A life lost.")) return;
     this.index += 1;
     if (this.index >= this.castle.stations.length) {
       this.over = true; this.phase = "finished";
-      this.say(`Castle reached! ${this.score} points`, "good");
+      this.say(`Level ${this.L.n} (${this.L.name}) cleared! ${this.score} points`, "good");
       this.cmd = { command: "stand", turn: 0, speed: 0.2 };
     } else this.begin();
   }
@@ -191,16 +239,18 @@ export class Game {
     const s = this.station, k = this.task, here = this.local();
     if (k.stage === "done") return this.finish(k.passed, k.note);
     if (this.rising(dt)) return;
-    if (s.kind === "sit" || s.kind === "lie") {
-      if (k.stage === "approach") {
-        this.cmd = this.driver.toward(this.world(s.end), 0.9, true, dt);
+    if (s.kind === "sit" || s.kind === "lie" || s.kind === "ice") {
+      const target = s.kind === "ice" ? "sit" : s.kind;
+      if (k.stage === "approach") {   // on the ice, it comes in fast: that is the challenge
+        this.cmd = this.driver.toward(this.world(s.end), s.kind === "ice" ? 1.0 : 0.9, true, dt);
         if (this.cmd.dist < 0.25 || (this.cmd.dist < s.radius && this.driver.speed <= 0.25)) { k.stage = "brake"; k.settle = 0; }
         return;
       }
-      const r = this.holdPosture(s.kind, dt);
+      const r = this.holdPosture(target, dt);
       if (r) {
         const d = Math.hypot(here[0] - s.end[0], here[1] - s.end[1]);
-        k.passed = r === "done" && d < s.radius + 0.15; k.note = r === "timeout" ? "Too slow." : k.passed ? "" : "Not in the box.";
+        k.passed = r === "done" && d < s.radius + 0.15;
+        k.note = r === "timeout" ? "Too slow." : k.passed ? "" : s.kind === "ice" ? "Slid off the spot." : "Not in the box.";
       }
       return;
     }
@@ -218,12 +268,13 @@ export class Game {
     if (s.kind === "slalom") {
       const g = s.gates[k.gate];
       this.cmd = this.driver.toward(this.world(g), 0.6, false, dt);
-      if (this.cmd.dist < 0.45) {
+      const n = s.gates.length, done = () => { k.stage = "done"; k.passed = k.bad === 0; k.note = k.bad ? `Missed ${k.bad} of ${n} gates.` : `All ${n} gates.`; };
+      if (this.cmd.dist < s.radius) {
         k.gate += 1;
-        if (k.gate >= s.gates.length) { k.stage = "done"; k.passed = true; k.note = "All 4 gates."; }
+        if (k.gate >= n) done();
       } else if (here[0] > g[0] + 0.6) {     // went past this pair of poles without passing between them
         k.gate += 1; k.bad += 1;
-        if (k.gate >= s.gates.length) { k.stage = "done"; k.passed = false; k.note = `Missed ${k.bad} of 4 gates.`; }
+        if (k.gate >= n) done();
       }
       return;
     }
@@ -276,7 +327,7 @@ export class Game {
     if (sh.stage === "pose") {
       this.cmd = { command: sh.cmd === "still" ? "stand" : sh.cmd, turn: 0, speed: 0.2 };
       sh.held = posture(this.bolt) === sh.cmd ? sh.held + dt : 0;
-      const late = this.t - sh.since > 7;
+      const late = this.t - sh.since > this.L.obey + 2;   // obey within the level's time, then hold 2 s
       if (sh.held >= 2 || late) {
         const ok = sh.held >= 2;
         this.results.push({ kind: "shout", title: `Guard: ${SHOUTS[sh.cmd]}`, passed: ok, note: ok ? "" : "Too slow." });

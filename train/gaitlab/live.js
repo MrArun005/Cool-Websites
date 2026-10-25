@@ -80,6 +80,10 @@ export class Bolt {
     this.torso = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_BODY.value, "torso");
     this.hurdle = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_GEOM.value, "hurdle");   // -1 in bundles without one
     this.ice = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_GEOM.value, "ice");
+    // the bar and the ice are mocap bodies: moved through data.mocap_pos (moving plain world geoms at
+    // run time made MuJoCo miss collisions: legs went through bars)
+    const mocap = (geom) => (geom < 0 ? -1 : this.model.body_mocapid[this.model.geom_bodyid[geom]]);
+    this.hurdleMocap = mocap(this.hurdle); this.iceMocap = mocap(this.ice);
     this.dt = this.c.dt;
   }
   // swap in another walk brain (agility competitors), with the gait it was trained on
@@ -95,17 +99,22 @@ export class Bolt {
     this.t = 0; this.command = "stand"; this.walkSince = 0; this.walkFrom = this.c.stand_pose.slice();
     this.lastAction = new Float64Array(12); this.yawCmd = 0; this.speedCmd = 0.4; this.phase = 0;
     this.hurdleAt = [100, 0]; this.hurdleDir = [1, 0]; this.hurdleH = 0;
-    if (this.hurdle >= 0) { this.model.geom_pos.set([100, 0, -1], 3 * this.hurdle); mj.mj_forward(m, d); }
-    if (this.ice >= 0) this.setIce([100, 0], 0, 2, 0.15, false);
+    // mj_resetData put the bar and the ice back where the model parks them
     this.push = null;
   }
-  // Game hazards. Ice: a slab `length` m long and 1.4 m wide at a spot, with friction `mu` (the paws: 1.0).
-  setIce([x, y], yaw, length, mu, on = true) {
-    if (this.ice < 0) return;
-    this.model.geom_pos.set([x, y, on ? 0.005 : -1], 3 * this.ice);
-    this.model.geom_quat.set([Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], 4 * this.ice);
-    this.model.geom_size.set([length / 2, 0.7, 0.005], 3 * this.ice);
-    this.model.geom_rbound[this.ice] = Math.hypot(length / 2, 0.7, 0.005);
+  // Put Bolt standing at a spot, facing `yaw` (a game's restart after a fall)
+  teleport(start, [x, y], yaw) {
+    this.reset(start);
+    const q = this.data.qpos;
+    q[0] = x; q[1] = y; q.set([Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], 3);
+    this.data.qvel.fill(0);
+    this.mj.mj_forward(this.model, this.data);
+  }
+  // Game hazards. Ice: a 2 m x 1.4 m slab centred at a spot, along `yaw`, with friction `mu` (paws: 1.0).
+  setIce([x, y], yaw, mu, on = true) {
+    if (this.iceMocap < 0) return;
+    this.data.mocap_pos.set([x, y, on ? 0.005 : -1], 3 * this.iceMocap);
+    this.data.mocap_quat.set([Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], 4 * this.iceMocap);
     this.model.geom_friction[3 * this.ice] = mu;
     this.mj.mj_forward(this.model, this.data);
   }
@@ -125,10 +134,10 @@ export class Bolt {
     this.setHurdle([w.x + f[0] * ahead, w.y + f[1] * ahead], w.yaw, height);
   }
   setHurdle([x, y], yaw, height) {   // put the bar at a spot on the course, across the direction `yaw`
-    const r = this.model.geom_quat, n = Math.hypot(Math.cos(yaw), Math.sin(yaw));
+    const n = Math.hypot(Math.cos(yaw), Math.sin(yaw));
     this.hurdleAt = [x, y]; this.hurdleDir = [Math.cos(yaw) / n, Math.sin(yaw) / n]; this.hurdleH = height;
-    this.model.geom_pos.set([x, y, height - (this.c.hurdle_half || 0.15)], 3 * this.hurdle);
-    r.set([Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], 4 * this.hurdle);
+    this.data.mocap_pos.set([x, y, height - (this.c.hurdle_half || 0.15)], 3 * this.hurdleMocap);
+    this.data.mocap_quat.set([Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], 4 * this.hurdleMocap);
     this.mj.mj_forward(this.model, this.data);
   }
   hurdleAhead() {

@@ -129,7 +129,7 @@
   <header style="display:grid;gap:6px">
     <span class="label">Bolt robot dog · a competition on the live simulator</span>
     <h1>Bolt Agility Cup</h1>
-    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through all eight poles, take the tunnel from the right end, clear the hurdles without knocking a bar, and lie on the pause table for the judge's count of five. The judge counts 5 faults for a missed pole, a wrong tunnel entry or a knocked bar, and 1 fault per second over the standard course time. The fewest faults wins, then the fastest time. A fall is elimination. Everything runs in your browser, in the same physics as training.</p>
+    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through every pole, take each tunnel from the right end, and lie on the pause table for the judge's count of five. The judge counts 5 faults for a missed pole or a wrong tunnel entry, and 1 fault per second over the standard course time. The Championship class is much harder: 12 tighter poles, three tunnels, sharper turns and a strict course time, so even the best dogs rarely go clear. Hurdles come back when Bolt has learned to jump. The fewest faults wins, then the fastest time. A fall is elimination. Everything runs in your browser, in the same physics as training.</p>
   </header>
 
   <section class="panel" aria-labelledby="ring">
@@ -145,6 +145,8 @@
     <div class="controls">
       <button class="btn" id="start" type="button">Start the competition</button>
       <button class="btn" id="new" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">New course</button>
+      <span class="label">Class</span>
+      <div class="chips" id="classes" role="group" aria-label="Class"></div>
       <button class="btn" id="pause" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Pause</button>
       <span class="label">Speed</span>
       <div class="chips" id="speeds" role="group" aria-label="Playback speed"></div>
@@ -408,11 +410,20 @@
     queue.forEach((n) => rows.push(`<tr><td></td><td class="muted">${n}</td><td colspan="3" class="muted">waiting</td></tr>`));
     $("board").innerHTML = rows.join("") || `<tr><td colspan="5" class="muted">No rounds yet.</td></tr>`;
   }
+  let cls = "standard";
+  function classChips() {
+    $("classes").innerHTML = "";
+    for (const [key, c] of Object.entries(agility.CLASSES)) {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = c.name; b.setAttribute("aria-pressed", String(key === cls));
+      b.addEventListener("click", () => { cls = key; classChips(); newCourse(); });
+      $("classes").append(b);
+    }
+  }
   function newCourse() {
-    course = agility.buildAgility((Math.random() * 1e9) >>> 0);
+    course = agility.buildAgility((Math.random() * 1e9) >>> 0, { cls });
     bolt.reset(bundle.start); buildRing();
     round = null; queue = []; results = []; $("result").hidden = true;
-    renderCourse(); renderBoard(); $("log").innerHTML = ""; log(`New course: ${course.obstacles.length} obstacles, course time ${course.sct} s.`, "info");
+    renderCourse(); renderBoard(); $("log").innerHTML = ""; log(`New ${course.cls} course: ${course.obstacles.length} obstacles, course time ${course.sct} s.`, "info");
     $("hDog").textContent = "–"; $("hObstacle").textContent = "Press Start"; $("hTime").textContent = "0.00 s"; $("hFaults").textContent = "0"; $("hSct").textContent = `${course.sct} s`;
     resetView();
   }
@@ -474,7 +485,7 @@
     } catch (e) {
       console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
     }
-    buildDog(bundle.geoms); newCourse(); $("loading").hidden = true;
+    buildDog(bundle.geoms); classChips(); newCourse(); $("loading").hidden = true;
   }
   $("start").addEventListener("click", () => bolt && startCompetition());
   $("new").addEventListener("click", () => bolt && newCourse());
