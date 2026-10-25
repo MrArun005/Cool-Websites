@@ -7,10 +7,10 @@ export const HX = 2.25, HY = 1.5, GOAL_W = 1.3, PEN_AREA = [1.0, 2.5], BORDER = 
 export const KICK_X = 0.08, KICK_Y = 0.032, TOL_X = 0.02, TOL_Y = 0.02, TOL_H = 0.15, BEHIND = 0.24, AROUND = 0.28;
 export const READY_S = 1.0, QUICK_READY_S = 0.8, QUICK_X = [-0.03, 0.035], QUICK_Y = 0.03, QUICK_H = 0.45;
 export const FOOT_VIEW = [-0.6, 1.1], CAM_H = 0.21, CAM_DOWN = 0.17;
-const DUEL_D = 0.45, ALIGN_MAX_S = 3.0, SHOOT_D = 2.4, LANE_R = 0.18, PASS_MIN = 0.5, PASS_MAX = 2.2, PASS_LEAD = 0.2;
-const RECEIVE_S = 4.0, FOLLOW_S = 3.0, ROLE_EVERY = 15, SUPPORT_EVERY = 2.5, COVER_D = 0.35, CONTEST_D = 0.45, MARK_D = 0.3;
+const DUEL_D = 0.35, ALIGN_MAX_S = 3.0, SHOOT_D = 2.4, LANE_R = 0.18, PASS_MIN = 0.5, PASS_MAX = 2.2, PASS_LEAD = 0.2;
+const RECEIVE_S = 4.0, FOLLOW_S = 3.0, ROLE_EVERY = 15, SUPPORT_EVERY = 2.5, COVER_D = 0.6, CONTEST_D = 0.45, MARK_D = 0.3;
 const SHUFFLE_A = 0.12, SHUFFLE_T = 5.0;
-const AIM_Y = 0.35, DRIBBLE_D = [1.3, 3.2], DRIBBLE_FREE = 0.7, DRIBBLE_MAX_S = 5.0;
+const AIM_Y = 0.35, DRIBBLE_D = [1.3, 3.2], DRIBBLE_FREE = 0.55, DRIBBLE_MAX_S = 5.0;
 const GAP = 0.4, CROWD_VX = 0.6, CROWD_WZ = 0.75, CROWD_VX_BALL = 0.75, PINNED_S = 1.5;
 
 // ---------------------------------------------------------------- 2-D helpers ([x, y] arrays)
@@ -332,7 +332,8 @@ export class TeamTactics {
     const opp_d = this.nearest_opp(wm, b), db = norm(sub(b, me.pos));
     const st = wm.players.find(x => x.name === this.striker);
     const st_near = st !== undefined && norm(sub(st.pos, me.pos)) < 0.3;
-    if (!restricted && db < CONTEST_D && opp_d < 0.6 && !st_near) {
+    const st_db = st !== undefined ? norm(sub(st.pos, b)) : 9.0;
+    if (!restricted && db < CONTEST_D && opp_d < Math.min(0.45, st_db) && !st_near) {
       if (!['approach', 'chase', 'duel', 'align', 'ready', 'dribble'].includes(mem.state)) mem.set_state('duel', t);
       const c = this.ball_play(wm, me, mem, p, b);
       c.state = 'contest:' + c.state;
@@ -453,7 +454,7 @@ export class TeamTactics {
     }
     if (['approach', 'chase'].includes(mem.state) && opp_d < DUEL_D && dball < 0.7) mem.set_state('duel', t);
     if (mem.state === 'duel') {
-      if (opp_d > DUEL_D + 0.25 && t - mem.state_t > 1.0) mem.set_state('approach', t);
+      if (opp_d > DUEL_D + 0.2 && t - mem.state_t > 0.6) mem.set_state('approach', t);
       const nh = Math.trunc(PINNED_S / DT);
       mem.duel_hist = mem.duel_hist.concat([b.slice()]).slice(-nh);
       if (mem.duel_hist.length === nh && norm(sub(mem.duel_hist[0], b)) < 0.05 && t > mem.detour_until) {
