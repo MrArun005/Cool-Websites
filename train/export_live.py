@@ -24,10 +24,15 @@ import numpy as np
 import torch
 from stable_baselines3 import PPO
 
-from bolt_env import ACTION_SCALE, HURDLE_MARGIN, HURDLE_XML, HURDLE_ZONE, MODEL, PAW_GAIT, STAND_POSE, STANCES, BoltEnv
+from bolt_env import ACTION_SCALE, HURDLE_HALF, HURDLE_MARGIN, HURDLE_XML, HURDLE_ZONE, MODEL, PAW_GAIT, STAND_POSE, STANCES, BoltEnv
 from evaluate import Policy, reset_standing
 from record3d import describe
 from reference_gait import HIP_X, HIP_Y
+
+# Game hazards, only in the browser bundle: an ice slab 1 cm thick whose low friction wins over the paws'
+# (higher contact priority), parked out of the way until a game puts it on the course.
+ICE_XML = ('<geom name="ice" type="box" size="1.0 0.7 0.005" pos="100 0 -1" friction="0.15 0.005 0.0001" '
+           'priority="1" rgba="0.75 0.9 1 1"/>')
 
 # The reference run: (command, steps, turn rad/s, speed m/s[, hurdle height placed 1.5 m ahead]): sit, lie,
 # walk, step over a hurdle, run, turn sharply, brake, stand
@@ -97,12 +102,13 @@ def main():
                   hurdles=True)
     m = env.model
     bundle = dict(   # the robot plus one hurdle, which the page moves to whichever bar comes next
-        xml=MODEL.read_text().replace('<geom name="floor"', HURDLE_XML + '\n    <geom name="floor"', 1), geoms=describe(m),
+        xml=MODEL.read_text().replace('<geom name="floor"', HURDLE_XML + '\n    ' + ICE_XML + '\n    <geom name="floor"', 1),
+        geoms=describe(m),
         constants=dict(stand_pose=STAND_POSE.tolist(), dog_pose=STANCES["dog"].tolist(), action_scale=ACTION_SCALE.tolist(),
                        residual_scale=env.RESIDUAL_SCALE, frame_skip=env.frame_skip, dt=env.dt, paw_gait=PAW_GAIT,
                        turn_gain=env.TURN_GAIN, max_turn=env.MAX_TURN, max_speed=env.MAX_SPEED, speed_ref=env.SPEED_REF,
                        sharp_turns=env.sharp_turns, sharp_turn=env.SHARP_TURN,
-                       hurdle_margin=HURDLE_MARGIN, hurdle_zone=list(HURDLE_ZONE),
+                       hurdle_margin=HURDLE_MARGIN, hurdle_zone=list(HURDLE_ZONE), hurdle_half=HURDLE_HALF,
                        hip_x=HIP_X.tolist(), hip_y=HIP_Y.tolist(),
                        commands=["stand", "sit", "lie", "walk"]),
         brains=dict(posture=dict(brain(args.posture), source=Path(args.posture).name),

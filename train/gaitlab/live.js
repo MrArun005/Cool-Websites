@@ -79,6 +79,7 @@ export class Bolt {
     this.lo = Array.from({ length: 12 }, (_, i) => r[2 * i]); this.hi = Array.from({ length: 12 }, (_, i) => r[2 * i + 1]);
     this.torso = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_BODY.value, "torso");
     this.hurdle = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_GEOM.value, "hurdle");   // -1 in bundles without one
+    this.ice = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_GEOM.value, "ice");
     this.dt = this.c.dt;
   }
   // swap in another walk brain (agility competitors), with the gait it was trained on
@@ -95,6 +96,27 @@ export class Bolt {
     this.lastAction = new Float64Array(12); this.yawCmd = 0; this.speedCmd = 0.4; this.phase = 0;
     this.hurdleAt = [100, 0]; this.hurdleDir = [1, 0]; this.hurdleH = 0;
     if (this.hurdle >= 0) { this.model.geom_pos.set([100, 0, -1], 3 * this.hurdle); mj.mj_forward(m, d); }
+    if (this.ice >= 0) this.setIce([100, 0], 0, 2, 0.15, false);
+    this.push = null;
+  }
+  // Game hazards. Ice: a slab `length` m long and 1.4 m wide at a spot, with friction `mu` (the paws: 1.0).
+  setIce([x, y], yaw, length, mu, on = true) {
+    if (this.ice < 0) return;
+    this.model.geom_pos.set([x, y, on ? 0.005 : -1], 3 * this.ice);
+    this.model.geom_quat.set([Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], 4 * this.ice);
+    this.model.geom_size.set([length / 2, 0.7, 0.005], 3 * this.ice);
+    this.model.geom_rbound[this.ice] = Math.hypot(length / 2, 0.7, 0.005);
+    this.model.geom_friction[3 * this.ice] = mu;
+    this.mj.mj_forward(this.model, this.data);
+  }
+  // A shove: force (N) on the body, sideways (+ to Bolt's left) and forward, for `seconds`.
+  shove(side, forward, seconds) { this.push = { side, forward, left: seconds }; }
+  applyPush(dt) {
+    const f = this.data.xfrc_applied, k = 6 * this.torso;
+    if (!this.push || this.push.left <= 0) { f[k] = f[k + 1] = 0; this.push = null; return; }
+    const w = this.where(), c = Math.cos(w.yaw), s = Math.sin(w.yaw);
+    f[k] = c * this.push.forward - s * this.push.side; f[k + 1] = s * this.push.forward + c * this.push.side;
+    this.push.left -= dt;
   }
   // Hurdles (BoltEnv.place_hurdle): a bar `ahead` m in front, across Bolt's path, `height` m tall. The
   // trot steps over it, lifting the paws to the bar's height plus a margin while near it.
@@ -105,7 +127,7 @@ export class Bolt {
   setHurdle([x, y], yaw, height) {   // put the bar at a spot on the course, across the direction `yaw`
     const r = this.model.geom_quat, n = Math.hypot(Math.cos(yaw), Math.sin(yaw));
     this.hurdleAt = [x, y]; this.hurdleDir = [Math.cos(yaw) / n, Math.sin(yaw) / n]; this.hurdleH = height;
-    this.model.geom_pos.set([x, y, height - 0.15], 3 * this.hurdle);
+    this.model.geom_pos.set([x, y, height - (this.c.hurdle_half || 0.15)], 3 * this.hurdle);
     r.set([Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], 4 * this.hurdle);
     this.mj.mj_forward(this.model, this.data);
   }
@@ -173,6 +195,7 @@ export class Bolt {
     const base = this.basePose(), k = this.command === "walk" ? c.residual_scale : 1;
     const ctrl = base.map((b, i) => clamp(b + c.action_scale[i] * k * a[i], this.lo[i], this.hi[i]));
     d.ctrl.set(ctrl);
+    this.applyPush(this.dt);
     for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
     this.t += 1;
     this.phase += 2 * Math.PI * this.freq() * this.dt;

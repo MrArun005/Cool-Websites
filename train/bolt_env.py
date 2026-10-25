@@ -71,7 +71,8 @@ FEET = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
 # near a bar the trot lifts each paw to the bar's height plus 7 cm. With the 12M walk brain unchanged,
 # that cleared 15 and 25 cm bars 48 times in 48 at 0.3-1.0 m/s on randomised physics. (A hand-made
 # bounding leap, run 14, reared up and tipped over backwards in every variant tried.)
-HURDLE_XML = '<geom name="hurdle" type="box" size="0.025 0.6 0.15" pos="100 0 0" rgba="0.89 0.38 0.04 1"/>'
+HURDLE_HALF = 0.3           # m: the bar is a 60 cm box, sunk into the floor to show any height up to 60 cm
+HURDLE_XML = f'<geom name="hurdle" type="box" size="0.025 0.6 {HURDLE_HALF}" pos="100 0 0" rgba="0.89 0.38 0.04 1"/>'
 HURDLE_MARGIN = 0.07        # m of paw clearance over the bar
 HURDLE_ZONE = (-0.7, 1.0)   # m: high steps from 1.0 m before the bar until the body is 0.7 m past it
 
@@ -203,7 +204,7 @@ class BoltEnv(gym.Env):
         self.hurdle_dir, self.hurdle_h = fwd, height
         self.hurdle_at = self.data.qpos[:2] + fwd * ahead
         g = self.model.geom("hurdle").id
-        self.model.geom_pos[g] = [self.hurdle_at[0], self.hurdle_at[1], height - 0.15]  # a 30 cm box, sunk to show `height`
+        self.model.geom_pos[g] = [self.hurdle_at[0], self.hurdle_at[1], height - HURDLE_HALF]  # sunk to show `height`
         yaw = np.arctan2(fwd[1], fwd[0])
         self.model.geom_quat[g] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
         mujoco.mj_forward(self.model, self.data)

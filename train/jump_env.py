@@ -1,0 +1,143 @@
+"""Teach Bolt to really jump: clear a bar too high to step over, from standing, and land on its feet.
+
+Bolt's belly is ~36 cm off the ground, so it steps over bars up to ~25 cm without leaving the ground
+(bolt_env HURDLE_XML). A 40 cm bar can only be cleared by jumping: the whole body has to go up and
+over. A hand-made leap (run 14) reared up and tipped over backwards in all 64 versions tried, so this
+brain learns the jump from scratch, with the full motor range (not small corrections to a plan).
+
+    python train_jump.py --name jump1 --steps 6000000
+
+Each try: Bolt stands 45-65 cm in front of a bar, gets 2 s, and is paid for moving its paws past the
+bar, a big bonus once all four are past without touching it, then for landing and standing still.
+Touching the bar costs, falling ends the try. The bar rises from 20-25 cm to 20-45 cm over training.
+"""
+import gymnasium as gym
+import mujoco
+import numpy as np
+import torch
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+
+from bolt_env import ACTION_SCALE, STANCES, BoltEnv
+
+DOG = STANCES["dog"]
+
+
+class JumpEnv(BoltEnv):
+    OBS = 49
+
+    def __init__(self, randomize=True, seed=None, max_steps=100):
+        super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", hurdles=True,
+                         skills=["stand"])
+        self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
+        self.exam_bar = None  # (distance, height): exams set the bar; training draws it
+
+    def _bar_height(self):
+        top = 0.25 + 0.20 * min(1.0, self.env_steps * 8 / 3e6)  # taller bars as training goes on
+        return float(self.rng.uniform(0.20, top))
+
+    def paws_past(self):
+        """How far each paw is past the bar, along the jump (negative: still in front of it)."""
+        return np.array([np.dot(self.data.geom_xpos[f][:2] - self.hurdle_at, self.hurdle_dir) for f in self.foot_ids])
+
+    def _obs(self):
+        d, R = self.data, self._rotation()
+        obs = np.concatenate([
+            R.T @ np.array([0, 0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3], [d.qpos[2]],
+            d.qpos[7:] - DOG, d.qvel[6:] * 0.1, self.last_action,
+            [self.hurdle_ahead(), self.hurdle_h, self.t / self.max_steps],
+        ])
+        if self.randomize:
+            obs += self.rng.normal(0, 0.01, obs.shape)
+        return obs.astype(np.float32)
+
+    def reset(self, seed=None, options=None):
+        gym.Env.reset(self, seed=seed)
+        if seed is not None:
+            self.rng = self.np_random
+        m, d = self.model, self.data
+        mujoco.mj_resetData(m, d)
+        if self.randomize:  # the same physics randomization as the other brains
+            kp = self.nominal_kp * self.rng.uniform(0.85, 1.15)
+            m.actuator_gainprm[:, 0], m.actuator_biasprm[:, 1] = kp, -kp
+            m.body_mass[:] = self.nominal_mass
+            m.body_mass[self.torso] = self.nominal_mass[self.torso] * self.rng.uniform(0.85, 1.15)
+            m.geom_friction[:, 0] = self.nominal_friction * self.rng.uniform(0.6, 1.3)
+        yaw = self.rng.uniform(-np.pi, np.pi)
+        d.qpos[2] = 0.45
+        d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+        d.qpos[7:] = d.ctrl[:] = np.clip(DOG + self.rng.normal(0, 0.02, 12), self.lo, self.hi)
+        mujoco.mj_forward(m, d)
+        for _ in range(25):  # settle into the dog stance on the motors
+            mujoco.mj_step(m, d, nstep=self.frame_skip)
+        dist, h = self.exam_bar or (self.rng.uniform(0.45, 0.65), self._bar_height())
+        self.place_hurdle(dist, h)
+        self.t, self.last_action = 0, np.zeros(12)
+        self.touched = self.cleared = False
+        self.best_past = self.paws_past().min()
+        return self._obs(), {}
+
+    def step(self, action):
+        a = np.clip(np.asarray(action, dtype=float), -1, 1)
+        self.data.ctrl[:] = np.clip(DOG + ACTION_SCALE * a, self.lo, self.hi)  # the full motor range
+        mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
+        self.t += 1
+        self.env_steps += 1
+        d, R = self.data, self._rotation()
+        p = self.posture()
+        hits = self.hurdle_hits()
+        self.touched |= hits > 0
+        past = self.paws_past()
+        upright = np.exp(-(p["roll"] / 0.4) ** 2) * np.exp(-(p["pitch"] / 0.6) ** 2)
+        reward = 0.3 * upright - 1.0 * (hits > 0)
+        just_cleared = False
+        if not self.cleared:
+            reward += 4.0 * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
+            self.best_past = max(self.best_past, past.min())
+            reward += 0.3 * np.clip(p["vx"], -0.5, 2.0)
+            if past.min() > 0.08:  # all four paws past the bar
+                self.cleared = just_cleared = True
+                reward += 10.0 if not self.touched else 2.0
+        else:  # landed: stand tall and still
+            speed = np.hypot(p["vx"], p["vy"])
+            reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2)
+        reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 5e-5 * np.sum(d.actuator_force ** 2)
+        self.last_action = a
+        fell = R[2, 2] < 0.2
+        if fell:
+            reward -= 5.0
+        info = dict(p, cleared=self.cleared, touched=self.touched, just_cleared=just_cleared, hits=hits,
+                    bar=self.hurdle_h, past=float(past.min()))
+        return self._obs(), float(reward), bool(fell), self.t >= self.max_steps, info
+
+
+class JumpPolicy:
+    def __init__(self, run_dir, zip_name="policy.zip", stats_name="vecnormalize.pkl"):
+        from pathlib import Path
+        run_dir = Path(run_dir)
+        self.model = PPO.load(run_dir / zip_name, device="cpu")
+        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: JumpEnv()]))
+        self.norm.training = False
+
+    def act(self, obs):
+        return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
+
+
+def exam(policy, episodes=10, seed=5000, heights=(0.30, 0.40)):
+    """Jump the bar from 55 cm away: cleared without touching it, landed, standing at the end, no fall."""
+    out = {}
+    env = JumpEnv(randomize=True)
+    for h in heights:
+        wins = 0
+        for k in range(episodes):
+            env.exam_bar = (0.55, h)
+            obs, _ = env.reset(seed=seed + k)
+            info, fell = {}, False
+            for _ in range(env.max_steps):
+                obs, _, fell, trunc, info = env.step(policy.act(obs))
+                if fell or trunc:
+                    break
+            wins += bool(info["cleared"] and not info["touched"] and not fell and info["up"] > 0.9
+                         and info["height"] > 0.35)
+        out[f"jump_{round(h * 100)}"] = wins / episodes
+    return out
