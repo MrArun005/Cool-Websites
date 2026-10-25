@@ -25,7 +25,9 @@ from 6.5M with a third of the learning rate and a coach half as quick to raise t
 same way at 7M and stayed down. Watching the jumps showed why: both still cleared 15 cm bars cleanly, but
 leapt harder and crashed half a second after landing, because a crash after clearing (-10) cost less than
 the clear bonus plus the progress pay. Run 15e: a crash after clearing costs 25, and speed before the bar
-is paid only up to 1 m/s (was 2).
+is paid only up to 1 m/s (was 2). Run 15e still broke within 500k steps (the third run from 6.5M to do so):
+each update saw only 4096 steps (~40 jumps), too noisy a signal. Run 15f: 4x the data per update, from
+15c's 8M brain (landing again, practising 25 cm bars).
 """
 import gymnasium as gym
 import mujoco

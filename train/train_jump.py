@@ -64,6 +64,7 @@ def main():
     ap.add_argument("--resume")
     ap.add_argument("--lr", type=float, default=3e-4, help="learning rate (on --resume too)")
     ap.add_argument("--target-kl", type=float, default=0.03)
+    ap.add_argument("--n-steps", type=int, default=512, help="steps per env per update (x envs = samples per update)")
     args = ap.parse_args()
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
@@ -72,12 +73,12 @@ def main():
     if args.resume:
         ck = Path(args.resume)
         venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)
-        model = PPO.load(ck, env=venv, device="cpu", custom_objects=dict(learning_rate=args.lr, target_kl=args.target_kl))
+        model = PPO.load(ck, env=venv, device="cpu", custom_objects=dict(learning_rate=args.lr, target_kl=args.target_kl, n_steps=args.n_steps))
         venv.env_method("__setattr__", "env_steps", model.num_timesteps // args.envs)  # keep the bar-height curriculum
-        print(f"resuming from {ck} at {model.num_timesteps:,} steps, learning rate {model.learning_rate}, target kl {model.target_kl}", flush=True)
+        print(f"resuming from {ck} at {model.num_timesteps:,} steps, learning rate {model.learning_rate}, target kl {model.target_kl}, {model.n_steps * args.envs} samples per update", flush=True)
     else:
         venv = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
-        model = PPO("MlpPolicy", venv, n_steps=512, batch_size=4096, n_epochs=5, learning_rate=args.lr, gamma=0.99,
+        model = PPO("MlpPolicy", venv, n_steps=args.n_steps, batch_size=4096, n_epochs=5, learning_rate=args.lr, gamma=0.99,
                     gae_lambda=0.95, clip_range=0.2, ent_coef=0.0, max_grad_norm=1.0, target_kl=args.target_kl,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]), activation_fn=torch.nn.ELU,
                                        log_std_init=-0.5),
