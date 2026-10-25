@@ -41,7 +41,8 @@ class Examiner(BaseCallback):
         self.training_env.save(str(ck / f"policy_vecnormalize_{n}_steps.pkl"))
         result = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"))
         score = sum(result.values()) / len(result)
-        print(f"checkpoint {n} ready: {result}", flush=True)
+        levels = self.training_env.get_attr("bar_level")
+        print(f"checkpoint {n} ready: {result} (practice bars now {100 * sum(levels) / len(levels):.0f} cm)", flush=True)
         if score > self.best:
             self.best = score
             best = self.out / "best"
