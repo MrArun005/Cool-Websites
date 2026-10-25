@@ -7,9 +7,13 @@ brain learns the jump from scratch, with the full motor range (not small correct
 
     python train_jump.py --name jump1 --steps 6000000
 
-Each try: Bolt stands 45-65 cm in front of a bar, gets 2 s, and is paid for moving its paws past the
-bar, a big bonus once all four are past without touching it, then for landing and standing still.
-Touching the bar costs, falling ends the try. The bar rises from 20-25 cm to 20-45 cm over training.
+Each try: Bolt stands 45-65 cm in front of a bar, gets 2 s, and is paid for moving its hindmost paw
+past the bar, a big bonus once all four are past (less if it touched the bar), then for landing and
+standing tall. Every moment still in front of the bar costs a little; touching the bar costs; a fall
+ends the try. Bars start low (8-15 cm) and rise to 45 cm over 4M steps.
+
+Run 15b (paid for standing upright before the jump, bars from 20 cm) learned to stand still and hop in
+place: staying put paid steadily, trying risked touch and fall penalties.
 """
 import gymnasium as gym
 import mujoco
@@ -33,8 +37,8 @@ class JumpEnv(BoltEnv):
         self.exam_bar = None  # (distance, height): exams set the bar; training draws it
 
     def _bar_height(self):
-        top = 0.25 + 0.20 * min(1.0, self.env_steps * 8 / 3e6)  # taller bars as training goes on
-        return float(self.rng.uniform(0.20, top))
+        grow = min(1.0, self.env_steps * 8 / 4e6)  # taller bars as training goes on
+        return float(self.rng.uniform(0.08 + 0.22 * grow, 0.15 + 0.30 * grow))
 
     def paws_past(self):
         """How far each paw is past the bar, along the jump (negative: still in front of it)."""
@@ -89,15 +93,16 @@ class JumpEnv(BoltEnv):
         self.touched |= hits > 0
         past = self.paws_past()
         upright = np.exp(-(p["roll"] / 0.4) ** 2) * np.exp(-(p["pitch"] / 0.6) ** 2)
-        reward = 0.3 * upright - 1.0 * (hits > 0)
+        reward = -0.3 * (hits > 0)
         just_cleared = False
         if not self.cleared:
-            reward += 4.0 * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
+            reward -= 0.1  # every moment still in front of the bar costs a little
+            reward += 15.0 * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
             self.best_past = max(self.best_past, past.min())
-            reward += 0.3 * np.clip(p["vx"], -0.5, 2.0)
+            reward += 0.5 * np.clip(p["vx"], -0.5, 2.0) * upright
             if past.min() > 0.08:  # all four paws past the bar
                 self.cleared = just_cleared = True
-                reward += 10.0 if not self.touched else 2.0
+                reward += 15.0 if not self.touched else 4.0
         else:  # landed: stand tall and still
             speed = np.hypot(p["vx"], p["vy"])
             reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2)

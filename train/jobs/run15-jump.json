@@ -1,16 +1,16 @@
 {
-  "name": "bolt-run15b-jump",
+  "name": "bolt-run15c-jump",
   "workdir": "..",
   "env": {"MUJOCO_GL": "osmesa"},
   "check_every": 30,
   "jobs": [
     {
       "name": "train",
-      "cmd": ["python", "-u", "train_jump.py", "--name", "jump15b", "--steps", "8000000"],
-      "resume_cmd": ["python", "-u", "train_jump.py", "--name", "jump15b", "--steps", "8000000", "--resume", "{latest}"],
-      "latest": "runs/jump15b/checkpoints/policy_*_steps.zip",
-      "log": "runs/jump15b/train.log",
-      "done_when": {"exit_code": 0, "file": "runs/jump15b/policy.zip", "log_contains": "^done:"}
+      "cmd": ["python", "-u", "train_jump.py", "--name", "jump15c", "--steps", "8000000"],
+      "resume_cmd": ["python", "-u", "train_jump.py", "--name", "jump15c", "--steps", "8000000", "--resume", "{latest}"],
+      "latest": "runs/jump15c/checkpoints/policy_*_steps.zip",
+      "log": "runs/jump15c/train.log",
+      "done_when": {"exit_code": 0, "file": "runs/jump15c/policy.zip", "log_contains": "^done:"}
     }
   ]
 }
