@@ -18,10 +18,10 @@ live_meta.json carries what the page needs to drive it: per robot the actuator /
 policy order, BAM's friction-row index quirk (match.MultiBam.quirk), sensor and body ids; BAM's XL330 m6 parameters;
 the policies are Microduck's ONNX files, copied unchanged (the page runs them with onnx_mlp.js).
 """
-from __future__ import base64
-import annotations
+from __future__ import annotations
 
 import argparse
+import base64
 import json
 import re
 import math
