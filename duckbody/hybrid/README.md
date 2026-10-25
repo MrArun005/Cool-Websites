@@ -209,6 +209,103 @@ MUJOCO_GL=osmesa $PY duckbody/hybrid/page_data.py DIR --soccer    # page: the so
                                                                   # 60 s when over 3 MB) + tests/games tables
 ```
 
+## 5-a-side match: 11 hybrids, a referee and a GameController (`match.py`)
+
+Blue (5) against Yellow (5) plus a referee duck in black: every one is the same hybrid (owner's head on Microduck's
+body) running the same runtime and Microduck's brains, all in **one MuJoCo model** (11 copies attached with MjSpec
+frames, names prefixed `b1_` ... `y5_`, `ref_`), with contacts between ducks on: shoulder-to-shoulder duels, bumps
+and falls happen in the physics, and fallen ducks get up by themselves (the runtime's get-up and unstick sequence).
+
+**Pitch** (RoboCup Humanoid KidSize field x 0.5). KidSize robots are 40-90 cm tall on a 9 x 6 m field; this duck is
+~25 cm and its steps and kicks (ball rolls ~1.7 m) are about half theirs, while its speed (0.17-0.5 m/s) is like
+theirs. So: **4.5 x 3 m**, 2.5 cm white lines, halfway line, 0.75 m centre circle, goal areas 0.5 x 1.5 m, penalty
+areas 1 x 2.5 m, penalty marks 0.75 m out, **goals 1.3 m wide, 0.6 m high, 0.3 m deep** (white 5 cm posts and
+crossbar, a net of back, sides and roof that collides, so the ball stops in it), a 0.5 m border strip and 15 cm
+boards (a venue barrier; RoboCup has none). Ball 7 cm, 20 g (KidSize uses a ~15 cm ball). Turf friction 0.7 with
+each duck's own randomized friction (0.7-1.3) on its geoms (MuJoCo takes the larger of the two).
+
+**Physics, same as single-duck.** 5 ms steps, 50 Hz brains, BAM's XL330 m6 servo model for all 11 x 14 servos
+(`MultiBam`: BAM's `MujocoController.update()` vectorised over 154 servos, with the voltage drop, kp and battery kept
+per robot, and BAM's friction lookup kept exactly as it is per robot), 3-6 step command delay, observation noise,
+Microduck's domain randomization per duck. **Check** (`--check`): one duck in this model against
+`harness.MicroduckSim`, 4 s of walking and turning: **0.0000 mm** difference. The visible-only meshes are dropped
+and the 11 ducks share one copy of the collision meshes (MuJoCo would hold 11 copies: 2.9 GB per process -> 1 GB).
+
+**Speed**: 11 ducks alone run at **3.2 x real time** (physics + BAM 1.2 s, brains 0.3 s per 5 s); with the 4 head
+cameras at 10 Hz **0.8-0.86 x real time** on a free CPU (rendering 18 ms per camera frame, OSMesa). The matches
+below ran 3 at a time next to other jobs on 4 CPUs: **0.39-0.40 x real time**, ~15.5 min per match (6 min of play
+plus stoppages).
+
+**Players** (`Player`, 50 Hz):
+- **Roles**: goalkeeper, 2 defenders, 2 attackers. Every 0.5 s each team picks the field player best placed for the
+  ball (distance, turn needed, fallen +8, a defender when the ball is in the other half +3, the current one -1.5) as
+  striker: only he goes for the ball. The others take spots relative to the ball (attackers 0.5 m behind it, 0.75 m
+  to each side; defenders halfway back to their goal) with teammate repulsion (0.4 m). Both teams' strikers go for
+  the same ball, so they meet and push.
+- **Ball play** (soccer.py's): approach a point behind the ball on the line to the aim, align it at a foot with the
+  head down, head home, kick with `ball_kick_left/right`. The aim is the goal (the side away from the keeper); if an
+  opponent blocks the line and a teammate further up is open, a **pass** to him; from the own half or by the keeper,
+  a clearance. **Duel**: with an opponent within 0.45 m of the ball there is no time to line up: walk through the
+  ball towards the aim, with the ball in front of one foot, and kick at once if it is in that foot's kick window
+  (6-11 cm ahead, +-3 cm) and the aim within 0.45 rad (0.8 s head-up first); pinned 3 s: step round it.
+- **Goalkeeper**: stays in front of its goal on the line ball -> goal centre (0.32 m out), facing the ball; goes and
+  clears when the ball is in its penalty area near it (or it is the closest of its team).
+- **Team world model** (RoboCup team communication): only the **striker and the goalkeeper render their head
+  cameras** (160 x 120, 10 Hz, soccer.py's colour blob and floor ray); they share the ball over "wifi" (5 per second,
+  200 ms late, 2 cm noise) and the others play on that shared estimate. Rendering 10 cameras would halve the speed
+  again. Honestly: the head cameras draw the pitch, the ball and **box proxies of the ducks** (one box per part, for
+  occlusion), not the full meshes (OSMesa: 1.2 s per frame with 11 full ducks, 18 ms with boxes).
+
+**Referee and GameController** (`Referee`, `Game.rules`, on the simulator's truth like the human referee + GameController):
+the referee duck walks with play ~0.8 m from the ball at its side (off the line of play), keeps 0.4 m from players,
+turns its head to the ball, hops after a goal. Calls: **kick-off** (teams on their spots, opponents outside the
+centre circle until the ball moves 15 cm or 10 s), **goal** (ball fully over the line between the posts under the
+bar; scorer and teammates within 0.8 m hop; then READY: players walk back to their kick-off spots, 14 s, then SET:
+whoever is still off his spot by more than 0.35 m or down is carried there, RoboCup's manual placement), **throw-in**
+(ball over the touch line: placed on the line where it went out for the other team of the last toucher, opponents
+0.5 m away for 10 s or until it is played), **goal kick / corner** (over the goal line, by who touched it last),
+**dropped ball** (ball pinned between ducks 20 s: both teams 0.5 m away for 3 s; our rule), **pick-up** (a duck down
+12 s or off the pitch 8 s is taken off for 10 s and put back at the touch line in its own half), two halves of
+**3 min playing time** with ends changed at half-time (ducks carried to the new spots). Every call is logged with a
+"whistle".
+
+**Results, RESULTS_N matches (seeds RESULTS_SEEDS), 2 x 3 min** (`results_match_hybrid.json`):
+
+RESULTS_TABLE
+
+Falls per duck over all matches: RESULTS_FALLS.
+
+What is realistic, and what isn't:
+- Realistic: the physics and servos are exactly single-duck's (checked), every duck uses Microduck's brains through
+  the hybrid runtime, ducks collide, push and fall over each other and get up by themselves, the players who need the
+  ball use their own head camera, set pieces and pick-ups follow the RoboCup Humanoid League procedures (scaled).
+- **Self-localization is simulated**: each duck's pose is the simulator's truth plus a slowly drifting error (5 cm,
+  3 deg, 2 s correlation), standing in for the line/goal particle filter a RoboCup robot runs (soccer.py has a real
+  one on a single goal; with two identical white goals and 11 ducks that is a project of its own).
+- **Opponents' positions** come from the truth with 6 cm noise (stands in for robot detection), used for duels and
+  for choosing a pass. Teammates' positions are their own (noisy) estimates, as over team communication.
+- On a referee placement (kick-off, throw-in...) the teams are told where the ball is.
+- The referee is choreography; its calls are the GameController's, made on the truth.
+- Low scoring: shots connect but from 1.5-2 m a 1.2 m/s kick rolls out before the line or the keeper is in the way,
+  duels pin the ball for long stretches, and passes don't arrive (the receiver isn't facing it, opponents step in):
+  RESULTS_PASSES. Real KidSize games are low scoring too, but these numbers are mostly the slow kick cycle (lining
+  up takes seconds) and the blind 0.5 s kick brains.
+- Not modelled: the ball leaving the ground, penalty kicks, fouls (pushing is legal here), robot heat / battery drain.
+
+Run:
+```
+PY=/home/user/cool-websites/.venv/bin/python
+MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --check                       # physics == harness, page FK, speed
+MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --one 0 --out m0.json         # one match per process (~1 GB each)
+$PY duckbody/hybrid/match.py --merge m0.json m1.json ...                    # -> results_match_hybrid.json
+MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --trace 0 --t 60 --halves 1   # one short match with a printed trace
+MUJOCO_GL=osmesa $PY duckbody/hybrid/page_data.py DIR --match               # page: 90 s of the best match
+```
+Page replay (`rollout_match.json`, ~2 MB): frames carry per duck the free joint and 15 joint angles (ints), the page
+rebuilds every body by forward kinematics from `kin` (checked against MuJoCo: `--check`) and draws the 11 ducks from
+one light mesh (`duck_mesh_match.json`) with team colours and numbers, the pitch, a broadcast camera following the
+ball, and a scoreboard with the match clock and the referee's last call.
+
 ## Microduck's brains on the hybrid head (first study)
 
 **What this is.** A simulated duck built from Pollen Robotics' **Microduck** (legs, hips, trunk, neck, all
