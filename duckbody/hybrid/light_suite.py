@@ -34,14 +34,17 @@ SKILLS = ["idle", "walk", "run", "squat", "sit_stand", "swag", "sleep_wake", "li
           "getup_back", "hop", "roll"]
 BODIES = {          # suffix -> label, head mass (g), head scale
     "_noantenna": ("baseline (189 g, x1)", 189, 1.0),
+    "_m175": ("175 g", 175, 1.0),
     "_m160": ("160 g", 160, 1.0),
     "_m140": ("140 g", 140, 1.0),
     "_m120": ("120 g", 120, 1.0),
     "_m100": ("100 g", 100, 1.0),
     "_k85": ("x0.85 (159 g)", 159, 0.85),
     "_k75": ("x0.75 (142 g)", 142, 0.75),
-    "_human": ("human-like head", None, None),              # build_shapes.py; mass build_hybrid.SHAPE_KG
-    "_roundduck": ("round duck head", None, None),
+    "_human": ("human-like head (160 g)", 160, None),             # build_shapes.py; mass build_hybrid.SHAPE_KG
+    "_roundduck": ("round duck head (160 g)", 160, None),
+    "_human_tall": ("human-like, first tall version (skills only)", 160, None),
+    "_roundduck_tall": ("round duck, first tall version (skills only)", 160, None),
 }
 MATCH_SEEDS = (0, 1)
 

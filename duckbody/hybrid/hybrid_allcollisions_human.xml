@@ -258,13 +258,13 @@
             <body name="jaw_soft" pos="-0.0179 0 0.0145" quat="0.707107 0 -0.707107 -0">
               <!-- Joint from yaw_roll_motion to jaw_soft -->
               <joint axis="0 0 1" name="head_roll" type="hinge" range="-0.43633231299858327 0.4363323129985815" class="chosen_actuator" />
-              <inertial pos="0.0130788 0.000676454 -0.0308488" mass="0.18427" fullinertia="0.000302137 0.000232875 0.000146812 -5.63376e-07 1.31484e-05 4.37824e-06" />
+              <inertial pos="0.00993356 0.000690486 -0.0279799" mass="0.15547" fullinertia="0.000250411 0.000191934 0.00012455 -4.75348e-07 1.16508e-05 3.75767e-06" />
               <geom type="mesh" class="visual" name="shape_human_skull_vis" mesh="shape_human_skull" material="shape_human_material" />
               <geom type="mesh" class="collision" name="shape_human_skull_col" mesh="shape_human_skull" />
-              <geom type="ellipsoid" size="0.025 0.036 0.011" pos="0.015 0 -0.08791" name="shape_faceplate" contype="0" conaffinity="0" group="2" rgba="0.12 0.14 0.18 1" />
-              <geom type="ellipsoid" size="0.008 0.008 0.002" pos="0.02 0.022 -0.09841" name="shape_eye_l" contype="0" conaffinity="0" group="2" rgba="0.35 0.85 1 1" />
-              <geom type="ellipsoid" size="0.008 0.008 0.002" pos="0.02 -0.022 -0.09841" name="shape_eye_r" contype="0" conaffinity="0" group="2" rgba="0.35 0.85 1 1" />
-              <geom type="box" size="0.0015 0.015 0.0015" pos="-0.001 0 -0.09791" name="shape_mouth_slit" contype="0" conaffinity="0" group="2" rgba="0.05 0.05 0.06 1" />
+              <geom type="ellipsoid" size="0.02 0.036 0.011" pos="0.015 0 -0.08755" name="shape_faceplate" contype="0" conaffinity="0" group="2" rgba="0.12 0.14 0.18 1" />
+              <geom type="ellipsoid" size="0.008 0.008 0.002" pos="0.02 0.022 -0.09805" name="shape_eye_l" contype="0" conaffinity="0" group="2" rgba="0.35 0.85 1 1" />
+              <geom type="ellipsoid" size="0.008 0.008 0.002" pos="0.02 -0.022 -0.09805" name="shape_eye_r" contype="0" conaffinity="0" group="2" rgba="0.35 0.85 1 1" />
+              <geom type="box" size="0.0015 0.015 0.0015" pos="-0.001 0 -0.09755" name="shape_mouth_slit" contype="0" conaffinity="0" group="2" rgba="0.05 0.05 0.06 1" />
               <!-- Part lens -->
               <geom type="mesh" class="visual" pos="0.0155 -9.13778e-05 -0.05548" quat="0.5 -0.5 0.5 -0.5" mesh="lens" material="lens_material" group="4" name="md_lens_4" />
               <!-- Part face_part -->
@@ -307,7 +307,7 @@
               <site group="3" name="head_imu" pos="0.0152323 0.000111069 -0.05106" quat="1 0 -0 0" />
               <!-- Frame mouth_tip -->
               <site group="3" name="mouth_tip" pos="-0.00809334 -0 -0.0777383" quat="0.704015 -0 0.710185 0" />
-              <body name="owner_jaw" pos="-0.006 0 -0.08929" quat="1 0 0 0">
+              <body name="owner_jaw" pos="-0.006 0 -0.09128" quat="1 0 0 0">
                 <inertial pos="-0.004 0 -0.006" mass="0.00453014" diaginertia="3.69961e-07 5.54942e-07 7.39923e-07" />
                 <joint name="mouth" type="hinge" axis="0 1 0" range="0 0.61" damping="0.02" armature="0.0005" frictionloss="0" />
                 <geom type="ellipsoid" size="0.008 0.026 0.01" pos="-0.004 0 -0.006" name="shape_chin" contype="0" conaffinity="0" group="2" rgba="0.86 0.87 0.9 1" />

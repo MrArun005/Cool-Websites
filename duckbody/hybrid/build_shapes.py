@@ -41,11 +41,19 @@ STACK = {"elec_rpi_robot_hat_pcb", "lens", "m12_lens_holder", "motor_support", "
          "seeed_bearing__configuration_default", "speaker", "xl330"}
 
 SHAPES = {
-    # superellipsoid skull: centre (F, U), semi-axes front / back / side / up / down, exponents horizontal / vertical
-    "human": dict(c=(28.0, 12.0), a_f=68.0, a_b=67.0, b=50.0, c_u=50.0, c_d=40.0, ph=2.5, pv=2.3,
+    # superellipsoid skull: centre (F, U), semi-axes front / back / side / up / down, exponents horizontal / vertical.
+    # The skull reaches 52-60 mm behind the head_roll axis and is 59 mm tall with the bottom shell: lying on its back
+    # the duck levers itself up over the back of the head, as on the owner's head (47 mm behind) and Microduck's.
+    "human": dict(c=(24.0, 8.0), a_f=72.0, a_b=76.0, b=50.0, c_u=34.0, c_d=36.0, ph=2.5, pv=2.8, face_u=20.0,
                   color=(0.86, 0.87, 0.9, 1), label="human-like robot head"),
-    "roundduck": dict(c=(26.0, 6.0), a_f=67.0, a_b=66.0, b=53.0, c_u=42.0, c_d=36.0, ph=2.2, pv=2.1,
+    "roundduck": dict(c=(20.0, 4.0), a_f=74.0, a_b=80.0, b=53.0, c_u=40.0, c_d=34.0, ph=2.3, pv=2.6,
                       color=(1.0, 1.0, 1.0, 1), label="round duck head"),
+    # first versions (README "Head shapes"): taller domes ending 39-41 mm behind the axis. They broke the get-up from
+    # the back (1/10, 3/10) and the roll (5/10, 8/10), so they are kept only for that comparison.
+    "human_tall": dict(c=(28.0, 12.0), a_f=68.0, a_b=67.0, b=50.0, c_u=50.0, c_d=40.0, ph=2.5, pv=2.3,
+                       color=(0.86, 0.87, 0.9, 1), label="human-like robot head, first (tall) version"),
+    "roundduck_tall": dict(c=(26.0, 6.0), a_f=67.0, a_b=66.0, b=53.0, c_u=42.0, c_d=36.0, ph=2.2, pv=2.1,
+                           color=(1.0, 1.0, 1.0, 1), label="round duck head, first (tall) version"),
 }
 
 
@@ -54,7 +62,7 @@ def sgnpow(w, e):
 
 
 class Skull:
-    def __init__(self, c, a_f, a_b, b, c_u, c_d, ph, pv, **_):
+    def __init__(self, c, a_f, a_b, b, c_u, c_d, ph, pv, **_):  # noqa: E741
         self.F0, self.U0 = c
         self.a_f, self.a_b, self.b, self.c_u, self.c_d, self.ph, self.pv = a_f, a_b, b, c_u, c_d, ph, pv
 
@@ -283,10 +291,10 @@ def build_shape(name, spec, parts, report):
 
     # features (F, L, U mm), each: kind, centre, half sizes, colour, part (head | jaw), collides
     feats, eye = [], None
-    if name == "human":
+    if name.startswith("human"):
         Ue, Le = 20.0, 22.0
         Ff = sk.surface_F(0.0, 16.0)
-        feats.append(dict(n="faceplate", kind="ellipsoid", c=(Ff - 8.0, 0.0, 15.0), s=(11.0, 36.0, 25.0),
+        feats.append(dict(n="faceplate", kind="ellipsoid", c=(Ff - 8.0, 0.0, 15.0), s=(11.0, 36.0, spec.get("face_u", 25.0)),
                           rgba=(0.12, 0.14, 0.18, 1)))
         for sgn in (1, -1):
             Fe = sk.surface_F(sgn * Le, Ue)
@@ -359,7 +367,7 @@ def build_shape(name, spec, parts, report):
                     features=round(feat_g, 1), estimate=round(est_g, 1)),
         skull_wall_centroid_head_frame=to_head(skull_c).round(5).tolist(),
         features_mass=[(round(g_, 2), to_head(c).round(5).tolist()) for g_, c in feat_m],
-        print_files=[f"shapes/print/{name}_shell.stl", f"shapes/print/{name}_bill.stl" if name != "human" else None,
+        print_files=[f"shapes/print/{name}_shell.stl", f"shapes/print/{name}_bill.stl" if not name.startswith("human") else None,
                      f"shapes/print/{name}_jaw.stl"],
     )
     print(name, json.dumps({k: report[name][k] for k in ("skull_size_mm", "stack_fit_level", "rim_margin_mm", "eye_mm", "mass_g")}))

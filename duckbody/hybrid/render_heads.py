@@ -13,9 +13,10 @@ import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 HEADS = [("_noantenna", "owner head x1"), ("_k85", "owner head x0.85"), ("_k75", "owner head x0.75"),
-         ("_small", "x2/3 (old)"), ("_human", "human-like head"), ("_roundduck", "round duck head")]
+         ("_small", "x2/3 (old)"), ("_human", "human-like head"), ("_roundduck", "round duck head"),
+         ("_human_tall", "human, 1st (tall)"), ("_roundduck_tall", "round duck, 1st (tall)")]
 VIEWS = ((180, "front"), (90, "side"), (150, "3/4"))
-W, H = 340, 400
+W, H = 300, 380
 
 
 def shots(suffix):
@@ -44,7 +45,7 @@ def main():
     for suffix, label in HEADS:
         col = np.vstack(shots(suffix))
         cv2.rectangle(col, (0, 0), (W, 34), (255, 255, 255), -1)
-        cv2.putText(col, label, (8, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (20, 20, 20), 2, cv2.LINE_AA)
+        cv2.putText(col, label, (8, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (20, 20, 20), 2, cv2.LINE_AA)
         cols.append(col)
         cols.append(np.full((len(VIEWS) * H, 4, 3), 255, np.uint8))
     img = np.hstack(cols[:-1])

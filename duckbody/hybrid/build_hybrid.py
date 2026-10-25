@@ -401,6 +401,7 @@ VARIANTS = {
     "hybrid_mdcollision": dict(collision="microduck"),           # owner head drawn, Microduck's head collides (control)
     "hybrid_small": dict(k=2 / 3, collision="owner_noantenna"),  # owner head shrunk to Microduck's head width, no antennas
     # Lighter heads (README "Lighter head"): no antennas, Microduck's head CoM, mass and inertia scaled.
+    "hybrid_m175": dict(collision="owner_noantenna", head_mass=0.175),
     "hybrid_m160": dict(collision="owner_noantenna", head_mass=0.160),
     "hybrid_m140": dict(collision="owner_noantenna", head_mass=0.140),
     "hybrid_m120": dict(collision="owner_noantenna", head_mass=0.120),
@@ -412,8 +413,10 @@ VARIANTS = {
     # Head shapes (build_shapes.py): human-like robot head, rounder duck head; mass SHAPE_KG, CoM from the parts.
     "hybrid_human": dict(collision="owner_noantenna", head_mass="shape", shape="human"),
     "hybrid_roundduck": dict(collision="owner_noantenna", head_mass="shape", shape="roundduck"),
+    "hybrid_human_tall": dict(collision="owner_noantenna", head_mass="shape", shape="human_tall"),
+    "hybrid_roundduck_tall": dict(collision="owner_noantenna", head_mass="shape", shape="roundduck_tall"),
 }
-SHAPE_KG = 0.1888              # set from the mass sweep (README "Lighter head")
+SHAPE_KG = 0.160               # the lightest mass that passed all 12 skills in the sweep (README "Lighter head")
 ELECTRONICS_KG = 0.081         # README "Lighter head": the parts a head cannot do without (estimate)
 MD_HEAD_KG = 0.188766          # Microduck's head link
 

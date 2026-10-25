@@ -3078,12 +3078,12 @@
   "owner_head_scale": 0.7,
   "total_mass_kg": {
    "microduck": 0.7372,
-   "hybrid": 0.7373
+   "hybrid": 0.7085
   },
   "head_mass_kg": {
    "microduck": 0.1888,
-   "hybrid": 0.1888,
-   "diff_g": 0.0
+   "hybrid": 0.16,
+   "diff_g": -28.8
   },
   "head_com_world_STAND_m": {
    "microduck": [
@@ -3092,16 +3092,16 @@
     0.2372
    ],
    "hybrid": [
-    0.0234,
+    0.0209,
     0.0007,
-    0.2451
+    0.242
    ],
    "diff_mm": [
-    -0.1,
+    -2.5,
     -0.5,
-    7.9
+    4.8
    ],
-   "dist_mm": 7.9
+   "dist_mm": 5.4
   },
   "head_inertia_diag_about_com": {
    "microduck": [
@@ -3110,9 +3110,9 @@
     0.0003208
    ],
    "hybrid": [
-    0.0001499,
-    0.0002541,
-    0.0003209
+    0.000127,
+    0.0002154,
+    0.0002719
    ]
   },
   "whole_robot_com_world_STAND_m": {
@@ -3122,14 +3122,14 @@
     0.1417
    ],
    "hybrid": [
-    0.0005,
+    -0.0009,
     -0.0002,
-    0.1438
+    0.1389
    ],
    "diff_mm": [
-    -0.0,
-    -0.1,
-    2.0
+    -1.5,
+    -0.2,
+    -2.8
    ]
   },
   "owner_shell_offset_in_head_frame_mm": [
@@ -3138,14 +3138,14 @@
    -51.5
   ],
   "owner_shell_size_world_mm": [
-   135.0,
+   148.0,
    100.0,
-   64.0
+   44.0
   ],
   "owner_head_with_antennas_size_world_mm": [
-   135.0,
+   148.0,
    100.0,
-   64.0
+   44.0
   ],
   "microduck_shell_size_world_mm": [
    122.7,
@@ -3176,14 +3176,14 @@
   },
   "owner_shell_box_rel_head_roll_world_mm": {
    "lo": [
-    -39.0,
+    -52.0,
     -50.0,
     -2.0
    ],
    "hi": [
     96.0,
     50.0,
-    62.0
+    42.0
    ]
   },
   "contacts_at_STAND": [],
@@ -3202,7 +3202,7 @@
   "eye_pos_head_frame": [
    0.02,
    0.022,
-   -0.10041
+   -0.10005
   ]
  },
  "hybrid_groundcontact_human.xml": {
@@ -3212,12 +3212,670 @@
   "owner_head_scale": 0.7,
   "total_mass_kg": {
    "microduck": 0.7372,
-   "hybrid": 0.7373
+   "hybrid": 0.7085
   },
   "head_mass_kg": {
    "microduck": 0.1888,
-   "hybrid": 0.1888,
-   "diff_g": 0.0
+   "hybrid": 0.16,
+   "diff_g": -28.8
+  },
+  "head_com_world_STAND_m": {
+   "microduck": [
+    0.0235,
+    0.0012,
+    0.2372
+   ],
+   "hybrid": [
+    0.0209,
+    0.0007,
+    0.242
+   ],
+   "diff_mm": [
+    -2.5,
+    -0.5,
+    4.8
+   ],
+   "dist_mm": 5.4
+  },
+  "head_inertia_diag_about_com": {
+   "microduck": [
+    0.0001499,
+    0.0002541,
+    0.0003208
+   ],
+   "hybrid": [
+    0.000127,
+    0.0002154,
+    0.0002719
+   ]
+  },
+  "whole_robot_com_world_STAND_m": {
+   "microduck": [
+    0.0006,
+    -0.0,
+    0.1417
+   ],
+   "hybrid": [
+    -0.0009,
+    -0.0002,
+    0.1389
+   ],
+   "diff_mm": [
+    -1.5,
+    -0.2,
+    -2.8
+   ]
+  },
+  "owner_shell_offset_in_head_frame_mm": [
+   5.3,
+   -0.0,
+   -51.5
+  ],
+  "owner_shell_size_world_mm": [
+   148.0,
+   100.0,
+   44.0
+  ],
+  "owner_head_with_antennas_size_world_mm": [
+   148.0,
+   100.0,
+   44.0
+  ],
+  "microduck_shell_size_world_mm": [
+   122.7,
+   91.8,
+   58.8
+  ],
+  "microduck_internals": [
+   "elec_rpi_robot_hat_pcb",
+   "lens",
+   "m12_lens_holder",
+   "motor_support",
+   "pcb__raspberry_pi_zero_2_w",
+   "seeed_bearing__configuration_default",
+   "speaker",
+   "xl330"
+  ],
+  "microduck_internals_box_rel_head_roll_world_mm": {
+   "lo": [
+    -29.0,
+    -40.0,
+    -10.0
+   ],
+   "hi": [
+    81.8,
+    40.0,
+    30.5
+   ]
+  },
+  "owner_shell_box_rel_head_roll_world_mm": {
+   "lo": [
+    -52.0,
+    -50.0,
+    -2.0
+   ],
+   "hi": [
+    96.0,
+    50.0,
+    42.0
+   ]
+  },
+  "contacts_at_STAND": [],
+  "head_roll_joint_world_STAND_m": [
+   -0.009,
+   0.0,
+   0.2326
+  ],
+  "shell_centre_head_frame_m": [
+   0.01245,
+   0.0,
+   -0.02285
+  ],
+  "head_k": 1.0,
+  "shape": "human",
+  "eye_pos_head_frame": [
+   0.02,
+   0.022,
+   -0.10005
+  ]
+ },
+ "hybrid_allcollisions_roundduck.xml": {
+  "variant": "matched",
+  "md_robot": "robot_allcollisions.xml",
+  "collision": "owner_noantenna",
+  "owner_head_scale": 0.7,
+  "total_mass_kg": {
+   "microduck": 0.7372,
+   "hybrid": 0.7085
+  },
+  "head_mass_kg": {
+   "microduck": 0.1888,
+   "hybrid": 0.16,
+   "diff_g": -28.8
+  },
+  "head_com_world_STAND_m": {
+   "microduck": [
+    0.0235,
+    0.0012,
+    0.2372
+   ],
+   "hybrid": [
+    0.0206,
+    0.0006,
+    0.2419
+   ],
+   "diff_mm": [
+    -2.9,
+    -0.6,
+    4.7
+   ],
+   "dist_mm": 5.6
+  },
+  "head_inertia_diag_about_com": {
+   "microduck": [
+    0.0001499,
+    0.0002541,
+    0.0003208
+   ],
+   "hybrid": [
+    0.000127,
+    0.0002154,
+    0.0002719
+   ]
+  },
+  "whole_robot_com_world_STAND_m": {
+   "microduck": [
+    0.0006,
+    -0.0,
+    0.1417
+   ],
+   "hybrid": [
+    -0.001,
+    -0.0002,
+    0.1389
+   ],
+   "diff_mm": [
+    -1.6,
+    -0.2,
+    -2.8
+   ]
+  },
+  "owner_shell_offset_in_head_frame_mm": [
+   5.3,
+   -0.0,
+   -51.5
+  ],
+  "owner_shell_size_world_mm": [
+   154.0,
+   106.0,
+   46.0
+  ],
+  "owner_head_with_antennas_size_world_mm": [
+   154.0,
+   106.0,
+   46.0
+  ],
+  "microduck_shell_size_world_mm": [
+   122.7,
+   91.8,
+   58.8
+  ],
+  "microduck_internals": [
+   "elec_rpi_robot_hat_pcb",
+   "lens",
+   "m12_lens_holder",
+   "motor_support",
+   "pcb__raspberry_pi_zero_2_w",
+   "seeed_bearing__configuration_default",
+   "speaker",
+   "xl330"
+  ],
+  "microduck_internals_box_rel_head_roll_world_mm": {
+   "lo": [
+    -29.0,
+    -40.0,
+    -10.0
+   ],
+   "hi": [
+    81.8,
+    40.0,
+    30.5
+   ]
+  },
+  "owner_shell_box_rel_head_roll_world_mm": {
+   "lo": [
+    -60.0,
+    -53.0,
+    -2.0
+   ],
+   "hi": [
+    94.0,
+    53.0,
+    44.0
+   ]
+  },
+  "contacts_at_STAND": [],
+  "head_roll_joint_world_STAND_m": [
+   -0.009,
+   0.0,
+   0.2326
+  ],
+  "shell_centre_head_frame_m": [
+   0.01245,
+   0.0,
+   -0.02285
+  ],
+  "head_k": 1.0,
+  "shape": "roundduck",
+  "eye_pos_head_frame": [
+   0.02,
+   0.0,
+   -0.09229
+  ]
+ },
+ "hybrid_groundcontact_roundduck.xml": {
+  "variant": "matched",
+  "md_robot": "robot_groundcontact.xml",
+  "collision": "owner_noantenna",
+  "owner_head_scale": 0.7,
+  "total_mass_kg": {
+   "microduck": 0.7372,
+   "hybrid": 0.7085
+  },
+  "head_mass_kg": {
+   "microduck": 0.1888,
+   "hybrid": 0.16,
+   "diff_g": -28.8
+  },
+  "head_com_world_STAND_m": {
+   "microduck": [
+    0.0235,
+    0.0012,
+    0.2372
+   ],
+   "hybrid": [
+    0.0206,
+    0.0006,
+    0.2419
+   ],
+   "diff_mm": [
+    -2.9,
+    -0.6,
+    4.7
+   ],
+   "dist_mm": 5.6
+  },
+  "head_inertia_diag_about_com": {
+   "microduck": [
+    0.0001499,
+    0.0002541,
+    0.0003208
+   ],
+   "hybrid": [
+    0.000127,
+    0.0002154,
+    0.0002719
+   ]
+  },
+  "whole_robot_com_world_STAND_m": {
+   "microduck": [
+    0.0006,
+    -0.0,
+    0.1417
+   ],
+   "hybrid": [
+    -0.001,
+    -0.0002,
+    0.1389
+   ],
+   "diff_mm": [
+    -1.6,
+    -0.2,
+    -2.8
+   ]
+  },
+  "owner_shell_offset_in_head_frame_mm": [
+   5.3,
+   -0.0,
+   -51.5
+  ],
+  "owner_shell_size_world_mm": [
+   154.0,
+   106.0,
+   46.0
+  ],
+  "owner_head_with_antennas_size_world_mm": [
+   154.0,
+   106.0,
+   46.0
+  ],
+  "microduck_shell_size_world_mm": [
+   122.7,
+   91.8,
+   58.8
+  ],
+  "microduck_internals": [
+   "elec_rpi_robot_hat_pcb",
+   "lens",
+   "m12_lens_holder",
+   "motor_support",
+   "pcb__raspberry_pi_zero_2_w",
+   "seeed_bearing__configuration_default",
+   "speaker",
+   "xl330"
+  ],
+  "microduck_internals_box_rel_head_roll_world_mm": {
+   "lo": [
+    -29.0,
+    -40.0,
+    -10.0
+   ],
+   "hi": [
+    81.8,
+    40.0,
+    30.5
+   ]
+  },
+  "owner_shell_box_rel_head_roll_world_mm": {
+   "lo": [
+    -60.0,
+    -53.0,
+    -2.0
+   ],
+   "hi": [
+    94.0,
+    53.0,
+    44.0
+   ]
+  },
+  "contacts_at_STAND": [],
+  "head_roll_joint_world_STAND_m": [
+   -0.009,
+   0.0,
+   0.2326
+  ],
+  "shell_centre_head_frame_m": [
+   0.01245,
+   0.0,
+   -0.02285
+  ],
+  "head_k": 1.0,
+  "shape": "roundduck",
+  "eye_pos_head_frame": [
+   0.02,
+   0.0,
+   -0.09229
+  ]
+ },
+ "hybrid_allcollisions_m175.xml": {
+  "variant": "matched",
+  "md_robot": "robot_allcollisions.xml",
+  "collision": "owner_noantenna",
+  "owner_head_scale": 0.7,
+  "total_mass_kg": {
+   "microduck": 0.7372,
+   "hybrid": 0.7235
+  },
+  "head_mass_kg": {
+   "microduck": 0.1888,
+   "hybrid": 0.175,
+   "diff_g": -13.8
+  },
+  "head_com_world_STAND_m": {
+   "microduck": [
+    0.0235,
+    0.0012,
+    0.2372
+   ],
+   "hybrid": [
+    0.0235,
+    0.0012,
+    0.2372
+   ],
+   "diff_mm": [
+    -0.0,
+    -0.0,
+    0.0
+   ],
+   "dist_mm": 0.0
+  },
+  "head_inertia_diag_about_com": {
+   "microduck": [
+    0.0001499,
+    0.0002541,
+    0.0003208
+   ],
+   "hybrid": [
+    0.000139,
+    0.0002356,
+    0.0002974
+   ]
+  },
+  "whole_robot_com_world_STAND_m": {
+   "microduck": [
+    0.0006,
+    -0.0,
+    0.1417
+   ],
+   "hybrid": [
+    0.0001,
+    -0.0,
+    0.1399
+   ],
+   "diff_mm": [
+    -0.4,
+    -0.0,
+    -1.8
+   ]
+  },
+  "owner_shell_offset_in_head_frame_mm": [
+   5.3,
+   -0.0,
+   -51.5
+  ],
+  "owner_shell_size_world_mm": [
+   140.0,
+   138.5,
+   41.7
+  ],
+  "owner_head_with_antennas_size_world_mm": [
+   140.0,
+   138.5,
+   103.5
+  ],
+  "microduck_shell_size_world_mm": [
+   122.7,
+   91.8,
+   58.8
+  ],
+  "microduck_internals": [
+   "elec_rpi_robot_hat_pcb",
+   "lens",
+   "m12_lens_holder",
+   "motor_support",
+   "pcb__raspberry_pi_zero_2_w",
+   "seeed_bearing__configuration_default",
+   "speaker",
+   "xl330"
+  ],
+  "microduck_internals_box_rel_head_roll_world_mm": {
+   "lo": [
+    -29.0,
+    -40.0,
+    -10.0
+   ],
+   "hi": [
+    81.8,
+    40.0,
+    30.5
+   ]
+  },
+  "owner_shell_box_rel_head_roll_world_mm": {
+   "lo": [
+    -47.1,
+    -69.3,
+    -8.4
+   ],
+   "hi": [
+    92.8,
+    69.3,
+    33.3
+   ]
+  },
+  "contacts_at_STAND": [],
+  "head_roll_joint_world_STAND_m": [
+   -0.009,
+   0.0,
+   0.2326
+  ],
+  "shell_centre_head_frame_m": [
+   0.01245,
+   0.0,
+   -0.02285
+  ],
+  "head_k": 1.0
+ },
+ "hybrid_groundcontact_m175.xml": {
+  "variant": "matched",
+  "md_robot": "robot_groundcontact.xml",
+  "collision": "owner_noantenna",
+  "owner_head_scale": 0.7,
+  "total_mass_kg": {
+   "microduck": 0.7372,
+   "hybrid": 0.7235
+  },
+  "head_mass_kg": {
+   "microduck": 0.1888,
+   "hybrid": 0.175,
+   "diff_g": -13.8
+  },
+  "head_com_world_STAND_m": {
+   "microduck": [
+    0.0235,
+    0.0012,
+    0.2372
+   ],
+   "hybrid": [
+    0.0235,
+    0.0012,
+    0.2372
+   ],
+   "diff_mm": [
+    -0.0,
+    -0.0,
+    0.0
+   ],
+   "dist_mm": 0.0
+  },
+  "head_inertia_diag_about_com": {
+   "microduck": [
+    0.0001499,
+    0.0002541,
+    0.0003208
+   ],
+   "hybrid": [
+    0.000139,
+    0.0002356,
+    0.0002974
+   ]
+  },
+  "whole_robot_com_world_STAND_m": {
+   "microduck": [
+    0.0006,
+    -0.0,
+    0.1417
+   ],
+   "hybrid": [
+    0.0001,
+    -0.0,
+    0.1399
+   ],
+   "diff_mm": [
+    -0.4,
+    -0.0,
+    -1.8
+   ]
+  },
+  "owner_shell_offset_in_head_frame_mm": [
+   5.3,
+   -0.0,
+   -51.5
+  ],
+  "owner_shell_size_world_mm": [
+   140.0,
+   138.5,
+   41.7
+  ],
+  "owner_head_with_antennas_size_world_mm": [
+   140.0,
+   138.5,
+   103.5
+  ],
+  "microduck_shell_size_world_mm": [
+   122.7,
+   91.8,
+   58.8
+  ],
+  "microduck_internals": [
+   "elec_rpi_robot_hat_pcb",
+   "lens",
+   "m12_lens_holder",
+   "motor_support",
+   "pcb__raspberry_pi_zero_2_w",
+   "seeed_bearing__configuration_default",
+   "speaker",
+   "xl330"
+  ],
+  "microduck_internals_box_rel_head_roll_world_mm": {
+   "lo": [
+    -29.0,
+    -40.0,
+    -10.0
+   ],
+   "hi": [
+    81.8,
+    40.0,
+    30.5
+   ]
+  },
+  "owner_shell_box_rel_head_roll_world_mm": {
+   "lo": [
+    -47.1,
+    -69.3,
+    -8.4
+   ],
+   "hi": [
+    92.8,
+    69.3,
+    33.3
+   ]
+  },
+  "contacts_at_STAND": [],
+  "head_roll_joint_world_STAND_m": [
+   -0.009,
+   0.0,
+   0.2326
+  ],
+  "shell_centre_head_frame_m": [
+   0.01245,
+   0.0,
+   -0.02285
+  ],
+  "head_k": 1.0
+ },
+ "hybrid_allcollisions_human_tall.xml": {
+  "variant": "matched",
+  "md_robot": "robot_allcollisions.xml",
+  "collision": "owner_noantenna",
+  "owner_head_scale": 0.7,
+  "total_mass_kg": {
+   "microduck": 0.7372,
+   "hybrid": 0.7085
+  },
+  "head_mass_kg": {
+   "microduck": 0.1888,
+   "hybrid": 0.16,
+   "diff_g": -28.8
   },
   "head_com_world_STAND_m": {
    "microduck": [
@@ -3244,9 +3902,9 @@
     0.0003208
    ],
    "hybrid": [
-    0.0001499,
-    0.0002541,
-    0.0003209
+    0.000127,
+    0.0002154,
+    0.0002719
    ]
   },
   "whole_robot_com_world_STAND_m": {
@@ -3256,14 +3914,14 @@
     0.1417
    ],
    "hybrid": [
-    0.0005,
+    -0.0004,
     -0.0002,
-    0.1438
+    0.1397
    ],
    "diff_mm": [
-    -0.0,
-    -0.1,
-    2.0
+    -0.9,
+    -0.2,
+    -2.1
    ]
   },
   "owner_shell_offset_in_head_frame_mm": [
@@ -3332,160 +3990,160 @@
    -0.02285
   ],
   "head_k": 1.0,
-  "shape": "human",
+  "shape": "human_tall",
   "eye_pos_head_frame": [
    0.02,
    0.022,
    -0.10041
   ]
  },
- "hybrid_allcollisions_roundduck.xml": {
-  "variant": "matched",
-  "md_robot": "robot_allcollisions.xml",
-  "collision": "owner_noantenna",
-  "owner_head_scale": 0.7,
-  "total_mass_kg": {
-   "microduck": 0.7372,
-   "hybrid": 0.7373
-  },
-  "head_mass_kg": {
-   "microduck": 0.1888,
-   "hybrid": 0.1888,
-   "diff_g": 0.0
-  },
-  "head_com_world_STAND_m": {
-   "microduck": [
-    0.0235,
-    0.0012,
-    0.2372
-   ],
-   "hybrid": [
-    0.0247,
-    0.0007,
-    0.2417
-   ],
-   "diff_mm": [
-    1.2,
-    -0.5,
-    4.5
-   ],
-   "dist_mm": 4.7
-  },
-  "head_inertia_diag_about_com": {
-   "microduck": [
-    0.0001499,
-    0.0002541,
-    0.0003208
-   ],
-   "hybrid": [
-    0.0001499,
-    0.0002541,
-    0.0003209
-   ]
-  },
-  "whole_robot_com_world_STAND_m": {
-   "microduck": [
-    0.0006,
-    -0.0,
-    0.1417
-   ],
-   "hybrid": [
-    0.0009,
-    -0.0001,
-    0.1429
-   ],
-   "diff_mm": [
-    0.3,
-    -0.1,
-    1.2
-   ]
-  },
-  "owner_shell_offset_in_head_frame_mm": [
-   5.3,
-   -0.0,
-   -51.5
-  ],
-  "owner_shell_size_world_mm": [
-   133.0,
-   106.0,
-   50.0
-  ],
-  "owner_head_with_antennas_size_world_mm": [
-   133.0,
-   106.0,
-   50.0
-  ],
-  "microduck_shell_size_world_mm": [
-   122.7,
-   91.8,
-   58.8
-  ],
-  "microduck_internals": [
-   "elec_rpi_robot_hat_pcb",
-   "lens",
-   "m12_lens_holder",
-   "motor_support",
-   "pcb__raspberry_pi_zero_2_w",
-   "seeed_bearing__configuration_default",
-   "speaker",
-   "xl330"
-  ],
-  "microduck_internals_box_rel_head_roll_world_mm": {
-   "lo": [
-    -29.0,
-    -40.0,
-    -10.0
-   ],
-   "hi": [
-    81.8,
-    40.0,
-    30.5
-   ]
-  },
-  "owner_shell_box_rel_head_roll_world_mm": {
-   "lo": [
-    -40.0,
-    -53.0,
-    -2.0
-   ],
-   "hi": [
-    93.0,
-    53.0,
-    48.0
-   ]
-  },
-  "contacts_at_STAND": [],
-  "head_roll_joint_world_STAND_m": [
-   -0.009,
-   0.0,
-   0.2326
-  ],
-  "shell_centre_head_frame_m": [
-   0.01245,
-   0.0,
-   -0.02285
-  ],
-  "head_k": 1.0,
-  "shape": "roundduck",
-  "eye_pos_head_frame": [
-   0.02,
-   0.0,
-   -0.09074
-  ]
- },
- "hybrid_groundcontact_roundduck.xml": {
+ "hybrid_groundcontact_human_tall.xml": {
   "variant": "matched",
   "md_robot": "robot_groundcontact.xml",
   "collision": "owner_noantenna",
   "owner_head_scale": 0.7,
   "total_mass_kg": {
    "microduck": 0.7372,
-   "hybrid": 0.7373
+   "hybrid": 0.7085
   },
   "head_mass_kg": {
    "microduck": 0.1888,
-   "hybrid": 0.1888,
-   "diff_g": 0.0
+   "hybrid": 0.16,
+   "diff_g": -28.8
+  },
+  "head_com_world_STAND_m": {
+   "microduck": [
+    0.0235,
+    0.0012,
+    0.2372
+   ],
+   "hybrid": [
+    0.0234,
+    0.0007,
+    0.2451
+   ],
+   "diff_mm": [
+    -0.1,
+    -0.5,
+    7.9
+   ],
+   "dist_mm": 7.9
+  },
+  "head_inertia_diag_about_com": {
+   "microduck": [
+    0.0001499,
+    0.0002541,
+    0.0003208
+   ],
+   "hybrid": [
+    0.000127,
+    0.0002154,
+    0.0002719
+   ]
+  },
+  "whole_robot_com_world_STAND_m": {
+   "microduck": [
+    0.0006,
+    -0.0,
+    0.1417
+   ],
+   "hybrid": [
+    -0.0004,
+    -0.0002,
+    0.1397
+   ],
+   "diff_mm": [
+    -0.9,
+    -0.2,
+    -2.1
+   ]
+  },
+  "owner_shell_offset_in_head_frame_mm": [
+   5.3,
+   -0.0,
+   -51.5
+  ],
+  "owner_shell_size_world_mm": [
+   135.0,
+   100.0,
+   64.0
+  ],
+  "owner_head_with_antennas_size_world_mm": [
+   135.0,
+   100.0,
+   64.0
+  ],
+  "microduck_shell_size_world_mm": [
+   122.7,
+   91.8,
+   58.8
+  ],
+  "microduck_internals": [
+   "elec_rpi_robot_hat_pcb",
+   "lens",
+   "m12_lens_holder",
+   "motor_support",
+   "pcb__raspberry_pi_zero_2_w",
+   "seeed_bearing__configuration_default",
+   "speaker",
+   "xl330"
+  ],
+  "microduck_internals_box_rel_head_roll_world_mm": {
+   "lo": [
+    -29.0,
+    -40.0,
+    -10.0
+   ],
+   "hi": [
+    81.8,
+    40.0,
+    30.5
+   ]
+  },
+  "owner_shell_box_rel_head_roll_world_mm": {
+   "lo": [
+    -39.0,
+    -50.0,
+    -2.0
+   ],
+   "hi": [
+    96.0,
+    50.0,
+    62.0
+   ]
+  },
+  "contacts_at_STAND": [],
+  "head_roll_joint_world_STAND_m": [
+   -0.009,
+   0.0,
+   0.2326
+  ],
+  "shell_centre_head_frame_m": [
+   0.01245,
+   0.0,
+   -0.02285
+  ],
+  "head_k": 1.0,
+  "shape": "human_tall",
+  "eye_pos_head_frame": [
+   0.02,
+   0.022,
+   -0.10041
+  ]
+ },
+ "hybrid_allcollisions_roundduck_tall.xml": {
+  "variant": "matched",
+  "md_robot": "robot_allcollisions.xml",
+  "collision": "owner_noantenna",
+  "owner_head_scale": 0.7,
+  "total_mass_kg": {
+   "microduck": 0.7372,
+   "hybrid": 0.7085
+  },
+  "head_mass_kg": {
+   "microduck": 0.1888,
+   "hybrid": 0.16,
+   "diff_g": -28.8
   },
   "head_com_world_STAND_m": {
    "microduck": [
@@ -3512,9 +4170,9 @@
     0.0003208
    ],
    "hybrid": [
-    0.0001499,
-    0.0002541,
-    0.0003209
+    0.000127,
+    0.0002154,
+    0.0002719
    ]
   },
   "whole_robot_com_world_STAND_m": {
@@ -3524,14 +4182,14 @@
     0.1417
    ],
    "hybrid": [
-    0.0009,
     -0.0001,
-    0.1429
+    -0.0002,
+    0.1389
    ],
    "diff_mm": [
-    0.3,
-    -0.1,
-    1.2
+    -0.7,
+    -0.2,
+    -2.9
    ]
   },
   "owner_shell_offset_in_head_frame_mm": [
@@ -3600,7 +4258,141 @@
    -0.02285
   ],
   "head_k": 1.0,
-  "shape": "roundduck",
+  "shape": "roundduck_tall",
+  "eye_pos_head_frame": [
+   0.02,
+   0.0,
+   -0.09074
+  ]
+ },
+ "hybrid_groundcontact_roundduck_tall.xml": {
+  "variant": "matched",
+  "md_robot": "robot_groundcontact.xml",
+  "collision": "owner_noantenna",
+  "owner_head_scale": 0.7,
+  "total_mass_kg": {
+   "microduck": 0.7372,
+   "hybrid": 0.7085
+  },
+  "head_mass_kg": {
+   "microduck": 0.1888,
+   "hybrid": 0.16,
+   "diff_g": -28.8
+  },
+  "head_com_world_STAND_m": {
+   "microduck": [
+    0.0235,
+    0.0012,
+    0.2372
+   ],
+   "hybrid": [
+    0.0247,
+    0.0007,
+    0.2417
+   ],
+   "diff_mm": [
+    1.2,
+    -0.5,
+    4.5
+   ],
+   "dist_mm": 4.7
+  },
+  "head_inertia_diag_about_com": {
+   "microduck": [
+    0.0001499,
+    0.0002541,
+    0.0003208
+   ],
+   "hybrid": [
+    0.000127,
+    0.0002154,
+    0.0002719
+   ]
+  },
+  "whole_robot_com_world_STAND_m": {
+   "microduck": [
+    0.0006,
+    -0.0,
+    0.1417
+   ],
+   "hybrid": [
+    -0.0001,
+    -0.0002,
+    0.1389
+   ],
+   "diff_mm": [
+    -0.7,
+    -0.2,
+    -2.9
+   ]
+  },
+  "owner_shell_offset_in_head_frame_mm": [
+   5.3,
+   -0.0,
+   -51.5
+  ],
+  "owner_shell_size_world_mm": [
+   133.0,
+   106.0,
+   50.0
+  ],
+  "owner_head_with_antennas_size_world_mm": [
+   133.0,
+   106.0,
+   50.0
+  ],
+  "microduck_shell_size_world_mm": [
+   122.7,
+   91.8,
+   58.8
+  ],
+  "microduck_internals": [
+   "elec_rpi_robot_hat_pcb",
+   "lens",
+   "m12_lens_holder",
+   "motor_support",
+   "pcb__raspberry_pi_zero_2_w",
+   "seeed_bearing__configuration_default",
+   "speaker",
+   "xl330"
+  ],
+  "microduck_internals_box_rel_head_roll_world_mm": {
+   "lo": [
+    -29.0,
+    -40.0,
+    -10.0
+   ],
+   "hi": [
+    81.8,
+    40.0,
+    30.5
+   ]
+  },
+  "owner_shell_box_rel_head_roll_world_mm": {
+   "lo": [
+    -40.0,
+    -53.0,
+    -2.0
+   ],
+   "hi": [
+    93.0,
+    53.0,
+    48.0
+   ]
+  },
+  "contacts_at_STAND": [],
+  "head_roll_joint_world_STAND_m": [
+   -0.009,
+   0.0,
+   0.2326
+  ],
+  "shell_centre_head_frame_m": [
+   0.01245,
+   0.0,
+   -0.02285
+  ],
+  "head_k": 1.0,
+  "shape": "roundduck_tall",
   "eye_pos_head_frame": [
    0.02,
    0.0,
