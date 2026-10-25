@@ -185,3 +185,8 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   6.5M brain was the reverse. With no random physics, game results flip all-or-nothing, so one good setting
   can be luck: check the neighbours. Some walk brains drift back as they stand still (Dash: 0.68-0.71 m from
   the bar); a second creep forward keeps every jump inside the 0.45-0.65 m it was trained from.
+- **The exam is not the game.** Run 15f's later brains scored higher on the jump exam every checkpoint (12M:
+  30 cm 60%, 10M: 35%) but fell after landing far more in the castle (11M-12M: 4-18 falls in 12 games at
+  20-22 cm; 10M: 0). The exam starts each jump from a settled dog stance on randomised physics and checks
+  only the last moment; the game starts after a walk and a stand, then hands over to the standing brain.
+  Next time: put the game's start (walk up, stop, stand, hold) and the hand-over into training and the exam.
