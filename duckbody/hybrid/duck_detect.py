@@ -39,13 +39,13 @@ MODEL_PATH = Path(os.environ.get("DUCK_DETECT_ONNX", HERE / ".cache" / "duck_det
 SIZE, PAD, STRIDE = 320, 114, 5
 IOU_LIMIT = 0.5
 THRESHOLD = 0.25            # float model; Pollen: tune the threshold against the deployed model
-FEET_Z = 0.0                # colour boxes end at the lowest team-coloured part, not the sole: the ray meets this plane
+FEET_Z = 0.025               # colour boxes end at the lowest team-coloured part, not the sole: the ray meets this plane
 
 # match.py's team colours (TEAM_RGB), as OpenCV HSV ranges (H 0-180): blue (0.13, 0.38, 0.95) -> H ~111,
-# yellow (1.0, 0.82, 0.05) -> H ~25. The duck's own orange bill / feet (H 10-18) and yellow-orange soles (H ~20)
-# stay out of the yellow range; the turf (H ~62), the lines (white), the boards (dark blue, V 0.36) and the ball
+# yellow (1.0, 0.82, 0.05) -> H ~24. The duck's own orange bill / feet (H 10-18), yellow-orange soles (H ~20) and the
+# owner's antenna holders (H ~22) stay out of the yellow range; the turf (H ~62), the lines (white), the boards (dark blue, V 0.36) and the ball
 # (magenta, H ~160) out of both.
-TEAM_HSV = {"blue": ((100, 150, 110), (124, 255, 255)), "yellow": ((22, 170, 120), (32, 255, 255))}
+TEAM_HSV = {"blue": ((100, 170, 120), (124, 255, 255)), "yellow": ((23, 170, 120), (32, 255, 255))}
 
 
 # ------------------------------------------------------------------------------------------- Pollen's model

@@ -4,6 +4,10 @@ frames of hybrid ducks, against the simulator's ground truth.
     PY=/home/user/cool-websites/.venv/bin/python
     MUJOCO_GL=osmesa $PY duckbody/hybrid/duck_detect_eval.py --scenes 120      # -> results_duck_detect_hybrid.json
     MUJOCO_GL=osmesa $PY duckbody/hybrid/duck_detect_eval.py --sheet DIR       # + contact sheets of frames + boxes
+    MUJOCO_GL=osmesa $PY duckbody/hybrid/duck_detect_eval.py --others microduck --shadows --scenes 60 \
+        --out results_duck_detect_microduck.json                                # the model on plain Microducks
+    MUJOCO_GL=osmesa $PY duckbody/hybrid/duck_detect_eval.py --match-proxies 200 \
+        --out results_duck_detect_match.json                                    # match.py's own head-camera frames
 
 Scenes (seeded): the observing duck (itself untinted or in a team colour: its own legs can enter the picture) stands at the origin looking along +x (head home, or tilted down / sideways a
 little), 1-4 other hybrid ducks (Microduck body, the owner's head; standing pose, random yaw) at 0.3-2.5 m within
@@ -34,6 +38,7 @@ sys.path.insert(0, str(HERE))
 import duck_detect as DD  # noqa: E402
 
 ROBOT_XML = HERE / "hybrid_allcollisions_noantenna.xml"
+MICRODUCK_XML = HERE / "microduck" / "robot_allcollisions.xml"      # Pollen's Microduck, its own head
 EYE_POS = (0.020, 0.0, -0.096)          # follow.py's head camera
 EYE_QUAT = (0.7071068, 0.0, 0.0, -0.7071068)
 FOVY = 49.0
@@ -58,7 +63,7 @@ def tint_part(rgb, name=""):
 CHECKER_GROUP = 5
 
 
-def build():
+def build(others_xml=ROBOT_XML):
     """World with the observer ('o_', with the eye camera) and MAX_OTHERS other ducks ('d0_'...), all kinematic
     (rendering only). Two floors: match.py's turf + a white line (group 0) and the hybrid scene's blue checker (group
     5, under the turf); a scene shows one through the renderer's geom groups. Team tints: set_tints()."""
@@ -88,7 +93,7 @@ def build():
     g.pos = [0, 0, -0.0002]
     names = ["o"] + [f"d{i}" for i in range(MAX_OTHERS)]
     for i, name in enumerate(names):
-        child = mujoco.MjSpec.from_file(str(ROBOT_XML))
+        child = mujoco.MjSpec.from_file(str(ROBOT_XML if i == 0 else others_xml))
         if i == 0:
             c = child.body("jaw_soft").add_camera()
             c.name, c.pos, c.quat, c.fovy = "eye", list(EYE_POS), list(EYE_QUAT), FOVY
@@ -134,9 +139,10 @@ def scene(seed):
     return dict(seed=seed, floor=floor, tints=tints, head=head, ducks=ducks)
 
 
-def pose(m, d, names, sc):
+def pose(m, d, names, sc, origin=(0.0, 0.0)):
     import mujoco
     d.qpos[:] = m.qpos0
+    ox, oy = origin
     for i, name in enumerate(names):
         a = m.jnt_qposadr[m.joint(f"{name}_trunk_base_freejoint").id]
         if i == 0:
@@ -145,7 +151,7 @@ def pose(m, d, names, sc):
             xy, yaw = sc["ducks"][i - 1]["xy"], sc["ducks"][i - 1]["yaw"]
         else:
             xy, yaw = (50.0 + 3 * i, 50.0), 0.0       # parked far away, out of view
-        d.qpos[a:a + 7] = [xy[0], xy[1], STAND_Z, math.cos(yaw / 2), 0, 0, math.sin(yaw / 2)]
+        d.qpos[a:a + 7] = [xy[0] + ox, xy[1] + oy, STAND_Z, math.cos(yaw / 2), 0, 0, math.sin(yaw / 2)]
         for jn, v in STAND.items():
             d.qpos[m.jnt_qposadr[m.joint(f"{name}_{jn}").id]] = v
         if i == 0:
@@ -155,7 +161,8 @@ def pose(m, d, names, sc):
     # stand on the floor: lowest sole vertex at z = 0 (approximately: shift each trunk by its lowest geom aabb)
     for i, name in enumerate(names):
         root = m.body(f"{name}_trunk_base").id
-        gs = [g for g in range(m.ngeom) if m.body_rootid[m.geom_bodyid[g]] == root and m.geom_type[g] == mujoco.mjtGeom.mjGEOM_MESH]
+        gs = [g for g in range(m.ngeom) if m.body_rootid[m.geom_bodyid[g]] == root and m.geom_type[g] == mujoco.mjtGeom.mjGEOM_MESH
+              and m.geom_group[g] in (2, 3)]
         zmin = min(d.geom_xpos[g][2] - _half_z(m, d, g) for g in gs)
         a = m.jnt_qposadr[m.joint(f"{name}_trunk_base_freejoint").id]
         d.qpos[a + 2] -= zmin
@@ -221,13 +228,13 @@ def _inside(a, b):
     return max(x1 - x0, 0.0) * max(y1 - y0, 0.0) / area
 
 
-def run(n_scenes, sheet=None, thresholds=(0.1, 0.25, 0.5)):
+def run(n_scenes, sheet=None, thresholds=(0.1, 0.25, 0.5), others_xml=ROBOT_XML, shadows=False):
     import mujoco
     det_model = DD.PollenDuckDetector(threads=1)
     rows = []
     t0 = time.time()
     sheets = {}
-    m, names = build()
+    m, names = build(others_xml)
     d = mujoco.MjData(m)
     cid = m.camera("o_eye").id
     rens = {}
@@ -243,7 +250,7 @@ def run(n_scenes, sheet=None, thresholds=(0.1, 0.25, 0.5)):
         opt.geomgroup[0] = sc["floor"] != "checker"
         for (W, H) in RES:
             ren, sren = rens[(W, H)]
-            ren.scene.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
+            ren.scene.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = int(shadows)
             ren.scene.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = 0
             ren.update_scene(d, camera="o_eye", scene_option=opt)
             img = ren.render().copy()
@@ -288,6 +295,63 @@ def run(n_scenes, sheet=None, thresholds=(0.1, 0.25, 0.5)):
     if sheet is not None:
         _write_sheets(sheets.get("x", []), Path(sheet))
     return rows
+
+
+def run_match_proxies(n_scenes, foot_view_every=4):
+    """What match.py's head cameras actually render: its model (pitch, goals, ball, 5 ducks), the other ducks drawn as
+    match.py's team-tinted proxy boxes (group 5, no meshes), 160x120. Observer blue; others blue, yellow, blue, yellow.
+    Every `foot_view_every`-th scene the observer looks at its feet (soccer.FOOT_VIEW: neck -0.6, head pitch 1.1) -
+    where its own blue legs are in the picture. Colour detector only (the model does not apply to boxes)."""
+    import mujoco
+    import match as Mt                       # read-only use of the 5v5 model builder and its head-camera renderer
+    teams = ["blue", "blue", "yellow", "blue", "yellow"]
+    robots = [(n, t) for n, t in zip(["o"] + [f"d{i}" for i in range(MAX_OTHERS)], teams)]
+    m, _ = Mt.build_model(robots, pitch=True, cams=True)
+    names = [r[0] for r in robots]
+    d = mujoco.MjData(m)
+    cid = m.camera("o_eye").id
+    ren = Mt.make_renderer(m)
+    sren = Mt.make_renderer(m)
+    sren.enable_segmentation_rendering()
+    rows = []
+    for s in range(n_scenes):
+        sc = scene(1000 + s)
+        for i, du in enumerate(sc["ducks"]):
+            du["team"] = teams[i + 1]
+        foot = s % foot_view_every == foot_view_every - 1
+        if foot:
+            sc["head"] = dict(neck_pitch=0.3491 - 0.6, head_pitch=0.3491 + 1.1, head_yaw=0.0)   # default + command
+        pose(m, d, names, sc, origin=(-1.0, 0.0))
+        img = Mt.render_eye(ren, d, "o_eye").copy()
+        seg = Mt.render_eye(sren, d, "o_eye").copy()
+        H, W = img.shape[:2]
+        gts = ground_truth(m, d, names, seg, len(sc["ducks"]))
+        for i, g in enumerate(gts):
+            g.update(dist=round(float(np.hypot(*(sc["ducks"][i]["xy"] + [-1.0, 0.0] - d.cam_xpos[cid][:2]))), 3),
+                     team=sc["ducks"][i]["team"])
+        col = DD.detect_ducks(img, d.cam_xpos[cid], d.cam_xmat[cid], FOVY, method="colour")
+        tp, fp = match(col, gts)
+        floor_err = [round(float(np.hypot(*(det["floor"] - (sc["ducks"][i]["xy"] + [-1.0, 0.0])))), 3)
+                     for i, det in tp if det["floor"] is not None and not det["cut"]]
+        team_ok = sum(det["team"] == sc["ducks"][i]["team"] for i, det in tp)
+        rows.append(dict(scene=s, res=f"{W}x{H}", foot_view=foot, n=len(sc["ducks"]),
+                         gt=[dict(dist=g["dist"], team=g["team"], visible=g["visible"], px=g["px"]) for g in gts],
+                         colour=dict(tp=[i for i, _ in tp], fp=fp, floor_err=floor_err, floor_z={}, team_ok=team_ok)))
+    vis = [(r, i, g) for r in rows for i, g in enumerate(r["gt"]) if g["visible"]]
+    det = sum(1 for r, i, g in vis if i in r["colour"]["tp"])
+    fe = [e for r in rows for e in r["colour"]["floor_err"]]
+    by = {}
+    for lo, hi in ((0.0, 0.75), (0.75, 1.5), (1.5, 3.0)):
+        vv = [(r, i) for r, i, g in vis if lo <= g["dist"] < hi]
+        by[f"{lo}-{hi} m"] = f"{sum(1 for r, i in vv if i in r['colour']['tp'])}/{len(vv)}"
+    summ = dict(frames=len(rows), visible_ducks=len(vis), detected=det, detection_rate=round(det / max(1, len(vis)), 3),
+                by_distance=by, team_correct=sum(r["colour"]["team_ok"] for r in rows),
+                false_pos=sum(r["colour"]["fp"] for r in rows),
+                false_pos_foot_view=sum(r["colour"]["fp"] for r in rows if r["foot_view"]),
+                foot_view_frames=sum(r["foot_view"] for r in rows),
+                floor_err_m_median=round(float(np.median(fe)), 3) if fe else None,
+                floor_err_m_p90=round(float(np.percentile(fe, 90)), 3) if fe else None)
+    return summ, rows
 
 
 def _annotate(img, gts, model, col):
@@ -363,12 +427,23 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenes", type=int, default=120)
     ap.add_argument("--sheet", default=None)
+    ap.add_argument("--others", default="hybrid", choices=("hybrid", "microduck"),
+                    help="the other ducks: hybrids, or Pollen's plain Microduck (its own head) as a check that the "
+                         "model's failure is the sim look, not the owner's head")
+    ap.add_argument("--shadows", action="store_true")
+    ap.add_argument("--match-proxies", type=int, default=0, metavar="N",
+                    help="instead: N frames of match.py's own head-camera rendering (proxy boxes), colour detector")
     ap.add_argument("--out", default=str(HERE / "results_duck_detect_hybrid.json"))
     a = ap.parse_args()
-    rows = run(a.scenes, a.sheet)
+    if a.match_proxies:
+        summ, rows = run_match_proxies(a.match_proxies)
+        print(json.dumps(summ, indent=1))
+        Path(a.out).write_text(json.dumps(dict(summary=summ, frames=rows), indent=1))
+        return
+    rows = run(a.scenes, a.sheet, others_xml=ROBOT_XML if a.others == "hybrid" else MICRODUCK_XML, shadows=a.shadows)
     summ = summarize(rows)
     print(json.dumps(summ, indent=1))
-    Path(a.out).write_text(json.dumps(dict(summary=summ, frames=rows), indent=1))
+    Path(a.out).write_text(json.dumps(dict(summary=summ, others=a.others, shadows=a.shadows, frames=rows), indent=1))
 
 
 if __name__ == "__main__":
