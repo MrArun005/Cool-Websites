@@ -18,7 +18,8 @@ live_meta.json carries what the page needs to drive it: per robot the actuator /
 policy order, BAM's friction-row index quirk (match.MultiBam.quirk), sensor and body ids; BAM's XL330 m6 parameters;
 the policies are Microduck's ONNX files, copied unchanged (the page runs them with onnx_mlp.js).
 """
-from __future__ import annotations
+from __future__ import base64
+import annotations
 
 import argparse
 import json
@@ -230,6 +231,7 @@ def main():
     pol.mkdir(exist_ok=True)
     for b in BRAINS:
         shutil.copyfile(POLICIES / f"{b}.onnx", pol / f"{b}.onnx")       # unchanged (onnx_mlp.js reads them)
+        (pol / f"{b}.onnx.b64.txt").write_text(base64.b64encode((POLICIES / f"{b}.onnx").read_bytes()).decode())   # the artifact host does not serve .onnx
     if a.page:
         for f in ("live_sim.js", "live_game.js", "tactics.js", "onnx_mlp.js"):
             shutil.copyfile(HERE / f, out / f)

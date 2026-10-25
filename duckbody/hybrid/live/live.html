@@ -137,7 +137,14 @@ const fail = (what, err) => {
   p.textContent = `${what}: ${err && err.message ? err.message : err}. This page runs a physics engine (WebAssembly) in the browser; it needs a recent Chrome, Edge, Firefox or Safari with JavaScript on.`;
   loadmsg.appendChild(p);
 };
-const getBuf = async u => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.arrayBuffer(); };
+const getBuf = async u => {
+  if (u.endsWith('.onnx')) {   // the artifact host does not serve .onnx: the unchanged files ship base64-encoded as .onnx.b64.txt
+    const r = await fetch(u + '.b64.txt'); if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`);
+    const s = atob((await r.text()).trim()), out = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+    return out.buffer;
+  }
+  const r = await fetch(u); if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.arrayBuffer(); };
 const getText = async u => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.text(); };
 const getJson = async u => JSON.parse(await getText(u));
 
