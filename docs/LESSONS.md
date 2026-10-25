@@ -177,3 +177,11 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   misses, it touches the bar and stays up; when 9M misses, it crashes on landing. In a game a fall costs a
   life, so the games keep 6.5M. Bigger updates (run 15f: 16k steps each, ~160 jumps) stopped the collapses
   that broke runs 15c, 15d and 15e within 500k steps.
+- **More data per learning step steadies a delicate skill.** With 4096 steps per update (~40 jumps), three jump
+  runs broke within 500k steps. With 16384 (~160 jumps), run 15f improved at every checkpoint: 30 cm bars
+  went 10% -> 50% from 8.5M to 10M.
+- **Tune the hand-off for each brain, and test around the setting.** The 10M jump brain fell after landing
+  with a 0.5 s steadying hold, and jumped 12 stations of 12 clean with 1 s (0.8 s and 1.2 s also good); the
+  6.5M brain was the reverse. With no random physics, game results flip all-or-nothing, so one good setting
+  can be luck: check the neighbours. Some walk brains drift back as they stand still (Dash: 0.68-0.71 m from
+  the bar); a second creep forward keeps every jump inside the 0.45-0.65 m it was trained from.

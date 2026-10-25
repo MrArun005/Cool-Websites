@@ -110,6 +110,10 @@ export class Driver {
 // let the motors hold the dog stance 0.5 s (how every training jump started), jump (2 s), stand 0.6 s.
 // Measured with the 6M jump brain in live.js: 15 cm bars 6/6 clean from 0.55-0.65 m, 20 cm bars 6/6 clean
 // from 0.65 m; from 0.45 m it falls, and after a posture-brain stand without the hold it fell 1 in 3.
+export let HOLD = 1.0;   // s the motors hold the dog stance before a jump (10M brain: 0.8-1.2 s all good, 0.5 s fell more)
+export function setHold(s) { HOLD = s; }
+export let LAND_HOLD = 0;   // s the motors hold the stance after landing, before the standing brain
+export function setLandHold(s) { LAND_HOLD = s; }
 export class Jumper {
   constructor(bolt, driver, bar, yaw, h) {
     this.bolt = bolt; this.driver = driver; this.dir = [Math.cos(yaw), Math.sin(yaw)];
@@ -127,15 +131,20 @@ export class Jumper {
     }
     if (this.stage === "brake") {   // a slow trot before stopping (stopping dead tips Bolt over)
       const cmd = { ...this.driver.toward(this.spot, 0.2, true, dt), speed: 0.2 };
-      if ((this.t += dt) > 1.5 || ahead < 0.64) { this.stage = "settle"; this.t = 0; }
+      if ((this.t += dt) > 3.0 || ahead < 0.64) { this.stage = "settle"; this.t = 0; }
       return cmd;
     }
     if (this.stage === "settle") {
-      if ((this.t += dt) > 0.8) { this.stage = "hold"; this.t = 0; this.from = ahead; }
+      if ((this.t += dt) > 0.8) {
+        // some walk brains drift back a few cm as they stand (run 11b: 0.68-0.71 m, and fell 3 jumps in 9):
+        // creep up once more, so the jump starts within the 0.45-0.65 m it was trained from
+        if (ahead > 0.67 && !this.crept) { this.crept = true; this.stage = "brake"; this.t = 0; }
+        else { this.stage = "hold"; this.t = 0; this.from = ahead; }
+      }
       return { command: "stand", turn: 0, speed: 0.2 };
     }
     if (this.stage === "hold") {
-      if ((this.t += dt) > 0.5) { this.stage = "jump"; b.startJump(); }
+      if ((this.t += dt) > HOLD) { this.stage = "jump"; b.startJump(); }
       return { command: "hold", turn: 0, speed: 0.2 };
     }
     if (this.stage === "jump") {
@@ -143,8 +152,8 @@ export class Jumper {
       if (!b.jumping()) { this.stage = "land"; this.t = 0; }
       return { command: "jump", turn: 0, speed: 0.2 };
     }
-    if ((this.t += dt) > 0.6) { this.done = true; this.over = ahead < -0.3; this.driver.speed = 0.2; }
-    return { command: "stand", turn: 0, speed: 0.2 };
+    if ((this.t += dt) > 0.6 + LAND_HOLD) { this.done = true; this.over = ahead < -0.3; this.driver.speed = 0.2; }
+    return { command: this.t < LAND_HOLD ? "hold" : "stand", turn: 0, speed: 0.2 };
   }
 }
 
