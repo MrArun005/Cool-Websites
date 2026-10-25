@@ -27,6 +27,9 @@ class Examiner(BaseCallback):
         super().__init__()
         self.out, self.every, self.next, self.best = out, every, every, -1.0
 
+    def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
+        self.next = (self.num_timesteps // self.every + 1) * self.every
+
     def _on_step(self):
         if self.num_timesteps < self.next:
             return not (self.out / "STOP").exists()
