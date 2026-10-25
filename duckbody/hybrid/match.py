@@ -381,6 +381,7 @@ class Duck:
         self.bodies = [b for b in range(m.nbody) if m.body_rootid[b] == self.trunk]
         self.geoms = {g for g in range(m.ngeom) if m.body_rootid[m.geom_bodyid[g]] == self.trunk}
         self.cam = m.camera(f"{name}_eye").id if world.cams else None
+        self.feet = (m.body(f"{name}_ankle_left").id, m.body(f"{name}_ankle_right").id)
         self.rng = np.random.default_rng(world.seed * 100 + i)
         self.obs_noise, self.delay = True, True
         self.pending, self.on_substep = DEFAULT_POSE.copy(), None
@@ -983,6 +984,158 @@ class Metrics:
         return dict(players=per, duels=self.duels, bumps=self.bumps, play_s=round(self.play_s, 1))
 
 
+DIAG_NEAR = 0.12                # ball "near" an object: within 12 cm of a duck's trunk or foot (centres), a board, a post
+DIAG_LOST_D = 0.15              # "lost at the feet": a player within 15 cm of the ball whose own camera has no fix ...
+DIAG_UNSEEN = 0.3               # ... for this long
+DIAG_STALL_S = 3.0              # a stall: the ball stays within 15 cm of where it was for this long (the dropped-ball
+                                # rule fires at NO_PROGRESS_S)
+DIAG_ARRIVE = 0.25              # the striker "reached the ball": trunk within this of it
+
+
+class Diag:
+    """Measurement only (simulator truth, no effect on play), for the stuck-ball and kick-cycle diagnosis.
+    1. Ball episodes: the ball's position is anchored; an episode ends when the ball moves 15 cm from the anchor (as
+       the dropped-ball rule's progress clock), a set piece / out / goal, or a dropped ball. Per episode: how long,
+       what the ball was near (ducks, referee, board / touch or goal line, corner, post), the states of the players
+       near it, what ended it (kick, push, dropped ball, restart). Stalls = episodes longer than DIAG_STALL_S.
+    2. Lost at the feet: players within 15 cm of the ball whose own camera has not seen it for 0.3 s, by what they do.
+    3. Arrival -> strike: from the striker reaching the ball (trunk within 25 cm) to the ball leaving at > 0.3 m/s
+       after its touch or kick, split by its tactics state (approach = the walk-in and stop, align, ready = head home
+       wait, kick = the kick brain, duel, dribble, other)."""
+
+    def __init__(self, game):
+        self.g = game
+        self.ep = None
+        self.episodes = []
+        self.lost = {}                    # player -> current lost span start
+        self.lost_spans = []              # (name, start, dur, states)
+        self.lost_ticks = dict(total=0, search=0, standing=0, moving=0, by_src={})
+        self.near_ticks = 0
+        self.arr = {}                     # player -> {t0, states}
+        self.arrivals = []
+        self.last_touch_t = {}
+
+    def near_objects(self, b):
+        g = self.g
+        out = set()
+        d = g.world.d
+        for dk in g.world.ducks:
+            pts = [d.xpos[dk.trunk][:2], d.xpos[dk.feet[0]][:2], d.xpos[dk.feet[1]][:2]]
+            if min(float(np.linalg.norm(q - b)) for q in pts) < DIAG_NEAR:
+                out.add("referee" if dk.team == "ref" else "duck")
+        ex, ey = HX - abs(b[0]), HY - abs(b[1])
+        if min(math.hypot(abs(b[0]) - HX, abs(b[1]) - GOAL_W / 2) for _ in (0,)) < DIAG_NEAR + POST_R:
+            out.add("post")
+        elif ex < 0.3 and ey < 0.3:
+            out.add("corner")
+        elif ey < DIAG_NEAR or (ex < DIAG_NEAR and abs(b[1]) > GOAL_W / 2):
+            out.add("board/line")
+        return out
+
+    def touch(self, idx):
+        for i in idx:
+            self.last_touch_t[i] = self.g.t
+
+    def close(self, why):
+        e = self.ep
+        if e is None:
+            return
+        e["dur"] = round(self.g.t - e["t0"], 2)
+        e["end"] = why
+        e["near"] = {k: round(v * rh.DT, 2) for k, v in e["near"].items()}
+        e["states"] = {k: round(v * rh.DT, 2) for k, v in e["states"].items()}
+        self.episodes.append(e)
+        self.ep = None
+
+    def tick(self):
+        g = self.g
+        t = g.t
+        b3, bv = g.world.ball()
+        b = b3[:2]
+        if g.phase != "playing" or g.setpiece is not None or g.out_pending is not None:
+            if self.ep is not None:
+                self.close("restart" if g.phase != "playing" or g.out_pending is not None else
+                           ("dropped ball" if g.setpiece and g.setpiece["kind"] == "dropped ball" else "restart"))
+            self.lost, self.arr = {}, {}
+            return
+        if self.ep is None:
+            self.ep = dict(t0=round(t, 2), b=[round(float(v), 3) for v in b], near={}, states={}, kicks=0, touches=0)
+        e = self.ep
+        if float(np.linalg.norm(b - np.array(e["b"]))) > 0.15:
+            recent_kick = any(t - k["t"] < 1.5 and k["connected"] for k in g.kicks[-3:])
+            self.close("kick" if recent_kick else "push")
+            self.ep = dict(t0=round(t, 2), b=[round(float(v), 3) for v in b], near={}, states={}, kicks=0, touches=0)
+            e = self.ep
+        for o in self.near_objects(b) or {"open"}:
+            e["near"][o] = e["near"].get(o, 0) + 1
+        for p in g.players:
+            if not p.active():
+                continue
+            dk = p.duck
+            d = g.world.d
+            dist = min(float(np.linalg.norm(d.xpos[q][:2] - b)) for q in (dk.trunk,) + dk.feet)
+            c = p.cmd
+            st = p.state.split("/")[0] if p.state else "?"
+            if dist < 0.25:
+                e["states"][st] = e["states"].get(st, 0) + 1
+            # lost at the feet
+            if dist < DIAG_LOST_D:
+                self.near_ticks += 1
+                unseen = t - p.ball_t > DIAG_UNSEEN
+                if unseen:
+                    lt = self.lost_ticks
+                    lt["total"] += 1
+                    _, src = p.ball(t)
+                    lt["by_src"][str(src)] = lt["by_src"].get(str(src), 0) + 1
+                    busy = p.rt.mode in ("kick left", "kick right", "get up", "hop")
+                    if st == "search":
+                        lt["search"] += 1
+                    elif c is not None and not busy and abs(c.vx) < 1e-6 and abs(c.vy) < 1e-6 and abs(c.wz) < 1e-6:
+                        lt["standing"] += 1
+                    else:
+                        lt["moving"] += 1
+                    if p.name not in self.lost:
+                        self.lost[p.name] = dict(t0=t, states={})
+                    s = self.lost[p.name]["states"]
+                    s[st] = s.get(st, 0) + 1
+                else:
+                    self._end_lost(p.name)
+            else:
+                self._end_lost(p.name)
+            # arrival -> strike
+            role = c.role if c is not None else ""
+            a = self.arr.get(p.name)
+            if a is None:
+                if role == "striker" and float(np.linalg.norm(d.xpos[dk.trunk][:2] - b)) < DIAG_ARRIVE:
+                    self.arr[p.name] = dict(t0=t, states={}, name=p.name)
+            else:
+                a["states"][st] = a["states"].get(st, 0) + 1
+                touched = t - self.last_touch_t.get(dk.i, -9) < 0.3
+                kicked = any(k["who"] == dk.i and t - k["t"] < 1.2 for k in g.kicks[-3:])
+                spd = float(np.hypot(bv[0], bv[1]))
+                if spd > 0.3 and (touched or kicked):
+                    a.update(dur=round(t - a["t0"], 2), how="kick" if kicked else "push", v=round(spd, 2))
+                    a["states"] = {k: round(v * rh.DT, 2) for k, v in a["states"].items()}
+                    self.arrivals.append(a)
+                    del self.arr[p.name]
+                elif role != "striker" or float(np.linalg.norm(d.xpos[dk.trunk][:2] - b)) > 0.6:
+                    del self.arr[p.name]       # gave it up (role change, ball gone): not counted
+
+    def _end_lost(self, name):
+        s = self.lost.pop(name, None)
+        if s is not None:
+            dur = self.g.t - s["t0"]
+            self.lost_spans.append(dict(name=name, t0=round(s["t0"], 2), dur=round(dur, 2),
+                                        states={k: round(v * rh.DT, 2) for k, v in s["states"].items()}))
+
+    def result(self):
+        self.close("end")
+        for n in list(self.lost):
+            self._end_lost(n)
+        return dict(episodes=self.episodes, lost_spans=self.lost_spans,
+                    lost_ticks=self.lost_ticks, near_ticks=self.near_ticks, arrivals=self.arrivals)
+
+
 class Game:
     """The match: world, 10 players + referee, the GameController (states, rules, clock, score, events)."""
 
@@ -1022,6 +1175,7 @@ class Game:
         self.log = log
         self.place_kickoff(teleport=True)
         self.metrics = Metrics(self)
+        self.diag = Diag(self)
 
     # ---------------------------------------------------------------- helpers
     def ev(self, kind, team=None, text="", **kw):
@@ -1358,6 +1512,7 @@ class Game:
         w.physics()
         for rt in self.rts:
             rt.tick_after()
+        self.diag.touch(self.touch_now)
         self.process_touches()
         b, bv = w.ball()
         sp = float(np.hypot(bv[0], bv[1]))
@@ -1369,6 +1524,7 @@ class Game:
                     self.by_index(kc["who"]).stats["connected"] += 1
         self.rules()
         self.metrics.tick()
+        self.diag.tick()
         if self.record and self.k % REC_EVERY == 0:
             self.frames.append(self.frame())
             self.clk.append([int(round(self.clock * 10)), self.half, "gsrpe".index(self.phase[0]) if self.phase[0] in "gsrpe" else 0])
@@ -1421,7 +1577,8 @@ class Game:
                     placements=cnt("placement"), events=self.events, sim_s=round(sim_s, 1),
                     playing_s=round(self.half_s * self.halves, 1), wall_s=round(getattr(self, "wall", 0.0), 1),
                     rtf=round(sim_s / max(1e-6, getattr(self, "wall", 1.0)), 3),
-                    bodies={dk.name: dk.dr for dk in self.world.ducks}, metrics=self.metrics.result())
+                    bodies={dk.name: dk.dr for dk in self.world.ducks}, metrics=self.metrics.result(),
+                    diag=self.diag.result())
 
 
 def kinematics():
