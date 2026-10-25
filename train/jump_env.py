@@ -34,7 +34,10 @@ if knocked) instead of a solid board. In the games, run 15f's brains landed twis
 the way they jumped, so run 16 starts each try up to 11 degrees askew and up to 10 cm off the centre
 line, feels both (two more inputs: sin of the heading error, distance off the line), and is paid for
 landing facing along the jump. A dropped bar costs 5 more, and only a dropped bar spoils a jump (the
-agility rule); a touch still costs.
+agility rule); a touch still costs. It still cleared every bar but by 11M fell after every landing: the
+landing bonus needed Bolt facing within 20 degrees, a cliff it rarely reached. Run 16b instead charges a
+little for spinning all through the jump (where the twist starts) and scales the landing bonus by how
+straight Bolt lands.
 """
 import gymnasium as gym
 import mujoco
@@ -204,13 +207,14 @@ class JumpEnv(BoltEnv):
                 self.clear_t = self.t
                 reward += 5.0 if not self.touched else 1.0
         else:  # landed: stand tall and still
-            if (not self.landed and self.t - self.clear_t >= 25 and R[2, 2] > 0.85 and p["height"] > 0.3
-                    and abs(e) < 0.35):
-                self.landed = True   # still on its feet (and facing the way it jumped) half a second after clearing
-                reward += 1.0 if self.dropped else 12.0 if not self.touched else 6.0
+            if not self.landed and self.t - self.clear_t >= 25 and R[2, 2] > 0.85 and p["height"] > 0.3:
+                self.landed = True   # still on its feet half a second after clearing; worth more facing forward
+                reward += (1.0 if self.dropped else 12.0 if not self.touched else 6.0) * (0.5 + 0.5 * facing)
             speed = np.hypot(p["vx"], p["vy"])
             reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2) * facing
-            reward -= 0.3 * (1 - np.cos(e))   # landing twisted sideways (run 15f: 40-120 degrees in the games)
+            reward -= 0.2 * (1 - np.cos(e))   # landing twisted sideways (run 15f: 40-120 degrees in the games)
+        if self.real:   # spinning about the vertical, all through the jump, is where a twisted landing starts
+            reward -= 0.02 * d.qvel[5] ** 2
         reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 5e-5 * np.sum(d.actuator_force ** 2)
         self.last_action = a
         fell = R[2, 2] < 0.2
