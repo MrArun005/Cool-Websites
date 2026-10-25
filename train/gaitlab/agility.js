@@ -13,7 +13,7 @@ export const OBSTACLES = {
   weave: { title: "Weave poles", how: "Weave through every pole, first pole on the left shoulder" },
   tunnel: { title: "Tunnel", how: "Run through the tunnel, in at the near end" },
   table: { title: "Pause table", how: "Lie down on the table while the judge counts 5" },
-  jump: { title: "Hurdle", how: "Jump the bar without knocking it" },
+  jump: { title: "Hurdle", how: "Jump the hurdle without knocking the bar down" },
 };
 // m: Bolt's body is rigid, so the poles are wider apart than a real 60 cm weave. Bolt follows a smooth
 // wave through them (side: how far it swings out at each pole), at most ~1.4 rad/s of turning.
@@ -46,7 +46,7 @@ export function buildAgility(seed, { jumps = false, cls = "standard" } = {}) {
     const entry = [x + gap * Math.cos(h), y + gap * Math.sin(h)];
     const exit = [entry[0] + L * Math.cos(h), entry[1] + L * Math.sin(h)];
     x = exit[0]; y = exit[1];
-    return { n: n + 1, kind, entry, exit, h, L, ...OBSTACLES[kind], ...(kind === "jump" ? { bar: C.bar, how: `Jump the ${Math.round(C.bar * 100)} cm bar without knocking it` } : {}) };
+    return { n: n + 1, kind, entry, exit, h, L, ...OBSTACLES[kind], ...(kind === "jump" ? { bar: C.bar, how: `Jump the ${Math.round(C.bar * 100)} cm hurdle without knocking the bar down` } : {}) };
   });
   const last = obstacles[obstacles.length - 1];
   const finish = [last.exit[0] + 2.5 * Math.cos(last.h), last.exit[1] + 2.5 * Math.sin(last.h)];
@@ -59,6 +59,17 @@ export function buildAgility(seed, { jumps = false, cls = "standard" } = {}) {
   return { seed, cls: C.name, obstacles, finish, finishH: last.h, sct: Math.round(length / C.pace + 9 + JUMP_TIME * jumpCount) };
 }
 
+// Every hurdle on the course is real and solid from the start: solid stands, a bar in its cups (live.js
+// placeReal). Bolt stands at the start line (course coordinates begin where it stands).
+export function placeJumps(bolt, course) {
+  const w = bolt.where(), c = Math.cos(w.yaw), s = Math.sin(w.yaw);
+  let slot = 0;
+  for (const o of course.obstacles) if (o.kind === "jump") {
+    o.slot = slot;
+    bolt.placeReal(slot++, [w.x + c * o.entry[0] - s * o.entry[1], w.y + s * o.entry[0] + c * o.entry[1]], w.yaw + o.h, o.bar);
+  }
+}
+
 // One competitor's round. Call step() 50 times a second.
 export class Round {
   constructor(bolt, course, start, name) {
@@ -66,6 +77,7 @@ export class Round {
     bolt.reset(start);
     const w = bolt.where();
     this.origin = [w.x, w.y]; this.yaw0 = w.yaw;
+    placeJumps(bolt, course);
     this.driver = new Driver(bolt);
     this.t = 0; this.clock = 0; this.index = 0; this.faults = 0; this.notes = [];
     this.phase = "ready"; this.task = null; this.events = []; this.over = false;
@@ -104,8 +116,6 @@ export class Round {
     const o = this.obstacle;
     this.task = o ? { stage: "approach", wp: 0, held: 0, settle: 0, checked: 0, missed: false } : { stage: "finish" };
     if (o) this.say(`${o.n}. ${o.title}`, "station");
-    // the simulator has one bar: it stands at the next hurdle (the jumper puts it there), parked otherwise
-    if (!o || o.kind !== "jump") this.bolt.setHurdle([1e3, 0], 0, 0.1);
   }
   next(note) {
     if (note) this.say(note, "good");
@@ -165,13 +175,13 @@ export class Round {
       this.next(o.kind === "weave" && !k.missed ? "Weaves: clean" : o.kind === "tunnel" ? "Tunnel: through" : "");
     }
   }
-  jump(o, dt) {   // a real jump from standing (game.js Jumper); touching the bar knocks it: 5 faults
+  jump(o, dt) {   // a real jump from standing (game.js Jumper); a bar knocked down: 5 faults
     const k = this.task;
-    if (!k.jumper) k.jumper = new Jumper(this.bolt, this.driver, this.world(o.entry), this.yaw0 + o.h, o.bar);
+    if (!k.jumper) k.jumper = new Jumper(this.bolt, this.driver, o.slot);
     this.cmd = k.jumper.step(dt);
     if (k.jumper.done) {
-      if (k.jumper.touched) { this.fault(5, "Knocked the bar"); this.next(""); }
-      else this.next("Clear jump");
+      if (k.jumper.dropped) { this.fault(5, "Knocked the bar down"); this.next(""); }
+      else this.next(k.jumper.touched ? "Brushed the bar, it stayed up" : "Clear jump");
     }
   }
   table(o, dt) {   // run up, stop, lie down for the judge's count of 5, get up, go on

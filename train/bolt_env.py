@@ -107,7 +107,10 @@ class BoltEnv(gym.Env):
         # policy observes and is scored on is converted back to full-size units, so the same brain
         # can drive any size.
         self.s, self.ts = scale, np.sqrt(scale)  # length and time scale
-        if scale == 1.0 and hurdles:  # the same robot, plus a hurdle (parked far away until placed)
+        if scale == 1.0 and hurdles == "real":   # a real agility hurdle: solid stands, a loose bar (hurdle.py)
+            import hurdle
+            self.model = mujoco.MjModel.from_xml_string(hurdle.world_xml(MODEL.read_text(), n=1))
+        elif scale == 1.0 and hurdles:  # the same robot, plus a hurdle (parked far away until placed)
             xml = MODEL.read_text().replace('<geom name="floor"', HURDLE_XML + '\n    <geom name="floor"', 1)
             self.model = mujoco.MjModel.from_xml_string(xml)
         elif scale == 1.0:
@@ -378,7 +381,7 @@ class BoltEnv(gym.Env):
         cmd = np.zeros(len(COMMANDS)); cmd[self.command] = 1
         obs = np.concatenate([
             gravity, d.qvel[3:6] * self.ts * 0.25, v_body, [d.qpos[2] / self.s],
-            d.qpos[7:] - STAND_POSE, d.qvel[6:] * self.ts * 0.1, self.last_action,
+            d.qpos[7:19] - STAND_POSE, d.qvel[6:18] * self.ts * 0.1, self.last_action,
             cmd, [np.sin(clock), np.cos(clock)],
         ] + ([[self.yaw_cmd]] if self.turning else []) + ([[self.speed_cmd]] if self.speed_control else []))
         if self.randomize:
@@ -421,8 +424,8 @@ class BoltEnv(gym.Env):
                 r = np.zeros(4); r[0] = np.cos(angle / 2); r[axis] = np.sin(angle / 2)
                 out = np.zeros(4); mujoco.mju_mulQuat(out, q, r); q = out
             d.qpos[3:7] = q
-        d.qpos[7:] = np.clip(pose + self.rng.normal(0, 0.05, 12), self.lo, self.hi)
-        d.ctrl[:] = d.qpos[7:]
+        d.qpos[7:19] = np.clip(pose + self.rng.normal(0, 0.05, 12), self.lo, self.hi)
+        d.ctrl[:] = d.qpos[7:19]
         mujoco.mj_forward(m, d)
 
         self.t = 0
@@ -502,7 +505,7 @@ class BoltEnv(gym.Env):
             gait = np.mean(feet == stance_ref)
             # Width matters: at 0.05 a dog halfway to the trot scored ~0, so there was no
             # "warmer, warmer" signal. At 0.3, halfway earns about a third.
-            imitation = np.exp(-np.mean((self.data.qpos[7:] - q_ref) ** 2) / 0.3)
+            imitation = np.exp(-np.mean((self.data.qpos[7:19] - q_ref) ** 2) / 0.3)
             # Wide enough that standing still still scores a little: a too-strict speed term makes
             # the whole product zero, and then nothing rewards starting to move.
             target = self.speed_cmd if self.speed_control else self.walk_speed()
@@ -522,7 +525,7 @@ class BoltEnv(gym.Env):
             progress = np.clip(p["vx"] / target, -1.0, 1.0)  # every bit of forward speed pays
             progress += imitation  # following the example pays on its own, even before it moves
         else:
-            pose_err = np.mean((self.data.qpos[7:] - np.asarray(goal["pose"])) ** 2)
+            pose_err = np.mean((self.data.qpos[7:19] - np.asarray(goal["pose"])) ** 2)
             speed = np.hypot(p["vx"], p["vy"])
             # The dog-stance stand is 12 cm taller than the old crouch the posture brain knew. At
             # width 0.06, standing 9 cm short paid ~10%, so run 9b rose only 3 cm in 500k steps.
@@ -546,7 +549,7 @@ class BoltEnv(gym.Env):
         torque = self.data.actuator_force / self.s ** 4  # full-size units
         reward -= 0.02 * np.sum((action - self.last_action) ** 2)  # smooth, not twitchy
         reward -= 2e-4 * np.sum(torque ** 2)                        # don't waste energy
-        reward -= 1e-4 * np.sum((self.data.qvel[6:] * self.ts) ** 2)
+        reward -= 1e-4 * np.sum((self.data.qvel[6:18] * self.ts) ** 2)
         return reward * 0.5, dict(command=name, feet=feet, scrape=scrapes, shin_tilt=tilt, walk_height=self.walk_height, yaw_cmd=self.yaw_cmd, turning=self.turning,
                                   speed_cmd=self.speed_cmd if self.speed_control else None,
                                   goal_height=goal["height"], hurdle_hits=hits, **p)

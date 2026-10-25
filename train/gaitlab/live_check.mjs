@@ -34,7 +34,9 @@ console.log(`end: Python at (${r[0].toFixed(3)}, ${r[1].toFixed(3)}), browser po
 if (ref.jump && bolt.brains.jump) {   // the jump: same start, same bar, step by step
   const J = ref.jump;
   bolt.reset(J.start);
-  bolt.setHurdle(J.start.bar_at, Math.atan2(J.start.bar_dir[1], J.start.bar_dir[0]), J.start.bar_h);
+  const yaw = Math.atan2(J.start.bar_dir[1], J.start.bar_dir[0]);
+  if (J.start.real) { bolt.placeReal(0, J.start.bar_at, yaw, J.start.bar_h); bolt.aim(0); }   // a real hurdle (run 16 on)
+  else bolt.setHurdle(J.start.bar_at, yaw, J.start.bar_h);
   bolt.startJump();
   let wObs = 0, wAct = 0, wPos = 0;
   J.steps.forEach((s) => {
@@ -43,6 +45,6 @@ if (ref.jump && bolt.brains.jump) {   // the jump: same start, same bar, step by
     bolt.jumpStep(bolt.brains.jump.act(o));
     const q = bolt.data.qpos; wPos = Math.max(wPos, Math.hypot(q[0] - s.qpos[0], q[1] - s.qpos[1], q[2] - s.qpos[2]));
   });
-  console.log(`jump (${J.steps.length} steps, Python: cleared ${J.cleared}, touched ${J.touched}): worst difference in what the jump brain feels ` +
+  console.log(`jump (${J.steps.length} steps, Python: cleared ${J.cleared}, touched ${J.touched}${J.start.real ? `, dropped ${J.dropped}; browser dropped ${bolt.barDropped(0)}` : ""}): worst difference in what the jump brain feels ` +
     `${wObs.toExponential(1)}, its output ${wAct.toExponential(1)}, body position ${(wPos * 1000).toFixed(3)} mm`);
 }

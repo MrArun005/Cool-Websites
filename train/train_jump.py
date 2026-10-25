@@ -20,6 +20,36 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from jump_env import JumpEnv, JumpPolicy, exam
 
 
+def widen(src, out):
+    """A 49-input jump brain -> 51 inputs for the real hurdle (run 16): the two new inputs (heading error,
+    distance off the line) start with zero weights and a neutral normalizer, so it jumps exactly as before."""
+    import numpy as np
+    from stable_baselines3.common.vec_env import DummyVecEnv
+    src, out = Path(src), Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    old = PPO.load(src / "policy.zip", device="cpu")
+    env = DummyVecEnv([lambda: JumpEnv(real=True)])
+    new = PPO("MlpPolicy", env, device="cpu", policy_kwargs=old.policy_kwargs, n_steps=old.n_steps,
+              batch_size=old.batch_size, n_epochs=old.n_epochs, gamma=old.gamma, gae_lambda=old.gae_lambda,
+              clip_range=old.clip_range, ent_coef=old.ent_coef, max_grad_norm=old.max_grad_norm, target_kl=old.target_kl)
+    state, widened = old.policy.state_dict(), {}
+    for k, v in new.policy.state_dict().items():
+        w = state[k]
+        if w.shape != v.shape:   # a first layer: the new inputs' columns start at zero
+            w = torch.cat([w, torch.zeros(w.shape[0], v.shape[1] - w.shape[1])], dim=1)
+        widened[k] = w
+    new.policy.load_state_dict(widened)
+    new.num_timesteps = old.num_timesteps
+    new.save(out / "policy_{}_steps.zip".format(old.num_timesteps))
+    norm = VecNormalize.load(str(src / "vecnormalize.pkl"), DummyVecEnv([lambda: JumpEnv()]))
+    norm.obs_rms.mean = np.concatenate([norm.obs_rms.mean, np.zeros(2)])
+    norm.obs_rms.var = np.concatenate([norm.obs_rms.var, np.ones(2)])
+    norm.observation_space = env.observation_space
+    norm.save(str(out / "policy_vecnormalize_{}_steps.pkl".format(old.num_timesteps)))
+    print(f"widened {src} (49 -> 51 inputs, {old.num_timesteps:,} steps) -> {out}", flush=True)
+    return out / "policy_{}_steps.zip".format(old.num_timesteps)
+
+
 class Examiner(BaseCallback):
     """Every `every` steps: save a checkpoint, take the exam, keep the best."""
 
@@ -65,16 +95,23 @@ def main():
     ap.add_argument("--lr", type=float, default=3e-4, help="learning rate (on --resume too)")
     ap.add_argument("--target-kl", type=float, default=0.03)
     ap.add_argument("--n-steps", type=int, default=512, help="steps per env per update (x envs = samples per update)")
+    ap.add_argument("--real", action="store_true", help="the real hurdle (hurdle.py) and heading inputs: run 16 on")
+    ap.add_argument("--widen-from", help="a 49-input jump brain folder to start from (with --real)")
+    ap.add_argument("--bar-start", type=float, help="the coach's starting bar height (m), e.g. 0.20 for a skilled brain")
     args = ap.parse_args()
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
-    venv = make_vec_env(JumpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv)
+    venv = make_vec_env(JumpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(real=args.real))
+    if args.widen_from and not args.resume:
+        args.resume = str(widen(args.widen_from, out / "widened"))
     if args.resume:
         ck = Path(args.resume)
         venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)
         model = PPO.load(ck, env=venv, device="cpu", custom_objects=dict(learning_rate=args.lr, target_kl=args.target_kl, n_steps=args.n_steps))
         venv.env_method("__setattr__", "env_steps", model.num_timesteps // args.envs)  # keep the bar-height curriculum
+        if args.bar_start:
+            venv.env_method("__setattr__", "bar_level", args.bar_start)
         print(f"resuming from {ck} at {model.num_timesteps:,} steps, learning rate {model.learning_rate}, target kl {model.target_kl}, {model.n_steps * args.envs} samples per update", flush=True)
     else:
         venv = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)

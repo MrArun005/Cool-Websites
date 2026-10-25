@@ -28,6 +28,13 @@ the clear bonus plus the progress pay. Run 15e: a crash after clearing costs 25,
 is paid only up to 1 m/s (was 2). Run 15e still broke within 500k steps (the third run from 6.5M to do so):
 each update saw only 4096 steps (~40 jumps), too noisy a signal. Run 15f: 4x the data per update, from
 15c's 8M brain (landing again, practising 25 cm bars).
+
+Run 16 (real=True): a real agility hurdle (hurdle.py: solid wing stands, a loose bar in cups that drops
+if knocked) instead of a solid board. In the games, run 15f's brains landed twisted 40-120 degrees off
+the way they jumped, so run 16 starts each try up to 11 degrees askew and up to 10 cm off the centre
+line, feels both (two more inputs: sin of the heading error, distance off the line), and is paid for
+landing facing along the jump. A dropped bar costs 5 more, and only a dropped bar spoils a jump (the
+agility rule); a touch still costs.
 """
 import gymnasium as gym
 import mujoco
@@ -42,11 +49,20 @@ DOG = STANCES["dog"]
 
 
 class JumpEnv(BoltEnv):
-    OBS = 49
+    OBS = 49   # 51 with real=True
 
-    def __init__(self, randomize=True, seed=None, max_steps=100):
-        super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", hurdles=True,
-                         skills=["stand"])
+    def __init__(self, randomize=True, seed=None, max_steps=100, real=False):
+        super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
+                         hurdles="real" if real else True, skills=["stand"])
+        self.real = real
+        self.OBS = 51 if real else 49
+        if real:
+            import hurdle
+            self.bar_geom = self.model.geom("bar0").id
+            self.stand_geoms = {g for g in range(self.model.ngeom) if self.model.geom_bodyid[g] == self.model.body("hurdle0").id}
+            self.bar_q = self.model.jnt_qposadr[self.model.joint("bar0").id]
+            self.bar_v = self.model.jnt_dofadr[self.model.joint("bar0").id]
+            self.exam_askew = None   # (heading error rad, metres off the line) for exams
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.exam_bar = None  # (distance, height): exams set the bar; training draws it
         # adaptive bar height, like a coach: it goes up (0.5 cm) while clean jumps are common, down when rare
@@ -67,13 +83,55 @@ class JumpEnv(BoltEnv):
         """How far each paw is past the bar, along the jump (negative: still in front of it)."""
         return np.array([np.dot(self.data.geom_xpos[f][:2] - self.hurdle_at, self.hurdle_dir) for f in self.foot_ids])
 
+    def heading_error(self):
+        """Angle from Bolt's heading to the jump direction (radians, positive: the bar's line is to the left)."""
+        R = self._rotation()
+        return float(np.arctan2(R[0, 0] * self.hurdle_dir[1] - R[1, 0] * self.hurdle_dir[0],
+                                R[0, 0] * self.hurdle_dir[0] + R[1, 0] * self.hurdle_dir[1]))
+
+    def off_line(self):
+        """How far Bolt's body is to the left of the line through the middle of the bar (m)."""
+        rel = self.data.qpos[:2] - self.hurdle_at
+        return float(-rel[0] * self.hurdle_dir[1] + rel[1] * self.hurdle_dir[0])
+
+    def place_real(self, ahead, height, askew, side):
+        """The real hurdle `ahead` m in front, its line turned `askew` rad from Bolt's heading, Bolt `side` m
+        left of that line; the bar resting in its cups."""
+        import hurdle
+        R = self._rotation()
+        fwd = R[:2, 0] / np.linalg.norm(R[:2, 0])
+        c, s = np.cos(askew), np.sin(askew)
+        u = np.array([c * fwd[0] - s * fwd[1], s * fwd[0] + c * fwd[1]])
+        n = np.array([-u[1], u[0]])
+        self.hurdle_dir, self.hurdle_h = u, height
+        self.hurdle_at = self.data.qpos[:2] + u * ahead - n * side
+        pos, q, bar, bq = hurdle.rest_pose(self.hurdle_at, np.arctan2(u[1], u[0]), height)
+        k = self.model.body_mocapid[self.model.body("hurdle0").id]
+        self.data.mocap_pos[k], self.data.mocap_quat[k] = pos, q
+        self.data.qpos[self.bar_q:self.bar_q + 3], self.data.qpos[self.bar_q + 3:self.bar_q + 7] = bar, bq
+        self.data.qvel[self.bar_v:self.bar_v + 6] = 0
+        self.bar_rest = bar.copy()
+        mujoco.mj_forward(self.model, self.data)
+
+    def hurdle_hits(self):
+        if not self.real:
+            return super().hurdle_hits()
+        # Bolt touching a stand or the bar (not the bar in its cups, nor the bar on the floor)
+        hurdle_geoms, floor = self.stand_geoms | {self.bar_geom}, self.model.geom("floor").id
+        return sum((c.geom1 in hurdle_geoms) != (c.geom2 in hurdle_geoms) and floor not in (c.geom1, c.geom2)
+                   for c in self.data.contact[:self.data.ncon])
+
+    def bar_dropped(self):
+        """The bar knocked out of its cups (moved 3 cm or more): the only fault in agility."""
+        return self.real and float(np.linalg.norm(self.data.qpos[self.bar_q:self.bar_q + 3] - self.bar_rest)) > 0.03
+
     def _obs(self):
         d, R = self.data, self._rotation()
         obs = np.concatenate([
             R.T @ np.array([0, 0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3], [d.qpos[2]],
-            d.qpos[7:] - DOG, d.qvel[6:] * 0.1, self.last_action,
+            d.qpos[7:19] - DOG, d.qvel[6:18] * 0.1, self.last_action,
             [self.hurdle_ahead(), self.hurdle_h, self.t / self.max_steps],
-        ])
+        ] + ([[np.sin(self.heading_error()), self.off_line()]] if self.real else []))
         if self.randomize:
             obs += self.rng.normal(0, 0.01, obs.shape)
         return obs.astype(np.float32)
@@ -93,14 +151,18 @@ class JumpEnv(BoltEnv):
         yaw = self.rng.uniform(-np.pi, np.pi)
         d.qpos[2] = 0.45
         d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
-        d.qpos[7:] = d.ctrl[:] = np.clip(DOG + self.rng.normal(0, 0.02, 12), self.lo, self.hi)
+        d.qpos[7:19] = d.ctrl[:] = np.clip(DOG + self.rng.normal(0, 0.02, 12), self.lo, self.hi)
         mujoco.mj_forward(m, d)
         for _ in range(25):  # settle into the dog stance on the motors
             mujoco.mj_step(m, d, nstep=self.frame_skip)
         dist, h = self.exam_bar or (self.rng.uniform(0.45, 0.65), self._bar_height())
-        self.place_hurdle(dist, h)
+        if self.real:   # like a game: up to 11 degrees askew and 10 cm off the line
+            askew, side = self.exam_askew or (self.rng.uniform(-0.2, 0.2), self.rng.uniform(-0.1, 0.1))
+            self.place_real(dist, h, askew, side)
+        else:
+            self.place_hurdle(dist, h)
         self.t, self.last_action = 0, np.zeros(12)
-        self.touched = self.cleared = self.landed = False
+        self.touched = self.cleared = self.landed = self.dropped = False
         self.clear_t = None
         self.best_past = self.paws_past().min()
         return self._obs(), {}
@@ -119,6 +181,11 @@ class JumpEnv(BoltEnv):
         past = self.paws_past()
         upright = np.exp(-(p["roll"] / 0.4) ** 2) * np.exp(-(p["pitch"] / 0.6) ** 2)
         reward = -1.0 * (hits > 0) - 5.0 * first_touch   # touching the bar is a knocked bar
+        if self.real and not self.dropped and self.bar_dropped():
+            self.dropped = True
+            reward -= 5.0   # knocked the bar out of its cups: a fault
+        e = self.heading_error() if self.real else 0.0
+        facing = np.exp(-(e / 0.35) ** 2)   # 1 facing along the jump, ~0.5 at 17 degrees off
         just_cleared = False
         if not self.cleared:
             reward -= 0.1  # every moment still in front of the bar costs a little
@@ -137,20 +204,23 @@ class JumpEnv(BoltEnv):
                 self.clear_t = self.t
                 reward += 5.0 if not self.touched else 1.0
         else:  # landed: stand tall and still
-            if not self.landed and self.t - self.clear_t >= 25 and R[2, 2] > 0.85 and p["height"] > 0.3:
-                self.landed = True   # still on its feet half a second after clearing: the real prize
-                reward += 12.0 if not self.touched else 1.0
+            if (not self.landed and self.t - self.clear_t >= 25 and R[2, 2] > 0.85 and p["height"] > 0.3
+                    and abs(e) < 0.35):
+                self.landed = True   # still on its feet (and facing the way it jumped) half a second after clearing
+                reward += 1.0 if self.dropped else 12.0 if not self.touched else 6.0
             speed = np.hypot(p["vx"], p["vy"])
-            reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2)
+            reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2) * facing
+            reward -= 0.3 * (1 - np.cos(e))   # landing twisted sideways (run 15f: 40-120 degrees in the games)
         reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 5e-5 * np.sum(d.actuator_force ** 2)
         self.last_action = a
         fell = R[2, 2] < 0.2
         if fell:
             reward -= 25.0 if self.cleared else 5.0   # diving over and crashing must not pay (15c/15d: -10 did)
         if (fell or self.t >= self.max_steps) and self.exam_bar is None:
-            self._grade(self.landed and not self.touched)
+            self._grade(self.landed and not (self.dropped if self.real else self.touched))
         info = dict(p, cleared=self.cleared, touched=self.touched, just_cleared=just_cleared, hits=hits,
-                    bar=self.hurdle_h, past=float(past.min()), level=self.bar_level, landed=self.landed)
+                    bar=self.hurdle_h, past=float(past.min()), level=self.bar_level, landed=self.landed,
+                    dropped=self.dropped, heading_error=e)
         return self._obs(), float(reward), bool(fell), self.t >= self.max_steps, info
 
 
@@ -159,7 +229,8 @@ class JumpPolicy:
         from pathlib import Path
         run_dir = Path(run_dir)
         self.model = PPO.load(run_dir / zip_name, device="cpu")
-        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: JumpEnv()]))
+        self.real = self.model.observation_space.shape[0] == 51   # run 16 on: the real hurdle
+        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: JumpEnv(real=self.real)]))
         self.norm.training = False
 
     def act(self, obs):
@@ -167,13 +238,18 @@ class JumpPolicy:
 
 
 def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30)):
-    """Jump the bar from 55 cm away: cleared without touching it, landed, standing at the end, no fall."""
+    """Jump the bar from 55 cm away: cleared without touching it, landed, standing at the end, no fall.
+    On the real hurdle (run 16 on), half the tries start 6 degrees askew and 5 cm off the line, and Bolt
+    must end facing within 20 degrees of the jump."""
     out = {}
-    env = JumpEnv(randomize=True)
+    real = getattr(policy, "real", False)
+    env = JumpEnv(randomize=True, real=real)
     for h in heights:
         wins = 0
         for k in range(episodes):
             env.exam_bar = (0.55, h)
+            if real:
+                env.exam_askew = (0.0, 0.0) if k % 2 == 0 else ((0.1, 0.05) if k % 4 == 1 else (-0.1, -0.05))
             obs, _ = env.reset(seed=seed + k)
             info, fell = {}, False
             for _ in range(env.max_steps):
@@ -181,6 +257,6 @@ def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30)):
                 if fell or trunc:
                     break
             wins += bool(info["cleared"] and not info["touched"] and not fell and info["up"] > 0.9
-                         and info["height"] > 0.35)
+                         and info["height"] > 0.35 and abs(info.get("heading_error", 0.0)) < 0.35)
         out[f"jump_{round(h * 100)}"] = wins / episodes
     return out

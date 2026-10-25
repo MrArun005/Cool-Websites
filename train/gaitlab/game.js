@@ -41,7 +41,7 @@ export const STATIONS = {
   ice: { title: "Ice rink", say: "SIT ON THE ICE!", how: () => "Run onto the ice, stop on the spot and sit for 2 s without slipping off" },
   sit: { title: "Sit box", say: "SIT!", how: () => "Stop in the box and sit for 2 s" },
   lie: { title: "Lie-down mat", say: "LIE DOWN!", how: () => "Stop on the mat and lie down for 2 s" },
-  hurdles: { title: "Hurdles", say: "JUMP!", how: (L) => `Jump 3 bars, ${Math.round(L.bar * 100)} cm high, without touching them` },
+  hurdles: { title: "Hurdles", say: "JUMP!", how: (L) => `Jump 3 hurdles, bars ${Math.round(L.bar * 100)} cm high, without knocking a bar down` },
   gate: { title: "Castle gate", say: "HOME!", how: () => "Reach the castle" },
 };
 export const SHOUTS = { sit: "SIT!", lie: "LIE DOWN!", still: "FREEZE!" };
@@ -112,25 +112,41 @@ export class Driver {
 // from 0.65 m; from 0.45 m it falls, and after a posture-brain stand without the hold it fell 1 in 3.
 export let HOLD = 1.0;   // s the motors hold the dog stance before a jump (10M brain: 0.8-1.2 s all good, 0.5 s fell more)
 export function setHold(s) { HOLD = s; }
+export let SETTLE = "hold";   // how Bolt comes to rest before the jump: "hold" (motors: take-off 1-5° off square) or "stand" (the standing brain twisted it 5-13°)
+export function setSettle(s) { SETTLE = s; }
 export let LAND_HOLD = 0;   // s the motors hold the stance after landing, before the standing brain
 export function setLandHold(s) { LAND_HOLD = s; }
+// k: which real hurdle (live.js placeReal: solid stands, a bar in cups that drops if knocked).
+// touched: Bolt brushed the stands or bar; dropped: the bar came down (the agility fault).
 export class Jumper {
-  constructor(bolt, driver, bar, yaw, h) {
-    this.bolt = bolt; this.driver = driver; this.dir = [Math.cos(yaw), Math.sin(yaw)];
+  constructor(bolt, driver, k) {
+    const H = bolt.real[k], yaw = H.yaw, bar = H.at;
+    this.bolt = bolt; this.driver = driver; this.k = k; this.dir = [Math.cos(yaw), Math.sin(yaw)]; this.bar = bar;
     this.spot = [bar[0] - 0.6 * this.dir[0], bar[1] - 0.6 * this.dir[1]];   // where to stop
-    this.stage = "approach"; this.t = 0; this.touched = false; this.done = false;
-    bolt.setHurdle(bar, yaw, h);
+    this.stage = "approach"; this.t = 0; this.touched = false; this.dropped = false; this.done = false;
+    bolt.aim(k);
   }
   get busy() { return this.stage !== "approach"; }   // no shouts or cannon from stopping until landed
+  // the run-up follows the line through the middle of the bar, aiming a little ahead along it, so Bolt
+  // arrives square to the bar (aiming straight at the stopping spot left it up to 31° askew, and the
+  // jump brain only practised within ~7°: it jumped diagonally)
+  line(cruise, dt) {
+    const w = this.bolt.where(), [dx, dy] = this.dir, rx = w.x - this.bar[0], ry = w.y - this.bar[1];
+    const before = -(rx * dx + ry * dy), side = -rx * dy + ry * dx;
+    // aim at a point this far before the bar; near the bar it lies beyond it (aiming at the stopping spot
+    // itself, almost under Bolt's nose while braking, swung it ~10° off)
+    const t = before - Math.max(0.5, 1.5 * Math.abs(side));
+    return this.driver.toward([this.bar[0] - t * dx, this.bar[1] - t * dy], cruise, false, dt);
+  }
   step(dt) {
     const b = this.bolt, ahead = b.hurdleAhead();
     if (this.stage === "approach") {
-      const cmd = this.driver.toward(this.spot, 0.8, true, dt);
-      if (cmd.dist < 0.1 || ahead < 0.8) { this.stage = "brake"; this.t = 0; }
+      const cmd = this.line(Math.min(0.8, Math.max(0.25, 0.25 + 0.6 * (ahead - 0.8))), dt);
+      if (ahead < 0.8) { this.stage = "brake"; this.t = 0; }
       return cmd;
     }
     if (this.stage === "brake") {   // a slow trot before stopping (stopping dead tips Bolt over)
-      const cmd = { ...this.driver.toward(this.spot, 0.2, true, dt), speed: 0.2 };
+      const cmd = { ...this.line(0.2, dt), speed: 0.2 };
       if ((this.t += dt) > 3.0 || ahead < 0.64) { this.stage = "settle"; this.t = 0; }
       return cmd;
     }
@@ -141,7 +157,7 @@ export class Jumper {
         if (ahead > 0.67 && !this.crept) { this.crept = true; this.stage = "brake"; this.t = 0; }
         else { this.stage = "hold"; this.t = 0; this.from = ahead; }
       }
-      return { command: "stand", turn: 0, speed: 0.2 };
+      return { command: SETTLE, turn: 0, speed: 0.2 };
     }
     if (this.stage === "hold") {
       if ((this.t += dt) > HOLD) { this.stage = "jump"; b.startJump(); }
@@ -152,7 +168,9 @@ export class Jumper {
       if (!b.jumping()) { this.stage = "land"; this.t = 0; }
       return { command: "jump", turn: 0, speed: 0.2 };
     }
-    if ((this.t += dt) > 0.6 + LAND_HOLD) { this.done = true; this.over = ahead < -0.3; this.driver.speed = 0.2; }
+    if ((this.t += dt) > 0.6 + LAND_HOLD) {
+      this.done = true; this.over = ahead < -0.3; this.driver.speed = 0.2; this.dropped = b.barDropped(this.k);
+    }
     return { command: this.t < LAND_HOLD ? "hold" : "stand", turn: 0, speed: 0.2 };
   }
 }
@@ -167,6 +185,7 @@ export class Game {
     bolt.reset(start);
     const w = bolt.where();
     this.origin = [w.x, w.y]; this.yaw0 = w.yaw;       // course coordinates start where Bolt stands
+    this.placeHurdles();
     this.driver = new Driver(bolt);
     this.t = 0; this.index = 0; this.score = score; this.lives = lives; this.results = [];
     this.phase = "ready"; this.task = null; this.shout = null; this.events = []; this.over = false; this.readyFor = 2;
@@ -181,10 +200,16 @@ export class Game {
     if (this.lives <= 0) { this.over = true; this.phase = "eliminated"; this.say("ELIMINATED!", "bad"); }
     return this.lives > 0;
   }
-  // after a fall: Bolt starts that station again, standing 1.5 m before it
+  // every hurdle on the course is real and solid from the start (real hurdles 0, 1, 2), bars in their cups
+  placeHurdles() {
+    let k = 0;
+    for (const s of this.castle.stations) if (s.kind === "hurdles") s.slots = s.bars.map(([x, y, h]) => { this.bolt.placeReal(k, this.world([x, y]), this.yaw0, h); return k++; });
+  }
+  // after a fall: Bolt starts that station again, standing 1.5 m before it (the judge puts knocked bars back)
   respawn() {
     const s = this.station, before = [s.start[0] - 1.5, s.start[1]];
     this.bolt.teleport(this.start, this.world(before), this.yaw0);
+    this.placeHurdles();
     this.shout = null; this.driver.speed = 0.2; this.phase = "ready"; this.readyFor = this.t + 2;
     this.cmd = { command: "stand", turn: 0, speed: 0.2 };
   }
@@ -215,7 +240,9 @@ export class Game {
       this.cmd = { command: "stand", turn: 0, speed: 0.2 };
       if (this.t >= this.readyFor) { this.phase = "run"; this.begin(); }
     } else {
-      const midJump = this.task && this.task.jumper && this.task.jumper.busy;   // shouts and shots wait
+      // shouts and shots wait from braking for a hurdle until 1.5 s after landing (a "sit!" the moment
+      // Bolt landed, still twisted from the jump, toppled it 3 times in 8 level-1 games)
+      const midJump = (this.task && this.task.jumper && this.task.jumper.busy) || this.t < (this.calmUntil || 0);
       while (!midJump && this.pendingShouts.length && this.t >= this.pendingShouts[0].t + 2) this.shoutNow(this.pendingShouts.shift().cmd);
       while (!midJump && this.pendingShots.length && this.t >= this.pendingShots[0].t + 2) {   // the guard's cannon
         const shot = this.pendingShots.shift();
@@ -342,18 +369,19 @@ export class Game {
       return;
     }
     if (s.kind === "hurdles") {
-      // the simulator has one bar: it stands at the next bar, and the jumper takes Bolt over it
-      if (k.bar === undefined) { k.bar = 0; k.touched = 0; }
-      if (!k.jumper) { const [bx, by, h] = s.bars[k.bar]; k.jumper = new Jumper(this.bolt, this.driver, this.world([bx, by]), this.yaw0, h); }
+      // three real hurdles; the jumper takes Bolt over each. A knocked-down bar fails the station; a
+      // brushed bar that stays up does not (the agility rule)
+      if (k.bar === undefined) { k.bar = 0; k.dropped = 0; }
+      if (!k.jumper) k.jumper = new Jumper(this.bolt, this.driver, s.slots[k.bar]);
       this.cmd = k.jumper.step(dt);
       if (k.jumper.done) {
         const j = k.jumper;
-        if (j.touched) { k.touched += 1; this.say(`Bar ${k.bar + 1} touched!`, "bad"); }
-        else this.say(`Bar ${k.bar + 1}: clean jump!`, "good");
-        k.bar += 1; k.jumper = null;
+        if (j.dropped) { k.dropped += 1; this.say(`Hurdle ${k.bar + 1}: bar knocked down!`, "bad"); }
+        else if (j.touched) this.say(`Hurdle ${k.bar + 1}: brushed it, but the bar stayed up`, "info");
+        else this.say(`Hurdle ${k.bar + 1}: clean jump!`, "good");
+        k.bar += 1; k.jumper = null; this.calmUntil = this.t + 1.5;
         if (k.bar >= s.bars.length) {
-          this.bolt.setHurdle([1e3, 0], 0, 0.1);
-          k.stage = "done"; k.passed = k.touched === 0; k.note = k.touched ? `Touched ${k.touched} of 3 bars.` : "Clean over all 3 bars.";
+          k.stage = "done"; k.passed = k.dropped === 0; k.note = k.dropped ? `Knocked down ${k.dropped} of 3 bars.` : "All 3 bars stayed up.";
         }
       }
       return;

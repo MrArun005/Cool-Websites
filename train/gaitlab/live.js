@@ -85,6 +85,18 @@ export class Bolt {
     // run time made MuJoCo miss collisions: legs went through bars)
     const mocap = (geom) => (geom < 0 ? -1 : this.model.body_mocapid[this.model.geom_bodyid[geom]]);
     this.hurdleMocap = mocap(this.hurdle); this.iceMocap = mocap(this.ice);
+    // real agility hurdles (hurdle.py): solid stands (mocap bodies) and loose bars (free bodies) in cups
+    this.real = [];
+    for (let k = 0; ; k++) {
+      const body = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_BODY.value, `hurdle${k}`);
+      if (body < 0) break;
+      const bar = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_BODY.value, `bar${k}`);
+      const joint = this.model.body_jntadr[bar], geoms = new Set();
+      for (let g = 0; g < this.model.ngeom; g++) if (this.model.geom_bodyid[g] === body || this.model.geom_bodyid[g] === bar) geoms.add(g);
+      this.real.push({ mocap: this.model.body_mocapid[body], body, bar, q: this.model.jnt_qposadr[joint], v: this.model.jnt_dofadr[joint], geoms, rest: null, at: null });
+    }
+    this.floor = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_GEOM.value, "floor");
+    this.aimed = -1;
     this.dt = this.c.dt;
   }
   // swap in another walk brain (agility competitors), with the gait it was trained on
@@ -99,7 +111,7 @@ export class Bolt {
     mj.mj_forward(m, d);
     this.t = 0; this.command = "stand"; this.walkSince = 0; this.walkFrom = this.c.stand_pose.slice();
     this.lastAction = new Float64Array(12); this.yawCmd = 0; this.speedCmd = 0.4; this.phase = 0;
-    this.hurdleAt = [100, 0]; this.hurdleDir = [1, 0]; this.hurdleH = 0;
+    this.hurdleAt = [100, 0]; this.hurdleDir = [1, 0]; this.hurdleH = 0; this.aimed = -1;
     // mj_resetData put the bar and the ice back where the model parks them
     this.push = null;
   }
@@ -141,11 +153,53 @@ export class Bolt {
     this.data.mocap_quat.set([Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], 4 * this.hurdleMocap);
     this.mj.mj_forward(this.model, this.data);
   }
+  // Real hurdles: put hurdle k at a spot, across the direction `yaw`, its bar `height` m up, resting in
+  // its cups (null: park it). The stands are solid; the bar falls if knocked hard (1.5-2 m/s).
+  placeReal(k, spot, yaw, height) {
+    const H = this.real[k], g = this.c.real_hurdle, d = this.data;
+    const [x, y] = spot || [100, 3 * k], h = spot ? height : 0.15, qt = [Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)];
+    d.mocap_pos.set([x, y, h], 3 * H.mocap); d.mocap_quat.set(qt, 4 * H.mocap);
+    H.rest = [x, y, h - g.bar_r]; H.at = spot ? [x, y] : null; H.yaw = yaw; H.h = h;
+    d.qpos.set([...H.rest, ...qt], H.q); for (let i = 0; i < 6; i++) d.qvel[H.v + i] = 0;
+    this.mj.mj_forward(this.model, d);
+  }
+  resetBar(k) { const H = this.real[k]; if (H.at) this.placeReal(k, H.at, H.yaw, H.h); }
+  // the hurdle the jump brain looks at (its distance, height and line)
+  aim(k) {
+    const H = this.real[k]; this.aimed = k;
+    this.hurdleAt = H.at.slice(); this.hurdleDir = [Math.cos(H.yaw), Math.sin(H.yaw)]; this.hurdleH = H.h;
+  }
+  // the bar of hurdle k knocked out of its cups (moved 3 cm or more): the only fault in agility
+  barDropped(k) {
+    const H = this.real[k], q = this.data.qpos;
+    return Math.hypot(q[H.q] - H.rest[0], q[H.q + 1] - H.rest[1], q[H.q + 2] - H.rest[2]) > 0.03;
+  }
+  // where hurdle k's bar is now (position and quaternion), for drawing
+  barPose(k) { const q = this.data.qpos, H = this.real[k]; return [q.slice(H.q, H.q + 3), q.slice(H.q + 3, H.q + 7)]; }
+  // angle from Bolt's heading to the aimed hurdle's line (+: to the left), and how far left of the line Bolt is
+  headingError() {
+    const R = this.rotation(), [ux, uy] = this.hurdleDir;
+    return Math.atan2(R[0] * uy - R[3] * ux, R[0] * ux + R[3] * uy);
+  }
+  offLine() {
+    const q = this.data.qpos, [ux, uy] = this.hurdleDir, rx = q[0] - this.hurdleAt[0], ry = q[1] - this.hurdleAt[1];
+    return -rx * uy + ry * ux;
+  }
   hurdleAhead() {
     const q = this.data.qpos;
     return (this.hurdleAt[0] - q[0]) * this.hurdleDir[0] + (this.hurdleAt[1] - q[1]) * this.hurdleDir[1];
   }
   hurdleHits() {
+    if (this.aimed >= 0) {   // Bolt touching any real hurdle's stands or bar (not a bar in its cups or on the floor)
+      const all = new Set(); for (const H of this.real) for (const g of H.geoms) all.add(g);
+      const cs = this.data.contact; let n = 0;
+      for (let k = 0; k < this.data.ncon; k++) {
+        const c = cs.get(k);
+        if (all.has(c.geom1) !== all.has(c.geom2) && c.geom1 !== this.floor && c.geom2 !== this.floor) n++;
+        c.delete();
+      }
+      cs.delete(); return n;
+    }
     if (this.hurdle < 0) return 0;
     const cs = this.data.contact; let n = 0;
     for (let k = 0; k < this.data.ncon; k++) { const c = cs.get(k); if (c.geom1 === this.hurdle || c.geom2 === this.hurdle) n++; c.delete(); }
@@ -227,6 +281,7 @@ export class Bolt {
     for (let i = 0; i < 12; i++) o.push(q[7 + i] - c.dog_pose[i]);
     for (let i = 0; i < 12; i++) o.push(v[6 + i] * 0.1);
     o.push(...this.jumpLast, this.hurdleAhead(), this.hurdleH, this.jt / c.jump_steps);
+    if (this.brains.jump.inputs === 51) o.push(Math.sin(this.headingError()), this.offLine());   // run 16 on
     return o;
   }
   jumpStep(action) {

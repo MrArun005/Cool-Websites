@@ -119,10 +119,7 @@
     } else if (o.kind === "table") {
       g.add(box(1.0, 1.0, 0.04, std("#e3620b", { roughness: 0.95 }), 0, 0, 0.02));
       for (const [x, y] of [[0.47, 0.47], [0.47, -0.47], [-0.47, 0.47], [-0.47, -0.47]]) g.add(box(0.06, 0.06, 0.045, std("#7b5229"), x, y, 0.0225));
-    } else if (o.kind === "jump") {   // a striped bar on wing posts, at the height Bolt is judged on
-      for (const y of [0.65, -0.65]) { g.add(post(0.03, 0.6, white, 0, y)); g.add(box(0.04, 0.3, 0.5, std("#2f6fb5"), 0, y + Math.sign(y) * 0.18, 0.25)); }
-      for (let k = 0; k < 4; k++) g.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 16), k % 2 ? white : red, [0, -0.45 + 0.3 * k, o.bar]));
-    }
+    }   // hurdles: drawn from the physics (hurdles3d.js), where they really stand
     const sign = label(String(o.n), "#ffffff", "#191b1a");   // the judge's number for this obstacle
     sign.position.set(-0.6, 0.75, 1.05); g.add(sign, post(0.012, 0.9, std("#9aa19c"), -0.6, 0.75));
     return g;
@@ -143,7 +140,7 @@
   }
 
   // ---------- the competition ----------
-  let lib, agility, bundle, bolt = null, course = null, round = null, queue = [], results = [], acc = 0, playing = true, speed = 1, seen = 0, bannerUntil = 0, wait = 0;
+  let lib, agility, bundle, drawHurdles = () => {}, bolt = null, course = null, round = null, queue = [], results = [], acc = 0, playing = true, speed = 1, seen = 0, bannerUntil = 0, wait = 0;
   const dogs = () => Object.keys(bundle.competitors);
   const SPEEDS = [1, 2, 4];
   function setSpeed(s) { speed = s; [...$("speeds").children].forEach((x, i) => x.setAttribute("aria-pressed", String(SPEEDS[i] === s))); }
@@ -180,7 +177,7 @@
   }
   function newCourse() {
     course = agility.buildAgility((Math.random() * 1e9) >>> 0, { cls, jumps: !!bundle.brains.jump });
-    bolt.reset(bundle.start); buildRing();
+    bolt.reset(bundle.start); agility.placeJumps(bolt, course); buildRing();
     round = null; queue = []; results = []; $("result").hidden = true;
     renderCourse(); renderBoard(); $("log").innerHTML = ""; log(`New ${course.cls} course: ${course.obstacles.length} obstacles, course time ${course.sct} s.`, "info");
     $("hDog").textContent = "–"; $("hObstacle").textContent = "Press Start"; $("hTime").textContent = "0.00 s"; $("hFaults").textContent = "0"; $("hSct").textContent = `${course.sct} s`;
@@ -238,9 +235,10 @@
   }
   async function boot() {
     try {
-      const [l, a, m, b] = await Promise.all([import("./live.js"), import("./agility.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_agility.json").then((x) => x.json())]);
+      const [l, a, m, b, h3] = await Promise.all([import("./live.js"), import("./agility.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_agility.json").then((x) => x.json()), import("./hurdles3d.js")]);
       lib = l; agility = a; bundle = b;
       bolt = new lib.Bolt(await m.default(), bundle);
+      drawHurdles = h3.makeHurdles(THREE, scene, bolt, mesh, lin);
     } catch (e) {
       console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
     }
@@ -279,7 +277,7 @@
         } else if ((wait -= dt * speed) <= 0) nextDog();
       }
       if (now > bannerUntil) $("banner").classList.remove("show");
-      drawBolt(); follow(); hud();
+      drawBolt(); drawHurdles(); follow(); hud();
       const s = now / 1000, cmd = round ? round.cmd.command : "stand";
       if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (cmd === "walk" ? 9 : 5));
       eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));

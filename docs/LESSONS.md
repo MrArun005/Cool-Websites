@@ -195,3 +195,12 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   pages drew Bolt's body on the floor at the start line and every part one place off, so Bolt looked like a
   pile of legs with no body. All tests passed (they check physics, not drawing); the user spotted it.
   export_live.py now takes the part ids from the exact model the page runs.
+- **Make the world as real as the robot.** The games' hurdles were one hidden solid board moved from bar
+  to bar, plus pictures: Bolt could walk through every drawn stand. Now each hurdle is real (hurdle.py):
+  solid wing stands, and a loose bar in shallow cups that stays up when brushed (up to 1 m/s) and drops
+  when knocked (1.5-2 m/s), drawn from the physics. One definition serves training, the browser and the
+  drawing, so they cannot disagree.
+- **Measure the take-off, not just the result.** Bolt stopped up to 31° askew before jumping, because the
+  standing brain twisted it 5-13° as it stopped and the steering aimed at a point under its nose. Following
+  the bar's centre line and stopping on the motors' hold: 1-5°. And the jump itself landed Bolt 40-140°
+  sideways, which only training can fix (run 16 pays for landing facing forward).

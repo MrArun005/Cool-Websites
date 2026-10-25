@@ -25,6 +25,7 @@ import numpy as np
 import torch
 from stable_baselines3 import PPO
 
+import hurdle
 from bolt_env import ACTION_SCALE, HURDLE_HALF, HURDLE_MARGIN, HURDLE_XML, HURDLE_ZONE, MODEL, PAW_GAIT, STAND_POSE, STANCES, BoltEnv
 from evaluate import Policy, reset_standing
 from record3d import describe
@@ -91,12 +92,15 @@ def reference(posture, walk):
 def jump_reference(folder, bar=(0.55, 0.15), seed=1):
     """One jump in Python (JumpEnv, no randomness): the start state, the bar, and every step."""
     from jump_env import JumpEnv, JumpPolicy
-    policy, env = JumpPolicy(folder), JumpEnv(randomize=False)
+    policy = JumpPolicy(folder)
+    env = JumpEnv(randomize=False, real=policy.real)
     env.exam_bar = bar
+    if policy.real:   # a real hurdle, 6 degrees askew and 5 cm off its line, so the new inputs are checked too
+        env.exam_askew = (0.1, 0.05)
     obs, _ = env.reset(seed=seed)
     d = env.data
     start = dict(qpos=d.qpos.tolist(), qvel=d.qvel.tolist(), ctrl=d.ctrl.tolist(), bar_at=env.hurdle_at.tolist(),
-                 bar_dir=env.hurdle_dir.tolist(), bar_h=env.hurdle_h)
+                 bar_dir=env.hurdle_dir.tolist(), bar_h=env.hurdle_h, real=policy.real)
     steps = []
     for _ in range(env.max_steps):
         action = policy.act(obs)
@@ -105,7 +109,8 @@ def jump_reference(folder, bar=(0.55, 0.15), seed=1):
         steps[-1]["qpos"] = d.qpos.tolist()
         if fell:
             break
-    return dict(start=start, steps=steps, max_steps=env.max_steps, cleared=bool(info["cleared"]), touched=bool(info["touched"]))
+    return dict(start=start, steps=steps, max_steps=env.max_steps, cleared=bool(info["cleared"]), touched=bool(info["touched"]),
+                dropped=bool(info.get("dropped", False)))
 
 
 def main():
@@ -122,7 +127,8 @@ def main():
     start, ref = reference(Policy(args.posture), walk)
     env = BoltEnv(randomize=False, gait_generator="dog", turning=True, speed_control=True, sharp_turns=walk.sharp_turns,
                   hurdles=True)
-    xml = MODEL.read_text().replace('<geom name="floor"', HURDLE_XML + '\n    ' + ICE_XML + '\n    <geom name="floor"', 1)
+    # the old board hurdle (for the reference run), the ice, and 4 real agility hurdles (hurdle.py) for the games
+    xml = hurdle.world_xml(MODEL.read_text(), n=4, extra_before_floor=HURDLE_XML + '\n    ' + ICE_XML)
     # the page draws each part at its geom's pose by id, so the ids must come from the model the page runs
     # (the ice slab, added for the games, shifted every id by one and drew Bolt's body on the floor)
     page_model = mujoco.MjModel.from_xml_string(xml)
@@ -134,7 +140,7 @@ def main():
                        turn_gain=env.TURN_GAIN, max_turn=env.MAX_TURN, max_speed=env.MAX_SPEED, speed_ref=env.SPEED_REF,
                        sharp_turns=env.sharp_turns, sharp_turn=env.SHARP_TURN,
                        hurdle_margin=HURDLE_MARGIN, hurdle_zone=list(HURDLE_ZONE), hurdle_half=HURDLE_HALF,
-                       hip_x=HIP_X.tolist(), hip_y=HIP_Y.tolist(),
+                       hip_x=HIP_X.tolist(), hip_y=HIP_Y.tolist(), real_hurdle=hurdle.constants(),
                        commands=["stand", "sit", "lie", "walk"]),
         brains=dict(posture=dict(brain(args.posture), source=Path(args.posture).name),
                     walk=dict(brain(args.walk), source=Path(args.walk).name)),
