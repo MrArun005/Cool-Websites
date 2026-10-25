@@ -17,7 +17,7 @@
   <header style="display:grid;gap:6px">
     <span class="label">Bolt robot dog · a competition on the live simulator</span>
     <h1>Bolt Agility Cup</h1>
-    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through every pole, take each tunnel from the right end, and lie on the pause table for the judge's count of five. The judge counts 5 faults for a missed pole or a wrong tunnel entry, and 1 fault per second over the standard course time. The Championship class is much harder: 12 tighter poles, three tunnels, sharper turns and a strict course time, so even the best dogs rarely go clear. Hurdles come back when Bolt has learned to jump. The fewest faults wins, then the fastest time. A fall is elimination. Everything runs in your browser, in the same physics as training.</p>
+    <p class="muted" style="margin:0;max-width:72ch">A dog-agility competition. The judge sets out a numbered course, and four of Bolt's trained brains run it one after another with the same handler. Weave through every pole, take each tunnel from the right end, jump the hurdles, and lie on the pause table for the judge's count of five. Every dog jumps for real, with Bolt's jump brain: it stops before the bar, steadies itself and leaps. The judge counts 5 faults for a missed pole, a wrong tunnel entry or a knocked bar, and 1 fault per second over the standard course time. Standard bars are 15 cm. The Championship class is much harder: 12 tighter poles, three tunnels, sharper turns, 20 cm bars and a strict course time, so even the best dogs rarely go clear. The fewest faults wins, then the fastest time. A fall is elimination. Everything runs in your browser, in the same physics as training.</p>
   </header>
 
   <section class="panel" aria-labelledby="ring">
@@ -121,7 +121,7 @@
       for (const [x, y] of [[0.47, 0.47], [0.47, -0.47], [-0.47, 0.47], [-0.47, -0.47]]) g.add(box(0.06, 0.06, 0.045, std("#7b5229"), x, y, 0.0225));
     } else if (o.kind === "jump") {   // a striped bar on wing posts, at the height Bolt is judged on
       for (const y of [0.65, -0.65]) { g.add(post(0.03, 0.6, white, 0, y)); g.add(box(0.04, 0.3, 0.5, std("#2f6fb5"), 0, y + Math.sign(y) * 0.18, 0.25)); }
-      for (let k = 0; k < 4; k++) g.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 16), k % 2 ? white : red, [0, -0.45 + 0.3 * k, agility.BAR]));
+      for (let k = 0; k < 4; k++) g.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 16), k % 2 ? white : red, [0, -0.45 + 0.3 * k, o.bar]));
     }
     const sign = label(String(o.n), "#ffffff", "#191b1a");   // the judge's number for this obstacle
     sign.position.set(-0.6, 0.75, 1.05); g.add(sign, post(0.012, 0.9, std("#9aa19c"), -0.6, 0.75));
@@ -179,7 +179,7 @@
     }
   }
   function newCourse() {
-    course = agility.buildAgility((Math.random() * 1e9) >>> 0, { cls });
+    course = agility.buildAgility((Math.random() * 1e9) >>> 0, { cls, jumps: !!bundle.brains.jump });
     bolt.reset(bundle.start); buildRing();
     round = null; queue = []; results = []; $("result").hidden = true;
     renderCourse(); renderBoard(); $("log").innerHTML = ""; log(`New ${course.cls} course: ${course.obstacles.length} obstacles, course time ${course.sct} s.`, "info");

@@ -103,9 +103,9 @@
 
   <section class="panel" aria-labelledby="where">
     <h2 id="where">Where we are</h2>
-    <p style="margin:0"><a href="https://claude.ai/artifact/Qmgw6JkPzALegcTj537aT7" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Play Bolt's Castle →</a> <span class="muted">A Takeshi's Castle-style course that Bolt runs with these brains, live in your browser.</span></p>
-    <p style="margin:0"><a href="https://claude.ai/artifact/8icBrDN9xEbALpzGasqd3t" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Watch the Bolt Agility Cup →</a> <span class="muted">Four of Bolt's brains compete on a dog-agility course: weaves, tunnels, hurdles, the pause table.</span></p>
-    <p>Bolt has two trained brains that work together: one for standing, sitting and lying, one for walking, turning and running at any asked speed. Both stand and walk tall like a real dog, with lower legs close to upright and no knees on the floor. Saved in <span class="mono">models/</span>.</p>
+    <p style="margin:0"><a href="https://claude.ai/artifact/Qmgw6JkPzALegcTj537aT7" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Play Bolt's Castle →</a> <span class="muted">A Takeshi's Castle-style course that Bolt runs with these brains, live in your browser, jumping real bars.</span></p>
+    <p style="margin:0"><a href="https://claude.ai/artifact/8icBrDN9xEbALpzGasqd3t" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Watch the Bolt Agility Cup →</a> <span class="muted">Four of Bolt's brains compete on a dog-agility course: weaves, tunnels, real hurdle jumps, the pause table.</span></p>
+    <p>Bolt has three trained brains that work together: one for standing, sitting and lying, one for walking, turning and running at any asked speed, and one for jumping a bar. They stand and walk tall like a real dog, with lower legs close to upright and no knees on the floor. Saved in <span class="mono">models/</span>.</p>
     <div class="two">
       <div class="brain">
         <h3>Stand, sit, lie</h3>
@@ -120,6 +120,12 @@
         <p class="muted" style="font-size:.9rem">Goes the speed it is asked, from a slow walk to a run: 0.2, 0.4, 0.7, 1.0 and 1.2 m/s asked give 0.22, 0.41, 0.70, 0.99 and 1.18 m/s on bumpy, randomised physics, with no knees on the floor. Turns on command and takes over from the standing brain. Following a person, it ran at up to 1.19 m/s and never fell behind more than 1.9 m (the old walk brain fell 6 m behind).</p>
       </div>
     </div>
+    <div class="brain">
+      <h3>Jump a bar</h3>
+      <span class="muted mono" style="font-size:.82rem">run 15c · 6.5M steps · models/bolt-dog-jump-6.5M</span>
+      <div class="cells"><span class="c2">10 cm 80%</span><span class="c2">15 cm 80%</span><span class="c2">20 cm 70%</span><span class="c1">25 cm 40%</span><span class="c0">30 cm 0%</span></div>
+      <p class="muted" style="font-size:.9rem">Clean jumps (over without touching the bar, landed, standing) from standing 55 cm in front of the bar, on randomised physics. Learned from scratch by trial and error, with the full motor range. In the games Bolt walks up, stops about 60 cm before the bar, steadies for half a second and jumps: 16 of 18 clean at 12 cm in Bolt's Castle.</p>
+    </div>
     <div style="display:grid;gap:6px">
       <span class="label">Next</span>
       <ol>
@@ -127,8 +133,10 @@
         <li><strong>Done: follow a person.</strong> A steering layer turns Bolt toward the person, speeds up when they pull away and stands when they stop. In the simulator it followed someone who walks, turns, jogs at 1.1 m/s and stops: no falls, on average 1.4 m behind, never more than 1.9 m. Watch "Follow a person" below.</li>
         <li><strong>Sharp turns (run 12), done.</strong> Real dogs turn sharply by stepping sideways: front paws one way, rear paws the other. The trot now does that too. The 12M brain turns as asked up to 111°/s at a walk and 56°/s while running at 1.2 m/s, with no falls in any speed or turn test. Following people it stays 1.7 m behind (was 2.6 m).</li>
         <li><strong>Getting up (run 13), done.</strong> Bolt's Castle showed that standing straight up from a sit fell 1 time in 3. Run 13 practised getting up without spinning: 0 falls in 48 tries, and 40 of 40 castle games finished.</li>
-        <li><strong>Hurdles, done (by stepping over).</strong> A hand-made leap reared up and tipped over backwards in every one of 64 versions tried, and training on it (run 14) learned to hover in front of the bar, so it was stopped. Bolt's belly is 36 cm up, so a bar up to 25 cm only has to be cleared by the legs: near a hurdle the trot lifts its paws over it. With no retraining, the 12M brain cleared 15 and 25 cm bars 48 times in 48. Hurdles are now in <a href="https://claude.ai/artifact/Qmgw6JkPzALegcTj537aT7" target="_blank" rel="noopener" style="color:var(--accent)">Bolt's Castle</a> and the <a href="https://claude.ai/artifact/8icBrDN9xEbALpzGasqd3t" target="_blank" rel="noopener" style="color:var(--accent)">Agility Cup</a>.</li>
-        <li><strong>Next:</strong> a real leap, trained with more freedom than a hand-made plan; getting up after a fall; galloping faster than 1.2 m/s.</li>
+        <li><strong>Correction: stepping over hurdles never worked.</strong> The "48 of 48" result was a simulator mistake: the bar was moved in a way MuJoCo does not check for collisions, so Bolt walked through it. With a solid bar, the trot touched even a 5 cm bar every time.</li>
+        <li><strong>New: Bolt really jumps (run 15).</strong> A separate jump brain, learned from scratch: stand in front of the bar, leap, land and stand. A coach raises the bar after clean jumps. At 6.5M it jumps 15 cm bars clean 4 times in 5 and 20 cm bars 7 in 10. Real jumps are now in <a href="https://claude.ai/artifact/Qmgw6JkPzALegcTj537aT7" target="_blank" rel="noopener" style="color:var(--accent)">Bolt's Castle</a> (12 cm at level 1 up to 22 cm at level 5) and the <a href="https://claude.ai/artifact/8icBrDN9xEbALpzGasqd3t" target="_blank" rel="noopener" style="color:var(--accent)">Agility Cup</a> (15 cm, 20 cm in the Championship). A knocked bar costs 5 faults.</li>
+        <li><strong>Training now: run 15d.</strong> At 7M run 15c collapsed (no clean jumps even at 10 cm) just after its coach raised the bar from 13 to 20 cm. Run 15d goes back to 6.5M with smaller learning steps and a slower coach, aiming at 25–30 cm.</li>
+        <li><strong>Next:</strong> higher bars; a running jump (no stop); getting up after a fall; galloping faster than 1.2 m/s.</li>
                 <li>Try both brains on the hand-size Bolt.</li>
         <li>Connect the brains to voice commands ("sit", "come here").</li>
       </ol>
@@ -203,7 +211,9 @@
         <tr><td>11b</td><td>Same, but speed is felt relative to the asked speed; practice speeds ramp up to 1.2 m/s</td><td><strong>Walk, turns, run 1.0 m/s, slow 0.2 m/s: all 100%.</strong> 10M saved: holds 0.2–1.2 m/s as asked.</td></tr>
         <tr><td>12</td><td>Sharp turns: step sideways like a dog, practise up to 115°/s</td><td><strong>All tests 100% incl. sharp turns.</strong> 12M saved: no falls in any speed or turn test.</td></tr>
         <tr><td>13</td><td>Posture brain practises getting up from sit and lie, without spinning</td><td><strong>Stand, sit, lie, get up: all 100% at 3M.</strong> Saved, used by the live pages and games.</td></tr>
-        <tr><td>14</td><td>Jump hurdles with a bounding leap</td><td>Stopped at 12.5M: the leap pushed backwards, and the brain learned to hover in front of the bar. Replaced by stepping over (no training needed).</td></tr>
+        <tr><td>14</td><td>Jump hurdles with a bounding leap</td><td>Stopped at 12.5M: the leap pushed backwards, and the brain learned to hover in front of the bar.</td></tr>
+        <tr><td>15b / 15c</td><td>A separate jump brain from scratch: full motor range, paid for getting over, landing and standing; a coach sets the bar height</td><td>15b learned to stand still; 15c first dived and crashed, then touched every bar. With landing bonuses and a tuck reward: <strong>15 cm 80%, 20 cm 70% at 6.5M.</strong> Saved, used by both games. Collapsed at 7M.</td></tr>
+        <tr><td>15d</td><td>Resume 6.5M with smaller learning steps and a slower coach</td><td>Training.</td></tr>
       </tbody>
     </table></div>
   </section>

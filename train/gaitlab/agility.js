@@ -7,15 +7,13 @@
 // trained walk brain, steered round the course by the same handler (the course runner below).
 // agility_test.mjs runs many rounds headless.
 
-import { Driver, posture, rng } from "./game.js";
-
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+import { Driver, Jumper, posture, rng } from "./game.js";
 
 export const OBSTACLES = {
   weave: { title: "Weave poles", how: "Weave through every pole, first pole on the left shoulder" },
   tunnel: { title: "Tunnel", how: "Run through the tunnel, in at the near end" },
   table: { title: "Pause table", how: "Lie down on the table while the judge counts 5" },
-  jump: { title: "Hurdle", how: "Get over the 20 cm bar without knocking it" },
+  jump: { title: "Hurdle", how: "Jump the bar without knocking it" },
 };
 // m: Bolt's body is rigid, so the poles are wider apart than a real 60 cm weave. Bolt follows a smooth
 // wave through them (side: how far it swings out at each pole), at most ~1.4 rad/s of turning.
@@ -25,14 +23,15 @@ export function setWeaveSpeed(v) { WEAVE_SPEED = v; }
 
 // The course: obstacles along a winding path from the start line (course coordinates: x ahead of
 // Bolt at the start, y to its left). Each obstacle has an entry point, a heading and a length.
-export const BAR = 0.2;   // m: hurdle height
-// Classes: Standard, and Championship (12 tighter weave poles, three tunnels, sharper turns, a stricter
-// course time). Hurdles stay out until Bolt can jump: with solid bars, the trot touched even a 5 cm bar
-// every time (the bars only looked clearable while MuJoCo was missing collisions with moved geoms).
+// Classes: Standard, and Championship (12 tighter weave poles, three tunnels, sharper turns, a higher
+// bar, a stricter course time). Hurdles need the jump brain (jump_env.py): with solid bars, the trot
+// touched even a 5 cm bar every time. Every dog jumps with the same jump brain: the dog stops ~0.6 m
+// before the bar, steadies, and jumps from standing (game.js Jumper), ~4.5 s per hurdle.
 export const CLASSES = {
-  standard: { name: "Standard", poles: 8, spacing: 1.2, tunnels: 2, turn: 0.9, pace: 0.55 },
-  championship: { name: "Championship", poles: 12, spacing: 1.0, tunnels: 3, turn: 1.2, pace: 0.65 },
+  standard: { name: "Standard", poles: 8, spacing: 1.2, tunnels: 2, turn: 0.9, pace: 0.55, bar: 0.15 },
+  championship: { name: "Championship", poles: 12, spacing: 1.0, tunnels: 3, turn: 1.2, pace: 0.65, bar: 0.20 },
 };
+const JUMP_TIME = 4.5;   // s: stop, steady, jump and land, added to the course time per hurdle
 export function buildAgility(seed, { jumps = false, cls = "standard" } = {}) {
   const r = rng(seed), C = CLASSES[cls];
   WEAVE.poles = C.poles; WEAVE.spacing = C.spacing;
@@ -41,22 +40,23 @@ export function buildAgility(seed, { jumps = false, cls = "standard" } = {}) {
   if (kinds[0] === "table") kinds.push(kinds.shift());              // a course never opens with the table
   let x = 0.5, y = 0, h = 0;
   const obstacles = kinds.map((kind, n) => {
-    // up to ~50° between obstacles; a hurdle gets a straighter, longer run-up (high-stepping while
-    // turning hard tipped Bolt over: 2 falls in 24 rounds before this)
+    // up to ~50° between obstacles; a hurdle gets a straighter, longer run-up to line up for the jump
     h += n === 0 ? (r() * 2 - 1) * 0.3 : (r() * 2 - 1) * (kind === "jump" ? 0.5 : C.turn);
     const gap = kind === "weave" ? 2.6 : kind === "jump" ? 3.0 : 2.2, L = kind === "weave" ? WEAVE.spacing * (WEAVE.poles - 1) : kind === "tunnel" ? 3.0 : 0;
     const entry = [x + gap * Math.cos(h), y + gap * Math.sin(h)];
     const exit = [entry[0] + L * Math.cos(h), entry[1] + L * Math.sin(h)];
     x = exit[0]; y = exit[1];
-    return { n: n + 1, kind, entry, exit, h, L, ...OBSTACLES[kind] };
+    return { n: n + 1, kind, entry, exit, h, L, ...OBSTACLES[kind], ...(kind === "jump" ? { bar: C.bar, how: `Jump the ${Math.round(C.bar * 100)} cm bar without knocking it` } : {}) };
   });
   const last = obstacles[obstacles.length - 1];
   const finish = [last.exit[0] + 2.5 * Math.cos(last.h), last.exit[1] + 2.5 * Math.sin(last.h)];
-  // standard course time: the path at 0.55 m/s, plus the 5 s on the table and getting on and off it
+  // standard course time: the path at the class pace, plus the 5 s on the table and getting on and off it,
+  // plus the time each jump takes
   let length = 0, p = [0, 0];
   for (const o of obstacles) { length += Math.hypot(o.entry[0] - p[0], o.entry[1] - p[1]) + o.L; p = o.exit; }
   length += Math.hypot(finish[0] - p[0], finish[1] - p[1]);
-  return { seed, cls: C.name, obstacles, finish, finishH: last.h, sct: Math.round(length / C.pace + 9) };
+  const jumpCount = obstacles.filter((o) => o.kind === "jump").length;
+  return { seed, cls: C.name, obstacles, finish, finishH: last.h, sct: Math.round(length / C.pace + 9 + JUMP_TIME * jumpCount) };
 }
 
 // One competitor's round. Call step() 50 times a second.
@@ -96,19 +96,16 @@ export class Round {
       this.clock += dt;
       this.play(dt);
     }
-    const c = this.cmd, b = this.bolt;
-    b.setCommand(c.command);
-    if (c.command === "walk") { b.setTurn(c.turn); b.setSpeed(c.speed); }
-    b.tick();
+    const b = this.bolt;
+    b.run(this.cmd);
     if (b.fell()) { this.over = true; this.phase = "eliminated"; this.say(`${this.name} fell: eliminated`, "bad"); }
   }
   begin() {
     const o = this.obstacle;
     this.task = o ? { stage: "approach", wp: 0, held: 0, settle: 0, checked: 0, missed: false } : { stage: "finish" };
     if (o) this.say(`${o.n}. ${o.title}`, "station");
-    // the simulator has one bar: it stands at the next hurdle, and is parked away otherwise
-    if (o && o.kind === "jump") this.bolt.setHurdle(this.world(o.entry), this.yaw0 + o.h, BAR);
-    else if (this.bolt.hurdle >= 0) this.bolt.setHurdle([1e3, 0], 0, 0.1);
+    // the simulator has one bar: it stands at the next hurdle (the jumper puts it there), parked otherwise
+    if (!o || o.kind !== "jump") this.bolt.setHurdle([1e3, 0], 0, 0.1);
   }
   next(note) {
     if (note) this.say(note, "good");
@@ -121,7 +118,7 @@ export class Round {
       return [[-1.4, -w * 0.5], ...Array.from({ length: WEAVE.poles }, (_, k) => [k * s, k % 2 ? w : -w]), [(WEAVE.poles - 1) * s + 1.2, 0]];
     }
     if (o.kind === "tunnel") return [[-1.2, 0], [0, 0], [o.L, 0], [o.L + 1.0, 0]];
-    if (o.kind === "jump") return [[-2.0, 0], [1.5, 0]];
+    if (o.kind === "jump") return [[-2.0, 0]];   // line up straight; the jumper does the rest
     return [[0, 0]];
   }
 
@@ -138,6 +135,7 @@ export class Round {
       return;
     }
     if (o.kind === "table") return this.table(o, dt);
+    if (o.kind === "jump" && k.wp > 0) return this.jump(o, dt);
     const wps = this.waypoints(o), [along, side] = this.rel(o);
     let target = wps[k.wp];
     const last = k.wp === wps.length - 1, weaving = o.kind === "weave" && k.wp > 0;
@@ -148,7 +146,6 @@ export class Round {
       target = [a, a > end ? 0 : -WEAVE.side * Math.cos(Math.PI * Math.max(0, a) / WEAVE.spacing)];
     }
     this.cmd = this.driver.toward(this.world(this.at(o, target[0], target[1])), k.wp === 0 ? 0.9 : cruise, false, dt, weaving ? 1 : 2);
-    if (this.bolt.lift() > this.bolt.c.paw_gait.lift + 0.01) this.cmd.turn = clamp(this.cmd.turn, -0.5, 0.5);   // stepping over a bar: steer gently
     // move on to the next waypoint once level with this one
     if (along >= target[0] - (o.kind === "weave" ? 0.05 : 0.2) && (k.wp > 0 || Math.abs(side) < 0.6)) k.wp += 1;
     if (o.kind === "weave") {      // judge each pole as Bolt passes it: pole k must be on the right side
@@ -162,10 +159,19 @@ export class Round {
       k.entered = true;
       if (Math.abs(side) > 0.4) this.fault(5, "Missed the tunnel entry");
     }
-    if (o.kind === "jump" && this.bolt.hurdleHits && this.bolt.hurdleHits() > 0 && !k.knocked) { k.knocked = true; this.fault(5, "Knocked the bar"); }
+    if (o.kind === "jump") return;   // lined up: the jump starts next step
     if (k.wp >= wps.length || (last && along > target[0])) {
       if (o.kind === "weave" && k.missed) this.fault(5, "Missed a weave pole");
-      this.next(o.kind === "weave" && !k.missed ? "Weaves: clean" : o.kind === "tunnel" ? "Tunnel: through" : o.kind === "jump" && !k.knocked ? "Clear jump" : "");
+      this.next(o.kind === "weave" && !k.missed ? "Weaves: clean" : o.kind === "tunnel" ? "Tunnel: through" : "");
+    }
+  }
+  jump(o, dt) {   // a real jump from standing (game.js Jumper); touching the bar knocks it: 5 faults
+    const k = this.task;
+    if (!k.jumper) k.jumper = new Jumper(this.bolt, this.driver, this.world(o.entry), this.yaw0 + o.h, o.bar);
+    this.cmd = k.jumper.step(dt);
+    if (k.jumper.done) {
+      if (k.jumper.touched) { this.fault(5, "Knocked the bar"); this.next(""); }
+      else this.next("Clear jump");
     }
   }
   table(o, dt) {   // run up, stop, lie down for the judge's count of 5, get up, go on

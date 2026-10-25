@@ -10,8 +10,8 @@ brain learns the jump from scratch, with the full motor range (not small correct
 Each try: Bolt stands 45-65 cm in front of a bar, gets 2 s, and is paid for moving its hindmost paw
 past the bar, a big bonus once all four are past (less if it touched the bar), then for landing and
 standing tall. Every moment still in front of the bar costs a little; touching the bar costs; a fall
-ends the try. The bar height adapts, like a coach's: it rises 1 cm while clean jumps are common (over
-half), and drops when they are rare, from 12 cm up to 48 cm.
+ends the try. The bar height adapts, like a coach's: it rises 0.5 cm while clean jumps are common (over
+60%), and drops when they are rare, from 12 cm up to 48 cm.
 
 Run 15b (paid for standing upright before the jump, bars from 20 cm) learned to stand still and hop in
 place: staying put paid steadily, trying risked touch and fall penalties. Run 15c's first 1M steps
@@ -19,6 +19,9 @@ learned to launch (all paws up to 22 cm, 0.4 s in the air) but dived over and cr
 clear bonus beat the fall penalty. So most of the bonus now waits for a landing: still upright 0.5 s
 after clearing. By 2.5M it cleared 25 cm bars and landed, but touched the bar every time (sliding over
 its top), so touching now costs 5 at once and 1 per step, and only clean jumps earn the big bonuses.
+At 6.5M it jumped 15 cm bars clean 11 times in 12 and 20 cm 9 in 12; by 7M it had collapsed (0 clean even
+at 10 cm) right after the coach raised the practice bars from 13 to 20 cm in 1M steps. Run 15d resumes
+from 6.5M with a third of the learning rate and a coach half as quick to raise the bar.
 """
 import gymnasium as gym
 import mujoco
@@ -40,7 +43,7 @@ class JumpEnv(BoltEnv):
                          skills=["stand"])
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.exam_bar = None  # (distance, height): exams set the bar; training draws it
-        # adaptive bar height, like a coach: it goes up after clean jumps and down after failed ones
+        # adaptive bar height, like a coach: it goes up (0.5 cm) while clean jumps are common, down when rare
         self.bar_level, self.clean_rate = 0.12, 0.0
 
     def _bar_height(self):
@@ -49,8 +52,8 @@ class JumpEnv(BoltEnv):
     def _grade(self, clean):
         """After each training try: raise the bar when clean jumps are common, lower it when they are rare."""
         self.clean_rate = 0.9 * self.clean_rate + 0.1 * float(clean)
-        if self.clean_rate > 0.5:
-            self.bar_level = min(0.48, self.bar_level + 0.01)
+        if self.clean_rate > 0.6:
+            self.bar_level = min(0.48, self.bar_level + 0.005)
         elif self.clean_rate < 0.15:
             self.bar_level = max(0.10, self.bar_level - 0.005)
 
@@ -157,7 +160,7 @@ class JumpPolicy:
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
-def exam(policy, episodes=10, seed=5000, heights=(0.30, 0.40)):
+def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30)):
     """Jump the bar from 55 cm away: cleared without touching it, landed, standing at the end, no fall."""
     out = {}
     env = JumpEnv(randomize=True)

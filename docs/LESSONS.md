@@ -157,3 +157,14 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   mocap bodies moved through `data.mocap_pos`; a dropped ball and a bar under the dog both collide. Honest result:
   the trot touches even a 5 cm bar every time (it does not place its paws around the bar), so hurdles wait
   for the jump brain. Test a new physics object with a simple drop test before trusting any result on it.
+- **Pay for what you want, not for what comes before it.** The jump brain learned to stand still when standing
+  was paid (run 15b), and to dive over and crash when clearing paid more than a fall cost (early 15c). It jumped
+  for real once most of the prize waited for a clean landing, touching the bar cost at once, and paws over the
+  bar were paid for being above it (a tuck).
+- **A coach that raises the bar too fast can break a brain.** Run 15c jumped 15 cm bars clean 11 in 12 at 6.5M;
+  its coach then raised the practice bar from 13 to 20 cm in 1M steps, and by 7M it jumped nothing, even 10 cm.
+  Keep the best checkpoint, exam on bars the brain can nearly clear (not only ones it cannot), and resume from
+  the last good one with smaller steps (run 15d).
+- **Start a learned skill the way it was practised.** The jump brain always began from 0.5 s of holding the dog
+  stance. Jumping straight after the standing brain fell 1 time in 3 at 15 cm; holding the stance first, 0 in 6.
+  Stopping 0.83 m from the bar (training used 0.45-0.65 m) still mostly worked, but stopping at 0.6 m was better.

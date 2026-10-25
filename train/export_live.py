@@ -87,12 +87,33 @@ def reference(posture, walk):
     return start, dict(start=start, script=SCRIPT, steps=steps)
 
 
+def jump_reference(folder, bar=(0.55, 0.15), seed=1):
+    """One jump in Python (JumpEnv, no randomness): the start state, the bar, and every step."""
+    from jump_env import JumpEnv, JumpPolicy
+    policy, env = JumpPolicy(folder), JumpEnv(randomize=False)
+    env.exam_bar = bar
+    obs, _ = env.reset(seed=seed)
+    d = env.data
+    start = dict(qpos=d.qpos.tolist(), qvel=d.qvel.tolist(), ctrl=d.ctrl.tolist(), bar_at=env.hurdle_at.tolist(),
+                 bar_dir=env.hurdle_dir.tolist(), bar_h=env.hurdle_h)
+    steps = []
+    for _ in range(env.max_steps):
+        action = policy.act(obs)
+        steps.append(dict(obs=obs.tolist(), action=np.asarray(action, dtype=float).tolist()))
+        obs, _, fell, _, info = env.step(action)
+        steps[-1]["qpos"] = d.qpos.tolist()
+        if fell:
+            break
+    return dict(start=start, steps=steps, max_steps=env.max_steps, cleared=bool(info["cleared"]), touched=bool(info["touched"]))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--posture", required=True)
     ap.add_argument("--walk", required=True)
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--reference", required=True, help="where to write the Python reference run")
+    ap.add_argument("--jump", help="jump brain folder (jump_env.py): the bundle gets it, and the reference a Python jump")
     ap.add_argument("--competitor", action="append", default=[], metavar="NAME=FOLDER",
                     help="more walk brains for the agility competition (speed-control brains)")
     args = ap.parse_args()
@@ -118,6 +139,10 @@ def main():
     if args.competitor:   # agility competitors: name -> walk brain and the gait it turns with
         bundle["competitors"] = {name: dict(brain(path), sharp_turns=Policy(path).sharp_turns, source=Path(path).name)
                                  for name, path in (c.split("=", 1) for c in args.competitor)}
+    if args.jump:   # a real jump, from standing: its own brain (jump_env.py), 2 s per jump
+        bundle["brains"]["jump"] = dict(brain(args.jump), source=Path(args.jump).name)
+        bundle["constants"]["jump_steps"] = 100
+        ref["jump"] = jump_reference(args.jump)
     Path(args.out).write_text(json.dumps(bundle, separators=(",", ":")))
     Path(args.reference).write_text(json.dumps(ref, separators=(",", ":")))
     print(f"wrote {args.out} ({Path(args.out).stat().st_size / 1e6:.1f} MB) and {args.reference} ({len(ref['steps'])} steps)")

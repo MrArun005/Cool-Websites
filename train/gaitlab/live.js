@@ -75,6 +75,7 @@ export class Bolt {
     this.model = mj.MjModel.from_xml_string(bundle.xml);
     this.data = new mj.MjData(this.model);
     this.brains = { posture: new Brain(bundle.brains.posture), walk: new Brain(bundle.brains.walk) };
+    if (bundle.brains.jump) this.brains.jump = new Brain(bundle.brains.jump);   // jump_env.py: a real jump
     const r = this.model.actuator_ctrlrange;
     this.lo = Array.from({ length: 12 }, (_, i) => r[2 * i]); this.hi = Array.from({ length: 12 }, (_, i) => r[2 * i + 1]);
     this.torso = mj.mj_name2id(this.model, mj.mjtObj.mjOBJ_BODY.value, "torso");
@@ -215,6 +216,43 @@ export class Bolt {
     this.step(brain.act(this.obs()));
   }
   fell() { return this.up() < 0.2; }
+  // The jump brain (JumpEnv in jump_env.py): from standing in front of the bar, 2 s of full-range motor
+  // control around the dog stance. startJump(), then jumpTick() 100 times.
+  startJump() { this.jt = 0; this.jumpLast = new Float64Array(12); }
+  jumpObs() {
+    const d = this.data, R = this.rotation(), q = d.qpos, v = d.qvel, c = this.c, o = [-R[6], -R[7], -R[8]];
+    o.push(v[3] * 0.25, v[4] * 0.25, v[5] * 0.25);
+    for (let j = 0; j < 3; j++) o.push(R[j] * v[0] + R[3 + j] * v[1] + R[6 + j] * v[2]);
+    o.push(q[2]);
+    for (let i = 0; i < 12; i++) o.push(q[7 + i] - c.dog_pose[i]);
+    for (let i = 0; i < 12; i++) o.push(v[6 + i] * 0.1);
+    o.push(...this.jumpLast, this.hurdleAhead(), this.hurdleH, this.jt / c.jump_steps);
+    return o;
+  }
+  jumpStep(action) {
+    const { mj, model: m, data: d, c } = this;
+    const a = Array.from(action, (v) => clamp(v, -1, 1));
+    d.ctrl.set(c.dog_pose.map((b, i) => clamp(b + c.action_scale[i] * a[i], this.lo[i], this.hi[i])));
+    this.applyPush(this.dt);
+    for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
+    this.jt += 1; this.jumpLast = Float64Array.from(a);
+  }
+  jumpTick() { this.jumpStep(this.brains.jump.act(this.jumpObs())); }
+  // the motors hold the dog stance (how every training jump started: 0.5 s of this, then the jump)
+  holdTick() {
+    const { mj, model: m, data: d, c } = this;
+    d.ctrl.set(c.dog_pose); this.applyPush(this.dt);
+    for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
+  }
+  // run one game command: walk/stand/sit/lie use the trained brains; "hold" and "jump" the jump sequence
+  run(cmd) {
+    if (cmd.command === "hold") return this.holdTick();
+    if (cmd.command === "jump") return this.jumpTick();
+    this.setCommand(cmd.command);
+    if (cmd.command === "walk") { this.setTurn(cmd.turn); this.setSpeed(cmd.speed); }
+    this.tick();
+  }
+  jumping() { return this.jt !== undefined && this.jt < this.c.jump_steps; }
   // where Bolt is and which way it faces
   where() {
     const R = this.rotation(), q = this.data.qpos;

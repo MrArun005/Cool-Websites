@@ -13,7 +13,7 @@ for (const [name, spec] of Object.entries(dogs)) {
   bolt.useWalk(spec, spec.sharp_turns);
   let clear = 0, elim = 0, times = [], faults = [], why = {};
   for (let c = 0; c < +courses; c++) {
-    const course = buildAgility(500 + c, { cls });
+    const course = buildAgility(500 + c, { cls, jumps: !!bundle.brains.jump });
     const r = new Round(bolt, course, bundle.start, name);
     while (!r.over && r.t < 300) r.step();
     if (!r.over) why["timed out at " + (r.obstacle ? r.obstacle.title : "finish")] = (why["timed out at " + (r.obstacle ? r.obstacle.title : "finish")] || 0) + 1;
