@@ -1,0 +1,663 @@
+{
+ "before": {
+  "total": {
+   "matches": 3,
+   "play_s": 540.0,
+   "stalls": 49,
+   "stall_s": 358.1,
+   "stall_median_s": 7.1,
+   "stalls_by_object": {
+    "open": [
+     28,
+     207.0
+    ],
+    "duck": [
+     18,
+     131.2
+    ],
+    "board/line": [
+     3,
+     20.0
+    ]
+   },
+   "stall_ends": {
+    "dropped ball": 16,
+    "push": 24,
+    "kick": 8,
+    "restart": 1
+   },
+   "stall_states_s": {
+    "duel": 443.4,
+    "press": 71.2,
+    "contest:duel": 41.2,
+    "support": 29.1,
+    "mark": 24.0,
+    "ready": 23.9,
+    "kick": 22.2,
+    "approach": 11.1,
+    "get up": 6.7,
+    "hold": 4.6
+   },
+   "near_ball_s": 412.7,
+   "lost_near_s": {
+    "total": 198.9,
+    "search": 0.3,
+    "standing": 11.0,
+    "moving": 187.6
+   },
+   "lost_near_src_s": {
+    "own": 52.4,
+    "team": 142.8,
+    "None": 3.7
+   },
+   "lost_spans_over_1s": 54,
+   "stalls_with_lost_player": 31,
+   "arrivals": 63,
+   "arrive_to_strike_median_s": 2.04,
+   "arrive_to_strike_mean_s": 2.65,
+   "strike_how": {
+    "kick": 9,
+    "push": 54
+   },
+   "strike_v_median": 0.49,
+   "arrive_split_mean_s": {
+    "duel": 1.99,
+    "kick": 0.24,
+    "ready": 0.24,
+    "approach": 0.13,
+    "align": 0.03,
+    "search": 0.03,
+    "get up": 0.0
+   },
+   "kicks": 47,
+   "connected": 24,
+   "kick_v_median": 0.54,
+   "shots": 23,
+   "goals": 1,
+   "dropped_balls": 16,
+   "falls": 18,
+   "moving": 0.784,
+   "by_kind": {
+    "shot": 23,
+    "forward": 10,
+    "clearance": 10,
+    "pass": 4
+   }
+  },
+  "per_seed": [
+   {
+    "matches": 1,
+    "play_s": 180.0,
+    "stalls": 17,
+    "stall_s": 117.5,
+    "stall_median_s": 6.9,
+    "stalls_by_object": {
+     "open": [
+      10,
+      73.4
+     ],
+     "duck": [
+      6,
+      37.3
+     ],
+     "board/line": [
+      1,
+      6.8
+     ]
+    },
+    "stall_ends": {
+     "dropped ball": 5,
+     "push": 9,
+     "kick": 2,
+     "restart": 1
+    },
+    "stall_states_s": {
+     "duel": 149.1,
+     "press": 19.9,
+     "contest:duel": 9.0,
+     "ready": 7.6,
+     "get up": 6.7,
+     "kick": 6.4,
+     "support": 4.9,
+     "hold": 4.6,
+     "search": 4.4,
+     "mark": 1.6
+    },
+    "near_ball_s": 130.1,
+    "lost_near_s": {
+     "total": 58.4,
+     "search": 0.3,
+     "standing": 3.9,
+     "moving": 54.2
+    },
+    "lost_near_src_s": {
+     "own": 17.4,
+     "team": 37.3,
+     "None": 3.7
+    },
+    "lost_spans_over_1s": 14,
+    "stalls_with_lost_player": 10,
+    "arrivals": 25,
+    "arrive_to_strike_median_s": 1.72,
+    "arrive_to_strike_mean_s": 1.82,
+    "strike_how": {
+     "kick": 3,
+     "push": 22
+    },
+    "strike_v_median": 0.46,
+    "arrive_split_mean_s": {
+     "duel": 1.39,
+     "kick": 0.18,
+     "ready": 0.16,
+     "search": 0.07,
+     "align": 0.01,
+     "get up": 0.01
+    },
+    "kicks": 18,
+    "connected": 10,
+    "kick_v_median": 0.54,
+    "shots": 11,
+    "goals": 0,
+    "dropped_balls": 5,
+    "falls": 9,
+    "moving": 0.796,
+    "by_kind": {
+     "shot": 11,
+     "forward": 2,
+     "clearance": 2,
+     "pass": 3
+    }
+   },
+   {
+    "matches": 1,
+    "play_s": 180.0,
+    "stalls": 16,
+    "stall_s": 116.8,
+    "stall_median_s": 7.1,
+    "stalls_by_object": {
+     "duck": [
+      6,
+      49.2
+     ],
+     "open": [
+      10,
+      67.6
+     ]
+    },
+    "stall_ends": {
+     "kick": 4,
+     "dropped ball": 4,
+     "push": 8
+    },
+    "stall_states_s": {
+     "duel": 153.1,
+     "press": 24.7,
+     "contest:duel": 13.5,
+     "mark": 12.9,
+     "ready": 7.8,
+     "approach": 6.7,
+     "kick": 6.5,
+     "support": 3.4,
+     "align": 0.3,
+     "position": 0.0
+    },
+    "near_ball_s": 142.3,
+    "lost_near_s": {
+     "total": 72.3,
+     "search": 0.0,
+     "standing": 3.4,
+     "moving": 68.9
+    },
+    "lost_near_src_s": {
+     "own": 19.5,
+     "team": 52.8
+    },
+    "lost_spans_over_1s": 21,
+    "stalls_with_lost_player": 10,
+    "arrivals": 22,
+    "arrive_to_strike_median_s": 2.51,
+    "arrive_to_strike_mean_s": 3.75,
+    "strike_how": {
+     "kick": 4,
+     "push": 18
+    },
+    "strike_v_median": 0.52,
+    "arrive_split_mean_s": {
+     "duel": 2.94,
+     "approach": 0.37,
+     "ready": 0.27,
+     "kick": 0.16,
+     "align": 0.01
+    },
+    "kicks": 15,
+    "connected": 9,
+    "kick_v_median": 0.97,
+    "shots": 7,
+    "goals": 1,
+    "dropped_balls": 4,
+    "falls": 7,
+    "moving": 0.776,
+    "by_kind": {
+     "shot": 7,
+     "clearance": 5,
+     "forward": 2,
+     "pass": 1
+    }
+   },
+   {
+    "matches": 1,
+    "play_s": 180.0,
+    "stalls": 16,
+    "stall_s": 123.8,
+    "stall_median_s": 8.1,
+    "stalls_by_object": {
+     "duck": [
+      6,
+      44.7
+     ],
+     "open": [
+      8,
+      66.0
+     ],
+     "board/line": [
+      2,
+      13.2
+     ]
+    },
+    "stall_ends": {
+     "dropped ball": 7,
+     "push": 7,
+     "kick": 2
+    },
+    "stall_states_s": {
+     "duel": 141.2,
+     "press": 26.6,
+     "support": 20.8,
+     "contest:duel": 18.7,
+     "mark": 9.5,
+     "kick": 9.3,
+     "ready": 8.5,
+     "approach": 3.1,
+     "align": 2.3,
+     "block": 1.1
+    },
+    "near_ball_s": 140.3,
+    "lost_near_s": {
+     "total": 68.2,
+     "search": 0.0,
+     "standing": 3.7,
+     "moving": 64.5
+    },
+    "lost_near_src_s": {
+     "team": 52.7,
+     "own": 15.5
+    },
+    "lost_spans_over_1s": 19,
+    "stalls_with_lost_player": 11,
+    "arrivals": 16,
+    "arrive_to_strike_median_s": 1.03,
+    "arrive_to_strike_mean_s": 2.44,
+    "strike_how": {
+     "kick": 2,
+     "push": 14
+    },
+    "strike_v_median": 0.45,
+    "arrive_split_mean_s": {
+     "duel": 1.62,
+     "kick": 0.42,
+     "ready": 0.31,
+     "align": 0.08,
+     "approach": 0.0
+    },
+    "kicks": 14,
+    "connected": 5,
+    "kick_v_median": 0.46,
+    "shots": 5,
+    "goals": 0,
+    "dropped_balls": 7,
+    "falls": 2,
+    "moving": 0.781,
+    "by_kind": {
+     "shot": 5,
+     "clearance": 3,
+     "forward": 6
+    }
+   }
+  ]
+ },
+ "after": {
+  "total": {
+   "matches": 3,
+   "play_s": 540.0,
+   "stalls": 46,
+   "stall_s": 232.4,
+   "stall_median_s": 4.6,
+   "stalls_by_object": {
+    "board/line": [
+     8,
+     36.9
+    ],
+    "open": [
+     16,
+     75.2
+    ],
+    "duck": [
+     21,
+     112.8
+    ],
+    "referee": [
+     1,
+     7.6
+    ]
+   },
+   "stall_ends": {
+    "push": 42,
+    "dropped ball": 1,
+    "kick": 1,
+    "restart": 2
+   },
+   "stall_states_s": {
+    "duel:strike": 69.2,
+    "duel:scramble": 58.9,
+    "duel": 49.7,
+    "press": 41.0,
+    "find:look": 23.5,
+    "find:back": 23.4,
+    "duel:round": 22.0,
+    "duel:back": 19.9,
+    "find:turn": 17.6,
+    "mark": 13.7
+   },
+   "near_ball_s": 399.4,
+   "lost_near_s": {
+    "total": 197.2,
+    "search": 0.0,
+    "standing": 25.7,
+    "moving": 171.5
+   },
+   "lost_near_src_s": {
+    "own": 64.7,
+    "team": 83.0,
+    "touch": 44.2,
+    "mem": 5.2
+   },
+   "lost_spans_over_1s": 48,
+   "stalls_with_lost_player": 23,
+   "arrivals": 119,
+   "arrive_to_strike_median_s": 1.64,
+   "arrive_to_strike_mean_s": 2.71,
+   "strike_how": {
+    "kick": 2,
+    "push": 117
+   },
+   "strike_v_median": 0.47,
+   "arrive_split_mean_s": {
+    "duel": 2.0,
+    "find": 0.45,
+    "glide": 0.17,
+    "approach": 0.06,
+    "kick": 0.02,
+    "align": 0.0,
+    "ready": 0.0,
+    "chase": 0.0
+   },
+   "kicks": 4,
+   "connected": 2,
+   "kick_v_median": 0.42,
+   "shots": 1,
+   "goals": 2,
+   "dropped_balls": 1,
+   "falls": 12,
+   "moving": 0.831,
+   "by_kind": {
+    "clearance": 2,
+    "shot": 1,
+    "forward": 1
+   }
+  },
+  "per_seed": [
+   {
+    "matches": 1,
+    "play_s": 180.0,
+    "stalls": 15,
+    "stall_s": 74.9,
+    "stall_median_s": 5.1,
+    "stalls_by_object": {
+     "board/line": [
+      1,
+      4.7
+     ],
+     "open": [
+      6,
+      28.4
+     ],
+     "duck": [
+      8,
+      41.9
+     ]
+    },
+    "stall_ends": {
+     "push": 15
+    },
+    "stall_states_s": {
+     "duel:strike": 25.9,
+     "duel:scramble": 21.5,
+     "duel": 16.8,
+     "press": 12.9,
+     "find:back": 8.0,
+     "duel:back": 6.1,
+     "find:look": 6.1,
+     "find:turn": 5.5,
+     "duel:round": 5.4,
+     "glide": 5.1
+    },
+    "near_ball_s": 140.1,
+    "lost_near_s": {
+     "total": 71.9,
+     "search": 0.0,
+     "standing": 7.9,
+     "moving": 63.9
+    },
+    "lost_near_src_s": {
+     "own": 22.5,
+     "team": 29.7,
+     "touch": 18.2,
+     "mem": 1.4
+    },
+    "lost_spans_over_1s": 17,
+    "stalls_with_lost_player": 7,
+    "arrivals": 51,
+    "arrive_to_strike_median_s": 1.36,
+    "arrive_to_strike_mean_s": 2.76,
+    "strike_how": {
+     "kick": 1,
+     "push": 50
+    },
+    "strike_v_median": 0.47,
+    "arrive_split_mean_s": {
+     "duel": 2.01,
+     "find": 0.5,
+     "glide": 0.16,
+     "approach": 0.06,
+     "kick": 0.03
+    },
+    "kicks": 2,
+    "connected": 1,
+    "kick_v_median": 0.51,
+    "shots": 1,
+    "goals": 2,
+    "dropped_balls": 0,
+    "falls": 4,
+    "moving": 0.836,
+    "by_kind": {
+     "clearance": 1,
+     "shot": 1
+    }
+   },
+   {
+    "matches": 1,
+    "play_s": 180.0,
+    "stalls": 15,
+    "stall_s": 78.2,
+    "stall_median_s": 4.8,
+    "stalls_by_object": {
+     "duck": [
+      8,
+      46.5
+     ],
+     "open": [
+      3,
+      12.8
+     ],
+     "board/line": [
+      4,
+      19.0
+     ]
+    },
+    "stall_ends": {
+     "push": 13,
+     "dropped ball": 1,
+     "kick": 1
+    },
+    "stall_states_s": {
+     "duel:scramble": 22.2,
+     "duel": 20.8,
+     "duel:strike": 19.5,
+     "press": 17.8,
+     "find:look": 12.2,
+     "duel:round": 10.7,
+     "find:back": 10.2,
+     "mark": 9.4,
+     "duel:back": 8.7,
+     "find:turn": 7.8
+    },
+    "near_ball_s": 150.5,
+    "lost_near_s": {
+     "total": 71.3,
+     "search": 0.0,
+     "standing": 11.5,
+     "moving": 59.8
+    },
+    "lost_near_src_s": {
+     "own": 21.7,
+     "touch": 13.6,
+     "team": 35.5,
+     "mem": 0.5
+    },
+    "lost_spans_over_1s": 19,
+    "stalls_with_lost_player": 9,
+    "arrivals": 32,
+    "arrive_to_strike_median_s": 1.76,
+    "arrive_to_strike_mean_s": 2.87,
+    "strike_how": {
+     "kick": 1,
+     "push": 31
+    },
+    "strike_v_median": 0.46,
+    "arrive_split_mean_s": {
+     "duel": 2.07,
+     "find": 0.48,
+     "glide": 0.21,
+     "approach": 0.08,
+     "kick": 0.03
+    },
+    "kicks": 1,
+    "connected": 1,
+    "kick_v_median": 0.34,
+    "shots": 0,
+    "goals": 0,
+    "dropped_balls": 1,
+    "falls": 2,
+    "moving": 0.812,
+    "by_kind": {
+     "forward": 1
+    }
+   },
+   {
+    "matches": 1,
+    "play_s": 180.0,
+    "stalls": 16,
+    "stall_s": 79.3,
+    "stall_median_s": 3.9,
+    "stalls_by_object": {
+     "duck": [
+      5,
+      24.4
+     ],
+     "open": [
+      7,
+      34.0
+     ],
+     "board/line": [
+      3,
+      13.2
+     ],
+     "referee": [
+      1,
+      7.6
+     ]
+    },
+    "stall_ends": {
+     "push": 14,
+     "restart": 2
+    },
+    "stall_states_s": {
+     "duel:strike": 23.8,
+     "duel:scramble": 15.2,
+     "duel": 12.1,
+     "press": 10.3,
+     "duel:round": 5.9,
+     "find:look": 5.2,
+     "find:back": 5.2,
+     "duel:back": 5.1,
+     "glide": 4.5,
+     "find:turn": 4.3
+    },
+    "near_ball_s": 108.7,
+    "lost_near_s": {
+     "total": 54.0,
+     "search": 0.0,
+     "standing": 6.3,
+     "moving": 47.7
+    },
+    "lost_near_src_s": {
+     "own": 20.6,
+     "touch": 12.4,
+     "team": 17.8,
+     "mem": 3.2
+    },
+    "lost_spans_over_1s": 12,
+    "stalls_with_lost_player": 7,
+    "arrivals": 36,
+    "arrive_to_strike_median_s": 1.86,
+    "arrive_to_strike_mean_s": 2.5,
+    "strike_how": {
+     "kick": 0,
+     "push": 36
+    },
+    "strike_v_median": 0.49,
+    "arrive_split_mean_s": {
+     "duel": 1.92,
+     "find": 0.36,
+     "glide": 0.15,
+     "approach": 0.05,
+     "align": 0.01,
+     "ready": 0.01,
+     "chase": 0.0
+    },
+    "kicks": 1,
+    "connected": 0,
+    "kick_v_median": 0,
+    "shots": 0,
+    "goals": 0,
+    "dropped_balls": 0,
+    "falls": 6,
+    "moving": 0.846,
+    "by_kind": {
+     "clearance": 1
+    }
+   }
+  ]
+ },
+ "setup": "seeds 0-2, 1 half x 180 s each; before = the tactics/perception at commit 8eda0cd with the same Diag measurement; after = this commit"
+}

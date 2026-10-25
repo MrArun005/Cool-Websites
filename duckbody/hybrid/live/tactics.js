@@ -14,8 +14,8 @@ const AIM_Y = 0.35, DRIBBLE_D = [1.3, 3.2], DRIBBLE_FREE = 0.55, DRIBBLE_MAX_S =
 const GAP = 0.4, CROWD_VX = 0.6, CROWD_WZ = 0.9, CROWD_VX_BALL = 0.75, PINNED_S = 1.5;
 // ball at the feet out of view (tactics.py FIND_*), kick-ready approach / kick on the move (GLIDE_*), walk-through strike
 const FIND_D = 0.3, FIND_BACK_X = 0.06, FIND_BACK_Y = 0.10, FIND_BACK_VX = -0.45, FIND_MAX_S = 1.5;
-const GLIDE_D = 0.45, GLIDE_PHI = 0.35, GLIDE_VX = 0.4, GLIDE_HEAD_X = 0.24, HOME_S = 0.3, GLIDE_WIN = [-0.025, 0.015], GLIDE_TOL_Y = 0.022;
-const FOOT_Y = 0.042, STRIKE_OPP = 0.45, POKE_D = 0.3, SCRAMBLE_D = 0.25;
+const GLIDE_D = 0.45, GLIDE_PHI = 0.45, GLIDE_VX = 0.4, GLIDE_HEAD_X = 0.24, HOME_S = 0.3, GLIDE_WIN = [-0.025, 0.015], GLIDE_TOL_Y = 0.03;
+const FOOT_Y = 0.042, STRIKE_OPP = 0.25, POKE_D = 0.3, SCRAMBLE_D = 0.35, PINNED_NEAR = 0.15;
 
 // ---------------------------------------------------------------- 2-D helpers ([x, y] arrays)
 export const wrap = a => { a = (a + Math.PI) % (2 * Math.PI); if (a < 0) a += 2 * Math.PI; return a - Math.PI; };
@@ -81,6 +81,11 @@ export function goTo(me, target, vmax = 0.9, face = null, strafe_r = 0.0) {
   if (Math.abs(b) > 0.9 && d < 0.3) vx = 0.0;
   if (Math.abs(b) > 2.4 && d < 0.25) return [-0.4, 0.0, 0.0, d];
   return [vx, 0.0, wz, d];
+}
+export function charge(me, target) {      // tactics.charge
+  const e = me.to_body(target), bear = Math.atan2(e[1], e[0]), wz = clip(2.0 * bear, -1.0, 1.0);
+  if (Math.abs(bear) > 1.0) return [0.0, 0.0, copysign(1.0, bear)];
+  return [0.9, 0.0, wz];
 }
 export function lookAt(me, p) {
   const rel = me.to_body(p), d = Math.hypot(rel[0], rel[1]), bear = Math.atan2(rel[1], rel[0]);
@@ -432,16 +437,6 @@ export class TeamTactics {
     if (Math.abs(bear) > 1.0) return new Cmd(0.0, copysign(0.45, bear), copysign(1.0, bear), { head, cam: true, state: 'find:turn' });
     return new Cmd(0.0, 0.0, 0.0, { head, cam: true, state: 'find:look' });
   }
-  scramble(wm, me, rel, b) {
-    const dball = Math.hypot(rel[0], rel[1]);
-    if (dball > SCRAMBLE_D) return null;
-    const bear = Math.atan2(rel[1], rel[0]);
-    if (Math.abs(bear) > 1.9) return null;
-    const push = (Math.abs(bear) < 0.5 ? 0.0 : copysign(Math.PI / 2, bear)) + me.psi;
-    if (dot([Math.cos(push), Math.sin(push)], unit(sub(TeamTactics.own_goal(wm.dir), b))) > 0.5) return null;
-    if (Math.abs(bear) < 0.5) return [0.9, 0.0, clip(1.6 * bear, -0.7, 0.7)];
-    return [rel[0] > 0.04 ? 0.35 : 0.0, copysign(0.45, bear), copysign(1.0, bear)];
-  }
   past_opponent(wm, b, k) {
     const qs = this.opp_pos(wm).filter(q => norm(sub(q, b)) < 0.4);
     if (!qs.length) return k;
@@ -462,7 +457,7 @@ export class TeamTactics {
     const t = wm.t, dball = Math.hypot(rel[0], rel[1]), home = rel[0] > GLIDE_HEAD_X ? [0.0, 0.6, null] : [0.0, 0.0, null];
     const c = (vx = 0, vy = 0, wz = 0, state = 'glide') => new Cmd(vx, vy, wz, { head: home, cam: true, state });
     if (dball > GLIDE_D + 0.15 || Math.abs(dphi) > 0.8 || !['own', 'mem'].includes(p.ball_src)) { mem.set_state('approach', t); return c(0, 0, 0, 'approach'); }
-    if (opp_d < DUEL_D - 0.1) { mem.set_state('duel', t); return c(0, 0, 0, 'duel'); }
+    if (opp_d < STRIKE_OPP - 0.05) { mem.set_state('duel', t); return c(0, 0, 0, 'duel'); }
     const ty = mem.foot === 'left' ? KICK_Y : -KICK_Y, ex = rel[0] - KICK_X, ey = rel[1] - ty;
     if (ex < -0.045) return c(FIND_BACK_VX, 0.0, 0.0, 'glide:back');
     if (GLIDE_WIN[0] < ex && ex < GLIDE_WIN[1] && Math.abs(ey) < GLIDE_TOL_Y && Math.abs(eh) < 0.3) {
@@ -523,35 +518,40 @@ export class TeamTactics {
         }
       }
     }
-    if (['approach', 'chase'].includes(mem.state) && opp_d < DUEL_D && dball < 0.7) mem.set_state('duel', t);
+    if (['approach', 'chase'].includes(mem.state) && opp_d < DUEL_D && dball < 0.7 && !(Math.abs(dphi) < GLIDE_PHI && dball < GLIDE_D && opp_d >= STRIKE_OPP)) mem.set_state('duel', t);
     if (mem.state === 'duel') {
       if (opp_d > DUEL_D + 0.2 && t - mem.state_t > 0.6) mem.set_state('approach', t);
+      else if (Math.abs(dphi) < GLIDE_PHI && dball < GLIDE_D && opp_d >= STRIKE_OPP && ['own', 'mem'].includes(src)
+               && norm(this.ball_vel()) < 0.25 && t > mem.detour_until) {
+        mem.set_state('glide', t); mem.foot = this.pick_foot(wm, rel, b);
+        return cmd(0, 0, 0, [0.0, 0.6, null]);
+      }
       const nh = Math.trunc(PINNED_S / DT);
       mem.duel_hist = mem.duel_hist.concat([b.slice()]).slice(-nh);
-      if (mem.duel_hist.length === nh && norm(sub(mem.duel_hist[0], b)) < 0.05 && t > mem.detour_until) {
-        mem.detour_until = t + 1.2; mem.detour_sign = mem.rng.choice([-1.0, 1.0]); mem.duel_hist = [];
+      if (mem.duel_hist.length === nh && norm(sub(mem.duel_hist[0], b)) < 0.05 && t > mem.detour_until && dball < PINNED_NEAR) {
+        mem.detour_until = t + 1.0; mem.detour_sign = mem.rng.choice([-1.0, 1.0]); mem.duel_hist = [];
       }
-      if (t < mem.detour_until - 0.8) return cmd(-0.5, 0.0, 0.0, null, 'duel:back');
+      if (t < mem.detour_until - 0.6) return cmd(-0.5, 0.0, 0.0, null, 'duel:back');
       if (t < mem.detour_until) {
         const a = phi_d + mem.detour_sign * 1.0;
         const target = clipLim(add(b, [0.22 * Math.cos(a), 0.22 * Math.sin(a)]), lim);
-        const [vx, vy, wz] = goTo(me, target, 1.0);
-        return cmd(vx, vy, wz);
+        const [vx, vy, wz] = charge(me, target);
+        return cmd(vx, vy, wz, null, 'duel:round');
       }
-      let vx, vy, wz;
-      if (Math.abs(dphi) > 1.0) {
-        const sc = this.scramble(wm, me, rel, b);
-        if (sc !== null) return cmd(sc[0], sc[1], sc[2], null, 'duel:scramble');
-        const a = phi_d + clip(dphi, -0.9, 0.9);
-        const target = clipLim(add(b, [0.2 * Math.cos(a), 0.2 * Math.sin(a)]), lim);
-        [vx, vy, wz] = goTo(me, target, 1.0);
-      } else {
+      if (Math.abs(dphi) <= 1.0) {
         const sg = rel[1] > 0 ? 1.0 : -1.0;
         const kk = this.past_opponent(wm, b, k), nn = [-kk[1], kk[0]];
-        [vx, vy, wz] = goTo(me, sub(add(b, mul(kk, 0.15)), mul(nn, sg * FOOT_Y)), 1.0);
-        if (vx > 0.0 && Math.abs(Math.atan2(rel[1], rel[0])) < 0.5) vx = Math.max(vx, 0.9);
+        const [vx, vy, wz] = charge(me, sub(add(b, mul(kk, 0.15)), mul(nn, sg * FOOT_Y)));
         return cmd(vx, vy, wz, null, 'duel:strike');
       }
+      const push = unit(sub(b, me.pos));
+      if (dball < SCRAMBLE_D && dot(push, unit(sub(TeamTactics.own_goal(wm.dir), b))) < 0.3) {
+        const [vx, vy, wz] = charge(me, add(b, mul(push, 0.12)));
+        return cmd(vx, vy, wz, null, 'duel:scramble');
+      }
+      const a = phi_d + clip(dphi, -0.9, 0.9);
+      const target = clipLim(add(b, [0.2 * Math.cos(a), 0.2 * Math.sin(a)]), lim);
+      const [vx, vy, wz] = charge(me, target);
       return cmd(vx, vy, wz);
     }
     if (mem.state === 'approach' || mem.state === 'chase') {

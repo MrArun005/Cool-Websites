@@ -269,13 +269,16 @@ runtime. What `step()` does each tick:
   closeness to goal, how far it is to run, and never the spot it is on.
 - **Defenders mark**: the most dangerous opponent in or near our half (not the one on the ball), 0.3 m goal-side of
   him; with no threat they hold the sliding block.
-- **Ball play** (soccer.py's cycle, faster): approach behind the ball on the line to the aim, align at a foot (0.2 s
-  held, was 0.3; give up after 3 s, was 6), head home 1 s (the kick brains are blind), kick. A **quick kick** fires
-  from any state (approach, align, duel) when the ball is already in a foot's kick window (6-11 cm ahead, +-3 cm) and
-  the aim within 0.45 rad (head home 0.8 s). **Duel** (an opponent within 0.35 m of the ball): walk through the
-  ball towards the aim; pinned 1.5 s: step round it (60 deg) and try from the side. **Dribble** when uncontested
-  (behind the ball, 1.3-3.2 m from goal, nobody within 0.55 m): walk through it towards the goal for up to 5 s, then
-  line up the shot.
+- **Ball play** (rewritten for flow, see "Stuck balls and kicks on the move" below): approach behind the ball on
+  the line to the aim; within 0.45 m, behind it and nobody within 0.25 m of it, a **glide**: head down (pitch 0.6)
+  then home, walk in slowly steering the ball onto a foot, and **kick on the move** when it is in the window and that
+  foot is in the air. Otherwise a **walk-through strike**: walk through the ball at speed on a foot's line, past an
+  opponent who stands on the aim line; a ball beside the duck is walked into as it lies (curving, no turn on the
+  spot) unless that sends it to our goal. Pinned against the body 1.5 s: a step back, then a curving step round.
+  The old align / head home / standing kick is the fallback when the walk-in cannot line up. **Dribble** when
+  uncontested (behind the ball, 1.3-3.2 m from goal, nobody within 0.55 m): walk through it towards the goal for up
+  to 5 s. **Ball at the feet but out of view**: look straight down at the remembered spot, step back if it is under
+  the toes, a sidestep-turn if it is beside, never a search turn; after 1.5 s play it blind.
 - **Aim**: the goal corner away from the keeper (0.35 m off centre; the near corner when he is central). Shoot when
   the lane is open and the goal within 1.6 m; **pass** to an open teammate further up (ahead > 0.15 m, 0.5-2.2 m
   away, lane clear by 0.2 m, nobody within 0.35 m of him) when the shot is blocked or out of range or he is 0.9 m
@@ -290,12 +293,13 @@ runtime. What `step()` does each tick:
 - **Reflex**: turning on the spot 1.5 s without the heading changing (blocked by a duck or a post): back up 1 s.
 - **Give way and caution**: a teammate in the corridor ahead (0.35 m, +-0.2 m) -> stop and sidestep (the striker
   has right of way, then the keeper); another duck within 0.4 m ahead -> at most 0.6 forward command (0.75 for the
-  player fighting for the ball), within 0.3 m -> turn at most 0.75 rad/s. Off-ball targets keep 0.4 m from
+  player fighting for the ball), within 0.3 m -> turn at most 0.9 rad/s (was 0.75). Off-ball targets keep 0.4 m from
   teammates. Without these the first version fell about 4x as often as before.
 - **Cameras**: the goalkeeper, the striker, a pass receiver and the second when within 1 m of the ball render their
   head cameras (160 x 120, 10 Hz, soccer.py's colour blob and floor ray) and share the ball over "wifi" (5 per
   second, 200 ms late, 2 cm noise); the others play on that shared estimate. Opponents are perceived with a drifting
-  6 cm error (1 s correlation), standing in for robot detection.
+  6 cm error (1 s correlation), standing in for robot detection. A player close to the ball also keeps a **ball
+  memory** and feels **leg touches** (below).
 
 **Referee and GameController** (`Referee`, `Game.rules`, on the simulator's truth like the human referee + GameController):
 the referee duck walks with play ~0.8 m from the ball at its side (off the line of play), keeps 0.4 m from players,
@@ -378,6 +382,137 @@ rebuilds every body by forward kinematics from `kin` (checked against MuJoCo: `-
 one light mesh (`duck_mesh_match.json`) with team colours and numbers, the pitch, a broadcast camera following the
 ball, a scoreboard with the match clock and the referee's last call, and a ball finder (a ring on the grass, an
 arrow above the ball and a short trail, drawn through the ducks) so the 7 cm ball is easy to find under a duck.
+
+### Stuck balls and kicks on the move (`match.py` Diag, `kick_move_probe.py`, `tactics.py`)
+
+The owner watched the matches and saw two things: play **got stuck** with the ball right at a duck (pinned between
+ducks, under or against feet, too close to kick; a dropped ball every ~13 s of play), and **no instant kick** (walk
+to the ball, stop, stand, then shoot).
+
+**Diagnosis** (`Diag` in match.py, measurement only, simulator truth; `match.py --report` over `--one` results). A
+"ball episode" starts where the ball lies and ends when it has moved 15 cm (the dropped-ball rule's own progress
+measure), a set piece, or a dropped ball; a **stall** is an episode over 3 s. Per stall: what the ball was near
+(within 12 cm of a duck's trunk or foot, the referee, a board or line, a corner, a post; "open" = none of them),
+the states of the players within 25 cm, what ended it. Plus "lost at the feet": a player within 15 cm of the ball
+whose own camera has not seen it for 0.3 s, and "arrival -> strike": from the striker reaching a still ball (25 cm)
+to the ball leaving it at > 0.3 m/s. Before (commit 8eda0cd, seeds 0-2, 1 x 3 min each):
+- the ball was **stalled 358 s of 540 s** of play (49 stalls, median 7 s), 16 of them ended by a dropped ball;
+- the stalls were **duels**: 443 player-seconds of "duel" next to stalled balls, then "press" (71 s): both strikers
+  walking through the ball from opposite sides, or turning on the spot beside it (velstand turns at ~0.4 rad/s at a
+  0.6 command and the crowd limit held it there; a duck turning against another one hardly turns at all), and the
+  pinned check sending them round the ball. Boards, corners, posts and the referee were rare (3 stalls by a line);
+- **the camera loses the ball at the feet**: 199 s of player time within 15 cm of the ball without an own fix
+  (of 413 s within 15 cm); 31 of the 49 stalls had such a player for over 1 s. Measured with the real head pose
+  (velstand tracking the head command; full body rendered): head at home the camera sees nothing closer than 0.34 m;
+  head pitched 0.6: from 0.14 m; head down (soccer.py's foot view): x 0.04-0.22 m ahead of the trunk, |y| < 0.1 m.
+  A ball under the trunk, between or behind the feet (x < 0.04 m) is never visible to a head camera;
+- arrival -> strike median **2.0 s** (63 strikes, 54 of them pushes, mostly the duel's walk-through); the kick
+  cycle itself (stop, align, head home 1 s, kick 0.5 s) was 2-4 s when it ran, but in 5-a-side it rarely got that far.
+
+**The kick brains, measured** (`kick_move_probe.py`, one duck, randomized bodies, ball placed at the trigger):
+- **head at home or nothing**: standing, head pitch 0.3 or 0.6 -> 0/24 kicks, foot view 0/12, home 10/12. After
+  raising it, the kick works 0.25 s after the head *command* is home (from pitch 0.3, 0.6 or the foot view:
+  18/18); the slew is 2 rad/s, so from the foot view 0.8 s, from pitch 0.6 0.55 s.
+- **kick on the move** (velstand straight at drive vx, kick brain started at a gait phase, ball 6-12 cm ahead):
+
+  | drive vx (trunk speed) | kick foot lifting | kick foot coming down | other foot lifting | other foot coming down | falls |
+  |---|---|---|---|---|---|
+  | 0 (standing) | 22/40, 0.97 m/s | | | | 0 |
+  | 0.4 (0.24 m/s) | 17/40, 0.72 | 12/40, 0.59 | 13/40, 0.49 | 8/40, 0.61 | 4/160 |
+  | 0.7 (0.32 m/s) | 29/40, 0.76 | 30/40, 0.67 | 25/40, 0.71 | 30/40, 0.93 | 41/160 |
+  | 1.0 (0.38 m/s) | 38/40, 0.89 | 38/40, 0.96 | 39/40, 0.85 | 40/40, 0.79 | 71/160 |
+
+  (all ball offsets; at the best offsets, 6-9 cm ahead: standing 16/16 at 1.17 m/s, drive 0.4 with the kick foot
+  in the air 13/16 at ~0.8 m/s with no falls.) At drive 0.7-1.0 most "hits" are the walking body itself and the duck
+  falls in 25-45 % of the kicks. **Walking through the ball without a kick**: drive 0.4 -> 0.44 m/s, 0.7 -> 0.73,
+  1.0 -> 0.88 m/s, 21-22/24 hit, 7/72 falls; on a foot's line it goes about straight, 2 cm off it 30-40 deg aside.
+  **Decelerating 0.25-0.5 s** before the kick: 25-75 % hits, worse than the slow-walk kick.
+  So: kick from a slow walk-in with the kicking foot in the air; otherwise strike by walking through it fast.
+
+**What changed** (tactics.py, ported to tactics.js; perception in match.py, ported to live_game.js):
+- **Ball memory**: a player whose last own fix was within 0.4 m keeps it for 3 s (last fix in the field frame, so
+  its own motion comes from its pose estimate = odometry; carried on by the ball's last measured velocity, decaying
+  over 0.5 s; uncertainty 2 cm + 12 cm/s). It is dropped after 3 camera frames that should have seen it outside the
+  self-blind zone (x < 0.05 m, |y| < 0.1 m). A teammate's sighting newer than the own fix wins (team communication).
+- **Leg touch**: a ball contact on a foot, shin or thigh with > 0.3 N tells the duck the ball is at that link
+  (forward kinematics from the encoders, 2 cm noise). On the robot: a load / current spike on that leg's XL330s that
+  the gait does not explain, or foot pressure sensors. Honestly: a 20 g ball is a small load next to the walking
+  loads, so on the real duck this would need a model of the expected load (or the IMU); it is the least certain
+  of the signals used here. No GameController / referee ball is used by the players.
+- **Find at the feet** instead of a search turn: look straight down at the remembered spot (foot view; pitch 0.6
+  when it is further than 0.18 m), step back 5-10 cm when it is under the toes (velstand -0.45 -> -0.16 m/s), a
+  sidestep-turn at 1 rad/s when it is beside, and after 1.5 s without a fix play it blind for 2 s.
+- **Glide (kick-ready approach)**: within 0.45 m behind the ball, head pitched 0.6 (the camera still sees it down to
+  0.14 m) until the ball is 0.24 m ahead, then home; walk in at drive 0.4 steering the ball onto the foot's line;
+  kick without stopping when it is 6-9.5 cm ahead, within 3 cm of the foot, the head home 0.3 s and that foot in the
+  air (the gait phase from the feet: leg forward kinematics). Too close: step back; head not home yet: one stop.
+- **Walk-through strike** as the default in a duel (curving walk at drive 0.9, the ball on a foot's line, aimed 0.8 rad
+  past an opponent standing on the aim line); a ball beside the duck is walked into as it lies unless that sends it
+  towards our own goal; turning commands at 1.0 (velstand ~1.1 rad/s) instead of 0.6-0.75 (0.4-0.7 rad/s).
+- **Pinned** (ball within 15 cm of the trunk, not moved 5 cm in 1.5 s): step back 0.4 s, then a curving step round.
+- The **second player pressing** right at the ball (0.3 m) plays it (walk-through) instead of standing.
+- A quick kick from a moving state fires only when the head is already home (no stop to raise it); "ready" kicks as
+  soon as the head has been home 0.3 s (was a fixed 0.8-1 s) and gives up if the ball moved away meanwhile.
+- The dropped-ball rule is unchanged: with the above the robots end their stalls themselves (1 dropped ball in
+  3 x 3 min instead of 16), so it was not touched.
+
+**Before / after** (`results_match_stalls.json`; seeds 0-2, 1 x 3 min each, same Diag; before = commit 8eda0cd):
+
+| | before | after |
+|---|---:|---:|
+| stalls > 3 s (count / total time) | 49 / 358 s | 46 / 232 s |
+| stall median | 7.1 s | 4.6 s |
+| stalls by object: duck / open / line-board / referee | 18 / 28 / 3 / 0 | 21 / 16 / 8 / 1 |
+| ended by a dropped ball | 16 | 1 |
+| dropped balls | 16 | 1 |
+| arrival -> strike, median (strikes) | 2.0 s (63) | 1.6 s (119) |
+| ball speed after a strike, median | 0.49 m/s | 0.47 m/s |
+| kicks (connected), ball speed median | 47 (24), 0.54 m/s | 4 (2), 0.42 m/s |
+| shots (kicks at goal) / goals | 23 / 1 | 1 / 2 |
+| player time within 15 cm of the ball without an own fix | 199 s | 197 s |
+| ... of it searching / standing | 0.3 s / 11 s | 0 / 26 s |
+| stalls with a player lost > 1 s at the feet | 31 | 23 |
+| players moving (mean share of playing time) | 78 % | 83 % |
+| falls | 18 | 12 |
+
+What this means, honestly:
+- **Stalled time down by a third, dropped balls almost gone, the ball is struck twice as often** after a duck reaches
+  it, and sooner. The remaining stalls are still duels, but shorter (median 4.6 s): ducks now walk into the ball
+  instead of turning on the spot beside it.
+- **Kicks almost vanished**: in 5-a-side somebody is nearly always within 25 cm of the ball, so the glide (the only
+  kick on the move that works: a slow walk-in) rarely gets 2 s of room, and the old standing quick kicks in duels
+  (47 kicks, half of them weak) are gone on purpose (they were the "stop and stand"). The ball is moved by
+  walk-through strikes instead (about the old kicks' median speed, 0.47 vs 0.54 m/s). Both goals of the
+  after-matches were walked / struck in; in a tuning run a glide kick scored (0.83 m/s). "Shots" only counts kicks,
+  so it dropped.
+- **The camera cannot see under the body**, and that did not change (197 s vs 199 s without an own fix within
+  15 cm): the memory, a teammate's view and leg touches carry the ball's position instead, and nobody turns round to
+  search; the standing time doubled (find: look down and hold still for a frame).
+- A real running kick would need a new brain (below).
+
+**A "walk-kick" brain, trained?** Fine-tuning velstand with PPO in this MuJoCo + BAM harness (same 61-D obs, a
+ball-strike reward) is possible in principle (torch and stable-baselines3 are installed), but the harness runs one
+duck at roughly 250-400 control steps per second per core (BAM's servo model is Python), i.e. ~2-3 M steps per hour
+on 2 free cores (less while other jobs share the 4 cores). Microduck's own brains were trained with ~4096 parallel
+GPU environments for ~2700 iterations (~250 M steps); even a short fine-tune of a new skill is tens of millions of
+steps: **10-25 hours on 2 cores**, well over the 3-hour budget. Not started.
+
+**Hardware note: seeing a ball under the duck.** From the measured geometry (camera 0.24 m up, 0.10 m in front of the
+trunk centre): a lower or wider head camera does not help under the body: every ray from the head to a ball under the
+trunk or between / behind the feet (x < 0.04 m) passes through the trunk or legs; a wider lens (120 deg) at home would
+see down to ~0.18 m ahead instead of 0.34 m (fewer head movements), still not the feet. The head ToF (8 x 8, 45 deg)
+sits at the same viewpoint, so it has the same blind zone; its 8 x 8 zones are ~1 cm wide at 10 cm, so it could
+range a ball in front of the toes but would need the leg forward kinematics to tell it from the own feet. What would
+see it: a small sensor at the front bottom of the trunk looking down and back (camera or the ToF), covering
+x -0.05 to 0.15 m between the feet; or foot contact / load sensing, which tells "it is at my left foot" with no
+vision at all.
+
+Run:
+```
+MUJOCO_GL=osmesa $PY duckbody/hybrid/kick_move_probe.py --grid main --jobs 2     # also: walk, decel, head, headup
+MUJOCO_GL=osmesa $PY duckbody/hybrid/match.py --one 0 --t 180 --halves 1 --out s0.json   # then:
+$PY duckbody/hybrid/match.py --report s0.json s1.json s2.json                    # stalls, lost at the feet, arrival -> strike
+```
 
 ## Microduck's brains on the hybrid head (first study)
 
