@@ -57,7 +57,7 @@ DOG = STANCES["dog"]
 class JumpEnv(BoltEnv):
     OBS = 49   # 51 with real=True
 
-    def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65)):
+    def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
                          hurdles="real" if real else True, skills=["stand"])
         self.real = real
@@ -74,6 +74,10 @@ class JumpEnv(BoltEnv):
         # approach: how far ahead the bar starts (m). Up to run 16h 0.45-0.65 m, a standing jump; run 16i trains
         # from 1.5-3 m so Bolt runs up and picks its own take-off, as dogs clear high bars (more steps per try)
         self.approach = approach
+        # approach_speed: half the tries start already running at the bar (1 m/s up to this, e.g. 3 = a canter),
+        # the way a dog arrives at a jump on a course (run 16i). 0: always from standing.
+        self.approach_speed = approach_speed
+        self.exam_speed = None   # exams: start speed (m/s) or None for standing
         # adaptive bar height, like a coach: it goes up (0.5 cm) while clean jumps are common, down when rare
         self.bar_level, self.clean_rate = 0.12, 0.0
 
@@ -170,6 +174,11 @@ class JumpEnv(BoltEnv):
             self.place_real(dist, h, askew, side)
         else:
             self.place_hurdle(dist, h)
+        v0 = self.exam_speed if self.exam_bar is not None else (
+            self.rng.uniform(1.0, self.approach_speed) if self.approach_speed and self.rng.random() < 0.5 else 0.0)
+        if v0:   # arriving at a run: the body moves at v0 along its heading
+            R = self._rotation()
+            d.qvel[0:2] = v0 * R[:2, 0] / np.linalg.norm(R[:2, 0])
         self.t, self.last_action = 0, np.zeros(12)
         self.touched = self.cleared = self.landed = self.dropped = False
         self.clear_t = None
@@ -246,27 +255,34 @@ class JumpPolicy:
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
-def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100):
-    """Jump the bar from `dist` m away (55 cm up to run 16h; 2 m with a run-up from run 16i): cleared without
-    touching it, landed, standing at the end, no fall.
-    On the real hurdle (run 16 on), half the tries start 6 degrees askew and 5 cm off the line, and Bolt
-    must end facing within 20 degrees of the jump."""
+def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None):
+    """Jump the bar from `dist` m away (55 cm up to run 16h; 1.5 m with a run-up from run 16i), optionally
+    arriving at `speed` m/s. Two scores per height:
+    jump_<cm>  fair, agility rules: straight approach, fixed physics; a jump counts if the bar stays in its
+               cups (a brush is no fault, as in dog agility) and Bolt lands on its feet without falling.
+    strict_<cm> the old test: randomized physics, half the tries 6 degrees askew and 5 cm off the line, no touch
+               at all, standing tall at the end and facing within 20 degrees of the jump."""
     out = {}
     real = getattr(policy, "real", False)
-    env = JumpEnv(randomize=True, real=real, max_steps=max_steps)
-    for h in heights:
-        wins = 0
-        for k in range(episodes):
-            env.exam_bar = (dist, h)
-            if real:
-                env.exam_askew = (0.0, 0.0) if k % 2 == 0 else ((0.1, 0.05) if k % 4 == 1 else (-0.1, -0.05))
-            obs, _ = env.reset(seed=seed + k)
-            info, fell = {}, False
-            for _ in range(env.max_steps):
-                obs, _, fell, trunc, info = env.step(policy.act(obs))
-                if fell or trunc:
-                    break
-            wins += bool(info["cleared"] and not info["touched"] and not fell and info["up"] > 0.9
-                         and info["height"] > 0.35 and abs(info.get("heading_error", 0.0)) < 0.35)
-        out[f"jump_{round(h * 100)}"] = wins / episodes
+    for strict in (False, True):
+        env = JumpEnv(randomize=strict, real=real, max_steps=max_steps)
+        env.exam_speed = speed
+        for h in heights:
+            wins = 0
+            for k in range(episodes):
+                env.exam_bar = (dist, h)
+                if real:
+                    env.exam_askew = (0.0, 0.0) if (k % 2 == 0 or not strict) else ((0.1, 0.05) if k % 4 == 1 else (-0.1, -0.05))
+                obs, _ = env.reset(seed=seed + k)
+                info, fell = {}, False
+                for _ in range(env.max_steps):
+                    obs, _, fell, trunc, info = env.step(policy.act(obs))
+                    if fell or trunc:
+                        break
+                if strict:
+                    wins += bool(info["cleared"] and not info["touched"] and not fell and info["up"] > 0.9
+                                 and info["height"] > 0.35 and abs(info.get("heading_error", 0.0)) < 0.35)
+                else:
+                    wins += bool(info["cleared"] and not info.get("dropped", info["touched"]) and not fell and info["up"] > 0.7)
+            out[f"{'strict' if strict else 'jump'}_{round(h * 100)}"] = wins / episodes
     return out
