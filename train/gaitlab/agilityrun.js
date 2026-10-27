@@ -38,7 +38,7 @@ export const GAITS = ["walk", "trot", "canter"];
 // lands at ~3.8 m/s and the jump brain needs 5-8 m to stop it (a fall can add a metre or two).
 export const LEVELS = [
   { n: 1, name: "Novice", blurb: "A straight line: two 20 cm hurdles and the pause table (sit for 3 s).",
-    pieces: [["S", 37]], pace: 0.9,
+    pieces: [["S", 37]], pace: 1.0,
     obstacles: [{ kind: "hurdle", s: 6.5, h: 0.20 }, { kind: "hurdle", s: 19, h: 0.20 }, { kind: "table", s: 31, pose: "sit", hold: 3 }],
     finish: 35 },
   { n: 2, name: "Intermediate", blurb: "A curve, three hurdles of 20-30 cm, slalom markers and a down-stay on the table.",
@@ -298,7 +298,7 @@ export class Body {
     if (m === "sharp") {
       const steer = w.turn ? w.turn * 1.2 : w.steer || 0, top = Math.min(1.4, b.maxTurn(this.vs || 0.5));
       // speed eased toward the target (a sudden change of asked speed while turning tipped run 12 over)
-      const target = w.turn ? 0.5 : Math.abs(steer) < 0.3 ? 0.8 : clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6);
+      const target = w.turn ? 0.5 : Math.abs(steer) < 0.3 ? 0.65 : clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6);
       this.vs = this.mt < 0.03 ? 0.5 : target > this.vs ? Math.min(target, this.vs + 0.6 * b.dt) : Math.max(target, this.vs - 1.0 * b.dt);
       return b.run({ command: "walk", turn: clamp(w.turn ? w.turn * 1.1 : 2.5 * steer, -top, top), speed: this.vs });
     }
