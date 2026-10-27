@@ -183,7 +183,8 @@ class MjxRun:
         # the auto-reset wrapper restores the body; per-episode counters restart here
         info.update(rng=rng, cmd=jp.where(end, self.command(k1, top_v, top_w), cmd), t=jp.where(end, 0, t), last_action=jp.where(end, 0.0, a),
                     air=jp.where(end, 0.0, air), track_sum=jp.where(end, 0.0, track_sum), ema=ema, n_top=n_top, top_v=top_v, top_w=top_w)
-        metrics = dict(track_v=track_v, vx=vb[0], top_v=top_v, fell=fell.astype(jp.float32))
+        metrics = dict(state.metrics)   # keep what the training wrappers added (e.g. "reward")
+        metrics.update(track_v=track_v, vx=vb[0], top_v=top_v, fell=fell.astype(jp.float32))
         return state.replace(pipeline_state=d, obs=self.obs(d, info), reward=r, done=fell.astype(jp.float32), metrics=metrics, info=info)
 
 
