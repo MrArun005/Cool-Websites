@@ -1,1 +1,2 @@
 resuming from runs/jump16i_start/policy_27500000_steps.zip at 27,500,000 steps, learning rate 0.0001, target kl 0.02, 16384 samples per update
+resuming from runs/jump16i_start/policy_27500000_steps.zip at 27,500,000 steps, learning rate 0.0001, target kl 0.02, 16384 samples per update
