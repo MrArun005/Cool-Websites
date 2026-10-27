@@ -197,7 +197,7 @@ export class Body {
     this.t += dt; this.mt += dt;
     this.speed += (Math.hypot(v[0], v[1]) - this.speed) * 0.1;
     if (this.mode !== "getup" && this.fallen()) {
-      this.say("Bolt fell", "bad");
+      this.say("Bolt fell", "bad"); this.fellIn = this.mode;
       this.dog.stop(); this.armed = null; this.getup = new GetUp(b); this.go("getup");
       this.falls = (this.falls || 0) + 1;
     }
@@ -276,7 +276,8 @@ export class Body {
         if (moving && this.mt < 0.6) this.go("walk");
         else if (this.mt > 1.3) this.go("stand");
         break;
-      case "trot":
+      case "trot":   // at least 0.8 s of trot before leaving it (a trot that has just started still swerves)
+        if (this.mt < 0.8) break;
         if (w.gait === "canter" && this.mt > 1.0 && this.armed === null) this.go("canter");
         else if (w.gait !== "trot" && w.gait !== "canter") this.go("pace", { next: "walk", paceFor: 0.8 });
         else if (sharp && this.armed === null) this.go("pace", { next: "walk", paceFor: 0.8 });   // slow down to turn
@@ -390,7 +391,7 @@ export class Run {
     }
     const wasMode = b.mode;
     b.step(dt);
-    while (b.events.length) { const e = b.events.shift(); this.say(e.text, e.kind); if (e.text === "Bolt fell") this.stats.falls++; }
+    while (b.events.length) { const e = b.events.shift(); this.say(e.text, e.kind); if (e.text === "Bolt fell") { this.stats.falls++; (this.stats.fellIn || (this.stats.fellIn = {}))[b.fellIn] = (this.stats.fellIn[b.fellIn] || 0) + 1; } }
     if (b.mode === "getup" && wasMode !== "getup") this.fellAt = this.t;
     if (b.stuck) this.rescue();
     this.judge();
@@ -472,7 +473,7 @@ export class Run {
   result() {
     const C = this.course, finished = this.phase === "finished", total = this.total;
     const rank = !finished ? "Keep practising" : this.faults.length === 0 && this.time <= C.sct ? "Clear round" : total <= 1.5 * C.sct ? "Qualified" : "Keep practising";
-    return { finished, time: this.time, faults: this.faults.slice(), total, sct: C.sct, rank, falls: this.stats.falls, jumps: this.stats.jumps, cleanJumps: this.stats.cleanJumps };
+    return { finished, time: this.time, faults: this.faults.slice(), total, sct: C.sct, rank, falls: this.stats.falls, fellIn: this.stats.fellIn || {}, jumps: this.stats.jumps, cleanJumps: this.stats.cleanJumps };
   }
 }
 
