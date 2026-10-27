@@ -1,10 +1,10 @@
 """Plan, then distill: teach the dog-motion brain what the PPS planner does, so the improvement runs without
 the planner (one forward pass, ONNX in the browser, a real robot with no simulator on board).
 
-    python research/pps_distill.py collect --tries 30 --seed 20000 --out research/results/distill_r0.npz
-    python research/pps_distill.py collect --tries 30 --seed 21000 --student research/results/student_r0 --out ...r1.npz  (DAgger round)
-    python research/pps_distill.py fit --data r0.npz [r1.npz] --out research/results/student_r0
-    python research/exam_canter.py --brain research/results/student_r0 --mode plain ...
+    python research/pps_distill.py collect --tries 30 --seed 20000 --out runs/research/distill_r0.npz
+    python research/pps_distill.py collect --tries 30 --seed 21000 --student runs/research/student_r0 --out ...r1.npz  (DAgger round)
+    python research/pps_distill.py fit --data r0.npz [r1.npz] --out runs/research/student_r0
+    python research/exam_canter.py --brain runs/research/student_r0 --mode plain ...
 
 collect: canter tries (randomized physics, random start phase, seeds disjoint from the exam's 9000+) with
 the PPS planner on top of the brain being trained (the original brain in round 0, the student in DAgger
@@ -29,7 +29,8 @@ sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
 
 from imitate_env import ImitateEnv, ImitatePolicy   # noqa: E402
-from pps import BatchBrain, Planner                   # noqa: E402
+from pps import Planner                              # noqa: E402
+from skills import closest_moment                    # noqa: E402
 
 BRAIN = HERE.parent.parent / "models" / "bolt-dog-imitate-18b-17.5M"
 ANCHOR_CLIPS = ["walk", "trot", "pace", "turn_left", "turn_right", "sit", "lie"]
@@ -47,34 +48,54 @@ def slice_obs(policy, obs):
 
 
 def collect(args):
-    orig = ImitatePolicy(BRAIN)
+    orig = ImitatePolicy(args.brain)
     driver = ImitatePolicy(args.student) if args.student else orig
     rng = np.random.default_rng(args.seed)
     O, E = [], []
-    env = ImitateEnv(randomize=True, clips=["canter"])
-    planner = Planner(driver, ["canter"], K=16, H=30, M=5, sigma=0.2, seed=args.seed)
-    c = env.clips["canter"]
+    rest = args.scenario == "rest"
+    names = ["walk", "trot", "sit", "lie"] if rest else ["canter"]
+    env = ImitateEnv(randomize=True, clips=names)
+    planner = Planner(driver, names, K=16, H=30, M=5, sigma=0.2, seed=args.seed)
     for k in range(args.tries):
-        env.exam_start = ("canter", float(rng.uniform(0, c.length)))
+        # segments: (clip, steps, planned and recorded). rest: walk or trot 2 s (bare driver), then sit 4 s and
+        # lie 5.5 s, each joined at the closest moment of the new clip (as skills.py's manager does)
+        first = (["walk", "trot"][k % 2]) if rest else "canter"
+        segs = [(first, 100, False), ("sit", 200, True), ("lie", 275, True)] if rest else [("canter", 200, True)]
+        c = env.clips[first]
+        env.exam_start = (first, float(rng.uniform(0, c.length)))
         obs, _ = env.reset(seed=args.seed + k)
-        env.limit = 200
-        planner.plan[:] = 0.0
-        queue = []
-        for t in range(200):
-            if not queue:
-                queue = list(planner.new_plan(env))
-            e = queue.pop(0)
-            o = slice_obs(orig, obs)
-            # label: what the planner made the DRIVER do, expressed as a raw action
-            O.append(o)
-            E.append(raw_mean(driver, o[None])[0] + e)
-            obs, r, fell, done, _ = env.step(np.clip(driver.act(obs) + e, -1, 1))
+        env.limit = 10 ** 9
+        fell, n = False, 0
+        for name, steps, planned in segs:
+            if name != env.clip.name:
+                c = env.clips[name]
+                env.clip, env.tau0, env.t = c, closest_moment(c, env.data.qpos[7:19], env.data.qvel[6:18]), 0
+                obs = env._obs()
+            planner.plan[:] = 0.0
+            queue = []
+            for t in range(steps):
+                if not planned:
+                    obs, r, fell, done, _ = env.step(driver.act(obs))
+                else:
+                    if not queue:
+                        queue = list(planner.new_plan(env))
+                    e = queue.pop(0)
+                    if len(queue) == planner.M - 1:   # a new chunk: DAgger, follow the plan or the bare driver
+                        follow = rng.random() < args.beta
+                    o = slice_obs(orig, obs)
+                    # label: what the planner made the DRIVER do, expressed as a raw action
+                    O.append(o)
+                    E.append(raw_mean(driver, o[None])[0] + e)
+                    obs, r, fell, done, _ = env.step(np.clip(driver.act(obs) + (e if follow else 0.0), -1, 1))
+                n += 1
+                if fell:
+                    break
             if fell:
                 break
-        print(f"try {k}: {t + 1} steps, fell={fell}, planner {planner.stats}", flush=True)
+        print(f"try {k}: {n} steps, fell={fell}, planner {planner.stats}", flush=True)
     # anchor samples: the original brain on the other clips (its own states, its own actions)
     A = []
-    env2 = ImitateEnv(randomize=True, clips=ANCHOR_CLIPS)
+    env2 = ImitateEnv(randomize=True, clips=args.anchor_clips)
     for k in range(args.anchor_tries):
         obs, _ = env2.reset(seed=args.seed + 5000 + k)
         for t in range(env2.limit):
@@ -82,14 +103,14 @@ def collect(args):
             obs, r, fell, done, _ = env2.step(orig.act(obs))
             if fell or done:
                 break
-    A = np.array(A, dtype=np.float32)
+    A = np.array(A, dtype=np.float32).reshape(-1, len(O[0]))
     np.savez_compressed(args.out, obs=np.array(O, dtype=np.float32), label=np.array(E, dtype=np.float32),
-                        anchor_obs=A, anchor_label=raw_mean(orig, A).astype(np.float32))
+                        anchor_obs=A, anchor_label=(raw_mean(orig, A) if len(A) else np.zeros((0, 12))).astype(np.float32))
     print(f"saved {len(O)} planner samples, {len(A)} anchor samples -> {args.out}")
 
 
 def fit(args):
-    src = Path(args.init or BRAIN)
+    src = Path(args.init or args.brain)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     pol = ImitatePolicy(src)
@@ -129,7 +150,12 @@ def main():
     ap.add_argument("--tries", type=int, default=30)
     ap.add_argument("--anchor-tries", type=int, default=40)
     ap.add_argument("--seed", type=int, default=20000)
+    ap.add_argument("--scenario", default="canter", choices=["canter", "rest"])
     ap.add_argument("--student")
+    ap.add_argument("--brain", default=str(BRAIN), help="the original brain (labels are its action + the plan)")
+    ap.add_argument("--anchor-clips", nargs="*", default=ANCHOR_CLIPS, help="clips kept as they were (the brain's own clips)")
+    ap.add_argument("--beta", type=float, default=1.0, help="DAgger: chance per 0.1 s chunk of following the plan "
+                    "(else the bare driver acts, still labelled with the plan)")
     ap.add_argument("--data", nargs="*")
     ap.add_argument("--init")
     ap.add_argument("--epochs", type=int, default=20)

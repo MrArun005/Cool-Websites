@@ -34,13 +34,13 @@ export const GAITS = ["walk", "trot", "canter"];
 // ---------------------------------------------------------------- the courses
 // A course is a handler's line (straights and arcs, course coordinates: x ahead of Bolt at the start, y to its
 // left) with obstacles at distances s along it. Each hurdle sits on a straight with at least 3 m before it.
-// After each hurdle the line runs straight on for 9 m or more: Bolt lands at ~3.8 m/s and the jump brain needs
-// 5-8 m to stop it.
+// After each hurdle the line runs straight on for 9 m or more, and the next obstacle is 11 m or more away: Bolt
+// lands at ~3.8 m/s and the jump brain needs 5-8 m to stop it (a fall can add a metre or two).
 export const LEVELS = [
   { n: 1, name: "Novice", blurb: "A straight line: two 20 cm hurdles and the pause table (sit for 3 s).",
-    pieces: [["S", 34]], pace: 0.9,
-    obstacles: [{ kind: "hurdle", s: 6.5, h: 0.20 }, { kind: "hurdle", s: 17, h: 0.20 }, { kind: "table", s: 28, pose: "sit", hold: 3 }],
-    finish: 32 },
+    pieces: [["S", 37]], pace: 1.0,
+    obstacles: [{ kind: "hurdle", s: 6.5, h: 0.20 }, { kind: "hurdle", s: 19, h: 0.20 }, { kind: "table", s: 31, pose: "sit", hold: 3 }],
+    finish: 35 },
   { n: 2, name: "Intermediate", blurb: "A curve, three hurdles of 20-30 cm, slalom markers and a down-stay on the table.",
     pace: 0.8, pieces: [["S", 17], ["A", Math.PI / 2, 3.5], ["S", 28], ["A", -Math.PI / 2, 3.5], ["S", 18]],
     obstacles: [{ kind: "hurdle", s: 6, h: 0.20 }, { kind: "slalom", s: 24, n: 5, gap: 2.4 }, { kind: "hurdle", s: 41, h: 0.25 },
@@ -73,7 +73,7 @@ export function buildCourse(levelIndex) {
   const at = (d) => { const i = clamp(Math.round(d / step), 0, pts.length - 1); return pts[i]; };
   let slot = 0, n = 0;
   const obstacles = L.obstacles.map((o) => {
-    const p = at(o.s), out = { ...o, n: ++n, x: p.x, y: p.y, hd: p.h, title: NAMES[o.kind] };
+    const p = at(o.s), out = { ...o, n: ++n, x: p.x, y: p.y, hd: p.h, title: NAMES[o.kind] };   // n: its number on the course
     if (o.kind === "hurdle") { out.slot = slot++; out.title = `Hurdle ${Math.round(o.h * 100)} cm`; }
     if (o.kind === "slalom") {
       out.markers = Array.from({ length: o.n }, (_, k) => { const q = at(o.s + k * o.gap); return { x: q.x, y: q.y, h: q.h, s: o.s + k * o.gap }; });
@@ -298,9 +298,11 @@ export class Body {
     if (m === "sharp") {
       const steer = w.turn ? w.turn * 1.2 : w.steer || 0, top = Math.min(1.4, b.maxTurn(this.vs || 0.5));
       // speed eased toward the target (a sudden change of asked speed while turning tipped run 12 over)
-      const target = w.turn ? 0.5 : Math.abs(steer) < 0.3 ? 0.8 : clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6);
+      const target = w.turn ? 0.5 : Math.abs(steer) < 0.3 ? 0.65 : clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6);
       this.vs = this.mt < 0.03 ? 0.5 : target > this.vs ? Math.min(target, this.vs + 0.6 * b.dt) : Math.max(target, this.vs - 1.0 * b.dt);
-      return b.run({ command: "walk", turn: clamp(w.turn ? w.turn * 1.1 : 2.5 * steer, -top, top), speed: this.vs });
+      // turning right round (facing away from the line after getting up): at most 0.9 rad/s (1.4 tipped it over)
+      const cap = Math.abs(steer) > 1.2 ? 0.9 : top;
+      return b.run({ command: "walk", turn: clamp(w.turn ? w.turn * 1.1 : 2.5 * steer, -cap, cap), speed: this.vs });
     }
     if (m === "brake") return b.run({ command: "walk", turn: 0, speed: this.mt < 0.6 ? 0.4 : 0.2 });
     this.dog.tick();
@@ -363,7 +365,7 @@ export class Run {
       let off = 0;
       for (const o of C.obstacles) if (o.kind === "slalom" && s > o.s - 1.2 && s < o.end + 1.2) {
         // first marker on Bolt's left: the line passes it on the right, then alternates
-        const u = clamp((s - o.s) / o.gap, -0.5, o.n - 0.5);
+        const u = clamp((s - o.s) / o.gap, -0.5, o.markers.length - 0.5);
         off = -SLALOM_SWING * Math.cos(Math.PI * u) * Math.min(1, (s - (o.s - 1.2)) / 1.2, (o.end + 1.2 - s) / 1.2);
       }
       return [p.x - Math.sin(p.h) * off, p.y + Math.cos(p.h) * off];
@@ -432,24 +434,28 @@ export class Run {
         if (jumped) { this.stats.jumps++; if (!dropped && b.jumpInfo && b.jumpInfo.landed) this.stats.cleanJumps++; }
         if (!jumped && Math.abs(side) > 0.7) this.fault("Missed the hurdle");
         else if (!jumped) this.fault("Refusal: ran through the hurdle");
-        if (dropped) this.fault("Knocked the bar down");
+        if (dropped && !k.knocked) this.fault("Knocked the bar down");   // one knock fault per hurdle
         if (jumped && !dropped) this.say(b.jumpInfo && b.jumpInfo.touched ? "Brushed the bar, it stayed up" : "Clear jump!", "good");
         b.disarm(); return this.next();
       }
       // fell in front of the bar, or ran past it to the side without jumping: the bar goes back up, try again
-      if (b.jumped === o.slot && along < -0.2 && !b.busy) { if (this.bolt.barDropped(o.slot)) { this.fault("Knocked the bar down"); this.bolt.resetBar(o.slot); } b.jumped = null; }
+      if (b.jumped === o.slot && along < -0.2 && !b.busy) {
+        if (this.bolt.barDropped(o.slot)) { if (!k.knocked) this.fault("Knocked the bar down"); k.knocked = true; this.bolt.resetBar(o.slot); }
+        b.jumped = null;
+      }
       if (along > -0.3 && Math.abs(side) > 0.7 && this.lineS > C.obstacles[this.index].s + 1.5) { this.fault("Missed the hurdle"); b.disarm(); return this.next(); }
       return;
     }
     if (o.kind === "slalom") {
-      while (k.marker < o.n) {
+      const count = o.markers.length;   // (o.n is the obstacle's number on the course)
+      while (k.marker < count) {
         const m = o.markers[k.marker], [a, sd] = this.rel(m, m.h);
         if (a < 0) break;
         const want = k.marker % 2 ? 1 : -1;   // marker 1 on Bolt's left (Bolt passes to its right), then alternate
         if (Math.sign(sd) !== want || Math.abs(sd) > 1.6) k.missed = true;
         k.marker += 1;
       }
-      if (k.marker >= o.n) { if (k.missed) this.fault("Missed a slalom marker"); else this.say("Slalom: clean", "good"); return this.next(); }
+      if (k.marker >= count) { if (k.missed) this.fault("Missed a slalom marker"); else this.say("Slalom: clean", "good"); return this.next(); }
       return;
     }
     if (o.kind === "table") {

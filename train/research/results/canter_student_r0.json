@@ -1,0 +1,91 @@
+{
+ "args": {
+  "clips": [
+   "canter"
+  ],
+  "n": 10,
+  "mode": "plain",
+  "brain": "research/results/student_r0",
+  "zip": "policy.zip",
+  "stats": "vecnormalize.pkl",
+  "K": 16,
+  "H": 30,
+  "M": 5,
+  "sigma": 0.2,
+  "robust": false,
+  "out": "research/results/canter_student_r0.json"
+ },
+ "results": [
+  {
+   "clip": "canter",
+   "n": 10,
+   "track_mean": 0.399,
+   "track_sd": 0.254,
+   "track_se": 0.08,
+   "falls": 3,
+   "speed_mean": 0.456,
+   "tries": [
+    {
+     "track": 0.5709296844942853,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.6437883519605099
+    },
+    {
+     "track": 0.5790359653651724,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.5915033222079997
+    },
+    {
+     "track": 0.5804521660288152,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6327323473599251
+    },
+    {
+     "track": 0.06102510876187103,
+     "fell": true,
+     "seconds": 0.1,
+     "speed": 0.12920439210569057
+    },
+    {
+     "track": 0.5012416683197197,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.5928360112474371
+    },
+    {
+     "track": 0.018001368044861757,
+     "fell": true,
+     "seconds": 0.0,
+     "speed": 0.07744534605526993
+    },
+    {
+     "track": 0.020983125181131018,
+     "fell": true,
+     "seconds": 0.0,
+     "speed": 0.08222589039196741
+    },
+    {
+     "track": 0.5367214679555882,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.6144350187528084
+    },
+    {
+     "track": 0.5368411536530665,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.5863813180902586
+    },
+    {
+     "track": 0.5812686809790434,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.6126998389573418
+    }
+   ]
+  }
+ ]
+}

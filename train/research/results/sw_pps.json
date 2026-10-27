@@ -1,0 +1,177 @@
+{
+ "args": {
+  "mode": "pps",
+  "n": 10,
+  "seed": 1000,
+  "only": [
+   "gaits",
+   "rest",
+   "jump30",
+   "shove"
+  ],
+  "K": 16,
+  "H": 30,
+  "M": 5,
+  "sigma": 0.2,
+  "out": "research/results/sw_pps.json"
+ },
+ "seconds": 2056,
+ "switches": [
+  {
+   "switch": "walk->trot",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->canter",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "canter->trot",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->walk",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "walk->sit",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "walk->sit [pose reached]",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "sit->lie",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "sit->lie [pose reached]",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "lie->stand (posture)",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->jump 30 cm",
+   "ok": 7,
+   "tries": 10,
+   "rate": 0.7,
+   "not_reached": 0,
+   "failures": [
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": true,
+     "fell": false
+    },
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": true,
+     "fell": false
+    },
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": false,
+     "fell": true
+    }
+   ]
+  },
+  {
+   "switch": "jump 30 cm->(canter)->trot",
+   "ok": 8,
+   "tries": 9,
+   "rate": 0.89,
+   "not_reached": 1,
+   "failures": [
+    {
+     "speed_at_switch": 3.64,
+     "min_height": 0.326,
+     "min_up": 0.44,
+     "fell_after": 0.26,
+     "in_skill": "canter",
+     "height": 0.583,
+     "speed": 1.45,
+     "roll": -0.11,
+     "pitch": -1.1
+    }
+   ]
+  },
+  {
+   "switch": "shove -> fall",
+   "ok": 9,
+   "tries": 10,
+   "rate": 0.9,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "fall -> recover (stood up)",
+   "ok": 8,
+   "tries": 9,
+   "rate": 0.89,
+   "not_reached": 1,
+   "failures": [
+    {
+     "end_height": 0.385
+    }
+   ]
+  },
+  {
+   "switch": "recover -> walk",
+   "ok": 8,
+   "tries": 8,
+   "rate": 1.0,
+   "not_reached": 2,
+   "failures": []
+  }
+ ],
+ "planner": {
+  "calls": 3534,
+  "chose_plain": 3448,
+  "plain_fell": 45,
+  "best_fell": 27
+ }
+}

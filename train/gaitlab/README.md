@@ -62,3 +62,27 @@ at any moment, with the buttons or by tapping a person.
 
 To serve the page, copy `mujoco.js` and `mujoco.wasm` from the npm package into `mujoco/`, and
 `live.js` next to `index.html`.
+
+## Bolt's Agility Run (you are the handler)
+
+`agilityrun.js` + `agilityrun_template.html`: three agility courses (a straight line; a curve with slalom markers and
+a down-stay; a full course with 30-40 cm bars). The player calls walk / trot / run (canter) / jump / sit / down /
+stand and turns; auto-steer follows the course line and auto-jump takes each hurdle (both can be switched off).
+Scoring is time plus 5 s per fault (knocked bar, refusal, missed obstacle), against a standard course time.
+One physics world, several brains: the dog-imitation brain (run 18b, `imitate.js`) for the gaits, run 12's walk
+brain for sharp turns, the real-hurdle jump brain (16g, 51 inputs), the posture brain for stand/sit/down, and the
+get-up chain (17e) after falls. The comments at the top of `agilityrun.js` list the measured hand-overs.
+
+Bundle and page (from `train/`; S = the scratchpad):
+
+    python export_live.py --posture ../models/bolt-dog-posture-getup-3M --walk ../models/bolt-dog-walk-sharp-12M \
+        --jump ../models/bolt-dog-jump-a1-16g-27M --getup ../models/bolt-dog-selfright-17e-16.5M \
+        -o $S/agilityrun/site/data/bolt_run.json --reference /tmp/ref.json
+    cp ../models/bolt-dog-imitate-18b-17.5M/brain.json $S/agilityrun/site/data/imitate_brain.json
+    cp ../models/bolt-dog-imitate-18b-17.5M/clips.json $S/agilityrun/site/data/imitate_clips.json
+    cp gaitlab/agilityrun_template.html $S/agilityrun/template.html && python gaitlab/build_pages.py $S agilityrun
+    cp gaitlab/{live,game,imitate,agilityrun,hurdles3d,props3d}.js $S/agilityrun/site/   # plus mujoco/ as the other sites
+
+Headless: `node gaitlab/agilityrun_test.mjs <mujoco.js> $S/agilityrun/site/data 6 1,2,3` (a scripted handler runs
+each level) and `... 8 drill` (each command in turn on an empty stretch). The page takes `?level=2`, `?demo`
+(the scripted handler plays) and `?speed=4` for tests.

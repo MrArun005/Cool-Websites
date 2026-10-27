@@ -1,0 +1,11 @@
+try 0: h=0.32 clean=False landed=True fell_after=False samples=179
+try 1: h=0.27 clean=False landed=True fell_after=False samples=353
+try 2: h=0.36 clean=True landed=True fell_after=False samples=527
+try 3: h=0.36 clean=False landed=True fell_after=False samples=700
+try 4: h=0.23 clean=False landed=True fell_after=True samples=769
+try 5: h=0.23 clean=True landed=True fell_after=False samples=949
+try 6: h=0.36 clean=True landed=True fell_after=False samples=1120
+try 7: h=0.34 clean=True landed=True fell_after=True samples=1152
+try 8: h=0.37 clean=False landed=False fell_after=False samples=1171
+try 9: h=0.27 clean=True landed=True fell_after=True samples=1263
+saved 1263 -> runs/research/land_r0_40000.npz

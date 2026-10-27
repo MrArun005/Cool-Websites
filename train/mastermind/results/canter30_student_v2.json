@@ -1,0 +1,14 @@
+{
+ "track_canter": 0.328,
+ "fall_canter": 0.2,
+ "speed_canter": 0.38,
+ "track_trot": 0.842,
+ "fall_trot": 0.0,
+ "speed_trot": 0.88,
+ "track_walk": 0.866,
+ "fall_walk": 0.0,
+ "speed_walk": 0.84,
+ "brain": "mastermind/export/student.pt",
+ "teachers": "v2",
+ "n": 30
+}

@@ -1,0 +1,503 @@
+{
+ "args": {
+  "clips": [
+   "walk",
+   "trot",
+   "pace",
+   "turn_left",
+   "turn_right",
+   "sit",
+   "lie"
+  ],
+  "n": 10,
+  "mode": "plain",
+  "brain": "runs/research/student_r1",
+  "zip": "policy.zip",
+  "stats": "vecnormalize.pkl",
+  "K": 16,
+  "H": 30,
+  "M": 5,
+  "sigma": 0.2,
+  "robust": false,
+  "out": "research/results/allclips_r1.json"
+ },
+ "results": [
+  {
+   "clip": "walk",
+   "n": 10,
+   "track_mean": 0.91,
+   "track_sd": 0.006,
+   "track_se": 0.002,
+   "falls": 0,
+   "speed_mean": 0.869,
+   "tries": [
+    {
+     "track": 0.9151689194116064,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8837332475937556
+    },
+    {
+     "track": 0.9153250154104365,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8731321373312625
+    },
+    {
+     "track": 0.9083134831701873,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8540625036037208
+    },
+    {
+     "track": 0.9005513617421174,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8790506315800807
+    },
+    {
+     "track": 0.9163912484814728,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8676800573696386
+    },
+    {
+     "track": 0.9030201560574994,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8634256782530338
+    },
+    {
+     "track": 0.9087623151203603,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8814616866191337
+    },
+    {
+     "track": 0.9024710481353378,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8356920869064526
+    },
+    {
+     "track": 0.9122042870237081,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8906684246618843
+    },
+    {
+     "track": 0.9131023770320813,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8617490302932095
+    }
+   ]
+  },
+  {
+   "clip": "trot",
+   "n": 10,
+   "track_mean": 0.902,
+   "track_sd": 0.004,
+   "track_se": 0.001,
+   "falls": 0,
+   "speed_mean": 0.889,
+   "tries": [
+    {
+     "track": 0.9010275898217114,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8908651009748436
+    },
+    {
+     "track": 0.9083314424805186,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8927157363154232
+    },
+    {
+     "track": 0.8950763711020175,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8818357426607182
+    },
+    {
+     "track": 0.898268745740366,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8786293993126636
+    },
+    {
+     "track": 0.9084827451062099,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8932198789817094
+    },
+    {
+     "track": 0.9015661307552643,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8928212518162865
+    },
+    {
+     "track": 0.9036005415196883,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.889468701022435
+    },
+    {
+     "track": 0.9020752539688688,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8863735079155334
+    },
+    {
+     "track": 0.896773730547359,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8936935421807061
+    },
+    {
+     "track": 0.9025338001569785,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8913782450536595
+    }
+   ]
+  },
+  {
+   "clip": "pace",
+   "n": 10,
+   "track_mean": 0.921,
+   "track_sd": 0.003,
+   "track_se": 0.001,
+   "falls": 0,
+   "speed_mean": 0.855,
+   "tries": [
+    {
+     "track": 0.9222610182595132,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8639243306239749
+    },
+    {
+     "track": 0.9224070605716135,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8593685352764919
+    },
+    {
+     "track": 0.9196619493194751,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8494602383784249
+    },
+    {
+     "track": 0.9163245877386166,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8356239286008137
+    },
+    {
+     "track": 0.9230486524180372,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.842539486308427
+    },
+    {
+     "track": 0.9180785426282358,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.8720924090477284
+    },
+    {
+     "track": 0.9267674413069839,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8722572529851993
+    },
+    {
+     "track": 0.9191706294706422,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.8229523875047298
+    },
+    {
+     "track": 0.9210808316644828,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8619019000880878
+    },
+    {
+     "track": 0.925728769644838,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.8652900987186178
+    }
+   ]
+  },
+  {
+   "clip": "turn_left",
+   "n": 10,
+   "track_mean": 0.891,
+   "track_sd": 0.004,
+   "track_se": 0.001,
+   "falls": 0,
+   "speed_mean": 0.203,
+   "tries": [
+    {
+     "track": 0.8951484017573229,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.1492055020912808
+    },
+    {
+     "track": 0.8931967637430485,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.19611851622406457
+    },
+    {
+     "track": 0.8887383490536487,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.22453180348066815
+    },
+    {
+     "track": 0.8899256844068103,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.22361210243646454
+    },
+    {
+     "track": 0.8926867871794971,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.19230058947847464
+    },
+    {
+     "track": 0.8869583464219416,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.31196103796021096
+    },
+    {
+     "track": 0.8840518133069142,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.20432339253580448
+    },
+    {
+     "track": 0.8902640634944692,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.18530414024385247
+    },
+    {
+     "track": 0.8941790633915495,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.17081462731873134
+    },
+    {
+     "track": 0.8950592919337998,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.17451768736959428
+    }
+   ]
+  },
+  {
+   "clip": "turn_right",
+   "n": 10,
+   "track_mean": 0.896,
+   "track_sd": 0.006,
+   "track_se": 0.002,
+   "falls": 0,
+   "speed_mean": 0.278,
+   "tries": [
+    {
+     "track": 0.9010251934165328,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.2876402581613352
+    },
+    {
+     "track": 0.9030101729983084,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.3279771500615253
+    },
+    {
+     "track": 0.886783382606301,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.2632404155885371
+    },
+    {
+     "track": 0.8950192873571927,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.30886636824321345
+    },
+    {
+     "track": 0.894499024233507,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.29375162612679645
+    },
+    {
+     "track": 0.890347023864645,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.3478947072006287
+    },
+    {
+     "track": 0.901135435997074,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.22867413863181332
+    },
+    {
+     "track": 0.8905214987226903,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.304058288663114
+    },
+    {
+     "track": 0.8975507458655604,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.20929480234911713
+    },
+    {
+     "track": 0.9032245734175295,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.2099463767233104
+    }
+   ]
+  },
+  {
+   "clip": "sit",
+   "n": 10,
+   "track_mean": 0.942,
+   "track_sd": 0.004,
+   "track_se": 0.001,
+   "falls": 0,
+   "speed_mean": NaN,
+   "tries": [
+    {
+     "track": 0.9450645127043507,
+     "fell": false,
+     "seconds": 0.4
+    },
+    {
+     "track": 0.942714034260966,
+     "fell": false,
+     "seconds": 0.3
+    },
+    {
+     "track": 0.9421070655595579,
+     "fell": false,
+     "seconds": 0.3
+    },
+    {
+     "track": 0.9405886026720756,
+     "fell": false,
+     "seconds": 0.3
+    },
+    {
+     "track": 0.9466526158705353,
+     "fell": false,
+     "seconds": 0.3
+    },
+    {
+     "track": 0.930998515037431,
+     "fell": false,
+     "seconds": 0.3
+    },
+    {
+     "track": 0.9434785379362665,
+     "fell": false,
+     "seconds": 0.3
+    },
+    {
+     "track": 0.9463130755368574,
+     "fell": false,
+     "seconds": 0.3
+    },
+    {
+     "track": 0.9410459780011632,
+     "fell": false,
+     "seconds": 0.3
+    },
+    {
+     "track": 0.9442044948134095,
+     "fell": false,
+     "seconds": 0.3
+    }
+   ]
+  },
+  {
+   "clip": "lie",
+   "n": 10,
+   "track_mean": 0.934,
+   "track_sd": 0.004,
+   "track_se": 0.001,
+   "falls": 0,
+   "speed_mean": NaN,
+   "tries": [
+    {
+     "track": 0.9344419445017177,
+     "fell": false,
+     "seconds": 0.4
+    },
+    {
+     "track": 0.9355111412853764,
+     "fell": false,
+     "seconds": 0.4
+    },
+    {
+     "track": 0.9365863895230631,
+     "fell": false,
+     "seconds": 0.4
+    },
+    {
+     "track": 0.9356008408637864,
+     "fell": false,
+     "seconds": 0.4
+    },
+    {
+     "track": 0.9371958145531929,
+     "fell": false,
+     "seconds": 0.4
+    },
+    {
+     "track": 0.926115118532048,
+     "fell": false,
+     "seconds": 0.4
+    },
+    {
+     "track": 0.9344570416269122,
+     "fell": false,
+     "seconds": 0.4
+    },
+    {
+     "track": 0.9351087199672916,
+     "fell": false,
+     "seconds": 0.5
+    },
+    {
+     "track": 0.9304718217067462,
+     "fell": false,
+     "seconds": 0.4
+    },
+    {
+     "track": 0.9382507622635695,
+     "fell": false,
+     "seconds": 0.4
+    }
+   ]
+  }
+ ]
+}

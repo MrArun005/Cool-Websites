@@ -18,11 +18,15 @@ the full range; posture: crouch- or dog-stance centred) is reachable by the one 
 Who teaches (the active "mode", from the command and the state, the same chains skills.py runs):
     walk trot pace canter turn_left turn_right sit lie   the dog-motion brain on that clip (a switch joins the new
                                                           clip at the moment closest to Bolt's pose, as skills.py)
-    jump   the current gait up to JUMP_FROM (1.1 m) before the bar, the jump brain until it has landed (or 3 s),
-           0.6 s of canter (BRIDGE), then the command returns to the gait before the jump
+    jump   the current gait up to jump_from (v2: 1.1 m, v3: 1.5 m) before the bar, the jump brain until it has
+           landed (or jump_limit steps), `bridge` s of canter (0.6), then the command returns to the gait before the
+           jump. Teacher sets (which brain teaches what) are in teachers.SETS.
     stand  the posture brain's stand
     after a fall (skills.py's detector)  the command becomes "stand" and the teacher is the recovery chain:
-           self-righting until belly-down and calm, the posture brain's lie (tuck), its stand for 3 s
+           self-righting until belly-down and calm, the posture brain's lie (tuck), its stand for 3 s. With rec_cmd
+           (teacher set v3) the student's command input follows the phase: "stand" while self-righting, "lie" while
+           tucking (from calm belly-down until every joint is within 0.6 rad of LIE_POSE, at most 2 s), then
+           "stand" again, the command clock restarting at each change
 At a switch the new teacher labels from the very first step; its bookkeeping "previous action" is the action
 actually executed, expressed in its own units.
 
@@ -34,7 +38,7 @@ Observation (OBS = 84), every part present for every behaviour (zeros when it do
        height, body velocity 3, yaw rate, seconds since clip end   (the imitation brain's inputs; during a jump
        the approach gait's clip keeps playing, so the student itself has to decide when to take off)
     77 hurdle 6: present flag, distance ahead (clipped -1..3 m), bar height, sin heading error, metres off the
-       line, time since the bar came within JUMP_FROM (s / 2)
+       line, time since the jump brain took over (s / 2)
     83 time since the last command (s / 3, clipped at 1)
 """
 import sys
@@ -51,9 +55,10 @@ import getup_env  # noqa: E402
 import imitate_env  # noqa: E402
 import jump_env  # noqa: E402
 from bolt_env import ACTION_SCALE, LIE_POSE, BoltEnv  # noqa: E402
-from imitate_env import ALL_CLIPS, DOG  # noqa: E402
-from skills import BRIDGE, CLIPS, GAITS, JUMP_FROM, Bolt, closest_moment  # noqa: E402
-from teachers import imitate_brain  # noqa: E402
+from imitate_env import ALL_CLIPS, DOG, ImitatePolicy  # noqa: E402
+from jump_env import JumpPolicy  # noqa: E402
+from skills import CLIPS, GAITS, JUMP, Bolt, closest_moment  # noqa: E402
+from teachers import imitate_brain, teacher_set  # noqa: E402
 
 COMMANDS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "stand", "jump"]
 OBS = 84
@@ -74,14 +79,29 @@ for _mod in (bolt_env, imitate_env, jump_env, getup_env):
 
 
 class Master:
-    def __init__(self, seed=0, imitate="18e", randomize=True):
-        self.b = Bolt(seed=seed, randomize=randomize, auto_recover=False, imitate=imitate_brain(imitate))
+    def __init__(self, seed=0, imitate=None, randomize=True, teachers="v2", **over):
+        """teachers: a teacher set of teachers.SETS ("v2": the first student's, "v3": 18e-36M + 18c canter + 16i
+        run-up jump); `imitate` and keyword arguments override single entries of the set."""
+        self.ts = ts = teacher_set(teachers, dog=imitate, **over)
+        self.teachers = teachers
+        self.b = Bolt(seed=seed, randomize=randomize, auto_recover=False, imitate=imitate_brain(ts["dog"]))
         b = self.b
         self.w, self.im, self.sr = b.world, b.im, b.sr
+        if Path(ts["jump"]) != JUMP:
+            b.jumper = JumpPolicy(ts["jump"])
+        self.w.max_steps = ts["jump_steps"]   # the jump brain's clock input is t / its try length
+        self.canter = ImitatePolicy(*imitate_brain(ts["canter"])) if ts["canter"] else None
+        self.land = ImitatePolicy(*imitate_brain(ts["land"])) if ts["land"] else None
+        self.land_left = 0
+        self.jump_from, self.bridge = ts["jump_from"], ts["bridge"]
         self.lo, self.hi = self.w.lo.copy(), self.w.hi.copy()
         self.full = np.maximum(self.hi - DOG, DOG - self.lo)
         self.dt = b.dt
         self.mode = None
+        # patient=True (training): the recovery chain moves on only when the state says so (calm belly-down, legs
+        # tucked), never on a timeout, so a state is never labelled "self-right" in one try and "tuck"/"stand" in
+        # another (DAgger round 5-6 of the first run: the student never got up, the labels on its back contradicted)
+        self.patient = False
 
     # ---------------- episode ----------------
     def start(self, clip="walk", tau=None, seed=None):
@@ -94,6 +114,7 @@ class Master:
         self.hurdle_on = False
         self.rec = None           # the recovery in progress: dict(phase, calm, n)
         self.fallen = False
+        self.land_left = 0
         self.im.limit = 10 ** 9
 
     @property
@@ -140,10 +161,12 @@ class Master:
             gait = self.mode[1] if self.mode[0] == "clip" and self.mode[1] in GAITS else "walk"
             self.b.place_hurdle(ahead, height)
             self.hurdle_on = True
+            w = self.w   # no flags left over from an earlier jump (a fall in the approach reads them)
+            w.touched = w.cleared = w.landed = w.dropped = False
             self.jump = dict(phase="approach", height=height, after=after or gait, steps=0, out=dict(
                 height=height, cleared=False, clean=False, landed=False, fell=False, fell_after=False, dropped=False,
                 touched=False))
-            self._to_clip(gait)
+            self._to_clip(self.ts.get("run_up") or gait)   # run_up: the gait of the approach (v3: canter, ~2 m/s)
         else:
             raise ValueError(name)
         self.b.skill = name
@@ -156,6 +179,7 @@ class Master:
         w.touched = w.cleared = w.landed = w.dropped = False
         w.clear_t, w.best_past = None, w.paws_past().min()
         self.jump["phase"] = "jump"
+        self.jump["out"]["v_handover"] = round(float((w._rotation().T @ self.data.qvel[0:3])[0]), 2)
         self.mode = ("jump",)
 
     def _start_recovery(self):
@@ -174,7 +198,12 @@ class Master:
         b, mode = self.b, self.mode
         if mode[0] == "clip":
             im = self.im
-            return im._obs, b.dog, im.ref("joints", 1), ACTION_SCALE, im.step
+            pol = b.dog
+            if self.land is not None and self.land_left > 0:
+                pol = self.land
+            elif self.canter is not None and mode[1] == "canter":
+                pol = self.canter
+            return im._obs, pol, im.ref("joints", 1), ACTION_SCALE, im.step
         if mode[0] == "jump":
             w = self.w
             return w._obs, b.jumper, DOG, ACTION_SCALE, w.step
@@ -246,6 +275,7 @@ class Master:
         if self.mode[0] != "clip":
             self.im.t += 1         # the reference keeps playing (jump: the approach gait's clip)
         self.cmd_t += 1
+        self.land_left = max(0, self.land_left - 1)
         return self._after(ctrl)
 
     def _skill_name(self):
@@ -279,29 +309,43 @@ class Master:
         if j is not None:
             if j["phase"] == "approach":
                 j["steps"] += 1
-                if w.hurdle_ahead() <= JUMP_FROM or j["steps"] >= 200 or w.hurdle_ahead() < -0.5:
+                ahead = w.hurdle_ahead()
+                gate = self.ts.get("jump_phase")
+                in_phase = False
+                if gate and self.mode[0] == "clip" and ahead <= self.ts["jump_max"]:
+                    ph = self.im.clip.phase(self.im.tau())
+                    in_phase = gate[0] <= ph < gate[1]
+                if ahead <= self.jump_from or in_phase or j["steps"] >= 200 or ahead < -0.5:
                     self._start_jump_brain()
             elif j["phase"] == "jump":
-                if w.landed or w.t >= 150:
+                if w.landed or w.t >= self.ts["jump_limit"]:
                     o = j["out"]
                     o.update(cleared=bool(w.cleared), touched=bool(w.touched), dropped=bool(w.dropped),
                              landed=bool(w.landed), clean=bool(w.cleared and not w.touched and w.landed), steps=w.t)
                     if not w.landed:
                         b.events.append(dict(t=b.t, kind="no_landing"))
                     o["landed_at"] = b.t
+                    if self.land is not None:
+                        self.land_left = int(round(self.ts["land_s"] / self.dt))
                     j["phase"], j["bridge"] = "bridge", 0
-                    self._to_clip("canter")
+                    if self.bridge > 0:
+                        self._to_clip("canter")
+                    else:   # no bridge: straight back to the gait
+                        self._end_jump(out)
             elif j["phase"] == "bridge":
                 j["bridge"] += 1
-                if j["bridge"] >= int(round(BRIDGE / self.dt)):
-                    self.last_jump = j["out"]
-                    after = j["after"]
-                    j["phase"] = "done"
-                    self.command(after)   # the handler goes back to the gait before the jump
-                    out["jump_done"] = True
+                if j["bridge"] >= int(round(self.bridge / self.dt)):
+                    self._end_jump(out)
         if self.hurdle_on and self.jump is None and w.hurdle_ahead() < -1.5:
             self.hurdle_on = False
         return out
+
+    def _end_jump(self, out):
+        j = self.jump
+        self.last_jump = j["out"]
+        j["phase"] = "done"
+        self.command(j["after"])   # the handler goes back to the gait before the jump
+        out["jump_done"] = True
 
     def _recovery_tick(self):
         r, env, d = self.rec, self.sr, self.data
@@ -309,13 +353,21 @@ class Master:
         if r["phase"] == "selfright":
             standing = env._rotation()[2, 2] > 0.9 and np.linalg.norm(d.qvel[0:3]) < 0.2
             r["calm"] = r["calm"] + 1 if standing else 0
-            if r["calm"] >= 15 or r["n"] >= 200:
-                r["phase"], r["n"] = "tuck", 0
-                self._to_posture("lie")
+            if r["calm"] >= 15 or (r["n"] >= 200 and not self.patient):
+                if self.ts.get("tuck", True):
+                    r["phase"], r["n"] = "tuck", 0
+                    self._to_posture("lie")
+                    if self.ts.get("rec_cmd"):   # the student is told the phase: "lie" while tucking
+                        self.cmd, self.cmd_t = "lie", 0
+                else:   # straight to the stand: no lie/stand labels on the same lying states
+                    r["phase"], r["n"] = "stand", 0
+                    self._to_posture("stand")
         elif r["phase"] == "tuck":
-            if np.abs(d.qpos[7:19] - LIE_POSE).max() < 0.6 or r["n"] >= 100:
+            if np.abs(d.qpos[7:19] - LIE_POSE).max() < 0.6 or (r["n"] >= 100 and not self.patient):
                 r["phase"], r["n"] = "stand", 0
                 self._to_posture("stand")
+                if self.ts.get("rec_cmd"):   # ... and "stand" (clock from 0) once tucked
+                    self.cmd, self.cmd_t = "stand", 0
         elif r["phase"] == "stand" and r["n"] >= 150:
             p = env.posture()
             ok = bool(p["up"] > 0.9 and p["height"] > 0.38)
