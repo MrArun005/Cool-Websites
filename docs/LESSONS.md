@@ -249,3 +249,11 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   420 W) can't. With a real motor model (power limit, top speed, braking allowed), self-righting fell from
   17-18/20 to 8-9/20 and the jump from most to 1/10 at 15 cm: those results were partly impossible. Walking
   and posture were unaffected; they never needed more than a real motor gives.
+- **Joint limits are part of what a brain learned.** Widening the sideways hip limit to the real ±48°
+  made the old walk brain worse at the Championship weaves (3/3 clear -> 1/3 at ±0.9, 3/5 at ±0.84 with
+  real motors), though its commands never reach the new range: it had leaned on the ±0.5 stop. Retrain
+  for the real body instead of keeping a fake limit.
+- **Test "start it the way it was trained"; don't assume it.** Waiting for Bolt to come to rest before
+  self-righting did worse in the browser (63/80 stood vs 70/80; after shoves 11/20 vs 18/20).
+- **When the robot carries on after a fall, re-check every rule that ran during the fall:** timers, the
+  guard's schedule, a "stepped off the bridge" verdict caused by the fall itself, a hurdle it now lies by.

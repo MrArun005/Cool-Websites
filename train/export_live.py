@@ -13,6 +13,9 @@ lines of JavaScript.
 --reference writes a reference run from Python (stand with the posture brain, then walk,
 turn and change speed with the walk brain), so the JavaScript port can be checked step by
 step against the real thing (live_check.mjs).
+
+--jump and --getup add the jump brain and the self-righting brain (getup_env.py, goal "selfright"), each
+with a Python reference run of its own (a jump; a fall onto the side and the roll back onto the belly).
 """
 import argparse
 import base64

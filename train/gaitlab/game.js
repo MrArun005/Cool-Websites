@@ -217,8 +217,8 @@ export class GetUp {
     if (this.t > GETUP.limit) { this.failed = true; this.misses.push("10 s"); return rest; }
     if (this.stage === "tuck") {
       if (b.up() < 0.7) return next("toppled tucking");
-      // tucked: every joint within 0.6 rad of the lying pose (standing from half-tucked legs toppled it), at
-      // least GETUP.tuck s and at most twice that
+      // GETUP.tuck s; the "lie" tuck goes on (up to twice that) until every joint is within 0.6 rad of the
+      // lying pose (standing from half-tucked legs toppled it)
       const q = b.data.qpos, L = b.c.lie_pose, tucked = L.every((v, i) => Math.abs(q[7 + i] - v) < 0.6);
       if (this.st < GETUP.tuck || (!tucked && GETUP_TUCK === "lie" && this.st < 2 * GETUP.tuck)) return { command: GETUP_TUCK === "lie" ? "lie" : "tuck", turn: 0, speed: 0.2 };
       this.stage = "stand"; this.st = 0; b.afterGetUp(GETUP_CARRY && GETUP_TUCK !== "lie");

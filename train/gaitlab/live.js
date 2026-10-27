@@ -380,9 +380,10 @@ export class Bolt {
     this.physics(c.frame_skip);
   }
   // Tuck the legs under the body (the lying pose), moving the motor targets there from where the joints are
-  // over 0.7 s (35 steps, as measured in Python by the main session), then holding: the self-righting brain ends belly down with its legs anywhere (17d 7M: front
-  // hips bent backwards, knees straight, hips out 0.9 rad), and the posture brain standing up from there
-  // rolled Bolt onto its back; from the tucked legs it stands up.
+  // over 0.7 s (35 steps), then holding (the main session's fold, Python: 15-17 of 20 stood). The
+  // self-righting brain ends belly down with its legs anywhere (17d 7M: front hips bent backwards, knees
+  // straight, hips out 0.9 rad); the posture brain standing up from there rolled Bolt onto its back.
+  // In the browser (no random physics) the posture brain's own "lie" tucked better (game.js GETUP_TUCK).
   startTuck() { this.tt = 0; this.tuckFrom = Array.from(this.data.qpos.slice(7, 19)); }
   tuckTick() {
     const a = Math.min(1, ++this.tt / 35), L = this.c.lie_pose;
