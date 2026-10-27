@@ -61,6 +61,7 @@ def main():
     ap.add_argument("--envs", type=int, default=8)
     ap.add_argument("--resume")
     ap.add_argument("--turn-weight", type=float, default=0.75, help="pay for tracking the turn rate (run 21: 1.5)")
+    ap.add_argument("--style-weight", type=float, default=0.0, help="pay for moving like the reference gallop/trot (run 22: 1.5)")
     ap.add_argument("--turn-focus", type=float, default=0.0, help="share of commands that are fast turns or spins (run 21: 0.4)")
     ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints (each is tested and shown live)")
     args = ap.parse_args()
@@ -68,7 +69,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
     venv = make_vec_env(RunEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv,
-                        env_kwargs=dict(turn_weight=args.turn_weight, turn_focus=args.turn_focus))
+                        env_kwargs=dict(turn_weight=args.turn_weight, turn_focus=args.turn_focus, style_weight=args.style_weight))
     if args.resume:
         ck = Path(args.resume)
         venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)
