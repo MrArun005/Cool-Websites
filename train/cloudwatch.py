@@ -55,6 +55,11 @@ RUNS = {
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
                                    lowText="not at all", highText="exactly"),
                       words=["copied", "fell"]),
+    "imitate18b": dict(branch="local", label="Run 18b: moving like a real dog, with the canter (dog running)", where="this machine (from run 18 at 9M)",
+                      kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["canter", "Canter (run)"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"]],
+                      measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
+                                   lowText="not at all", highText="exactly"),
+                      words=["copied", "fell"]),
 }
 
 
@@ -169,12 +174,12 @@ def record_walk(d):
     return rec, prog
 
 
-def record_imitate(d):
+def record_imitate(d, run="imitate18"):
     from imitate_env import ImitateEnv, ImitatePolicy
     p = ImitatePolicy(d)
     env = ImitateEnv(randomize=False)
     rec, prog = {}, {}
-    for k, _ in RUNS["imitate18"]["kinds"]:
+    for k, _ in RUNS[run]["kinds"]:
         if k not in env.clip_names:
             continue
         env.exam_start = (k, 0.0)
@@ -260,7 +265,7 @@ def main():
                 fetch(run, n, folder, tmp)
                 try:
                     rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_walk(tmp) if run == "bolt19"
-                                  else record_run(tmp) if run in ("run20", "run21") else record_imitate(tmp))
+                                  else record_run(tmp) if run in ("run20", "run21") else record_imitate(tmp, run))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)
                     continue
