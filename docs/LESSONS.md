@@ -257,3 +257,8 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   self-righting did worse in the browser (63/80 stood vs 70/80; after shoves 11/20 vs 18/20).
 - **When the robot carries on after a fall, re-check every rule that ran during the fall:** timers, the
   guard's schedule, a "stepped off the bridge" verdict caused by the fall itself, a hurdle it now lies by.
+- **Use the real motor's full strength, not a cautious cap.** Bolt's joints were capped at 17 N·m, half the
+  Unitree A1's published 33.5 N·m (same 12 kg class). Compared with published robot dogs (Mini Cheetah 3.9 m/s,
+  A1 parkour onto 2x-hip-height boxes) that cap alone ruled out fast running and high jumps. With the real
+  33.5 N·m (still 420 W and 21 rad/s), the unchanged 12M jump brain went from mostly failing to clearing
+  20 cm 4/6 and 30 cm 3/6. Model the real motor; don't halve it "to be safe".

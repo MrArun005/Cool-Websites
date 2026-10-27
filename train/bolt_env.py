@@ -15,6 +15,8 @@ from pathlib import Path
 
 import gymnasium as gym
 import mujoco
+import os
+
 import numpy as np
 
 MODEL = Path(__file__).with_name("bolt.xml")
@@ -45,11 +47,12 @@ TARGETS = {
 ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)  # radians per unit action: abd, hip, knee
 
 # The motors, as real ones: Bolt weighs what a Unitree A1 does (12 kg), whose joint motors give 33.5 N·m,
-# 21 rad/s and 420 W peak each. Bolt's are capped at 17 N·m. A motor driving a joint can give at most
-# 420 W (so less torque the faster it spins) and nothing past 21 rad/s (fading to zero by 25 rad/s);
-# braking against the motion keeps the full 17 N·m. Before this, the jump and self-righting brains spun
+# 21 rad/s and 420 W peak each, and so do Bolt's (until run 19 they were capped at 17 N·m, half the real
+# motor, which held back running and jumping; BOLT_MOTOR_TORQUE=17 reproduces the old runs). A motor
+# driving a joint can give at most 420 W (so less torque the faster it spins) and nothing past 21 rad/s
+# (fading to zero by 25 rad/s); braking against the motion keeps the full torque. Before this, the jump and self-righting brains spun
 # joints at up to 57 rad/s and 900 W, which no motor this size can. Sideways hips swing ±48° (Go2).
-MOTOR = dict(torque=17.0, power=420.0, speed=21.0, cutoff=25.0)
+MOTOR = dict(torque=float(os.environ.get("BOLT_MOTOR_TORQUE", 33.5)), power=420.0, speed=21.0, cutoff=25.0)
 
 
 def motor_limits(qvel):

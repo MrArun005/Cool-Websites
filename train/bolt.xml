@@ -20,7 +20,7 @@
   <default>
     <joint damping="0.05" armature="0.01" frictionloss="0.02"/>
     <geom friction="1.0 0.02 0.01" condim="3" rgba="0.72 0.75 0.8 1"/>
-    <position kp="45" kv="1.2" forcerange="-17 17"/>
+    <position kp="45" kv="1.2" forcerange="-33.5 33.5"/>
     <default class="thigh"><geom type="capsule" size="0.024"/></default>
     <default class="shin"><geom type="capsule" size="0.019"/></default>
     <default class="foot"><geom type="sphere" size="0.025" rgba="0.21 0.23 0.27 1" friction="1.0 0.02 0.01"/></default>
