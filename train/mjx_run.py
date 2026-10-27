@@ -221,6 +221,7 @@ def main():
     ap.add_argument("--envs", type=int, default=4096)
     ap.add_argument("--out", default=str(HERE / "runs" / "run20gpu"))
     ap.add_argument("--evals", type=int, default=30, help="progress reports (and saved brains) over the run")
+    ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--quick", action="store_true")
     args = ap.parse_args()
     from brax.training.agents.ppo import networks as ppo_networks
@@ -253,7 +254,7 @@ def main():
         environment=env, num_timesteps=args.steps, episode_length=1000, num_envs=args.envs, num_eval_envs=min(args.envs, 128),
         learning_rate=3e-4, entropy_cost=1e-2, discounting=0.97, unroll_length=20, batch_size=min(256, args.envs) if args.quick else 256,
         num_minibatches=4 if args.quick else 32, num_updates_per_batch=4, normalize_observations=True, reward_scaling=1.0,
-        clipping_epsilon=0.2, gae_lambda=0.95, max_grad_norm=1.0, num_evals=args.evals, network_factory=nets, seed=0,
+        clipping_epsilon=0.2, gae_lambda=0.95, max_grad_norm=1.0, num_evals=args.evals, network_factory=nets, seed=args.seed,
         progress_fn=progress, policy_params_fn=save)
     save(args.steps, None, params)
     print(f"done: {args.steps:,} steps in {(time.time() - start) / 60:.1f} min -> {out}", flush=True)
