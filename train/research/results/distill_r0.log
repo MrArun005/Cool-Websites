@@ -27,3 +27,5 @@ try 25: 200 steps, fell=False, planner {'calls': 1040, 'chose_plain': 1004, 'pla
 try 26: 200 steps, fell=False, planner {'calls': 1080, 'chose_plain': 1044, 'plain_fell': 6, 'best_fell': 0}
 try 27: 200 steps, fell=False, planner {'calls': 1120, 'chose_plain': 1084, 'plain_fell': 6, 'best_fell': 0}
 try 28: 200 steps, fell=False, planner {'calls': 1160, 'chose_plain': 1119, 'plain_fell': 6, 'best_fell': 0}
+try 29: 200 steps, fell=False, planner {'calls': 1200, 'chose_plain': 1152, 'plain_fell': 6, 'best_fell': 0}
+saved 6000 planner samples, 9506 anchor samples -> research/results/distill_r0.npz

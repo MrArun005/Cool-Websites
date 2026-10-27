@@ -64,11 +64,13 @@ def collect(args):
             if not queue:
                 queue = list(planner.new_plan(env))
             e = queue.pop(0)
+            if len(queue) == planner.M - 1:   # a new chunk: DAgger, follow the plan or the bare driver
+                follow = rng.random() < args.beta
             o = slice_obs(orig, obs)
             # label: what the planner made the DRIVER do, expressed as a raw action
             O.append(o)
             E.append(raw_mean(driver, o[None])[0] + e)
-            obs, r, fell, done, _ = env.step(np.clip(driver.act(obs) + e, -1, 1))
+            obs, r, fell, done, _ = env.step(np.clip(driver.act(obs) + (e if follow else 0.0), -1, 1))
             if fell:
                 break
         print(f"try {k}: {t + 1} steps, fell={fell}, planner {planner.stats}", flush=True)
@@ -82,9 +84,9 @@ def collect(args):
             obs, r, fell, done, _ = env2.step(orig.act(obs))
             if fell or done:
                 break
-    A = np.array(A, dtype=np.float32)
+    A = np.array(A, dtype=np.float32).reshape(-1, len(O[0]))
     np.savez_compressed(args.out, obs=np.array(O, dtype=np.float32), label=np.array(E, dtype=np.float32),
-                        anchor_obs=A, anchor_label=raw_mean(orig, A).astype(np.float32))
+                        anchor_obs=A, anchor_label=(raw_mean(orig, A) if len(A) else np.zeros((0, 12))).astype(np.float32))
     print(f"saved {len(O)} planner samples, {len(A)} anchor samples -> {args.out}")
 
 
@@ -130,6 +132,8 @@ def main():
     ap.add_argument("--anchor-tries", type=int, default=40)
     ap.add_argument("--seed", type=int, default=20000)
     ap.add_argument("--student")
+    ap.add_argument("--beta", type=float, default=1.0, help="DAgger: chance per 0.1 s chunk of following the plan "
+                    "(else the bare driver acts, still labelled with the plan)")
     ap.add_argument("--data", nargs="*")
     ap.add_argument("--init")
     ap.add_argument("--epochs", type=int, default=20)

@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Bolt's Agility Run</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -9,7 +10,7 @@
 {{GAME_CSS}}
   .stage { aspect-ratio: 16 / 9; }
   .hud.tl b#hCmd { font: 800 1.25rem var(--display); color: var(--accent); }
-  .map { position: absolute; left: 10px; bottom: 26px; width: 150px; height: 150px; border-radius: 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 82%, transparent); pointer-events: none; }
+  .stage canvas.map { position: absolute; left: 10px; bottom: 26px; width: 150px; height: 150px; border-radius: 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 82%, transparent); pointer-events: none; }
   .pad { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
   .pad button { display: grid; gap: 2px; justify-items: center; padding: 10px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font: 600 0.92rem var(--body); touch-action: manipulation; user-select: none; -webkit-user-select: none; min-height: 52px; }
   .pad button kbd { font: 500 0.7rem var(--mono); color: var(--muted); }
@@ -27,6 +28,8 @@
   .summary { display: grid; grid-template-columns: auto auto; gap: 2px 14px; text-align: left; font-size: 0.88rem; justify-content: center; }
   .summary span:nth-child(odd) { color: var(--muted); }
   .summary span:nth-child(even) { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .log { align-content: start; }
+  .banner { max-width: 92%; white-space: normal; }
   .honest { font: 400 0.75rem/1.45 var(--mono); color: var(--muted); }
   .weak { font-size: 0.88rem; }
   @media (max-width: 560px) {
@@ -36,10 +39,10 @@
     .hud .muted { font-size: 0.74rem; }
     .hud.tr { column-gap: 6px; }
     .hud.tr b { font-size: 0.9rem; }
-    .map { width: 104px; height: 104px; bottom: 30px; }
+    .stage canvas.map { width: 104px; height: 104px; bottom: 30px; }
     .pad { grid-template-columns: repeat(4, 1fr); gap: 6px; }
     .pad button { padding: 8px 2px; font-size: 0.85rem; }
-    .banner { font-size: 1.7rem; }
+    .banner { font-size: 1.5rem; padding: 10px 16px; }
   }
 </style>
 
@@ -216,9 +219,9 @@
   let lib, live, bundle, dogBrain, dogClips, imitate, drawHurdles = () => {}, drawProps = () => {}, bolt = null, course = null, run = null, bot = null;
   let level = 0, acc = 0, playing = true, seen = 0, bannerUntil = 0, finishedShown = false;
   const NAMES = { stand: "Stand", walk: "Walk", trot: "Trot", canter: "Run", sit: "Sit", lie: "Down" };
-  const DOING = { stand: "standing", walk: "walking", turnclip: "walking, turning a little", sharp: "turning sharply at a walk (run 12 brain)", brake: "slowing down to stop",
-    trot: "trotting", canter: "running (canter)", pace: "shifting down through a pace", sit: "sitting", lie: "lying down", rise: "getting up",
-    jump: "jumping (jump brain)", land: "landing: the jump brain slows it down", settle: "steadying after the jump", getup: "fell: getting up by itself" };
+  const DOING = { stand: "Bolt is standing", walk: "Bolt is walking", turnclip: "Bolt is walking, turning a little", sharp: "Bolt turns sharply at a walk (run 12 brain)", brake: "Bolt is slowing down to stop",
+    trot: "Bolt is trotting", canter: "Bolt is running (canter)", pace: "Bolt shifts down through a pace", sit: "Bolt is sitting", lie: "Bolt is lying down", rise: "Bolt is getting up",
+    jump: "Bolt is jumping (jump brain)", land: "Landing: the jump brain slows Bolt down", settle: "Bolt steadies itself after the jump", getup: "Bolt fell: it is getting up by itself" };
   function banner(text, kind) {
     const el = $("banner"); el.textContent = text; el.className = `banner show ${kind === "good" ? "good" : kind === "bad" ? "bad" : ""}`;
     bannerUntil = performance.now() + 1300;
@@ -299,7 +302,7 @@
     if (!run) return;
     const b = run.body, o = run.obstacle;
     $("hCmd").textContent = (bot ? "Demo: " : "") + (NAMES[run.cmd] || run.cmd) + (run.turn ? (run.turn > 0 ? " · ◀" : " · ▶") : "");
-    $("hDoing").textContent = `Bolt is ${DOING[b.mode] || b.mode}`;
+    $("hDoing").textContent = DOING[b.mode] || b.mode;
     $("hNext").textContent = run.over ? "Run over" : o ? `Next: ${o.n}. ${o.title}` : "Next: the finish";
     $("hTime").textContent = `${run.time.toFixed(2)} s`;
     $("hFaults").textContent = String(run.faults.length);
