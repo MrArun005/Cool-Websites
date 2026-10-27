@@ -720,3 +720,15 @@ update at 29804960: reward/step 0.823, try length 223 steps (100 tries), 2477 st
 update at 29821344: reward/step 0.829, try length 220 steps (100 tries), 2475 steps/s
 update at 29837728: reward/step 0.833, try length 212 steps (100 tries), 2474 steps/s
 update at 29854112: reward/step 0.845, try length 222 steps (100 tries), 2472 steps/s
+update at 29870496: reward/step 0.847, try length 227 steps (100 tries), 2470 steps/s
+update at 29886880: reward/step 0.853, try length 228 steps (100 tries), 2468 steps/s
+update at 29903264: reward/step 0.853, try length 222 steps (100 tries), 2466 steps/s
+update at 29919648: reward/step 0.846, try length 226 steps (100 tries), 2464 steps/s
+update at 29936032: reward/step 0.854, try length 220 steps (100 tries), 2462 steps/s
+update at 29952416: reward/step 0.850, try length 219 steps (100 tries), 2460 steps/s
+update at 29968800: reward/step 0.840, try length 222 steps (100 tries), 2458 steps/s
+update at 29985184: reward/step 0.841, try length 221 steps (100 tries), 2457 steps/s
+checkpoint 30000000 ready: {'track_walk': 0.917, 'fall_walk': 0.0, 'speed_walk': 0.89, 'track_trot': 0.903, 'fall_trot': 0.0, 'speed_trot': 0.9, 'track_pace': 0.926, 'fall_pace': 0.0, 'speed_pace': 0.87, 'track_canter': 0.543, 'fall_canter': 0.0, 'speed_canter': 0.54, 'track_turn_left': 0.89, 'fall_turn_left': 0.0, 'speed_turn_left': 0.33, 'track_turn_right': 0.897, 'fall_turn_right': 0.0, 'speed_turn_right': 0.31, 'track_sit': 0.945, 'fall_sit': 0.0, 'track_lie': 0.932, 'fall_lie': 0.0} (mean tracking 0.869, fall rate 0.00, score 0.647)
+new best at 30000000: score 0.647
+update at 30001568: reward/step 0.823, try length 223 steps (100 tries), 2453 steps/s
+done: 30,001,568 steps in 203.9 min -> /home/user/Cool-Websites/train/runs/imitate18b
