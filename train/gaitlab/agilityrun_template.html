@@ -302,7 +302,8 @@
     if (!run) return;
     const b = run.body, o = run.obstacle;
     $("hCmd").textContent = (bot ? "Demo: " : "") + (NAMES[run.cmd] || run.cmd) + (run.turn ? (run.turn > 0 ? " · ◀" : " · ▶") : "");
-    $("hDoing").textContent = DOING[b.mode] || b.mode;
+    const lining = (run.cmd === "trot" || run.cmd === "canter") && ["walk", "turnclip", "sharp"].includes(b.mode);
+    $("hDoing").textContent = lining ? "Bolt walks until it is lined up, then trots" : DOING[b.mode] || b.mode;
     $("hNext").textContent = run.over ? "Run over" : o ? `Next: ${o.n}. ${o.title}` : "Next: the finish";
     $("hTime").textContent = `${run.time.toFixed(2)} s`;
     $("hFaults").textContent = String(run.faults.length);
@@ -322,7 +323,9 @@
     } catch (e) {
       console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
     }
-    buildDog(bundle.geoms); levelChips(); newRun(new URLSearchParams(location.search).has("demo")); $("loading").hidden = true;
+    const q = new URLSearchParams(location.search);   // ?level=2&demo: start there (tests, links)
+    level = Math.min(lib.LEVELS.length, Math.max(1, Number(q.get("level")) || 1)) - 1;
+    buildDog(bundle.geoms); levelChips(); newRun(q.has("demo")); $("loading").hidden = true;
   }
 
   // ---------- input: the pad, the keyboard ----------

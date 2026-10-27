@@ -61,7 +61,7 @@ for (const n of levelsArg.split(",").map(Number)) {
       if (process.env.DEBUG) {
         const q = run.local(), b = run.body;
         if (b.mode !== lastMode) { console.log(`    ${run.t.toFixed(2)} mode ${b.mode} cmd ${run.cmd} s ${run.lineS.toFixed(2)} off ${run.lineOff.toFixed(2)} v ${b.speed.toFixed(2)} steer ${(b.want.steer ?? 0).toFixed(2)} armed ${b.armed} ahead ${bolt.hurdleAhead().toFixed(2)}`); lastMode = b.mode; }
-        while (seen < run.events.length) { const e = run.events[seen++]; console.log(`    ${run.t.toFixed(2)} EVENT ${e.text}`); }
+        while (seen < run.events.length) { const e = run.events[seen++]; { const q = run.local(); console.log(`    ${run.t.toFixed(2)} EVENT ${e.text} at (${q.x.toFixed(2)}, ${q.y.toFixed(2)}) h ${q.h.toFixed(2)}`); } }
       }
       if (pending) {
         if (run.stats.falls > pending.falls) settle(false);

@@ -73,7 +73,7 @@ export function buildCourse(levelIndex) {
   const at = (d) => { const i = clamp(Math.round(d / step), 0, pts.length - 1); return pts[i]; };
   let slot = 0, n = 0;
   const obstacles = L.obstacles.map((o) => {
-    const p = at(o.s), out = { ...o, n: ++n, x: p.x, y: p.y, hd: p.h, title: NAMES[o.kind] };
+    const p = at(o.s), out = { ...o, n: ++n, x: p.x, y: p.y, hd: p.h, title: NAMES[o.kind] };   // n: its number on the course
     if (o.kind === "hurdle") { out.slot = slot++; out.title = `Hurdle ${Math.round(o.h * 100)} cm`; }
     if (o.kind === "slalom") {
       out.markers = Array.from({ length: o.n }, (_, k) => { const q = at(o.s + k * o.gap); return { x: q.x, y: q.y, h: q.h, s: o.s + k * o.gap }; });
@@ -300,7 +300,9 @@ export class Body {
       // speed eased toward the target (a sudden change of asked speed while turning tipped run 12 over)
       const target = w.turn ? 0.5 : Math.abs(steer) < 0.3 ? 0.65 : clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6);
       this.vs = this.mt < 0.03 ? 0.5 : target > this.vs ? Math.min(target, this.vs + 0.6 * b.dt) : Math.max(target, this.vs - 1.0 * b.dt);
-      return b.run({ command: "walk", turn: clamp(w.turn ? w.turn * 1.1 : 2.5 * steer, -top, top), speed: this.vs });
+      // turning right round (facing away from the line after getting up): at most 0.9 rad/s (1.4 tipped it over)
+      const cap = Math.abs(steer) > 1.2 ? 0.9 : top;
+      return b.run({ command: "walk", turn: clamp(w.turn ? w.turn * 1.1 : 2.5 * steer, -cap, cap), speed: this.vs });
     }
     if (m === "brake") return b.run({ command: "walk", turn: 0, speed: this.mt < 0.6 ? 0.4 : 0.2 });
     this.dog.tick();
@@ -363,7 +365,7 @@ export class Run {
       let off = 0;
       for (const o of C.obstacles) if (o.kind === "slalom" && s > o.s - 1.2 && s < o.end + 1.2) {
         // first marker on Bolt's left: the line passes it on the right, then alternates
-        const u = clamp((s - o.s) / o.gap, -0.5, o.n - 0.5);
+        const u = clamp((s - o.s) / o.gap, -0.5, o.markers.length - 0.5);
         off = -SLALOM_SWING * Math.cos(Math.PI * u) * Math.min(1, (s - (o.s - 1.2)) / 1.2, (o.end + 1.2 - s) / 1.2);
       }
       return [p.x - Math.sin(p.h) * off, p.y + Math.cos(p.h) * off];
@@ -442,14 +444,15 @@ export class Run {
       return;
     }
     if (o.kind === "slalom") {
-      while (k.marker < o.n) {
+      const count = o.markers.length;   // (o.n is the obstacle's number on the course)
+      while (k.marker < count) {
         const m = o.markers[k.marker], [a, sd] = this.rel(m, m.h);
         if (a < 0) break;
         const want = k.marker % 2 ? 1 : -1;   // marker 1 on Bolt's left (Bolt passes to its right), then alternate
         if (Math.sign(sd) !== want || Math.abs(sd) > 1.6) k.missed = true;
         k.marker += 1;
       }
-      if (k.marker >= o.n) { if (k.missed) this.fault("Missed a slalom marker"); else this.say("Slalom: clean", "good"); return this.next(); }
+      if (k.marker >= count) { if (k.missed) this.fault("Missed a slalom marker"); else this.say("Slalom: clean", "good"); return this.next(); }
       return;
     }
     if (o.kind === "table") {

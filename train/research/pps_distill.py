@@ -1,10 +1,10 @@
 """Plan, then distill: teach the dog-motion brain what the PPS planner does, so the improvement runs without
 the planner (one forward pass, ONNX in the browser, a real robot with no simulator on board).
 
-    python research/pps_distill.py collect --tries 30 --seed 20000 --out research/results/distill_r0.npz
-    python research/pps_distill.py collect --tries 30 --seed 21000 --student research/results/student_r0 --out ...r1.npz  (DAgger round)
-    python research/pps_distill.py fit --data r0.npz [r1.npz] --out research/results/student_r0
-    python research/exam_canter.py --brain research/results/student_r0 --mode plain ...
+    python research/pps_distill.py collect --tries 30 --seed 20000 --out runs/research/distill_r0.npz
+    python research/pps_distill.py collect --tries 30 --seed 21000 --student runs/research/student_r0 --out ...r1.npz  (DAgger round)
+    python research/pps_distill.py fit --data r0.npz [r1.npz] --out runs/research/student_r0
+    python research/exam_canter.py --brain runs/research/student_r0 --mode plain ...
 
 collect: canter tries (randomized physics, random start phase, seeds disjoint from the exam's 9000+) with
 the PPS planner on top of the brain being trained (the original brain in round 0, the student in DAgger

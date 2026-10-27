@@ -1,1 +1,18 @@
 gaits: done (939 s)
+rest: done (1604 s)
+jump30: done (1863 s)
+shove: done (2056 s)
+walk->trot                          10/10  not reached 0
+trot->canter                        10/10  not reached 0
+canter->trot                        10/10  not reached 0
+trot->walk                          10/10  not reached 0
+walk->sit                           10/10  not reached 0
+walk->sit [pose reached]            10/10  not reached 0
+sit->lie                            10/10  not reached 0
+sit->lie [pose reached]             10/10  not reached 0
+lie->stand (posture)                10/10  not reached 0
+trot->jump 30 cm                     7/10  not reached 0
+jump 30 cm->(canter)->trot           8/9   not reached 1
+shove -> fall                        9/10  not reached 0
+fall -> recover (stood up)           8/9   not reached 1
+recover -> walk                      8/8   not reached 2
