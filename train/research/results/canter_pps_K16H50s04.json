@@ -1,0 +1,97 @@
+{
+ "args": {
+  "clips": [
+   "canter"
+  ],
+  "n": 10,
+  "mode": "pps",
+  "brain": "/home/user/Cool-Websites/models/bolt-dog-imitate-18b-17.5M",
+  "zip": "policy.zip",
+  "stats": "vecnormalize.pkl",
+  "K": 16,
+  "H": 50,
+  "M": 5,
+  "sigma": 0.4,
+  "robust": false,
+  "out": "research/results/canter_pps_K16H50s04.json"
+ },
+ "results": [
+  {
+   "clip": "canter",
+   "n": 10,
+   "track_mean": 0.494,
+   "track_sd": 0.173,
+   "track_se": 0.055,
+   "falls": 1,
+   "speed_mean": 0.537,
+   "tries": [
+    {
+     "track": 0.5675024547730284,
+     "fell": false,
+     "seconds": 51.4,
+     "speed": 0.6345287245628943
+    },
+    {
+     "track": 0.5720834151078634,
+     "fell": false,
+     "seconds": 64.8,
+     "speed": 0.5116137813743589
+    },
+    {
+     "track": 0.5816900754240648,
+     "fell": false,
+     "seconds": 47.4,
+     "speed": 0.6077310221547066
+    },
+    {
+     "track": 0.5201441267488549,
+     "fell": false,
+     "seconds": 42.0,
+     "speed": 0.5514828187912748
+    },
+    {
+     "track": 0.5582665171124972,
+     "fell": false,
+     "seconds": 88.4,
+     "speed": 0.630436393115622
+    },
+    {
+     "track": 0.44413387176508196,
+     "fell": false,
+     "seconds": 71.2,
+     "speed": 0.5790887606448842
+    },
+    {
+     "track": 0.01506523440196164,
+     "fell": true,
+     "seconds": 2.0,
+     "speed": 0.07911232088923427
+    },
+    {
+     "track": 0.5654439311910567,
+     "fell": false,
+     "seconds": 49.5,
+     "speed": 0.5919428365815868
+    },
+    {
+     "track": 0.5304917492358814,
+     "fell": false,
+     "seconds": 51.4,
+     "speed": 0.5847091940760242
+    },
+    {
+     "track": 0.5851941537951878,
+     "fell": false,
+     "seconds": 51.1,
+     "speed": 0.6025588046534859
+    }
+   ],
+   "planner": {
+    "calls": 365,
+    "chose_plain": 356,
+    "plain_fell": 8,
+    "best_fell": 4
+   }
+  }
+ ]
+}
