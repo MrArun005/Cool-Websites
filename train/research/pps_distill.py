@@ -48,7 +48,7 @@ def slice_obs(policy, obs):
 
 
 def collect(args):
-    orig = ImitatePolicy(BRAIN)
+    orig = ImitatePolicy(args.brain)
     driver = ImitatePolicy(args.student) if args.student else orig
     rng = np.random.default_rng(args.seed)
     O, E = [], []
@@ -95,7 +95,7 @@ def collect(args):
         print(f"try {k}: {n} steps, fell={fell}, planner {planner.stats}", flush=True)
     # anchor samples: the original brain on the other clips (its own states, its own actions)
     A = []
-    env2 = ImitateEnv(randomize=True, clips=ANCHOR_CLIPS)
+    env2 = ImitateEnv(randomize=True, clips=args.anchor_clips)
     for k in range(args.anchor_tries):
         obs, _ = env2.reset(seed=args.seed + 5000 + k)
         for t in range(env2.limit):
@@ -110,7 +110,7 @@ def collect(args):
 
 
 def fit(args):
-    src = Path(args.init or BRAIN)
+    src = Path(args.init or args.brain)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     pol = ImitatePolicy(src)
@@ -152,6 +152,8 @@ def main():
     ap.add_argument("--seed", type=int, default=20000)
     ap.add_argument("--scenario", default="canter", choices=["canter", "rest"])
     ap.add_argument("--student")
+    ap.add_argument("--brain", default=str(BRAIN), help="the original brain (labels are its action + the plan)")
+    ap.add_argument("--anchor-clips", nargs="*", default=ANCHOR_CLIPS, help="clips kept as they were (the brain's own clips)")
     ap.add_argument("--beta", type=float, default=1.0, help="DAgger: chance per 0.1 s chunk of following the plan "
                     "(else the bare driver acts, still labelled with the plan)")
     ap.add_argument("--data", nargs="*")
