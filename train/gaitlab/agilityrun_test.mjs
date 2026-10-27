@@ -17,7 +17,7 @@ const reached = (r, c) => (["sit", "lie"].includes(c) ? posture(bolt) === c : c 
 for (const n of levelsArg.split(",").map(Number)) {
   const rows = [], cmds = {};
   for (let k = 0; k < +runsArg; k++) {
-    const course = buildCourse(n - 1), run = new Run(bolt, dog, course, bundle.start), bot = new Bot(run, { canter: style === "canter", rand: rng(1000 * n + k) });
+    const course = buildCourse(n - 1), run = new Run(bolt, dog, course, bundle.start), bot = new Bot(run, { canter: style === "canter", rand: rng(((n * 1000 + k) * 2654435761) >>> 0) });
     const orig = run.command.bind(run);
     let pending = null;
     const settle = (ok) => { if (!pending) return; const c = cmds[pending.c] || (cmds[pending.c] = { ok: 0, n: 0 }); c.n++; c.ok += ok; pending = null; };
