@@ -45,7 +45,7 @@ RUNS = {
                   measure=dict(label="Speed kept (share of the asked speed or turn rate)", lo=0, hi=1.2, unit="%",
                                lowText="stopped", highText="asked speed"),
                   words=["kept going", "fell"]),
-    "imitate18": dict(branch="claude/train-imitate18", label="Run 18: moving like a real dog", where="cloud machine 3",
+    "imitate18": dict(branch="local", label="Run 18: moving like a real dog", where="this machine (from 5M; cloud machine 3 before)",
                       kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"]],
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
                                    lowText="not at all", highText="exactly"),
@@ -60,6 +60,9 @@ def git(*a):
 def newest(run):
     """(steps, folder path in the branch) of the newest checkpoint the branch holds, or None."""
     b = RUNS[run]["branch"]
+    if b == "local":   # a run training on this machine
+        zs = [int(p.stem.split("_")[1]) for p in (REPO / f"train/runs/{run}/checkpoints").glob("policy_*_steps.zip")]
+        return (max(zs), f"train/runs/{run}/checkpoints") if zs else None
     names = git("ls-tree", "-r", "--name-only", f"origin/{b}", f"train/remote/{run}/").stdout.split()
     best = None
     for n in names:
@@ -72,12 +75,20 @@ def newest(run):
 def fetch(run, steps, folder, into):
     """The checkpoint's files under the names the policy loaders expect (policy.zip, vecnormalize.pkl)."""
     b = RUNS[run]["branch"]
+    if b == "local":
+        for src, dst in ((f"policy_{steps}_steps.zip", "policy.zip"), (f"policy_vecnormalize_{steps}_steps.pkl", "vecnormalize.pkl")):
+            shutil.copy(REPO / folder / src, into / dst)
+        return
     for src, dst in ((f"policy_{steps}_steps.zip", "policy.zip"), (f"policy_vecnormalize_{steps}_steps.pkl", "vecnormalize.pkl")):
         blob = subprocess.run(["git", "show", f"origin/{b}:{folder}/{src}"], cwd=REPO, capture_output=True).stdout
         (into / dst).write_bytes(blob)
 
 
 def exams(run):
+    if RUNS[run]["branch"] == "local":
+        p = REPO / f"train/runs/{run}/train.log"
+        log = p.read_text() if p.exists() else ""
+        return {int(m.group(1)): ast.literal_eval(m.group(2)) for m in re.finditer(r"checkpoint (\d+) ready: (\{.*?\})", log)}
     log = git("show", f"origin/{RUNS[run]['branch']}:train/remote/{run}/train.log").stdout
     return {int(m.group(1)): ast.literal_eval(m.group(2)) for m in re.finditer(r"checkpoint (\d+) ready: (\{.*?\})", log)}
 
@@ -230,7 +241,8 @@ def main():
     while True:
         changed = False
         for run, spec in RUNS.items():
-            git("fetch", "-q", "origin", spec["branch"])
+            if spec["branch"] != "local":
+                git("fetch", "-q", "origin", spec["branch"])
             R = data["runs"].setdefault(run, dict(checkpoints={}))
             R.update(label=spec["label"], where=spec["where"], kinds=spec["kinds"], measure=spec["measure"], words=spec["words"], goal="cloud")
             got = newest(run)
@@ -248,7 +260,8 @@ def main():
                     print(f"{run} {n}: could not record ({e})", flush=True)
                     continue
             R["checkpoints"][str(n)] = dict(steps=n, exam=ex, progress=prog, replays=rec)
-            R["finished"] = bool(git("ls-tree", "--name-only", f"origin/{spec['branch']}", f"train/remote/{run}/final/").stdout.strip())
+            R["finished"] = ((REPO / f"train/runs/{run}/policy.zip").exists() if spec["branch"] == "local" else
+                             bool(git("ls-tree", "--name-only", f"origin/{spec['branch']}", f"train/remote/{run}/final/").stdout.strip()))
             changed = True
             news(args.news, run, n, prog)
             print(f"{run} {n}: {prog}", flush=True)
