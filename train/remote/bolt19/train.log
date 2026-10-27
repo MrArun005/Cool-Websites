@@ -48,3 +48,4 @@ Traceback (most recent call last):
 AttributeError: 'NoneType' object has no attribute 'glGetError'
 resuming from ../models/bolt-dog-walk-sharp-12M/policy.zip at 12,000,000 steps
 resuming from /home/user/Cool-Websites/train/runs/bolt19/checkpoints/policy_12500000_steps.zip at 12,500,000 steps
+resuming from /home/user/Cool-Websites/train/runs/bolt19/checkpoints/policy_13000000_steps.zip at 13,000,000 steps
