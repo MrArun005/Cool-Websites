@@ -73,3 +73,24 @@ physics carries a real-motor model (train/bolt_env.py MOTOR: 17 N·m cap, 420 W,
 class for a 12 kg dog) and real joint ranges (sideways hips ±48°, Go2). Check every new skill's peak joint
 speed, torque and power against it (scratchpad audit.py pattern) before trusting any result, and remove
 shortcuts no real robot has (teleports, kinematic carrying) or say plainly where one remains.
+
+## Finish line: the best robot software when training ends
+Training is not the goal; one working robot brain stack is. When runs 16e, 17d, 18 and 19 end:
+1. **Pick by exam, not by last step.** Each run keeps its best checkpoint (best/). Re-run the exam on the best and last 2 checkpoints with 3 seeds; keep the winner. Never ship a brain that scores below the one it replaces.
+2. **Prove it in the real-body physics.** Everything under the motor model (17 N·m, 420 W, 21 rad/s) and the ±0.84 rad hip range; no teleports, no kinematic shortcuts. A skill counts only if it passes in the browser physics too (live_check, getup_test, game tests).
+3. **One stack, one controller.** Walk (19) and dog-like gaits (18), jump (16e), self-right then posture stand (17d), all switching through the same hand-over rules the games use. Test the switches: walk→jump→land→walk, fall→self-right→tuck→stand→walk, 60 simulated minutes on the pet page with zero stuck states.
+4. **Package.** models/<name>/ with ONNX, exam.json, MODEL.md for each brain; one README table of skills, success rates and limits (licence: dog-motion brains are CC BY-NC 4.0).
+5. **Ship.** Re-export the Gait Lab, castle, agility and pet pages with the new brains; remove the teleport fallback and the kinematic ball carry; republish; final news item on Bolt Learning Live.
+If a run ends worse than its start (e.g. the motor limits cost too much), fix the reward or curriculum and retrain that skill only; do not ship the regression.
+
+## Product goal: better together than the published research
+Each published system leads at one skill (Peng 2020 gaits, ANYmal recovery, parkour jumps, Mini Cheetah speed).
+Bolt's edge is the whole dog in one stack, measured honestly. Steps:
+1. Skill manager (train/skills.py, test_skills.py): dog gaits by speed (walk/trot/canter from runs 18b-18d), jump
+   (16g/16h), fall -> roll to belly (17e) -> get up front-first like a dog (18d getup clip), sit/lie. Target: 95%+
+   of switches without a fall.
+2. Robust for hardware: train with motor delay 0-20 ms, sensor noise, shoves; avoid inputs a real robot cannot measure.
+3. Benchmarks on the papers' terms (gait imitation vs Peng, recovery vs ANYmal/AFR, jump heights vs parkour, pushes
+   vs DreamWaQ, a Barkour-style course) and a scoreboard on Bolt Learning Live, each number marked sim or real.
+4. Demo: pet page and games on the combined Bolt; 4K video pushed to git.
+Do not claim to beat a specialist at its speciality unless the same test says so.

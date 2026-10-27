@@ -1,0 +1,16 @@
+{
+  "name": "bolt-run17e-selfright-a1",
+  "workdir": "..",
+  "env": {"MUJOCO_GL": "osmesa"},
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": ["python", "-u", "train_getup.py", "--name", "selfright17e", "--goal", "selfright", "--steps", "18000000", "--every", "500000", "--resume", "runs/selfright17e_start/policy_13000000_steps.zip"],
+      "resume_cmd": ["python", "-u", "train_getup.py", "--name", "selfright17e", "--goal", "selfright", "--steps", "18000000", "--every", "500000", "--resume", "{latest}"],
+      "latest": "runs/selfright17e/checkpoints/policy_*_steps.zip",
+      "log": "runs/selfright17e/train.log",
+      "done_when": {"exit_code": 0, "file": "runs/selfright17e/policy.zip", "log_contains": "^done:"}
+    }
+  ]
+}

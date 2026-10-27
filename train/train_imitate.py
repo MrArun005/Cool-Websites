@@ -22,7 +22,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
-from imitate_env import DEFAULT_CLIPS, ImitateEnv, ImitatePolicy, exam, score
+from imitate_env import ALL_CLIPS, DEFAULT_CLIPS, ImitateEnv, ImitatePolicy, exam, score
 
 
 class Examiner(BaseCallback):
@@ -79,6 +79,8 @@ def main():
     ap.add_argument("--envs", type=int, default=8)
     ap.add_argument("--resume")
     ap.add_argument("--clips", nargs="*", default=DEFAULT_CLIPS)
+    ap.add_argument("--switch-rate", type=float, default=0.0, help="chance per second of switching clip mid-try (run 18e: 0.3)")
+    ap.add_argument("--slots", type=int, default=len(ALL_CLIPS), help="clip one-hot size: 8 for runs begun before the getup clip")
     ap.add_argument("--exam-every", type=int, default=1_000_000)
     ap.add_argument("--threads", type=int, default=2, help="torch threads")
     ap.add_argument("--root-vel-weight", type=float, help="reward weight of body velocity tracking (default 0.1, "
@@ -88,7 +90,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(args.threads)
     venv = make_vec_env(ImitateEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(
-        clips=args.clips, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None))
+        clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None))
     if args.resume:
         ck = Path(args.resume)
         venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)

@@ -1,0 +1,18 @@
+{
+  "name": "bolt-run22b-dog-running-scratch",
+  "workdir": "..",
+  "env": {"MUJOCO_GL": "osmesa", "OMP_NUM_THREADS": "1"},
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": ["python", "-u", "train_run.py", "--name", "run22b", "--steps", "40000000", "--every", "500000",
+              "--turn-weight", "1.5", "--turn-focus", "0.3", "--style-weight", "3.0"],
+      "resume_cmd": ["python", "-u", "train_run.py", "--name", "run22b", "--steps", "40000000", "--every", "500000",
+                     "--turn-weight", "1.5", "--turn-focus", "0.3", "--style-weight", "3.0", "--resume", "{latest}"],
+      "latest": "runs/run22b/checkpoints/policy_*_steps.zip",
+      "log": "runs/run22b/train.log",
+      "done_when": {"exit_code": 0, "file": "runs/run22b/policy.zip", "log_contains": "^done:"}
+    }
+  ]
+}

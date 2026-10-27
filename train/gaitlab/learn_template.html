@@ -7,9 +7,9 @@
 {{GAME_CSS}}
   /* Layout: the latest attempt in 3D first, then the learning curve, then what changed and why.
      Same look as the Gait Lab; one color per kind of fall. */
-  :root { --k-side: #2f6fb5; --k-back: #c4372f; --k-tipped: #d08a12; --k-standing: #2f8a4c; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; } }
-  :root[data-theme="dark"] { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; }
+  :root { --k-side: #2f6fb5; --k-back: #c4372f; --k-tipped: #d08a12; --k-standing: #2f8a4c; --k-x5: #7a4fb8; --k-x6: #16867f; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; --k-x5: #b294ea; --k-x6: #4cc4bb; } }
+  :root[data-theme="dark"] { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; --k-x5: #b294ea; --k-x6: #4cc4bb; }
   .stage { aspect-ratio: 16 / 10; min-height: 300px; }
   .hud { position: absolute; display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--panel) 82%, transparent); border: 1px solid var(--line); pointer-events: none; max-width: min(60%, 340px); }
   .hud b { font: 700 1.05rem var(--display); }
@@ -38,6 +38,19 @@
   .newslist .bad { color: var(--k-back); border-color: var(--k-back); }
   .newslist .plan { color: var(--k-side); border-color: var(--k-side); }
   @media (max-width: 560px) { .newslist li { grid-template-columns: 1fr; } }
+  /* the 3D ground: a solid floor that fades into the sky colour at the horizon */
+  :root { --ground: #e4e7e1; --sky: #f3f4f1; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ground: #171a18; --sky: #222624; } }
+  :root[data-theme="dark"] { --ground: #171a18; --sky: #222624; }
+  .tag3d { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); padding: 2px 7px; border-radius: 6px; font: 500 12px var(--mono); white-space: nowrap; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); color: var(--ink); pointer-events: none; }
+  .tag3d.peak { color: var(--accent); border-color: var(--accent); }
+  .tag3d[hidden] { display: none; }
+  @media (max-width: 560px) {   /* phones: a taller stage and slimmer readouts, so the 3D view is not hidden behind them */
+    .stage { aspect-ratio: 4 / 5; }
+    .hud { padding: 5px 8px; gap: 0; max-width: 47%; }
+    .hud b, .hud.tr b { font-size: .82rem; }
+    .hud .muted { display: none; }
+  }
   .notes { display: grid; gap: 10px; margin: 0; padding-left: 1.2em; max-width: 75ch; }
   @media (prefers-reduced-motion: reduce) { .live.on i { animation: none; } }
 </style>
@@ -46,7 +59,7 @@
   <header style="display:grid;gap:6px">
     <span class="label">Bolt robot dog · training, as it happens</span>
     <h1>Bolt Learning Live</h1>
-    <p class="muted" style="margin:0;max-width:72ch">Bolt is learning to get up after a fall, by trial and error, the way real robot dogs do it: first roll onto its belly, then stand. Every million practice steps the training saves a checkpoint. This page tests each one: it drops Bolt on its side, on its back, half tipped over and standing, and records what the brain does. Watch the latest attempt below, drag the slider to go back in time, and see on the chart how upright it manages to get. The page refreshes itself when a new checkpoint arrives.</p>
+    <p class="muted" style="margin:0;max-width:72ch">Bolt is learning by trial and error, on four machines at once: getting up after a fall (roll onto its belly, then stand), jumping a real agility hurdle, walking with its real hip range, and moving like a real dog. Every 500k practice steps each run saves a checkpoint. This page tests each one and records what the brain does: pick a run and what to try. Watch the latest attempt below, drag the slider to go back in time, and see on the chart how upright it manages to get. The page refreshes itself when a new checkpoint arrives.</p>
     <span class="live" id="live"><i></i><span id="liveText">Loading…</span></span>
   </header>
 
@@ -61,19 +74,22 @@
       <div class="loading" id="loading">Loading…</div>
       <div class="hud tl"><span class="label">Checkpoint</span><b id="hCk">–</b><span class="muted" id="hRun"></span></div>
       <div class="hud tr"><span class="label">Upright</span><b id="hUp">–</b><span class="label">Doing</span><b id="hDo">–</b><span class="label">Result</span><b id="hRes">–</b><span class="label">Time</span><b id="hT">0.0 s</b></div>
+      <div class="tag3d" id="barTag" hidden></div>
+      <div class="tag3d peak" id="peakTag" hidden></div>
       <div class="hint"><span id="gridNote">grid = 50 cm</span> · drag to turn the view, scroll or pinch to zoom</div>
     </div>
     <div class="controls">
       <div class="chips" id="runs" role="group" aria-label="Training run"></div>
       <div class="chips" id="kinds" role="group" aria-label="Kind of fall"></div>
       <button class="btn" id="play" type="button">Pause</button>
+      <div class="chips" id="speed" role="group" aria-label="Playback speed"><button type="button" aria-pressed="true" data-s="1">1×</button><button type="button" aria-pressed="false" data-s="0.5" aria-label="half speed">½×</button><button type="button" aria-pressed="false" data-s="0.25" aria-label="quarter speed">¼×</button></div>
       <div class="slider"><span class="label">Checkpoint</span><input id="ck" type="range" min="0" max="0" value="0" aria-label="Checkpoint"><button class="btn" id="latest" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Latest</button></div>
     </div>
   </section>
 
   <section class="panel" aria-labelledby="curve">
     <h2 id="curve">How upright it gets</h2>
-    <p class="muted" style="margin:0;max-width:72ch">For each kind of fall: the most upright Bolt got during the attempt, at each checkpoint. 1 is standing, 0 is on its side, −1 is flat on its back. A filled dot means it reached the goal: standing (runs 17, 17b) or belly down and still (run 17c).</p>
+    <p class="muted" id="curveNote" style="margin:0;max-width:72ch">For each kind of fall: the most upright Bolt got during the attempt, at each checkpoint. 1 is standing, 0 is on its side, −1 is flat on its back. A filled dot means it reached the goal: standing (runs 17, 17b) or belly down and still (run 17c).</p>
     <div class="chart" id="chart"></div>
     <div class="tablewrap"><table id="table" aria-label="Exam results per checkpoint"></table></div>
   </section>
@@ -103,7 +119,26 @@
   const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
 
 {{SCENE_JS}}
-  controls.maxDistance = 12;
+  controls.maxDistance = 12; controls.maxPolarAngle = Math.PI / 2 - 0.04;   // never look from under the ground
+  camera.far = 320; camera.updateProjectionMatrix();
+  // ---------- the ground: solid to the horizon, a fine grid near Bolt, a faint 1 m grid far out, fog in the sky colour ----------
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshBasicMaterial({ toneMapped: false }));
+  ground.position.z = -0.002; ground.receiveShadow = true; ground.renderOrder = -1; scene.add(ground);   // the shadow floor above it draws the shadows
+  floor.scale.set(0.2, 0.2, 1);   // the shadow-only floor: 12 m around Bolt is plenty (the sun's shadows reach 1.2 m) and keeps far pixels cheap
+  scene.fog = new THREE.Fog(0xffffff, 10, 60);
+  let coarse = null;
+  function grids() {
+    makeGrid();
+    if (coarse) { scene.remove(coarse); coarse.geometry.dispose(); coarse.material.dispose(); }
+    const g = lin(css("--grid"));
+    coarse = new THREE.GridHelper(200, 200, g, g);
+    Object.assign(coarse.material, { toneMapped: false, transparent: true, opacity: 0.55, depthWrite: false });
+    coarse.rotation.x = Math.PI / 2; coarse.position.z = 0.0002; scene.add(coarse);
+    ground.material.color.copy(lin(css("--ground")));
+    const sky = new THREE.Color(css("--sky"));   // fog and background are mixed in after encoding (r128): use the colour as is
+    scene.background = sky; scene.fog.color.copy(sky);
+    $("gridNote").textContent = "grid = 10 cm, 1 m further out";
+  }
   let C = {};
   function colors() { C = { accent: lin(css("--accent")) }; }
 
@@ -129,9 +164,98 @@
     const x = data ? data.qpos[0] : 0, y = data ? data.qpos[1] : 0;
     camera.position.set(x + 1.3, y - 1.9, 1.2); controls.target.set(x, y, 0.2); controls.update(); lastPos = null;
   }
+  // ---------- the hurdle in jump replays: its fixed parts, and the bar posed per frame ----------
+  const propGrp = new THREE.Group(); scene.add(propGrp);
+  let propKey = null, barMesh = null;
+  const propMat = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.6 }), barMat = new THREE.MeshStandardMaterial({ color: 0xd6452f, roughness: 0.5 });
+  function geomMesh(type, size, mat) {   // MuJoCo geom types: 3 capsule, 5 cylinder, 6 box (cylinders along z)
+    const g = new THREE.Group();
+    const m = type === 6 ? new THREE.Mesh(new THREE.BoxGeometry(2 * size[0], 2 * size[1], 2 * size[2]), mat)
+      : new THREE.Mesh(new THREE.CylinderGeometry(size[0], size[0], 2 * size[1], 16), mat);
+    if (type !== 6) m.rotation.x = Math.PI / 2;
+    m.castShadow = true; g.add(m); return g;
+  }
+  function drawProps(P, i) {
+    const key = P ? runName + kind + ckIndex : null;
+    if (key !== propKey) {
+      propGrp.clear(); barMesh = null; propKey = key;
+      if (P) {
+        for (const [type, size, pos, q] of P.static) { const g = geomMesh(type, size, propMat); g.position.set(...pos); g.quaternion.set(q[1], q[2], q[3], q[0]); propGrp.add(g); }
+        barMesh = geomMesh(5, P.bar, barMat); barMesh.children[0].rotation.x = 0; propGrp.add(barMesh);   // the bar's capsule lies along its body's y axis
+      }
+    }
+    if (P && barMesh) { const b = P.barpose, k = 7 * Math.min(i, b.length / 7 - 1); barMesh.position.set(b[k], b[k + 1], b[k + 2]); barMesh.quaternion.set(b[k + 4], b[k + 5], b[k + 6], b[k + 3]); }
+  }
+
+  // ---------- jump replays: bar height, flight trail, highest point, and a side-on view ----------
+  const fx = new THREE.Group(); fx.visible = false; scene.add(fx);
+  const trailMat = new THREE.LineBasicMaterial({ toneMapped: false }), dotMat = new THREE.PointsMaterial({ size: 4, sizeAttenuation: false, toneMapped: false });
+  const peakMat = new THREE.MeshBasicMaterial({ toneMapped: false }), dropMat = new THREE.LineDashedMaterial({ toneMapped: false, dashSize: 0.03, gapSize: 0.03, transparent: true, opacity: 0.6 });
+  const trailGeo = new THREE.BufferGeometry(), dropGeo = new THREE.BufferGeometry();
+  const trail = new THREE.Line(trailGeo, trailMat), dots = new THREE.Points(trailGeo, dotMat), drop = new THREE.Line(dropGeo, dropMat);
+  const peak = new THREE.Mesh(new THREE.SphereGeometry(0.022, 16, 12), peakMat);
+  dropGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6), 3));
+  fx.add(trail, dots, drop, peak);
+  let fxKey = null, J = null, followOff = [0, 0];
+  const tags = { bar: null, peak: null };
+  function clearJump() { fx.visible = false; J = null; fxKey = null; tags.bar = tags.peak = null; $("barTag").hidden = $("peakTag").hidden = true; }
+  function jumpFx(f, P, i, n) {
+    const key = runName + kind + ckIndex;
+    if (key !== fxKey) {   // a new jump recording: its torso path, travel direction and the bar
+      fxKey = key;
+      const pos = new Float32Array(3 * n);
+      let top = 0;
+      for (let j = 0; j < n; j++) { pos.set(f.slice(19 * j, 19 * j + 3), 3 * j); if (f[19 * j + 2] > f[19 * top + 2]) top = j; }
+      trailGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3)); trailGeo.computeBoundingSphere();
+      const far = top > 0 ? top : n - 1;
+      let dx = f[19 * far] - f[0], dy = f[19 * far + 1] - f[1], len = Math.hypot(dx, dy);
+      if (len < 0.05) { dx = f[19 * (n - 1)] - f[0]; dy = f[19 * (n - 1) + 1] - f[1]; len = Math.hypot(dx, dy) || 1; }
+      const cm = /^j(\d+)$/.exec(kind);
+      J = { dir: [dx / len, dy / len], bar: P.barpose.slice(0, 3), text: cm ? `${cm[1]} cm` : "bar" };
+    }
+    if (aim) {   // side-on: square to the way Bolt travels (turned 12° toward the landing so the bar reads as a bar), a little raised, aimed at the bar
+      aim = false; followOff = [0, 0];
+      let px = -J.dir[1], py = J.dir[0];
+      if ((camera.position.x - controls.target.x) * px + (camera.position.y - controls.target.y) * py < 0) { px = -px; py = -py; }
+      const a = -0.21, vx = Math.cos(a) * px - Math.sin(a) * J.dir[0], vy = Math.cos(a) * py - Math.sin(a) * J.dir[1];
+      const dist = Math.min(5.5, Math.max(3.3, 4.2 / camera.aspect)), [bx, by] = J.bar;   // far enough to fit run-up, flight and landing, also on a narrow stage
+      controls.target.set(bx, by, 0.5); camera.position.set(bx + dist * vx, by + dist * vy, 0.5 + 0.18 * dist); controls.update();
+    }
+    fx.visible = true;
+    for (const m of [trailMat, dotMat, peakMat, dropMat]) m.color.copy(C.accent);
+    trailGeo.setDrawRange(0, i + 1);
+    let top = 0; for (let j = 1; j <= i; j++) if (f[19 * j + 2] > f[19 * top + 2]) top = j;
+    const pz = f[19 * top + 2], lifted = pz - f[2] > 0.05;
+    peak.visible = drop.visible = lifted;
+    if (lifted) {
+      peak.position.set(f[19 * top], f[19 * top + 1], pz);
+      dropGeo.attributes.position.array.set([f[19 * top], f[19 * top + 1], 0, f[19 * top], f[19 * top + 1], pz]); dropGeo.attributes.position.needsUpdate = true; drop.computeLineDistances();
+      tags.peak = [peak.position.clone().setZ(pz + 0.06), `peak ${pz.toFixed(2)} m`];
+    } else tags.peak = null;
+    const b = P.barpose, k = 7 * Math.min(i, b.length / 7 - 1);
+    tags.bar = [new THREE.Vector3(b[k], b[k + 1], b[k + 2] + 0.07), J.text];
+    return J;
+  }
+  const tv = new THREE.Vector3();
+  function placeTags() {   // HTML labels pinned to points in the 3D view
+    const r = stageEl.getBoundingClientRect();
+    for (const [name, el] of [["bar", $("barTag")], ["peak", $("peakTag")]]) {
+      const t = tags[name];
+      if (!t) { el.hidden = true; continue; }
+      tv.copy(t[0]).project(camera);
+      if (tv.z > 1 || Math.abs(tv.x) > 1.1 || Math.abs(tv.y) > 1.1) { el.hidden = true; continue; }
+      el.hidden = false; if (el.textContent !== t[1]) el.textContent = t[1];
+      el.style.transform = `translate(${((tv.x + 1) / 2 * r.width).toFixed(1)}px, ${((1 - tv.y) / 2 * r.height).toFixed(1)}px) translate(-50%, -100%)`;
+    }
+  }
+
   // ---------- the recorded attempts ----------
-  const KINDS = [["side", "On its side"], ["back", "On its back"], ["tipped", "Half tipped"], ["standing", "Standing"]];
-  let L = null, runName = null, kind = "back", ckIndex = 0, follow = true, playing = true, clock = 0, lastUpdated = null;
+  const FALLS = [["side", "On its side"], ["back", "On its back"], ["tipped", "Half tipped"], ["standing", "Standing"]];
+  const FALL_MEASURE = { label: "best uprightness", lo: -1, hi: 1, lowText: "on its back", highText: "standing" };
+  const kinds = () => L.runs[runName].kinds || FALLS;
+  const measure = () => L.runs[runName].measure || FALL_MEASURE;
+  const kcol = (i) => `var(--k-${["side", "back", "tipped", "standing", "x5", "x6"][i % 6]})`;
+  let L = null, runName = null, kind = "back", ckIndex = 0, follow = true, playing = true, clock = 0, lastUpdated = null, speed = 1, aim = true;
   const runsSorted = () => Object.keys(L.runs);
   const cks = () => Object.values(L.runs[runName].checkpoints).sort((a, b) => a.steps - b.steps);
   const fmt = (n) => (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + "M";
@@ -143,47 +267,60 @@
   function renderChips() {
     $("runs").innerHTML = ""; $("kinds").innerHTML = "";
     for (const r of runsSorted()) chip($("runs"), L.runs[r].label.split(" (")[0], r === runName, () => { runName = r; ckIndex = cks().length - 1; follow = true; refresh(); });
-    for (const [k, label] of KINDS) chip($("kinds"), label, k === kind, () => { kind = k; clock = 0; renderChips(); }, `var(--k-${k})`);
+    if (!kinds().some(([k]) => k === kind)) kind = kinds()[0][0];
+    kinds().forEach(([k, label], i) => chip($("kinds"), label, k === kind, () => { kind = k; clock = 0; aim = true; renderChips(); }, kcol(i)));
   }
   function refresh() {
     const list = cks();
     $("ck").max = String(Math.max(0, list.length - 1));
     if (follow) ckIndex = list.length - 1;
-    $("ck").value = String(ckIndex); clock = 0;
+    $("ck").value = String(ckIndex); clock = 0; aim = true;
     renderChips(); chart(); table(); hudStatic();
   }
   function current() { const list = cks(); return list[Math.min(ckIndex, list.length - 1)]; }
   function hudStatic() {
-    const c = current(); if (!c) return;
-    const R = L.runs[runName];
+    const c = current(), R = L.runs[runName];
+    if (!c) {   // a run with no checkpoint yet: say so, never leave the previous run's numbers up
+      $("hCk").textContent = "No checkpoint yet"; $("hRun").textContent = R.label + (R.where ? ` · ${R.where}` : "");
+      for (const id of ["hUp", "hDo", "hRes"]) $(id).textContent = "–";
+      $("hT").textContent = "0.0 s"; drawProps(null, 0); return;
+    }
     $("hCk").textContent = `${fmt(c.steps)} steps`;
-    $("hRun").textContent = R.label;
+    $("hRun").textContent = R.label + (R.where ? ` · ${R.where}` : "");
   }
 
   // ---------- chart: best uprightness per checkpoint, one line per kind of fall ----------
+  let fallNote = null;
   function chart() {
     const list = cks(), W = 720, H = 260, l = 46, r = 16, t = 14, b = 34;
     if (!list.length) { $("chart").innerHTML = '<p class="muted">No checkpoints yet. The first one arrives after 1M practice steps.</p>'; return; }
     const maxS = Math.max(...list.map((c) => c.steps)), minS = 0;
-    const x = (s) => l + (W - l - r) * (s - minS) / Math.max(1, maxS - minS), y = (u) => t + (H - t - b) * (1 - u) / 2;
-    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Best uprightness per checkpoint">`;
-    for (const u of [1, 0.5, 0, -0.5, -1]) s += `<line x1="${l}" x2="${W - r}" y1="${y(u)}" y2="${y(u)}" stroke="var(--line)" stroke-width="1"/><text x="${l - 8}" y="${y(u) + 4}" text-anchor="end">${u > 0 ? "+" : ""}${u}</text>`;
-    s += `<text x="${l + 4}" y="${y(1) - 4}">standing</text><text x="${l + 4}" y="${y(-1) + 13}">on its back</text>`;
+    if (!fallNote) fallNote = $("curveNote").textContent;
+    const cloudRun = !!L.runs[runName].kinds;
+    $("curve").textContent = cloudRun ? "Progress per checkpoint" : "How upright it gets";
+    $("curveNote").textContent = cloudRun ? `${measure().label}, at each checkpoint, for each kind of try. A filled dot means that try worked in the recording.` : fallNote;
+    const M = measure(), x = (s) => l + (W - l - r) * (s - minS) / Math.max(1, maxS - minS), y = (u) => t + (H - t - b) * (M.hi - Math.max(M.lo, Math.min(M.hi, u))) / (M.hi - M.lo);
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${M.label} per checkpoint">`;
+    for (let j = 0; j <= 4; j++) { const u = M.lo + (M.hi - M.lo) * j / 4; s += `<line x1="${l}" x2="${W - r}" y1="${y(u)}" y2="${y(u)}" stroke="var(--line)" stroke-width="1"/><text x="${l - 8}" y="${y(u) + 4}" text-anchor="end">${M.unit === "%" ? Math.round(u * 100) + "%" : (u > 0 && M.lo < 0 ? "+" : "") + +u.toFixed(2)}</text>`; }
+    s += `<text x="${l + 4}" y="${y(M.hi) + 13}">${M.highText}</text><text x="${l + 4}" y="${y(M.lo) - 4}">${M.lowText}</text>`;
     const ticks = Math.min(list.length, 8);
     for (let i = 0; i < ticks; i++) { const c = list[Math.round(i * (list.length - 1) / Math.max(1, ticks - 1))]; s += `<text x="${x(c.steps)}" y="${H - 12}" text-anchor="middle">${fmt(c.steps)}</text>`; }
-    for (const [k] of KINDS) {
-      const pts = list.map((c) => [x(c.steps), y(c.progress[k].best), c.progress[k].stood]);
-      s += `<polyline fill="none" stroke="var(--k-${k})" stroke-width="2.2" points="${pts.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}"/>`;
-      for (const [px, py, stood] of pts) s += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${stood ? `var(--k-${k})` : "var(--panel)"}" stroke="var(--k-${k})" stroke-width="2"/>`;
-    }
+    kinds().forEach(([k], i) => {
+      const col = kcol(i), pts = list.filter((c) => c.progress[k]).map((c) => [x(c.steps), y(c.progress[k].best), c.progress[k].stood]);
+      s += `<polyline fill="none" stroke="${col}" stroke-width="2.2" points="${pts.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}"/>`;
+      for (const [px, py, stood] of pts) s += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${stood ? col : "var(--panel)"}" stroke="${col}" stroke-width="2"/>`;
+    });
     const c = current(); if (c) s += `<line x1="${x(c.steps)}" x2="${x(c.steps)}" y1="${t}" y2="${H - b}" stroke="var(--ink)" stroke-dasharray="3 4" opacity=".5"/>`;
     $("chart").innerHTML = s + "</svg>";
   }
   function table() {
     const list = cks().slice().reverse();
     const pct = (v) => (v === undefined || v === null ? "–" : `${Math.round(v * 100)}%`);
-    let h = `<thead><tr><th>Checkpoint</th>${KINDS.map(([k, label]) => `<th><span class="kind" style="background:var(--k-${k})"></span>${label}</th>`).join("")}</tr></thead><tbody>`;
-    for (const c of list) h += `<tr><td class="mono">${fmt(c.steps)}</td>${KINDS.map(([k]) => { const v = c.exam["up_" + k], sec = c.exam["secs_" + k]; return `<td class="${v > 0 ? "ok" : ""}">${pct(v)}${sec ? ` · ${sec} s` : ""}</td>`; }).join("")}</tr>`;
+    const cloud = !!L.runs[runName].kinds;
+    let h = `<thead><tr><th>Checkpoint</th>${kinds().map(([k, label], i) => `<th><span class="kind" style="background:${kcol(i)}"></span>${label}</th>`).join("")}</tr></thead><tbody>`;
+    for (const c of list) h += `<tr><td class="mono">${fmt(c.steps)}</td>${kinds().map(([k]) => {
+      if (cloud) { const p = c.progress[k]; return `<td class="${p && p.stood ? "ok" : ""}">${p ? p.text : "–"}</td>`; }
+      const v = c.exam["up_" + k], sec = c.exam["secs_" + k]; return `<td class="${v > 0 ? "ok" : ""}">${pct(v)}${sec ? ` · ${sec} s` : ""}</td>`; }).join("")}</tr>`;
     $("table").innerHTML = h + "</tbody>";
   }
 
@@ -192,6 +329,7 @@
     try {
       const r = await fetch(`data/learning.json?t=${Date.now()}`); if (!r.ok) throw new Error(r.status);
       const next = await r.json();
+      try { const cr = await fetch(`data/cloud.json?t=${Date.now()}`); if (cr.ok) { const C2 = await cr.json(); Object.assign(next.runs, C2.runs); if (C2.updated > next.updated) next.updated = C2.updated; } } catch (e) {}
       if (L && next.updated === lastUpdated) return;
       L = next; lastUpdated = L.updated;
       const names = runsSorted();
@@ -232,14 +370,17 @@
     await Promise.all([load(), loadNews()]);
     setInterval(() => { load(); loadNews(); }, 60000);
   }
-  $("ck").addEventListener("input", (e) => { ckIndex = +e.target.value; follow = ckIndex === cks().length - 1; clock = 0; hudStatic(); chart(); });
+  $("ck").addEventListener("input", (e) => { ckIndex = +e.target.value; follow = ckIndex === cks().length - 1; clock = 0; aim = true; hudStatic(); chart(); });
   $("latest").addEventListener("click", () => { follow = true; refresh(); });
   $("play").addEventListener("click", () => { playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; });
+  for (const b of $("speed").querySelectorAll("button")) b.addEventListener("click", () => {   // slow motion: scales the replay clock
+    speed = +b.dataset.s; for (const o of $("speed").querySelectorAll("button")) o.setAttribute("aria-pressed", String(o === b));
+  });
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
   new ResizeObserver(resize).observe(stageEl);
-  const retheme = () => { colors(); makeGrid(); chart(); table(); };
+  const retheme = () => { colors(); grids(); chart(); table(); };
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
   new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   const FPS = 25, PAUSE = 1.5;
@@ -248,29 +389,46 @@
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     const c = L && current();
     if (c && data) {
-      const f = c.replays[kind], n = f.length / 19;
-      if (playing) clock += dt;
-      if (clock > n / FPS + PAUSE) clock = 0;   // loop, holding the last pose for a moment
+      const f = c.replays[kind];
+      if (!f || !f.length) {   // no recording of this kind at this checkpoint: say so, keep the page running
+        $("hDo").textContent = "no recording at this checkpoint"; $("hRes").textContent = "–";
+        clearJump(); controls.update(); renderer.render(scene, camera); requestAnimationFrame(tick); return;
+      }
+      const n = f.length / 19;
+      if (playing) clock += dt * speed;
+      if (clock > n / FPS + PAUSE * speed) clock = 0;   // loop, holding the last pose for a moment
       const i = Math.min(n - 1, Math.floor(clock * FPS));
       data.qpos.set(f.slice(19 * i, 19 * i + 19), 0);
       mj.mj_forward(model, data); drawBolt();
       const q = f.slice(19 * i + 3, 19 * i + 7), up = 1 - 2 * (q[1] * q[1] + q[2] * q[2]);   // body z axis vs vertical
       $("hUp").textContent = up.toFixed(2);
       const p = c.progress[kind];
-      const goalWord = L.runs[runName].goal === "selfright" ? ["on its belly", "not righted"] : ["stood up", "didn't stand"];
-      $("hRes").textContent = (i < n - 1 ? "trying…" : p.stood ? goalWord[0] : goalWord[1]) + (p.tries ? ` · ${p.wins} of ${p.tries} falls stood up` : "");
+      const RR = L.runs[runName], goalWord = RR.words || (RR.goal === "selfright" ? ["on its belly", "not righted"] : ["stood up", "didn't stand"]);
+      $("hRes").textContent = (i < n - 1 ? "trying…" : p.stood ? goalWord[0] : goalWord[1]) + (p.tries ? ` · ${p.wins} of ${p.tries} falls stood up` : p.text ? ` · ${p.text}` : "");
+      const P = c.replays[kind + "_props"];
+      drawProps(P, i);
       $("hT").textContent = `${(i / FPS).toFixed(1)} s`;
       const ph = c.replays[kind + "_phase"];
       $("hDo").textContent = ph ? ph[i] : (i < n - 1 ? "trying" : "–");
       const x = data.qpos[0], yy = data.qpos[1];
-      if (lastPos) { const dx = x - lastPos[0], dy = yy - lastPos[1]; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy; }
+      const J = P ? jumpFx(f, P, i, n) : (clearJump(), null);
+      if (J) {   // jump: hold the bar in view through run-up, flight and landing, then follow Bolt as it runs off
+        const s = Math.max(0, (x - J.bar[0]) * J.dir[0] + (yy - J.bar[1]) * J.dir[1] - 1.1), ox = s * J.dir[0], oy = s * J.dir[1];
+        camera.position.x += ox - followOff[0]; camera.position.y += oy - followOff[1]; controls.target.x += ox - followOff[0]; controls.target.y += oy - followOff[1];
+        followOff = [ox, oy];
+      } else if (lastPos) { const dx = x - lastPos[0], dy = yy - lastPos[1]; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy; }
       lastPos = [x, yy];
       if (grid) grid.position.set(Math.round(x / 0.5) * 0.5, Math.round(yy / 0.5) * 0.5, 0.0004);
       sun.position.set(x + 4, yy - 5.6, 10.4); sun.target.position.set(x, yy, 0);
-    }
-    controls.update(); renderer.render(scene, camera);
+      if (coarse) coarse.position.set(Math.round(x), Math.round(yy), 0.0002);
+      ground.position.set(x, yy, -0.002); floor.position.set(x, yy, 0);
+    } else clearJump();
+    const d = camera.position.distanceTo(controls.target);   // fog starts past what you are looking at, the far ground melts into the sky
+    scene.fog.near = 2 * d + 4; scene.fog.far = 5 * d + 30;
+    if (grid) { grid.material.transparent = true; grid.material.opacity = Math.min(1, Math.max(0, (9 - d) / 4)); grid.visible = d < 9; }   // zoomed out, the 1 m grid is enough
+    controls.update(); renderer.render(scene, camera); placeTags();
     requestAnimationFrame(tick);
   }
-  colors(); makeGrid(); resetView(); requestAnimationFrame(tick); boot();
+  colors(); grids(); resetView(); requestAnimationFrame(tick); boot();
 })();
 </script>

@@ -1,0 +1,68 @@
+{
+  "name": "bolt-run18b-imitate-canter",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train_imitate.py",
+        "--name",
+        "imitate18b",
+        "--steps",
+        "30000000",
+        "--clips",
+        "walk",
+        "trot",
+        "pace",
+        "canter",
+        "turn_left",
+        "turn_right",
+        "sit",
+        "lie",
+        "--slots",
+        "8",
+        "--exam-every",
+        "500000",
+        "--resume",
+        "runs/imitate18/checkpoints/policy_9000000_steps.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train_imitate.py",
+        "--name",
+        "imitate18b",
+        "--steps",
+        "30000000",
+        "--clips",
+        "walk",
+        "trot",
+        "pace",
+        "canter",
+        "turn_left",
+        "turn_right",
+        "sit",
+        "lie",
+        "--slots",
+        "8",
+        "--exam-every",
+        "500000",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/imitate18b/checkpoints/policy_*_steps.zip",
+      "log": "runs/imitate18b/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/imitate18b/policy.zip",
+        "log_contains": "^done:"
+      }
+    }
+  ]
+}

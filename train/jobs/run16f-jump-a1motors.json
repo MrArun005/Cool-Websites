@@ -1,0 +1,18 @@
+{
+  "name": "bolt-run16f-jump-a1motors",
+  "workdir": "..",
+  "env": {"MUJOCO_GL": "osmesa"},
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": ["python", "-u", "train_jump.py", "--name", "jump16f", "--steps", "20000000", "--lr", "1e-4", "--target-kl", "0.02",
+              "--n-steps", "2048", "--real", "--bar-start", "0.15", "--resume", "runs/jump16e_start/policy_12000000_steps.zip"],
+      "resume_cmd": ["python", "-u", "train_jump.py", "--name", "jump16f", "--steps", "20000000", "--lr", "1e-4", "--target-kl", "0.02",
+                     "--n-steps", "2048", "--real", "--bar-start", "0.15", "--resume", "{latest}"],
+      "latest": "runs/jump16f/checkpoints/policy_*_steps.zip",
+      "log": "runs/jump16f/train.log",
+      "done_when": {"exit_code": 0, "file": "runs/jump16f/policy.zip", "log_contains": "^done:"}
+    }
+  ]
+}

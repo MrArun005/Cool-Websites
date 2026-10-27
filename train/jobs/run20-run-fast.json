@@ -1,0 +1,16 @@
+{
+  "name": "bolt-run20-run-fast",
+  "workdir": "..",
+  "env": {"MUJOCO_GL": "osmesa", "OMP_NUM_THREADS": "1"},
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": ["python", "-u", "train_run.py", "--name", "run20", "--steps", "60000000", "--every", "500000"],
+      "resume_cmd": ["python", "-u", "train_run.py", "--name", "run20", "--steps", "60000000", "--every", "500000", "--resume", "{latest}"],
+      "latest": "runs/run20/checkpoints/policy_*_steps.zip",
+      "log": "runs/run20/train.log",
+      "done_when": {"exit_code": 0, "file": "runs/run20/policy.zip", "log_contains": "^done:"}
+    }
+  ]
+}

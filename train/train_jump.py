@@ -53,9 +53,9 @@ def widen(src, out):
 class Examiner(BaseCallback):
     """Every `every` steps: save a checkpoint, take the exam, keep the best."""
 
-    def __init__(self, out, every):
+    def __init__(self, out, every, heights=(0.15, 0.20, 0.25, 0.30)):
         super().__init__()
-        self.out, self.every, self.next, self.best = out, every, every, -1.0
+        self.out, self.every, self.next, self.best, self.heights = out, every, every, -1.0, heights
 
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
         self.next = (self.num_timesteps // self.every + 1) * self.every
@@ -69,7 +69,7 @@ class Examiner(BaseCallback):
         n = self.num_timesteps
         self.model.save(ck / f"policy_{n}_steps.zip")
         self.training_env.save(str(ck / f"policy_vecnormalize_{n}_steps.pkl"))
-        result = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"))
+        result = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), heights=self.heights)
         score = sum(result.values()) / len(result)
         levels = self.training_env.get_attr("bar_level")
         print(f"checkpoint {n} ready: {result} (practice bars now {100 * sum(levels) / len(levels):.0f} cm)", flush=True)
@@ -97,6 +97,8 @@ def main():
     ap.add_argument("--n-steps", type=int, default=512, help="steps per env per update (x envs = samples per update)")
     ap.add_argument("--real", action="store_true", help="the real hurdle (hurdle.py) and heading inputs: run 16 on")
     ap.add_argument("--widen-from", help="a 49-input jump brain folder to start from (with --real)")
+    ap.add_argument("--exam-heights", type=float, nargs="+", default=[0.15, 0.20, 0.25, 0.30],
+                    help="bar heights (m) of the exam, e.g. 0.25 0.30 0.40 0.50 for a brain that clears 30 cm")
     ap.add_argument("--bar-start", type=float, help="the coach's starting bar height (m), e.g. 0.20 for a skilled brain")
     args = ap.parse_args()
     out = Path(__file__).with_name("runs") / args.name
@@ -121,7 +123,7 @@ def main():
                                        log_std_init=-0.5),
                     device="cpu", verbose=0)
     start = time.time()
-    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 500_000),
+    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 500_000, tuple(args.exam_heights)),
                 reset_num_timesteps=not args.resume, progress_bar=False)
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))
