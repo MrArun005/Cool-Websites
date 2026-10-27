@@ -35,6 +35,11 @@ RUNS = {
                    measure=dict(label="Speed kept (share of the asked speed; turns: of the asked turn rate)", lo=0, hi=1.2, unit="%",
                                 lowText="stopped", highText="asked speed"),
                    words=["kept going", "fell"]),
+    "run20": dict(branch="claude/train-run20", label="Run 20: fast running (like Mini Cheetah)", where="cloud machine 4",
+                  kinds=[["v1", "1 m/s"], ["v2", "2 m/s"], ["v3", "3 m/s"], ["v4", "4 m/s"], ["w3", "Spin 3 rad/s"]],
+                  measure=dict(label="Speed kept (share of the asked speed or turn rate)", lo=0, hi=1.2, unit="%",
+                               lowText="stopped", highText="asked speed"),
+                  words=["kept going", "fell"]),
     "imitate18": dict(branch="claude/train-imitate18", label="Run 18: moving like a real dog", where="cloud machine 3",
                       kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"]],
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
@@ -169,6 +174,30 @@ def record_imitate(d):
     return rec, prog
 
 
+def record_run(d):
+    from run_env import RunEnv, RunPolicy
+    p = RunPolicy(d)
+    env = RunEnv(randomize=False, pushes=False, max_steps=250)
+    rec, prog = {}, {}
+    for k, cmd in (("v1", (1, 0, 0)), ("v2", (2, 0, 0)), ("v3", (3, 0, 0)), ("v4", (4, 0, 0)), ("w3", (0.5, 0, 3.0))):
+        env.exam_command = cmd
+        obs, _ = env.reset(seed=4321)
+        frames, got, fell = [], [], False
+        for t in range(250):
+            if t % 2 == 0:
+                frames.append(env.data.qpos[:19].copy())
+            obs, _, fell, _, info = env.step(p.act(obs))
+            if t >= 100:
+                got.append(info["w"] if k[0] == "w" else info["vx"])
+            if fell:
+                break
+        kept = 0.0 if fell or not got else float(np.mean(got)) / (cmd[2] if k[0] == "w" else cmd[0])
+        rec[k] = np.round(np.concatenate(frames), 4).tolist()
+        prog[k] = dict(best=round(float(np.clip(kept, -0.2, 1.2)), 3), stood=not fell,
+                       text="fell" if fell else (f"{np.mean(got):.2f} rad/s" if k[0] == "w" else f"{np.mean(got):.2f} m/s"))
+    return rec, prog
+
+
 def news(path, run, n, prog):
     if not path:
         return
@@ -208,7 +237,8 @@ def main():
                 tmp = Path(tmp)
                 fetch(run, n, folder, tmp)
                 try:
-                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_walk(tmp) if run == "bolt19" else record_imitate(tmp))
+                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_walk(tmp) if run == "bolt19"
+                                  else record_run(tmp) if run == "run20" else record_imitate(tmp))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)
                     continue
