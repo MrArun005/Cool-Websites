@@ -82,6 +82,10 @@ class Master:
         self.full = np.maximum(self.hi - DOG, DOG - self.lo)
         self.dt = b.dt
         self.mode = None
+        # patient=True (training): the recovery chain moves on only when the state says so (calm belly-down, legs
+        # tucked), never on a timeout, so a state is never labelled "self-right" in one try and "tuck"/"stand" in
+        # another (DAgger round 5-6 of the first run: the student never got up, the labels on its back contradicted)
+        self.patient = False
 
     # ---------------- episode ----------------
     def start(self, clip="walk", tau=None, seed=None):
@@ -309,11 +313,11 @@ class Master:
         if r["phase"] == "selfright":
             standing = env._rotation()[2, 2] > 0.9 and np.linalg.norm(d.qvel[0:3]) < 0.2
             r["calm"] = r["calm"] + 1 if standing else 0
-            if r["calm"] >= 15 or r["n"] >= 200:
+            if r["calm"] >= 15 or (r["n"] >= 200 and not self.patient):
                 r["phase"], r["n"] = "tuck", 0
                 self._to_posture("lie")
         elif r["phase"] == "tuck":
-            if np.abs(d.qpos[7:19] - LIE_POSE).max() < 0.6 or r["n"] >= 100:
+            if np.abs(d.qpos[7:19] - LIE_POSE).max() < 0.6 or (r["n"] >= 100 and not self.patient):
                 r["phase"], r["n"] = "stand", 0
                 self._to_posture("stand")
         elif r["phase"] == "stand" and r["n"] >= 150:

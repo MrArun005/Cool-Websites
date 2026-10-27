@@ -82,6 +82,7 @@ def collect(args):
     from student import Student
     rng = np.random.default_rng(seed)
     m = Master(seed=seed, imitate=imitate)
+    m.patient = True
     brain = Student(student_path, m) if student_path else None
     X, Y = [], []
     stats = dict(tries=0, falls=0, jumps=0, clean=0, shoves=0, recovered=0)
@@ -95,6 +96,8 @@ def collect(args):
         cmd, left = clip, int(rng.uniform(1.0, 3.0) / m.dt)
         ep_noise = noise * rng.uniform(0.0, 1.0)
         for _ in range(int(rng.uniform(15, 25) / m.dt)):
+            if m.recovering() and m.rec["n"] > 400:   # stuck (patient chain): a new try
+                break
             if left <= 0 and not m.recovering() and m.jump is None:
                 nxt, kw, secs = h.next(m.cmd)
                 if nxt == "shove":
@@ -126,9 +129,16 @@ def collect(args):
     return dict(obs=np.array(X, np.float32), label=np.array(Y, np.float32), stats=stats)
 
 
-def train(net, X, Y, full, dog, epochs, lr, log, batch=2048, weights=None):
+def sample_weights(X):
+    """More weight where the data is thin and mistakes are costly: the jump brain's second (x4) and the first
+    second after every command (x2)."""
+    return (1.0 + 3.0 * (X[:, 82] > 0) + 1.0 * (X[:, 83] < 1 / 3)).astype(np.float32)
+
+
+def train(net, X, Y, full, dog, epochs, lr, log, batch=2048):
     import torch
     Xt, Yt = torch.as_tensor(X), torch.as_tensor(Y)
+    Wt = torch.as_tensor(sample_weights(X))
     full_t, dog_t = torch.as_tensor(full, dtype=torch.float32), torch.as_tensor(dog, dtype=torch.float32)
     opt = torch.optim.Adam(net.parameters(), lr=lr)
     n = len(Xt)
@@ -143,7 +153,7 @@ def train(net, X, Y, full, dog, epochs, lr, log, batch=2048, weights=None):
         for k in range(steps_per):
             b = idx[k * batch:(k + 1) * batch]
             ctrl = dog_t + full_t * net(Xt[b])
-            loss = ((ctrl - Yt[b]) ** 2).mean()
+            loss = (((ctrl - Yt[b]) ** 2).mean(1) * Wt[b]).sum() / Wt[b].sum()
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -170,6 +180,9 @@ def main():
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--resume", action="store_true", help="continue from out/data.npz and out/student.pt")
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--init-data", help="start from this data.npz (its first --init-rows rows) instead of teacher rollouts")
+    ap.add_argument("--init-rows", type=int, default=0)
+    ap.add_argument("--beta-floor", type=float, default=0.0, help="teacher share of the executed actions never below this")
     a = ap.parse_args()
     import torch
     torch.set_num_threads(a.workers)
@@ -197,12 +210,34 @@ def main():
         net.load_state_dict(ck["state"])
     else:
         X, Y, r0, net = [], [], 0, None
+        if a.init_data:
+            z = np.load(a.init_data)
+            k = a.init_rows or len(z["obs"])
+            X, Y = [z["obs"][:k]], [z["label"][:k]]
+            r0 = 1
+            log(f"init data: {k} rows of {a.init_data}")
     history = json.loads((out / "history.json").read_text()) if a.resume and (out / "history.json").exists() else []
+    def fresh_net(Xa):
+        n = Net(hidden=hidden)
+        mean, std = Xa.mean(0), Xa.std(0)
+        std[std < 1e-3] = 1.0
+        for i in list(range(46, 57)) + [77]:   # one-hot and flag inputs stay 0/1
+            mean[i], std[i] = 0.0, 1.0
+        n.mean[:], n.std[:] = torch.as_tensor(mean), torch.as_tensor(std)
+        return n
+
+    if a.init_data and net is None:   # a first student on the given data, before any rollout of it
+        net = fresh_net(X[0])
+        t1 = time.time()
+        train(net, X[0], Y[0], full, DOG, a.epochs0, a.lr, log)
+        save(net, student, round=0, imitate=a.imitate)
+        save(net, out / "student_r0.pt", round=0, imitate=a.imitate)
+        log(f"init student trained in {time.time() - t1:.0f} s")
     ctx = mp.get_context("fork")
     for rnd in range(r0, a.rounds):
         t0 = time.time()
         steps = a.steps0 if rnd == 0 else a.steps
-        beta = 1.0 if rnd == 0 else max(0.0, 0.5 - 0.15 * (rnd - 1))
+        beta = 1.0 if rnd == 0 else max(a.beta_floor, 0.5 - 0.15 * (rnd - 1))
         noise = a.noise if rnd == 0 else 0.0
         per = steps // a.workers
         jobs = [(w, a.seed * 100 + rnd * 10 + w, per, str(student) if rnd > 0 else None, beta, noise, a.imitate)
@@ -216,13 +251,7 @@ def main():
         X, Y = [Xa], [Ya]
         log(f"round {rnd}: beta {beta:.2f}, collected {steps} in {time.time() - t0:.0f} s, {st}; data {len(Xa)}")
         if net is None:
-            net = Net(hidden=hidden)
-            mean, std = Xa.mean(0), Xa.std(0)
-            std[std < 1e-3] = 1.0
-            # one-hot and flag inputs: keep them 0/1 as they are (no normalization)
-            for i in list(range(46, 57)) + [77]:
-                mean[i], std[i] = 0.0, 1.0
-            net.mean[:], net.std[:] = torch.as_tensor(mean), torch.as_tensor(std)
+            net = fresh_net(Xa)
         t1 = time.time()
         train(net, Xa, Ya, full, DOG, a.epochs0 if rnd == 0 else a.epochs, a.lr if rnd == 0 else a.lr * 0.5, log)
         save(net, student, round=rnd, imitate=a.imitate)
