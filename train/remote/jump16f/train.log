@@ -5,3 +5,4 @@ checkpoint 13000000 ready: {'jump_15': 0.7, 'jump_20': 0.5, 'jump_25': 0.4, 'jum
 new best at 13000000: score 0.55
 checkpoint 13500000 ready: {'jump_15': 0.6, 'jump_20': 0.4, 'jump_25': 0.4, 'jump_30': 0.5} (practice bars now 15 cm)
 checkpoint 14000000 ready: {'jump_15': 0.6, 'jump_20': 0.3, 'jump_25': 0.4, 'jump_30': 0.5} (practice bars now 15 cm)
+checkpoint 14500000 ready: {'jump_15': 0.5, 'jump_20': 0.4, 'jump_25': 0.4, 'jump_30': 0.3} (practice bars now 15 cm)
