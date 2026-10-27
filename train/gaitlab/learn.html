@@ -141,6 +141,15 @@
   th { font: 500 .72rem var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
   .tablewrap { overflow-x: auto; }
   .ok { color: var(--k-standing); font-weight: 600; }
+  .newslist { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; max-width: 80ch; }
+  .newslist li { display: grid; grid-template-columns: 9.5em 1fr; gap: 4px 14px; align-items: baseline; }
+  .newslist time { font: 500 .78rem var(--mono); color: var(--muted); }
+  .newslist b { display: block; }
+  .newslist .tag { display: inline-block; font: 500 .68rem var(--mono); text-transform: uppercase; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; margin-right: 6px; border: 1px solid var(--line); }
+  .newslist .good { color: var(--k-standing); border-color: var(--k-standing); }
+  .newslist .bad { color: var(--k-back); border-color: var(--k-back); }
+  .newslist .plan { color: var(--k-side); border-color: var(--k-side); }
+  @media (max-width: 560px) { .newslist li { grid-template-columns: 1fr; } }
   .notes { display: grid; gap: 10px; margin: 0; padding-left: 1.2em; max-width: 75ch; }
   @media (prefers-reduced-motion: reduce) { .live.on i { animation: none; } }
 </style>
@@ -152,6 +161,11 @@
     <p class="muted" style="margin:0;max-width:72ch">Bolt is learning to get up after a fall, by trial and error, the way real robot dogs do it: first roll onto its belly, then stand. Every million practice steps the training saves a checkpoint. This page tests each one: it drops Bolt on its side, on its back, half tipped over and standing, and records what the brain does. Watch the latest attempt below, drag the slider to go back in time, and see on the chart how upright it manages to get. The page refreshes itself when a new checkpoint arrives.</p>
     <span class="live" id="live"><i></i><span id="liveText">Loading…</span></span>
   </header>
+
+  <section class="panel" aria-labelledby="news">
+    <h2 id="news">Latest news</h2>
+    <ol class="newslist" id="newslist"><li class="muted">Loading…</li></ol>
+  </section>
 
   <section class="panel" aria-labelledby="watch">
     <h2 id="watch">Watch it try</h2>
@@ -430,6 +444,24 @@
     } catch (e) { $("liveText").textContent = "Couldn't load the recordings. Reload the page to try again."; }
   }
 
+  // ---------- news: what happened, newest first (data/news.json) ----------
+  let newsStamp = null;
+  async function loadNews() {
+    try {
+      const r = await fetch(`data/news.json?t=${Date.now()}`); if (!r.ok) throw new Error(r.status);
+      const N = await r.json(); if (N.updated === newsStamp) return; newsStamp = N.updated;
+      const ol = $("newslist"); ol.innerHTML = "";
+      for (const n of N.items) {
+        const li = document.createElement("li"), when = document.createElement("time"), body = document.createElement("div");
+        when.textContent = new Date(n.t).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+        const tag = document.createElement("span"); tag.className = `tag ${n.kind || ""}`; tag.textContent = n.kind === "good" ? "progress" : n.kind === "bad" ? "problem" : n.kind === "plan" ? "plan" : "news";
+        const b = document.createElement("b"); b.append(tag, n.title);
+        const p = document.createElement("span"); p.className = "muted"; p.textContent = n.body;
+        body.append(b, p); li.append(when, body); ol.append(li);
+      }
+    } catch (e) { $("newslist").innerHTML = '<li class="muted">Couldn\'t load the news. Reload the page to try again.</li>'; }
+  }
+
   async function boot() {
     try {
       const [m, robot] = await Promise.all([import("./mujoco/mujoco.js"), fetch("data/robot.json").then((x) => x.json())]);
@@ -438,8 +470,8 @@
       buildDog(robot.geoms);
     } catch (e) { console.error(e); $("loading").textContent = "The 3D view couldn't start in this browser."; return; }
     $("loading").hidden = true;
-    await load();
-    setInterval(load, 60000);
+    await Promise.all([load(), loadNews()]);
+    setInterval(() => { load(); loadNews(); }, 60000);
   }
   $("ck").addEventListener("input", (e) => { ckIndex = +e.target.value; follow = ckIndex === cks().length - 1; clock = 0; hudStatic(); chart(); });
   $("latest").addEventListener("click", () => { follow = true; refresh(); });
