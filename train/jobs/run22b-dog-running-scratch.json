@@ -6,9 +6,9 @@
   "jobs": [
     {
       "name": "train",
-      "cmd": ["python", "-u", "train_run.py", "--name", "run22b", "--steps", "40000000", "--every", "1000000",
+      "cmd": ["python", "-u", "train_run.py", "--name", "run22b", "--steps", "40000000", "--every", "500000",
               "--turn-weight", "1.5", "--turn-focus", "0.3", "--style-weight", "3.0"],
-      "resume_cmd": ["python", "-u", "train_run.py", "--name", "run22b", "--steps", "40000000", "--every", "1000000",
+      "resume_cmd": ["python", "-u", "train_run.py", "--name", "run22b", "--steps", "40000000", "--every", "500000",
                      "--turn-weight", "1.5", "--turn-focus", "0.3", "--style-weight", "3.0", "--resume", "{latest}"],
       "latest": "runs/run22b/checkpoints/policy_*_steps.zip",
       "log": "runs/run22b/train.log",
