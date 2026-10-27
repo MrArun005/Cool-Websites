@@ -1,0 +1,16 @@
+{
+  "name": "bolt-run18-imitate",
+  "workdir": "..",
+  "env": {"MUJOCO_GL": "osmesa"},
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": ["python", "-u", "train_imitate.py", "--name", "imitate18", "--steps", "30000000"],
+      "resume_cmd": ["python", "-u", "train_imitate.py", "--name", "imitate18", "--steps", "30000000", "--resume", "{latest}"],
+      "latest": "runs/imitate18/checkpoints/policy_*_steps.zip",
+      "log": "runs/imitate18/train.log",
+      "done_when": {"exit_code": 0, "file": "runs/imitate18/policy.zip", "log_contains": "^done:"}
+    }
+  ]
+}
