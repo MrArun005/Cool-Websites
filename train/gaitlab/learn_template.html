@@ -289,7 +289,12 @@
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     const c = L && current();
     if (c && data) {
-      const f = c.replays[kind], n = f.length / 19;
+      const f = c.replays[kind];
+      if (!f || !f.length) {   // no recording of this kind at this checkpoint: say so, keep the page running
+        $("hDo").textContent = "no recording at this checkpoint"; $("hRes").textContent = "–";
+        controls.update(); renderer.render(scene, camera); requestAnimationFrame(tick); return;
+      }
+      const n = f.length / 19;
       if (playing) clock += dt;
       if (clock > n / FPS + PAUSE) clock = 0;   // loop, holding the last pose for a moment
       const i = Math.min(n - 1, Math.floor(clock * FPS));

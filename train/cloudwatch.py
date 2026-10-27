@@ -187,7 +187,7 @@ def record_walk(d):
 def record_imitate(d, run="imitate18"):
     from imitate_env import ImitateEnv, ImitatePolicy
     p = ImitatePolicy(d)
-    env = ImitateEnv(randomize=False)
+    env = ImitateEnv(randomize=False, clips=[k for k, _ in RUNS[run]["kinds"]])   # every clip shown on the page, canter included
     rec, prog = {}, {}
     for k, _ in RUNS[run]["kinds"]:
         if k not in env.clip_names:
