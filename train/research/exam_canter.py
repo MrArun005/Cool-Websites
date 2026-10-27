@@ -86,6 +86,7 @@ def main():
     ap.add_argument("--M", type=int, default=5)
     ap.add_argument("--sigma", type=float, default=0.2)
     ap.add_argument("--robust", action="store_true")
+    ap.add_argument("--seed", type=int, default=9000)
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
     pol = ImitatePolicy(args.brain, args.zip, args.stats)
@@ -96,7 +97,7 @@ def main():
             ctrl = PlannedController(pol, planner)
         else:
             ctrl, planner = Plain(pol), None
-        r = run(ctrl, name, args.n)
+        r = run(ctrl, name, args.n, seed=args.seed)
         if planner:
             r["planner"] = planner.stats
         res["results"].append(r)
