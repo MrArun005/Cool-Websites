@@ -1,7 +1,7 @@
 {
   "name": "bolt-run17d-selfright",
   "workdir": "..",
-  "env": {"MUJOCO_GL": "osmesa"},
+  "env": {"MUJOCO_GL": "osmesa", "BOLT_MOTOR_TORQUE": "17"},
   "check_every": 30,
   "jobs": [
     {

@@ -4,7 +4,7 @@
 
 The cloud machines push their newest checkpoint to their own branches (train/remote/<run>/). Every few
 minutes this fetches them, and for each checkpoint not seen yet records a few tries the way the games use
-the brain: jumps over the real hurdle (run 16e), walking, running and turning (run 19), and copying the
+the brain: jumps over the real hurdle (run 16f), walking, running and turning (run 19), and copying the
 real dog's motions (run 18). Each try is Bolt's body pose (qpos 0-18) at 25 Hz; jump tries also carry the
 hurdle (its fixed parts once, the bar's pose per frame). The page draws them with the same robot model.
 Kept separate from learnwatch.py's file so the two watchers never overwrite each other.
@@ -25,7 +25,7 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parent.parent
 RUNS = {
-    "jump16e": dict(branch="claude/train-jump16e", label="Run 16e: hurdle jump (real motors)", where="cloud machine 1",
+    "jump16f": dict(branch="claude/train-jump16e", label="Run 16f: hurdle jump (real A1 motors)", where="cloud machine 1",
                     kinds=[["j15", "15 cm bar"], ["j20", "20 cm bar"], ["j25", "25 cm bar"], ["j30", "30 cm bar"]],
                     measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
                                  lowText="none", highText="all clean"),
@@ -208,7 +208,7 @@ def main():
                 tmp = Path(tmp)
                 fetch(run, n, folder, tmp)
                 try:
-                    rec, prog = (record_jump(tmp, ex) if run == "jump16e" else record_walk(tmp) if run == "bolt19" else record_imitate(tmp))
+                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_walk(tmp) if run == "bolt19" else record_imitate(tmp))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)
                     continue
