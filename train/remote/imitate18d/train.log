@@ -3,3 +3,5 @@ training on clips ['walk', 'trot', 'pace', 'canter', 'turn_left', 'turn_right', 
 update at 14016384: reward/step 0.806, try length 205 steps (76 tries), 794276 steps/s
 update at 14032768: reward/step 0.779, try length 206 steps (100 tries), 396753 steps/s
 update at 14049152: reward/step 0.770, try length 200 steps (100 tries), 264167 steps/s
+update at 14065536: reward/step 0.796, try length 205 steps (100 tries), 200455 steps/s
+update at 14081920: reward/step 0.774, try length 203 steps (100 tries), 161898 steps/s
