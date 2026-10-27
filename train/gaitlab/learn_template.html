@@ -73,6 +73,9 @@
       <li><strong>Run 17b learned to roll.</strong> By 2M steps it rolled from flat on its back onto its side, and from half tipped nearly level, but never stood up.</li>
       <li><strong>How real robot dogs do it.</strong> ETH Zurich's ANYmal (Lee, Hwangbo and Hutter, 2019) recovers from any fall in under 5 s, over 97% of the time, with separate skills: self-righting (roll onto the belly, legs tucked), then standing up, then walking, picked by a selector. Unitree's recovery stand follows the same steps.</li>
       <li><strong>Run 17c does the same.</strong> It continues from run 17b and only learns to roll onto its belly with its legs tucked and lie still. Bolt's posture brain already stands up from there: 20 of 20 from the lying pose, 17 of 20 with the legs well off it.</li>
+      <li><strong>Run 17c stalled at a tilt.</strong> It rolled past its side but always settled at the same 0.16 tilt. The brain could only move the sideways hip joints ±0.4 rad, and the joints stopped at ±0.5 rad. Real robot dogs swing their legs sideways about ±48°.</li>
+      <li><strong>Run 17d: a wider leg swing.</strong> Bolt's sideways hip joints now reach ±0.9 rad, and the self-righting brain can use each joint's whole range. One million steps later it rolled onto its belly 7 to 8 times in 10 from every kind of fall, in 1 to 1.7 s.</li>
+      <li><strong>The whole recovery.</strong> Self-right, fold the legs under the body (Unitree does this too), then the posture brain stands up: 15 to 17 falls in 20 end with Bolt standing, about 6 s after the fall.</li>
     </ol>
   </section>
 </div>

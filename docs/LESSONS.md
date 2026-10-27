@@ -241,3 +241,6 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   past its side but always settled at the same 0.16 tilt (run 17c). Real robot dogs swing their legs
   sideways about ±48°; with ±0.9 rad and actions covering each joint's whole range, a motor search found a
   full roll even from flat on the back (run 17d).
+- **Hand a skill over in the pose the next skill knows.** Self-righting left Bolt belly-down with its legs
+  splayed 2.5 rad from the lying pose, and the posture brain stood it up 0-1 times in 20. Folding the legs
+  into the lying pose with the motors first (as Unitree tucks before standing) made it 15-17 in 20.
