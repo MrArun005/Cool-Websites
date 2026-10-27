@@ -19,3 +19,19 @@ update at 278528: reward/step 0.348, try length 168 steps (100 tries), 664 steps
 update at 294912: reward/step 0.369, try length 175 steps (100 tries), 666 steps/s
 update at 311296: reward/step 0.371, try length 167 steps (100 tries), 667 steps/s
 update at 327680: reward/step 0.386, try length 181 steps (100 tries), 665 steps/s
+training on clips ['walk', 'trot', 'pace', 'turn_left', 'turn_right', 'sit', 'lie'], 8 envs, 16384 samples per update
+update at 16384: reward/step 0.208, try length 67 steps (100 tries), 705 steps/s
+update at 32768: reward/step 0.217, try length 64 steps (100 tries), 663 steps/s
+update at 49152: reward/step 0.216, try length 74 steps (100 tries), 668 steps/s
+update at 65536: reward/step 0.231, try length 89 steps (100 tries), 659 steps/s
+update at 81920: reward/step 0.238, try length 92 steps (100 tries), 657 steps/s
+update at 98304: reward/step 0.256, try length 98 steps (100 tries), 664 steps/s
+update at 114688: reward/step 0.284, try length 103 steps (100 tries), 656 steps/s
+update at 131072: reward/step 0.256, try length 96 steps (100 tries), 661 steps/s
+update at 147456: reward/step 0.274, try length 106 steps (100 tries), 662 steps/s
+update at 163840: reward/step 0.285, try length 130 steps (100 tries), 660 steps/s
+update at 180224: reward/step 0.297, try length 133 steps (100 tries), 661 steps/s
+update at 196608: reward/step 0.303, try length 112 steps (100 tries), 667 steps/s
+update at 212992: reward/step 0.283, try length 148 steps (100 tries), 668 steps/s
+update at 229376: reward/step 0.317, try length 158 steps (100 tries), 668 steps/s
+update at 245760: reward/step 0.326, try length 162 steps (100 tries), 672 steps/s
