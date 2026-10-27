@@ -6,8 +6,8 @@
   "jobs": [
     {
       "name": "train",
-      "cmd": ["python", "-u", "train_getup.py", "--name", "selfright17d", "--goal", "selfright", "--steps", "15000000", "--resume", "runs/selfright17c/checkpoints/policy_6000000_steps.zip"],
-      "resume_cmd": ["python", "-u", "train_getup.py", "--name", "selfright17d", "--goal", "selfright", "--steps", "15000000", "--resume", "{latest}"],
+      "cmd": ["python", "-u", "train_getup.py", "--name", "selfright17d", "--goal", "selfright", "--steps", "15000000", "--every", "500000", "--resume", "runs/selfright17c/checkpoints/policy_6000000_steps.zip"],
+      "resume_cmd": ["python", "-u", "train_getup.py", "--name", "selfright17d", "--goal", "selfright", "--steps", "15000000", "--every", "500000", "--resume", "{latest}"],
       "latest": "runs/selfright17d/checkpoints/policy_*_steps.zip",
       "log": "runs/selfright17d/train.log",
       "done_when": {"exit_code": 0, "file": "runs/selfright17d/policy.zip", "log_contains": "^done:"}
