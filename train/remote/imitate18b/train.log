@@ -1,0 +1,12 @@
+resuming from remote/imitate18b_move/policy_18500000_steps.zip at 18,500,000 steps
+training on clips ['walk', 'trot', 'pace', 'canter', 'turn_left', 'turn_right', 'sit', 'lie'], 8 envs, 16384 samples per update
+update at 18516384: reward/step 0.839, try length 227 steps (100 tries), 944493 steps/s
+update at 18532768: reward/step 0.838, try length 225 steps (100 tries), 462008 steps/s
+update at 18549152: reward/step 0.846, try length 217 steps (100 tries), 313127 steps/s
+update at 18565536: reward/step 0.815, try length 216 steps (100 tries), 237764 steps/s
+update at 18581920: reward/step 0.838, try length 216 steps (100 tries), 191716 steps/s
+update at 18598304: reward/step 0.845, try length 211 steps (100 tries), 161082 steps/s
+update at 18614688: reward/step 0.844, try length 225 steps (100 tries), 137633 steps/s
+update at 18631072: reward/step 0.845, try length 222 steps (100 tries), 119052 steps/s
+update at 18647456: reward/step 0.837, try length 220 steps (100 tries), 107446 steps/s
+update at 18663840: reward/step 0.818, try length 210 steps (100 tries), 97521 steps/s
