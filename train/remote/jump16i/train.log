@@ -19,3 +19,4 @@ checkpoint 33500000 ready: {'jump_40': 1.0, 'jump_50': 0.5, 'jump_60': 0.1, 'jum
 checkpoint 34000000 ready: {'jump_40': 1.0, 'jump_50': 0.4, 'jump_60': 0.0, 'jump_70': 0.0, 'strict_40': 0.4, 'strict_50': 0.1, 'strict_60': 0.0, 'strict_70': 0.0} (practice bars now 40 cm)
 checkpoint 34500000 ready: {'jump_40': 1.0, 'jump_50': 0.8, 'jump_60': 0.3, 'jump_70': 0.0, 'strict_40': 0.3, 'strict_50': 0.1, 'strict_60': 0.1, 'strict_70': 0.0} (practice bars now 40 cm)
 new best at 34500000: score 0.53
+checkpoint 35000000 ready: {'jump_40': 1.0, 'jump_50': 0.6, 'jump_60': 0.1, 'jump_70': 0.0, 'strict_40': 0.5, 'strict_50': 0.3, 'strict_60': 0.0, 'strict_70': 0.0} (practice bars now 40 cm)
