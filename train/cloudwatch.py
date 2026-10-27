@@ -35,6 +35,11 @@ RUNS = {
                     measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
                                  lowText="none", highText="all clean"),
                     words=["clean jump", "not clean"]),
+    "jump16h": dict(branch="claude/train-jump16e", label="Run 16h: 40-60 cm bars (real A1 motors)", where="cloud machine 1",
+                    kinds=[["j30", "30 cm bar"], ["j40", "40 cm bar"], ["j50", "50 cm bar"], ["j60", "60 cm bar"]],
+                    measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
+                                 lowText="none", highText="all clean"),
+                    words=["clean jump", "not clean"]),
     "bolt19": dict(branch="claude/train-walk19", label="Run 19: walking (real hip range)", where="cloud machine 2",
                    kinds=[["walk", "Walk 0.4 m/s"], ["run", "Run 1 m/s"], ["turn", "Turn"], ["sharp", "Sharp turn"]],
                    measure=dict(label="Speed kept (share of the asked speed; turns: of the asked turn rate)", lo=0, hi=1.2, unit="%",
@@ -269,7 +274,7 @@ def main():
                 tmp = Path(tmp)
                 fetch(run, n, folder, tmp)
                 try:
-                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_walk(tmp) if run == "bolt19"
+                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_jump(tmp, ex, (0.30, 0.40, 0.50, 0.60)) if run == "jump16h" else record_walk(tmp) if run == "bolt19"
                                   else record_run(tmp) if run in ("run20", "run21", "run22", "run22b") else record_imitate(tmp, run))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)
