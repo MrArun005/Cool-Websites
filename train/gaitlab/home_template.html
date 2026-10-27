@@ -1,0 +1,329 @@
+<title>Bolt at home</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+{{GAME_CSS}}
+  /* Bolt at home: the room in 3D with Bolt's mood on top, then ways to talk to it, then how it feels and
+     what it did. Same look as the Gait Lab and the games. */
+  .hud.tl { max-width: min(64%, 360px); }
+  .say { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .say input { flex: 1 1 220px; min-width: 0; font: 400 0.95rem var(--body); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+  .say input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn.ghost { background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
+  .btn.mic[aria-pressed="true"] { background: var(--bad); color: #fff; }
+  .btn.mic[hidden] { display: none; }
+  .reply { min-height: 1.5em; font-size: 0.95rem; }
+  .reply b { color: var(--accent); font-weight: 600; }
+  .drives { display: grid; gap: 10px; }
+  .drive { display: grid; grid-template-columns: 6.5em 1fr 2.6em; gap: 10px; align-items: center; font-size: 0.9rem; }
+  .drive .bar > div { transition: width 0.4s; }
+  .drive .mono { text-align: right; color: var(--muted); font-size: 0.8rem; }
+  .bar.calm > div { background: var(--good); }
+  .mood { font: 800 1.6rem/1 var(--display); }
+  .memory { list-style: none; padding: 0; font-size: 0.9rem; gap: 4px; max-width: none; }
+  .log .you { color: var(--muted); font-style: italic; } .log .bolt { color: var(--accent); } .log .doing { color: var(--ink); }
+  .group { display: grid; gap: 6px; }
+  .bubble { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); max-width: min(92%, 520px); padding: 8px 14px; border-radius: 10px; background: color-mix(in srgb, var(--panel) 90%, transparent); border: 1px solid var(--line); font-size: 0.9rem; text-align: center; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  .bubble.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .bubble, .drive .bar > div { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="label">Bolt robot dog · a pet on the live simulator</span>
+    <h1>Bolt at home</h1>
+    <p class="muted" style="margin:0;max-width:72ch">Bolt lives in this room as a pet. It gets tired, playful, curious and lonely, and it picks what to do on its own: sniffing round the room, batting its ball about, racing round with the zoomies, napping on its bed, begging for a fuss, or sulking with its back to you if you ignore it too long. Talk to it (type, or use the mic), throw its ball, praise it or tell it off, and it remembers you. Every move is Bolt's own trained brains in real physics, running in your browser: nothing about its body is animated by hand.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="room">
+    <h2 id="room" class="label" style="font-size:.72rem">The room</h2>
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">Loading…</div>
+      <div class="hud tl"><span class="label">Bolt feels</span><b id="hMood">–</b><span class="muted" id="hDoing"></span></div>
+      <div class="hud tr"><span class="label">You</span><b id="hYou">out</b><span class="label">Time</span><b id="hTime">0:00</b></div>
+      <div class="bubble" id="bubble" aria-live="polite"></div>
+      <div class="hint"><span id="gridNote" hidden></span>floorboards 50 cm apart · drag the person to move them, tap the floor to walk there · drag to turn the view</div>
+    </div>
+    <form class="say" id="sayForm" autocomplete="off">
+      <input id="say" type="text" placeholder="Say something to Bolt: “sit”, “come here buddy”, “you look tired”…" aria-label="Say something to Bolt">
+      <button class="btn" type="submit">Say</button>
+      <button class="btn ghost mic" type="button" id="mic" aria-pressed="false" hidden>🎤 Speak</button>
+    </form>
+    <p class="reply" id="reply"><span class="muted">Bolt is listening.</span></p>
+    <div class="controls">
+      <div class="group"><span class="label">Commands</span><div class="chips" id="commands" role="group" aria-label="Commands"></div></div>
+      <div class="group"><span class="label">You</span><div class="chips" id="you" role="group" aria-label="What you do"></div></div>
+    </div>
+  </section>
+
+  <div class="two">
+    <section class="panel" aria-labelledby="feels">
+      <h2 id="feels">How Bolt feels</h2>
+      <div class="mood" id="mood">–</div>
+      <div class="drives" id="drives"></div>
+      <h3>What Bolt remembers</h3>
+      <ul class="memory" id="memory"></ul>
+      <div><button class="btn ghost" type="button" id="forget">Forget me</button></div>
+    </section>
+    <section class="panel" aria-labelledby="did">
+      <h2 id="did">What Bolt did</h2>
+      <ul class="log" id="log"><li class="muted">Waiting for Bolt to wake up…</li></ul>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+{{SCENE_JS}}
+  controls.maxDistance = 22; controls.maxPolarAngle = Math.PI * 0.47;
+  let C = {};
+  function colors() { C = { accent: lin(css("--accent")) }; }
+
+  // ---------- Bolt: the same body as the Gait Lab, posed from the live simulator ----------
+  let parts = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp }; });
+  }
+  const m4 = new THREE.Matrix4();
+  function drawBolt() {
+    const d = bolt.data, xp = d.geom_xpos, xm = d.geom_xmat;
+    for (const pt of parts) {
+      if (!pt.obj) continue;
+      const i = pt.g.id, k = 9 * i;
+      m4.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.obj.position.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.obj.quaternion.setFromRotationMatrix(m4);
+    }
+  }
+
+  // ---------- the room: floor, rug, bed and door are paint; walls, sofa, bowl and plant are solid (props3d.js) ----------
+  const room = new THREE.Group(); scene.add(room);
+  const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.8, ...extra });
+  function buildRoom(R) {
+    const [W, H] = R.half;
+    const floorMesh = mesh(new THREE.PlaneGeometry(2 * W, 2 * H), std("#e4d6bd", { roughness: 0.9 }), [0, 0, 0.0002]);
+    floorMesh.castShadow = false; room.add(floorMesh);
+    for (let x = -W + 0.5; x < W; x += 0.5) { const s = mesh(new THREE.PlaneGeometry(0.008, 2 * H), std("#cdbd9f"), [x, 0, 0.0005]); s.castShadow = false; room.add(s); }
+    const [rx, ry, rw, rh] = R.rug;
+    const rug = mesh(new THREE.PlaneGeometry(2 * rw, 2 * rh), std("#b85c3c", { roughness: 1 }), [rx, ry, 0.001]); rug.castShadow = false; room.add(rug);
+    const rug2 = mesh(new THREE.PlaneGeometry(2 * rw - 0.3, 2 * rh - 0.3), std("#d7a15a", { roughness: 1 }), [rx, ry, 0.0013]); rug2.castShadow = false; room.add(rug2);
+    // the bed: a flat round cushion with a rim
+    const [bx, by] = R.bed;
+    room.add(mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.012, 40), std("#6c8f6a"), [bx, by, 0.006], [Math.PI / 2, 0, 0]));
+    room.add(mesh(new THREE.TorusGeometry(0.6, 0.06, 12, 48), std("#577756"), [bx, by, 0.03]));
+    // the door, in the middle of the south wall
+    const [dx, dy] = R.door;
+    room.add(mesh(new THREE.BoxGeometry(1.0, 0.02, 0.52), std("#8a5a33"), [dx, dy - 0.04, 0.26]));
+    room.add(mesh(new THREE.SphereGeometry(0.025, 12, 10), std("#d8b24a", { metalness: 0.6, roughness: 0.3 }), [dx + 0.36, dy + 0.0, 0.3]));
+    // food in the bowl
+    room.add(mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.012, 24), std("#7a4b2a"), [R.bowl[0], R.bowl[1], 0.085], [Math.PI / 2, 0, 0]));
+    // leaves on the plant pot
+    const leaf = std("#3f7d4a");
+    for (let k = 0; k < 7; k++) { const a = k * 0.9; room.add(mesh(new THREE.SphereGeometry(0.16, 12, 10), leaf, [R.plant[0] + 0.12 * Math.cos(a), R.plant[1] + 0.12 * Math.sin(a), 0.55 + 0.08 * (k % 3)])); }
+  }
+  // the ball, drawn where its free body is (it rolls: the stripe turns with it)
+  const ballObj = new THREE.Group(); scene.add(ballObj);
+  function buildBall(r) {
+    ballObj.add(mesh(new THREE.SphereGeometry(r, 24, 18), std("#f2c21b", { roughness: 0.6 })));
+    ballObj.add(mesh(new THREE.TorusGeometry(r * 1.0, r * 0.12, 8, 32), std("#e3620b", { roughness: 0.6 })));
+  }
+  function drawBall() {
+    const q = bolt.data.qpos, k = bolt.ball.q;
+    ballObj.position.set(q[k], q[k + 1], q[k + 2]); ballObj.quaternion.set(q[k + 4], q[k + 5], q[k + 6], q[k + 3]);
+  }
+  // you: a simple figure you can drag about
+  const you = new THREE.Group(); scene.add(you);
+  const youMat = std("#2f6fb5", { roughness: 0.6 }), skin = std("#e9c6a5");
+  you.add(mesh(new THREE.CylinderGeometry(0.17, 0.2, 1.0, 20), youMat, [0, 0, 0.55], [Math.PI / 2, 0, 0]));
+  you.add(mesh(new THREE.SphereGeometry(0.14, 20, 16), skin, [0, 0, 1.22]));
+  you.add(mesh(new THREE.SphereGeometry(0.2, 20, 12), youMat, [0, 0, 1.05]));
+  const youRing = mesh(new THREE.RingGeometry(0.3, 0.36, 40), new THREE.MeshBasicMaterial({ color: lin("#2f6fb5"), transparent: true, opacity: 0.8, toneMapped: false }), [0, 0, 0.004]);
+  youRing.castShadow = false; you.add(youRing);
+  const goalRing = mesh(new THREE.RingGeometry(0.12, 0.16, 32), new THREE.MeshBasicMaterial({ color: lin("#2f6fb5"), transparent: true, opacity: 0.6, toneMapped: false }), [0, 0, 0.004]);
+  goalRing.castShadow = false; scene.add(goalRing);
+  function drawYou() {
+    const P = pet.person;
+    you.visible = P.present; you.position.set(P.x, P.y, 0);
+    goalRing.visible = P.present && !!P.goal; if (P.goal) goalRing.position.set(P.goal[0], P.goal[1], 0.004);
+  }
+
+  // ---------- pointer: drag the person, tap the floor to walk there ----------
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hitP = new THREE.Vector3();
+  function pick(e) {
+    const r = renderer.domElement.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+  }
+  function floorAt(e) { pick(e); return ray.ray.intersectPlane(plane, hitP) ? [hitP.x, hitP.y] : null; }
+  let drag = null;
+  renderer.domElement.addEventListener("pointerdown", (e) => {
+    if (!pet) return;
+    pick(e);
+    const onYou = pet.person.present && ray.intersectObject(you, true).length > 0;
+    drag = { x: e.clientX, y: e.clientY, you: onYou, moved: false };
+    if (onYou) { controls.enabled = false; renderer.domElement.setPointerCapture(e.pointerId); }
+  });
+  renderer.domElement.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6) drag.moved = true;
+    if (drag.you) { const p = floorAt(e); if (p) pet.movePerson(p); }
+  });
+  renderer.domElement.addEventListener("pointerup", (e) => {
+    if (!drag) return;
+    if (drag.you) controls.enabled = true;
+    else if (!drag.moved && pet.person.present) { const p = floorAt(e); if (p) pet.walkPerson(p); }
+    drag = null;
+  });
+
+  // ---------- talking to Bolt ----------
+  let lib, bundle, home, bolt = null, pet = null, acc = 0, seen = 0, bubbleUntil = 0;
+  function bubble(text) { const el = $("bubble"); el.textContent = text; el.classList.add("show"); bubbleUntil = performance.now() + 3200; }
+  function reply(text, said) {
+    $("reply").innerHTML = "";
+    if (said) { const q = document.createElement("span"); q.className = "muted"; q.textContent = `You: “${said}” → `; $("reply").append(q); }
+    const b = document.createElement("b"); b.textContent = text || "Bolt is listening."; $("reply").append(b);
+    if (text) bubble(text);
+  }
+  async function say(text) {
+    text = text.trim(); if (!text || !pet) return;
+    if (!pet.person.present && !/\b(hi|hello|hey|home|back)\b/i.test(text)) { reply("You're out: come home first, so Bolt can hear you.", text); return; }
+    const r = await pet.hear(text);
+    reply(r.reply, text);
+  }
+  $("sayForm").addEventListener("submit", (e) => { e.preventDefault(); say($("say").value); $("say").value = ""; });
+  const COMMANDS = [["Sit", "sit"], ["Lie down", "lie down"], ["Stand", "stand up"], ["Come here", "come here"], ["Stay", "stay"], ["Follow me", "follow me"],
+    ["Go play", "go play"], ["Fetch", "fetch"], ["Jump", "jump"], ["Spin", "spin"], ["Good boy!", "good boy!"], ["No!", "no!"]];
+  COMMANDS.forEach(([label, text]) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = label;
+    b.addEventListener("click", () => say(text)); $("commands").append(b);
+  });
+  const YOU = [["Throw the ball", () => { if (pet.throwBall()) reply("You throw the ball."); else reply("You're out: come home first."); }],
+    ["Pet Bolt", () => say("pet")], ["Go out", () => (pet.person.present ? (pet.leave(), reply("You go out. Bolt watches the door.")) : (pet.arrive(), reply("You come home.")))],
+    ["Pause", () => { playing = !playing; }]];
+  YOU.forEach(([label, fn], i) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.id = `you${i}`;
+    b.addEventListener("click", () => pet && fn()); $("you").append(b);
+  });
+  // the mic: the browser's speech recognition, where there is one
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (Rec) {
+    const mic = $("mic"); mic.hidden = false;
+    let rec = null;
+    mic.addEventListener("click", () => {
+      if (rec) { rec.stop(); return; }
+      try {
+        rec = new Rec(); rec.lang = navigator.language || "en-US"; rec.interimResults = true; rec.maxAlternatives = 1;
+        mic.setAttribute("aria-pressed", "true"); mic.textContent = "● Listening";
+        rec.onresult = (e) => {
+          const r = e.results[e.results.length - 1], text = r[0].transcript;
+          $("say").value = text;
+          if (r.isFinal) { say(text); $("say").value = ""; }
+        };
+        rec.onerror = (e) => reply(e.error === "not-allowed" ? "The microphone is blocked in this browser." : "Bolt couldn't hear that. Try again, or type it.");
+        rec.onend = () => { rec = null; mic.setAttribute("aria-pressed", "false"); mic.textContent = "🎤 Speak"; };
+        rec.start();
+      } catch (err) { rec = null; reply("Speech isn't available here: type to Bolt instead."); }
+    });
+  }
+
+  // ---------- how Bolt feels, what it remembers, what it did ----------
+  const DRIVES = [["energy", "Energy"], ["play", "Playful"], ["attention", "Wants you"], ["curiosity", "Curious"], ["rest", "Sleepy"]];
+  $("drives").innerHTML = DRIVES.map(([k, label]) => `<div class="drive"><span>${label}</span><div class="bar${k === "energy" ? " calm" : ""}"><div id="d_${k}" style="width:0%"></div></div><span class="mono" id="v_${k}"></span></div>`).join("") +
+    `<div class="drive"><span>Likes you</span><div class="bar calm"><div id="d_aff" style="width:0%"></div></div><span class="mono" id="v_aff"></span></div>`;
+  const MOOD = { happy: "Happy", excited: "Excited", sleepy: "Sleepy", bored: "Bored", sulky: "Sulky" };
+  const ago = (ms) => { const s = ms / 1000; return s < 90 ? "just now" : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} days ago`; };
+  let lastPanel = 0;
+  function panel() {
+    const s = pet.summary();
+    $("mood").textContent = MOOD[s.mood];
+    for (const [k] of DRIVES) { const v = s.drives[k]; $(`d_${k}`).style.width = `${Math.round(100 * v)}%`; $(`v_${k}`).textContent = `${Math.round(100 * v)}`; }
+    $("d_aff").style.width = `${Math.round(100 * s.affection)}%`; $("v_aff").textContent = `${Math.round(100 * s.affection)}`;
+    const items = [];
+    items.push(s.name ? `Your name: <b></b>` : `Your name: not yet (say “my name is …”)`);
+    items.push(`Times you came home: ${s.visits}${s.lastSeen && !pet.person.present ? ` · last seen ${ago(Date.now() - s.lastSeen)}` : ""}`);
+    const likes = s.likes.filter(([, v]) => v > 0).map(([k]) => k), dislikes = s.likes.filter(([, v]) => v < 0).map(([k]) => k);
+    items.push(`Praised for: ${likes.length ? likes.join(", ") : "nothing yet"}`);
+    items.push(`Told off for: ${dislikes.length ? dislikes.join(", ") : "nothing yet"}`);
+    $("memory").innerHTML = items.map((x) => `<li>${x}</li>`).join("");
+    if (s.name) $("memory").querySelector("b").textContent = s.name;
+    $("you2").textContent = pet.person.present ? "Go out" : "Come home";
+    $("you3").textContent = playing ? "Pause" : "Play";
+    for (const b of $("commands").children) b.disabled = !pet.person.present;
+    $("you0").disabled = $("you1").disabled = !pet.person.present;
+  }
+  function log(e) {
+    const li = document.createElement("li");
+    const m = Math.floor(e.t / 60), sec = Math.floor(e.t % 60);
+    li.innerHTML = `<time>${m}:${String(sec).padStart(2, "0")}</time><span class="${e.kind}"></span>`;
+    li.lastChild.textContent = e.text;
+    const list = $("log"); if (list.firstElementChild && list.firstElementChild.classList.contains("muted")) list.innerHTML = "";
+    list.prepend(li); while (list.children.length > 14) list.lastChild.remove();
+  }
+  function hud() {
+    $("hMood").textContent = MOOD[pet.mood()];
+    $("hDoing").textContent = pet.fallen > 0 ? "getting back up" : pet.label();
+    $("hYou").textContent = pet.person.present ? "home" : "out";
+    $("hTime").textContent = `${Math.floor(pet.t / 60)}:${String(Math.floor(pet.t % 60)).padStart(2, "0")}`;
+  }
+  $("forget").addEventListener("click", () => { if (pet) { pet.memory.forget(); panel(); reply("Bolt has forgotten everything about you."); } });
+
+  async function boot() {
+    try {
+      const [l, h, m, b, h3, p3] = await Promise.all([import("./live.js"), import("./home.js"), import("./mujoco/mujoco.js"), fetch("data/bolt_live.json").then((x) => x.json()), import("./hurdles3d.js"), import("./props3d.js")]);
+      lib = l; home = h; bundle = b;
+      bolt = new lib.Bolt(await m.default(), bundle);
+      pet = new home.Pet(bolt, bundle.start, { seed: (Math.random() * 1e9) >>> 0 });
+      drawHurdles = h3.makeHurdles(THREE, scene, bolt, mesh, lin); drawProps = p3.makeProps(THREE, scene, bolt, mesh, lin);
+    } catch (e) {
+      console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
+    }
+    buildDog(bundle.geoms); buildRoom(pet.room); buildBall(pet.room.ball.r); $("loading").hidden = true; panel();
+  }
+  let drawHurdles = () => {}, drawProps = () => {}, playing = true;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function view() {   // the whole room from above the door
+    const narrow = stageEl.clientWidth < 600;
+    camera.position.set(0, narrow ? -12.5 : -9.6, narrow ? 12 : 8.6); controls.target.set(0, narrow ? 0.3 : -0.1, 0); controls.update();
+  }
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stageEl);
+  const retheme = () => { colors(); makeGrid(); grid.visible = false; };
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  let last = performance.now(), arrived = false;
+  function tick(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (pet) {
+      if (playing) {
+        acc += dt;
+        let n = 0;
+        while (acc >= bolt.dt && n < 20) { pet.step(); acc -= bolt.dt; n++; }
+        if (n === 20) acc = 0;
+        if (!arrived && pet.t > 4) { arrived = true; pet.arrive(); }   // you come home a few seconds in
+      }
+      while (seen < pet.events.length) { const e = pet.events[seen++]; log(e); if (e.kind === "doing" || e.kind === "good" || e.kind === "bad") bubble(e.text); }
+      if (now > bubbleUntil) $("bubble").classList.remove("show");
+      drawBolt(); drawBall(); drawYou(); drawHurdles(); drawProps(); hud();
+      if (now - lastPanel > 250) { lastPanel = now; panel(); }
+      const s = now / 1000, [rate, amp] = pet.tail();
+      if (tail && !reduced) tail.rotation.z = amp * Math.sin(2 * Math.PI * rate * s);
+      const asleep = pet.napping;
+      eyes.forEach((e) => (e.scale.z = asleep ? 0.12 : (s % 3.7) < 0.12 ? 0.12 : 1));
+    }
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  colors(); makeGrid(24, 0.5); grid.visible = false; setReach(6); sun.position.set(3, -4, 9); sun.target.position.set(0, 0, 0);
+  resize(); view(); requestAnimationFrame(tick); boot();
+})();
+</script>

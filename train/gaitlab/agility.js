@@ -3,11 +3,11 @@
 // Like a real agility competition: a numbered course is set out, each dog runs it in turn, and the
 // judge counts faults (5 for a missed weave pole, 5 for a refusal or a wrong tunnel entry, 5 for a
 // knocked bar) plus time faults (1 per second over the standard course time). A fall eliminates the
-// dog. The best round is the fewest faults, then the fastest time. Each competitor is a different
+// dog (it gets back up by itself with the get-up brain first, so viewers see it is fine, then the round ends). The best round is the fewest faults, then the fastest time. Each competitor is a different
 // trained walk brain, steered round the course by the same handler (the course runner below).
 // agility_test.mjs runs many rounds headless.
 
-import { Driver, Jumper, posture, rng } from "./game.js";
+import { Driver, GetUp, Jumper, posture, rng } from "./game.js";
 
 export const OBSTACLES = {
   weave: { title: "Weave poles", how: "Weave through every pole, first pole on the left shoulder" },
@@ -144,6 +144,7 @@ export class Round {
     if (this.over) return;
     const dt = this.bolt.dt;
     this.t += dt;
+    if (this.phase === "getup") return this.recover(dt);
     if (this.phase === "ready") {
       this.cmd = { command: "stand", turn: 0, speed: 0.2 };
       if (this.t >= 2) { this.phase = "run"; this.say(`${this.name}: go!`, "station"); this.begin(); }
@@ -156,7 +157,20 @@ export class Round {
     }
     const b = this.bolt;
     b.run(this.cmd);
-    if (b.fell()) { this.over = true; this.phase = "eliminated"; this.say(`${this.name} fell: eliminated`, "bad"); }
+    if (b.fell()) {
+      this.say(`${this.name} fell: eliminated`, "bad");
+      if (!b.canGetUp()) { this.over = true; this.phase = "eliminated"; return; }
+      this.getup = new GetUp(b); this.phase = "getup"; this.cmd = { command: "rest", turn: 0, speed: 0.2 };   // the clock has stopped
+    }
+  }
+  // eliminated by a fall: Bolt gets back up where it fell (the get-up brain), stands a moment, and the
+  // round ends (also if it is not up within GETUP_LIMIT s)
+  recover(dt) {
+    const g = this.getup;
+    this.cmd = g.step(dt);
+    if (!g.failed) this.bolt.run(this.cmd);
+    if (g.done) this.say(`${this.name} got back up (${g.secs.toFixed(1)} s)`, "info");
+    if (g.done || g.failed) { this.over = true; this.phase = "eliminated"; this.gotUp = g.done; }
   }
   // Objects are solid: a dog pressed against a pole or a wall, going nowhere, is turned away from it and
   // walked clear for 1.5 s before the handler sends it on again (pushing on into it never got past)

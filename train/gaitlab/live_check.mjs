@@ -24,7 +24,7 @@ for (const [command, n, turn, speed, hurdle] of ref.script) {
       const q = bolt.data.qpos;
       console.log(`step ${String(k + 1).padStart(3)} (${command}, turn ${turn}, speed ${speed}): body position off by ` +
         `${(Math.hypot(q[0] - r.qpos[0], q[1] - r.qpos[1], q[2] - r.qpos[2]) * 1000).toFixed(3)} mm, joints by ` +
-        `${maxDiff(Array.from(q).slice(7), r.qpos.slice(7)).toExponential(1)} rad`);
+        `${maxDiff(Array.from(q).slice(7, 19), r.qpos.slice(7, 19)).toExponential(1)} rad`);
     }
   }
 }
@@ -47,4 +47,24 @@ if (ref.jump && bolt.brains.jump) {   // the jump: same start, same bar, step by
   });
   console.log(`jump (${J.steps.length} steps, Python: cleared ${J.cleared}, touched ${J.touched}${J.start.real ? `, dropped ${J.dropped}; browser dropped ${bolt.barDropped(0)}` : ""}): worst difference in what the jump brain feels ` +
     `${wObs.toExponential(1)}, its output ${wAct.toExponential(1)}, body position ${(wPos * 1000).toFixed(3)} mm`);
+}
+if (ref.getup && bolt.brains.getup) {   // getting up: the same fall (settled for 1 s), then the get-up step by step
+  const G = ref.getup;
+  bolt.reset(G.start);
+  bolt.startGetUp();
+  let wObs = 0, wAct = 0, wPos = 0, stoodAt = null;
+  const marks = [];
+  G.steps.forEach((s, i) => {
+    const o = bolt.getUpObs();
+    wObs = Math.max(wObs, maxDiff(o, s.obs)); wAct = Math.max(wAct, maxDiff(bolt.brains.getup.act(s.obs), s.action));
+    bolt.getUpStep(bolt.brains.getup.act(o));
+    const q = bolt.data.qpos, off = Math.hypot(q[0] - s.qpos[0], q[1] - s.qpos[1], q[2] - s.qpos[2]);
+    wPos = Math.max(wPos, off);
+    if (stoodAt === null && bolt.standing()) stoodAt = i + 1;
+    if ([0, 24, 49, 99, 149, 199].includes(i)) marks.push(`${i + 1}: obs ${wObs.toExponential(1)}, body ${(off * 1000).toFixed(2)} mm`);
+  });
+  console.log(`getup (from its ${G.start.kind}, ${G.steps.length} steps; Python: standing at the end ${G.standing}, first stood at step ${G.stood_at}; ` +
+    `browser: standing ${bolt.standing()}, first stood at step ${stoodAt}): worst difference in what the get-up brain feels ` +
+    `${wObs.toExponential(1)}, its output on the same input ${wAct.toExponential(1)}, body position ${(wPos * 1000).toFixed(3)} mm`);
+  console.log(`  by step: ${marks.join(" | ")}`);
 }

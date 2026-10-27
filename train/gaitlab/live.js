@@ -79,6 +79,7 @@ export class Bolt {
     this.mj = mj; this.c = bundle.constants; this.baseXml = bundle.xml;
     this.brains = { posture: new Brain(bundle.brains.posture), walk: new Brain(bundle.brains.walk) };
     if (bundle.brains.jump) this.brains.jump = new Brain(bundle.brains.jump);   // jump_env.py: a real jump
+    if (bundle.brains.getup) this.brains.getup = new Brain(bundle.brains.getup);   // getup_env.py: up after a fall
     this.build("");
     this.dt = this.c.dt;
   }
@@ -310,41 +311,78 @@ export class Bolt {
   // The jump brain (JumpEnv in jump_env.py): from standing in front of the bar, 2 s of full-range motor
   // control around the dog stance. startJump(), then jumpTick() 100 times.
   startJump() { this.jt = 0; this.jumpLast = new Float64Array(12); }
-  jumpObs() {
+  // what the full-range brains (jump, get-up) feel of the body: gravity and spin in the body frame, body-frame
+  // velocity, height, joints around the dog stance, joint speeds, and their own last action (46 numbers)
+  bodyObs(last) {
     const d = this.data, R = this.rotation(), q = d.qpos, v = d.qvel, c = this.c, o = [-R[6], -R[7], -R[8]];
     o.push(v[3] * 0.25, v[4] * 0.25, v[5] * 0.25);
     for (let j = 0; j < 3; j++) o.push(R[j] * v[0] + R[3 + j] * v[1] + R[6 + j] * v[2]);
     o.push(q[2]);
     for (let i = 0; i < 12; i++) o.push(q[7 + i] - c.dog_pose[i]);
     for (let i = 0; i < 12; i++) o.push(v[6 + i] * 0.1);
-    o.push(...this.jumpLast, this.hurdleAhead(), this.hurdleH, this.jt / c.jump_steps);
+    o.push(...last);
+    return o;
+  }
+  jumpObs() {
+    const o = this.bodyObs(this.jumpLast);
+    o.push(this.hurdleAhead(), this.hurdleH, this.jt / this.c.jump_steps);
     if (this.brains.jump.inputs === 51) o.push(Math.sin(this.headingError()), this.offLine());   // run 16 on
     return o;
   }
-  jumpStep(action) {
+  // full-range motor control around the dog stance (JumpEnv.step, GetUpEnv.step): 1/50 s
+  fullStep(a) {
     const { mj, model: m, data: d, c } = this;
-    const a = Array.from(action, (v) => clamp(v, -1, 1));
     d.ctrl.set(c.dog_pose.map((b, i) => clamp(b + c.action_scale[i] * a[i], this.lo[i], this.hi[i])));
     this.applyPush(this.dt);
     for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
+  }
+  jumpStep(action) {
+    const a = Array.from(action, (v) => clamp(v, -1, 1));
+    this.fullStep(a);
     this.jt += 1; this.jumpLast = Float64Array.from(a);
   }
   jumpTick() { this.jumpStep(this.brains.jump.act(this.jumpObs())); }
+  // The get-up brain (GetUpEnv in getup_env.py): from lying on its side, back or half-tipped, roll over and
+  // stand in the dog stance. Trained on 4 s tries (200 steps), each starting after 1 s lying still with the
+  // motors holding the pose it fell in. startGetUp(), then getUpTick() until standing().
+  startGetUp() { this.gt = 0; this.getUpLast = new Float64Array(12); }
+  getUpObs() { return this.bodyObs(this.getUpLast); }   // GetUpEnv._obs with randomize=False
+  getUpStep(action) {
+    const a = Array.from(action, (v) => clamp(v, -1, 1));
+    this.fullStep(a);
+    this.gt += 1; this.getUpLast = Float64Array.from(a);
+  }
+  getUpTick() { this.getUpStep(this.brains.getup.act(this.getUpObs())); }
+  // up as the get-up brain was taught it (GetUpEnv: upright within ~25° and the body 38 cm or more up)
+  standing(ground = 0) { return this.up() > 0.9 && this.data.qpos[2] - ground > 0.38; }
+  // lie still after a fall: the motors keep their last targets (how every get-up try started)
+  restTick() {
+    const { mj, model: m, data: d, c } = this;
+    this.applyPush(this.dt);
+    for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
+  }
+  // hand the body from the get-up brain to the standing brain: its stand maps actions to motors the same
+  // way (dog stance + action_scale x action), so its last action carries over
+  afterGetUp() { this.lastAction = Float64Array.from(this.getUpLast); this.command = "stand"; }
   // the motors hold the dog stance (how every training jump started: 0.5 s of this, then the jump)
   holdTick() {
     const { mj, model: m, data: d, c } = this;
     d.ctrl.set(c.dog_pose); this.applyPush(this.dt);
     for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
   }
-  // run one game command: walk/stand/sit/lie use the trained brains; "hold" and "jump" the jump sequence
+  // run one game command: walk/stand/sit/lie use the trained brains; "hold" and "jump" the jump sequence;
+  // "rest" and "getup" getting up after a fall
   run(cmd) {
     if (cmd.command === "hold") return this.holdTick();
     if (cmd.command === "jump") return this.jumpTick();
+    if (cmd.command === "getup") return this.getUpTick();
+    if (cmd.command === "rest") return this.restTick();
     this.setCommand(cmd.command);
     if (cmd.command === "walk") { this.setTurn(cmd.turn); this.setSpeed(cmd.speed); }
     this.tick();
   }
   jumping() { return this.jt !== undefined && this.jt < this.c.jump_steps; }
+  canGetUp() { return !!this.brains.getup; }
   // where Bolt is and which way it faces
   where() {
     const R = this.rotation(), q = this.data.qpos;

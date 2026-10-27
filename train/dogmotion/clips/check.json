@@ -1,0 +1,248 @@
+{
+  "calibration": {
+    "scale": [
+      1.1163,
+      1.1163,
+      1.0476,
+      1.0476
+    ],
+    "ground": [
+      0.0223,
+      0.0223,
+      0.0203,
+      0.0203
+    ],
+    "lateral": [
+      -0.0425,
+      0.0425,
+      -0.0145,
+      0.0145
+    ]
+  },
+  "clips": {
+    "walk": {
+      "frames": 33,
+      "seconds": 0.66,
+      "loop": true,
+      "speed_mps": 1.122,
+      "turn_rate": -0.098,
+      "body_height_m": [
+        0.387,
+        0.401
+      ],
+      "planted_paw_height_err_mm": {
+        "mean": 2.8,
+        "min": -3.0,
+        "max": 9.7
+      },
+      "paw_target_miss_mm": {
+        "mean": 22.9,
+        "max": 42.8
+      },
+      "joint_limit_clamp_rad": 0.128,
+      "out_of_reach_m": 0.0,
+      "legs_untangled_rad": 0.0,
+      "body_lifted_m": 0.008,
+      "body_lowered_m": 0.043,
+      "floor_penetration_mm": 0.0,
+      "self_penetration_mm": 0.0,
+      "self_contact_frames": 0
+    },
+    "trot": {
+      "frames": 27,
+      "seconds": 0.54,
+      "loop": true,
+      "speed_mps": 1.904,
+      "turn_rate": -0.082,
+      "body_height_m": [
+        0.361,
+        0.394
+      ],
+      "planted_paw_height_err_mm": {
+        "mean": 2.5,
+        "min": -2.4,
+        "max": 10.5
+      },
+      "paw_target_miss_mm": {
+        "mean": 44.0,
+        "max": 72.0
+      },
+      "joint_limit_clamp_rad": 0.205,
+      "out_of_reach_m": 0.0,
+      "legs_untangled_rad": 0.0,
+      "body_lifted_m": 0.003,
+      "body_lowered_m": 0.066,
+      "floor_penetration_mm": 0.0,
+      "self_penetration_mm": 0.0,
+      "self_contact_frames": 0
+    },
+    "pace": {
+      "frames": 32,
+      "seconds": 0.64,
+      "loop": true,
+      "speed_mps": 1.147,
+      "turn_rate": -0.085,
+      "body_height_m": [
+        0.379,
+        0.399
+      ],
+      "planted_paw_height_err_mm": {
+        "mean": 1.9,
+        "min": -0.8,
+        "max": 8.8
+      },
+      "paw_target_miss_mm": {
+        "mean": 12.5,
+        "max": 46.2
+      },
+      "joint_limit_clamp_rad": 0.195,
+      "out_of_reach_m": 0.0,
+      "legs_untangled_rad": 0.0,
+      "body_lifted_m": 0.0,
+      "body_lowered_m": 0.045,
+      "floor_penetration_mm": 0.0,
+      "self_penetration_mm": 0.0,
+      "self_contact_frames": 0
+    },
+    "canter": {
+      "frames": 24,
+      "seconds": 0.48,
+      "loop": true,
+      "speed_mps": 3.371,
+      "turn_rate": 0.114,
+      "body_height_m": [
+        0.406,
+        0.449
+      ],
+      "planted_paw_height_err_mm": {
+        "mean": 1.4,
+        "min": -3.4,
+        "max": 6.9
+      },
+      "paw_target_miss_mm": {
+        "mean": 39.1,
+        "max": 63.7
+      },
+      "joint_limit_clamp_rad": 0.38,
+      "out_of_reach_m": 0.013,
+      "legs_untangled_rad": 0.0,
+      "body_lifted_m": 0.008,
+      "body_lowered_m": 0.029,
+      "floor_penetration_mm": 0.0,
+      "self_penetration_mm": 0.0,
+      "self_contact_frames": 0
+    },
+    "turn_right": {
+      "frames": 32,
+      "seconds": 0.64,
+      "loop": true,
+      "speed_mps": 0.884,
+      "turn_rate": -1.027,
+      "body_height_m": [
+        0.4,
+        0.436
+      ],
+      "planted_paw_height_err_mm": {
+        "mean": 3.4,
+        "min": -6.1,
+        "max": 10.2
+      },
+      "paw_target_miss_mm": {
+        "mean": 50.8,
+        "max": 94.4
+      },
+      "joint_limit_clamp_rad": 0.324,
+      "out_of_reach_m": 0.016,
+      "legs_untangled_rad": 0.0,
+      "body_lifted_m": 0.031,
+      "body_lowered_m": 0.024,
+      "floor_penetration_mm": 0.1,
+      "self_penetration_mm": 0.0,
+      "self_contact_frames": 0
+    },
+    "turn_left": {
+      "frames": 32,
+      "seconds": 0.64,
+      "loop": true,
+      "speed_mps": 0.884,
+      "turn_rate": 1.027,
+      "body_height_m": [
+        0.4,
+        0.436
+      ],
+      "planted_paw_height_err_mm": {
+        "mean": 3.4,
+        "min": -6.1,
+        "max": 10.2
+      },
+      "paw_target_miss_mm": {
+        "mean": 50.8,
+        "max": 94.4
+      },
+      "joint_limit_clamp_rad": 0.324,
+      "out_of_reach_m": 0.016,
+      "legs_untangled_rad": 0.0,
+      "body_lifted_m": 0.031,
+      "body_lowered_m": 0.024,
+      "floor_penetration_mm": 0.1,
+      "self_penetration_mm": 0.0,
+      "self_contact_frames": 0
+    },
+    "sit": {
+      "frames": 176,
+      "seconds": 3.52,
+      "loop": false,
+      "speed_mps": 0.032,
+      "turn_rate": 0.0,
+      "body_height_m": [
+        0.234,
+        0.405
+      ],
+      "planted_paw_height_err_mm": {
+        "mean": 6.8,
+        "min": -0.3,
+        "max": 66.6
+      },
+      "paw_target_miss_mm": {
+        "mean": 74.9,
+        "max": 125.3
+      },
+      "joint_limit_clamp_rad": 0.0,
+      "out_of_reach_m": 0.0,
+      "legs_untangled_rad": 0.0,
+      "body_lifted_m": 0.009,
+      "body_lowered_m": 0.024,
+      "floor_penetration_mm": 0.0,
+      "self_penetration_mm": 0.0,
+      "self_contact_frames": 0
+    },
+    "lie": {
+      "frames": 276,
+      "seconds": 5.52,
+      "loop": false,
+      "speed_mps": 0.031,
+      "turn_rate": 0.0,
+      "body_height_m": [
+        0.16,
+        0.409
+      ],
+      "planted_paw_height_err_mm": {
+        "mean": 12.9,
+        "min": -3.2,
+        "max": 78.6
+      },
+      "paw_target_miss_mm": {
+        "mean": 182.9,
+        "max": 338.4
+      },
+      "joint_limit_clamp_rad": 0.452,
+      "out_of_reach_m": 0.056,
+      "legs_untangled_rad": 0.0,
+      "body_lifted_m": 0.212,
+      "body_lowered_m": 0.127,
+      "floor_penetration_mm": 0.0,
+      "self_penetration_mm": 0.0,
+      "self_contact_frames": 0
+    }
+  }
+}

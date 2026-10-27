@@ -4,8 +4,9 @@
 // bridge to cross slowly, a box to sit in, a mat to lie on, from level 3 an ice rink to stop and sit on,
 // and the castle gate at the end. The guard shouts surprise commands at any moment ("SIT!", "LIE DOWN!",
 // "FREEZE!"), and so can the viewer; from level 3 his cannon shoves Bolt sideways. Five levels, each
-// harder (LEVELS); 3 lives: a failed station or a fall costs one (after a fall Bolt restarts at that
-// station). Bolt plays on its own: a course runner steers its trained brains from station to station.
+// harder (LEVELS); 3 lives: a failed station or a fall costs one (after a fall Bolt gets up by itself
+// where it fell, with the get-up brain, and carries on; if it cannot, it restarts at that station).
+// Bolt plays on its own: a course runner steers its trained brains from station to station.
 // Every hazard is real physics (live.js): the shoves are forces, the ice is low friction.
 // game_test.mjs plays many games headless.
 
@@ -176,6 +177,41 @@ export class Jumper {
   }
 }
 
+// Getting up after a fall, by itself, where it fell: the get-up brain (getup_env.py, live.js) rolls Bolt
+// over and stands it up, then the standing brain holds it for 0.8 s before the game carries on.
+// The brain practised from rest (each try began after 1 s lying still), so by default Bolt first lies still
+// until it has stopped rolling (at most 1.5 s); "now" hands over the moment it falls.
+export let GETUP_WAIT = "rest";
+export function setGetUpWait(w) { GETUP_WAIT = w; }
+export const GETUP_LIMIT = 6;   // s from the fall to standing; after that the game falls back to a restart
+export class GetUp {
+  constructor(bolt) { this.bolt = bolt; this.stage = "rest"; this.t = 0; this.rested = 0; this.stood = 0; this.done = false; this.failed = false; this.secs = null; this.tries = 0; }
+  // the command for this step; then read done (up, and stood 0.8 s) or failed (not up within GETUP_LIMIT s)
+  step(dt) {
+    const b = this.bolt, v = b.data.qvel, rest = { command: "rest", turn: 0, speed: 0.2 };
+    this.t += dt;
+    if (this.stage === "stand") {
+      if (!b.fell()) {
+        if ((this.stood += dt) >= 0.8) this.done = true;
+        return { command: "stand", turn: 0, speed: 0.2 };
+      }
+      this.stage = "rest"; this.rested = 0;   // toppled again while steadying: get up again, same time limit
+    }
+    if (this.t > GETUP_LIMIT) { this.failed = true; return rest; }
+    if (this.stage === "rest") {
+      this.rested += dt;
+      const still = Math.hypot(v[3], v[4], v[5]) < 0.5 && Math.hypot(v[0], v[1], v[2]) < 0.1;
+      if (!(GETUP_WAIT === "now" || this.rested > 1.5 || (this.rested >= 0.2 && still))) return rest;
+      this.stage = "up"; this.tries += 1; b.startGetUp();
+    }
+    if (b.standing()) {
+      b.afterGetUp(); this.stage = "stand"; this.stood = 0; if (this.secs === null) this.secs = this.t;
+      return { command: "stand", turn: 0, speed: 0.2 };
+    }
+    return { command: "getup", turn: 0, speed: 0.2 };
+  }
+}
+
 // The solid castle (live.js setProps): every post, pole, tower and wall Bolt could run into is a real
 // object. Flat things (lines, mats, the bridge plank, the ice) stay paint; the hurdles are their own
 // physics (placeReal). In world coordinates for Bolt standing at the start (w = bolt.where()).
@@ -214,7 +250,7 @@ export class Game {
     this.cmd = { command: "stand", turn: 0, speed: 0.2 };
     this.pendingShouts = this.castle.shouts.slice();
     this.pendingShots = this.castle.shots.slice();
-    this.falls = 0;
+    this.falls = 0; this.getUps = 0; this.restarts = 0;   // falls Bolt got up from by itself, and restarts
   }
   loseLife(why) {
     this.lives -= 1;
@@ -227,8 +263,10 @@ export class Game {
     let k = 0;
     for (const s of this.castle.stations) if (s.kind === "hurdles") s.slots = s.bars.map(([x, y, h]) => { this.bolt.placeReal(k, this.world([x, y]), this.yaw0, h); return k++; });
   }
-  // after a fall: Bolt starts that station again, standing 1.5 m before it (the judge puts knocked bars back)
+  // after a fall: Bolt starts that station again, standing 1.5 m before it (the judge puts knocked bars back).
+  // Only when it could not get up by itself (or the bundle has no get-up brain).
   respawn() {
+    this.restarts += 1; this.rec = null;
     const s = this.station, before = [s.start[0] - 1.5, s.start[1]];
     this.bolt.teleport(this.start, this.world(before), this.yaw0);
     this.placeHurdles();
@@ -258,6 +296,7 @@ export class Game {
     const dt = this.bolt.dt;
     if (this.over) return;
     this.t += dt;
+    if (this.phase === "getup") return this.recover(dt);
     if (this.phase === "ready") {          // stand for 2 s at the start line (or after a restart)
       this.cmd = { command: "stand", turn: 0, speed: 0.2 };
       if (this.t >= this.readyFor) { this.phase = "run"; this.begin(); }
@@ -278,8 +317,53 @@ export class Game {
     if (b.fell()) {
       this.falls += 1;
       this.results.push({ kind: "fall", title: `Fell at ${this.shout ? "a shout" : this.station.title}`, passed: false, note: "" });
-      if (this.loseLife("Bolt fell!")) this.respawn();
+      if (!this.loseLife("Bolt fell!")) return;
+      if (!b.canGetUp()) return this.respawn();
+      // get up where it fell; a shout in progress is dropped (as on a restart), the shouts and the cannon wait
+      this.rec = { getup: new GetUp(b), from: this.phase, since: this.t };
+      this.phase = "getup"; this.shout = null;
+      this.cmd = { command: "rest", turn: 0, speed: 0.2 };
     }
+  }
+
+  // After a fall: the get-up brain stands Bolt up where it fell, then the station goes on from there.
+  // Station clocks pause meanwhile (as for a shout). Not up within GETUP_LIMIT s: the old restart.
+  recover(dt) {
+    const r = this.rec, b = this.bolt;
+    this.cmd = r.getup.step(dt);
+    if (r.getup.failed) { this.say("Bolt could not get up: restart at the station.", "bad"); return this.respawn(); }
+    b.run(this.cmd);
+    if (!r.getup.done) return;
+    this.getUps += 1;
+    this.say(`Bolt got up by itself (${r.getup.secs.toFixed(1)} s)`, "good");
+    const lost = this.t - r.since, k = this.task;
+    this.rec = null; this.phase = r.from; this.driver.speed = 0.2; this.calmUntil = this.t + 1.5;
+    if (r.from === "ready") { this.readyFor = Math.max(this.readyFor, this.t + 1); return; }
+    if (!k) return;
+    if (k.timer !== null && k.timer !== undefined) k.timer += lost;
+    if (k.posedAt !== undefined) k.posedAt += lost;
+    // a posture station starts again from the approach (it may have slid off the spot); a done one finishes
+    if (["brake", "settle", "pose"].includes(k.stage)) { k.stage = "approach"; k.held = 0; k.settle = 0; delete k.posedAt; }
+    if (k.stage === "rise") k.settle = 0;
+    if (this.station.kind === "bridge") {   // back to before the plank (toppling off it, judged "stepped off"
+      k.retry = true;                         // a moment before the fall, is part of the fall)
+      if (k.stage === "done" && !k.passed) k.stage = "approach";
+    }
+    if (k.jumper) this.afterJumpFall(k);
+  }
+  // fell inside a hurdle jump: the judge puts that bar back, and Bolt jumps it again from a proper run-up;
+  // if it ended up past the bar, that hurdle counts as jumped
+  afterJumpFall(k) {
+    const j = k.jumper, b = this.bolt;
+    if (b.barDropped(j.k)) b.resetBar(j.k);
+    b.aim(j.k);
+    const ahead = b.hurdleAhead();
+    k.jumper = null;
+    if (ahead < -0.3) {
+      this.say(`Hurdle ${k.bar + 1}: over, with a fall`, "info");
+      k.bar += 1;
+      if (k.bar >= this.station.bars.length) { k.stage = "done"; k.passed = k.dropped === 0; k.note = k.dropped ? `Knocked down ${k.dropped} of 3 bars.` : "All 3 bars stayed up."; }
+    } else if (ahead < 0.45) k.backOff = true;   // too close to jump from (trained from 0.45-0.65 m): back off first
   }
 
   begin() {
@@ -378,6 +462,17 @@ export class Game {
       return;
     }
     if (s.kind === "bridge") {
+      // after a fall (in the water, or on the way, which can leave Bolt 2 m off the line: coming at the plank
+      // from there it stepped off): walk to 2 m before the plank, on its line, and cross again, judged afresh
+      if (k.retry) {
+        if (here[0] > s.end[0] + 0.3 && k.retry !== "back") { k.retry = false; k.bad = 0; }
+        else {
+          k.retry = "back";
+          this.cmd = this.driver.toward(this.world([s.start[0] - 2.0, s.start[1]]), 0.5, true, dt);
+          if (this.cmd.dist < 0.35) { k.retry = false; k.bad = 0; }
+          return;
+        }
+      }
       const on = here[0] >= s.start[0] && here[0] <= s.end[0];
       const p = here[0] < s.start[0] - 0.8 ? [s.start[0] - 0.4, s.start[1]] : [s.end[0] + 1.5, s.end[1]];
       this.cmd = this.driver.toward(this.world(p), here[0] < s.start[0] - 0.8 ? 0.6 : 0.3, false, dt);
@@ -394,6 +489,12 @@ export class Game {
       // three real hurdles; the jumper takes Bolt over each. A knocked-down bar fails the station; a
       // brushed bar that stays up does not (the agility rule)
       if (k.bar === undefined) { k.bar = 0; k.dropped = 0; }
+      if (k.backOff) {   // got up too close to the bar: walk back to 1.6 m before it, then line up again
+        const H = this.bolt.real[s.slots[k.bar]], p = [H.at[0] - 1.6 * Math.cos(H.yaw), H.at[1] - 1.6 * Math.sin(H.yaw)];
+        this.cmd = this.driver.toward(p, 0.4, true, dt);
+        if (this.cmd.dist < 0.35) k.backOff = false;
+        return;
+      }
       if (!k.jumper) k.jumper = new Jumper(this.bolt, this.driver, s.slots[k.bar]);
       this.cmd = k.jumper.step(dt);
       if (k.jumper.done) {
