@@ -3,3 +3,4 @@ checkpoint 10000000 ready: {'speed_v1': 1.01, 'fall_v1': 0.0, 'speed_v2': 1.04, 
 new best at 10000000: score 2.60
 checkpoint 11000000 ready: {'speed_v1': 1.03, 'fall_v1': 0.0, 'speed_v2': 1.0, 'fall_v2': 0.0, 'style_v2': 0.1, 'speed_v3': 0.96, 'fall_v3': 0.0, 'style_v3': 0.1, 'speed_v4': 0.61, 'fall_v4': 0.33, 'turn_w3': 0.3, 'fall_w3': 0.0, 'turn_w5': 0.22, 'fall_w5': 0.0, 'push_1.5': 0.67} (practising up to 3.0 m/s, mean 2.8)
 new best at 11000000: score 3.62
+checkpoint 12000000 ready: {'speed_v1': 1.0, 'fall_v1': 0.0, 'speed_v2': 0.99, 'fall_v2': 0.0, 'style_v2': 0.1, 'speed_v3': 0.65, 'fall_v3': 0.33, 'style_v3': 0.1, 'speed_v4': 0.64, 'fall_v4': 0.33, 'turn_w3': 0.28, 'fall_w3': 0.0, 'turn_w5': 0.23, 'fall_w5': 0.0, 'push_1.5': 0.83} (practising up to 4.0 m/s, mean 3.8)
