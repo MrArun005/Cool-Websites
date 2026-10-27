@@ -38,16 +38,16 @@ export const GAITS = ["walk", "trot", "canter"];
 // 5-8 m to stop it.
 export const LEVELS = [
   { n: 1, name: "Novice", blurb: "A straight line: two 20 cm hurdles and the pause table (sit for 3 s).",
-    pieces: [["S", 34]],
+    pieces: [["S", 34]], pace: 0.9,
     obstacles: [{ kind: "hurdle", s: 6.5, h: 0.20 }, { kind: "hurdle", s: 17, h: 0.20 }, { kind: "table", s: 28, pose: "sit", hold: 3 }],
     finish: 32 },
   { n: 2, name: "Intermediate", blurb: "A curve, three hurdles of 20-30 cm, slalom markers and a down-stay on the table.",
-    pieces: [["S", 17], ["A", Math.PI / 2, 3.5], ["S", 28], ["A", -Math.PI / 2, 3.5], ["S", 18]],
+    pace: 0.8, pieces: [["S", 17], ["A", Math.PI / 2, 3.5], ["S", 28], ["A", -Math.PI / 2, 3.5], ["S", 18]],
     obstacles: [{ kind: "hurdle", s: 6, h: 0.20 }, { kind: "slalom", s: 24, n: 5, gap: 2.4 }, { kind: "hurdle", s: 41, h: 0.25 },
       { kind: "table", s: 59, pose: "lie", hold: 3 }, { kind: "hurdle", s: 66, h: 0.30 }],
     finish: 72 },
   { n: 3, name: "Championship", blurb: "The full course: four hurdles of 30-40 cm, three curves, slalom, a sit and a down.",
-    pieces: [["S", 17], ["A", -Math.PI / 2, 3.2], ["S", 32], ["A", Math.PI / 2, 3.2], ["S", 22], ["A", Math.PI / 2, 3.5], ["S", 22]],
+    pace: 0.85, pieces: [["S", 17], ["A", -Math.PI / 2, 3.2], ["S", 32], ["A", Math.PI / 2, 3.2], ["S", 22], ["A", Math.PI / 2, 3.5], ["S", 22]],
     obstacles: [{ kind: "hurdle", s: 6, h: 0.30 }, { kind: "slalom", s: 24.5, n: 6, gap: 2.4 }, { kind: "hurdle", s: 43, h: 0.35 },
       { kind: "table", s: 62, pose: "sit", hold: 3 }, { kind: "hurdle", s: 68, h: 0.40 }, { kind: "table", s: 89, pose: "lie", hold: 3 },
       { kind: "hurdle", s: 96, h: 0.35 }],
@@ -84,11 +84,12 @@ export function buildCourse(levelIndex) {
     return out;
   });
   const f = at(L.finish), st = at(START_LINE);
-  // the standard course time: the line at a brisk trot-and-walk pace (1.0 m/s), plus each jump's steadying
-  // (~4 s: the jump brain stops Bolt, then it sits a moment and stands) and each table's stay plus getting
-  // into position and up again (~5 s)
+  // the standard course time: the line at the level's pace, the slalom at 0.5 m/s, plus each jump's steadying
+  // (~3.5 s: the jump brain stops Bolt, then it sits a moment and stands) and each table's stay plus getting
+  // into position and up again (~4 s)
   const jumps = obstacles.filter((o) => o.kind === "hurdle").length, tables = obstacles.filter((o) => o.kind === "table");
-  const sct = Math.round((L.finish - START_LINE) / 1.0 + 4 * jumps + tables.reduce((t, o) => t + o.hold + 5, 0));
+  const weave = obstacles.filter((o) => o.kind === "slalom").reduce((t, o) => t + (o.end - o.s + 2) * (1 / 0.5 - 1 / L.pace), 0);
+  const sct = Math.round((L.finish - START_LINE) / L.pace + weave + 3.5 * jumps + tables.reduce((t, o) => t + o.hold + 4, 0));
   return { level: L, index: levelIndex, pts, step, at, obstacles, start: { x: st.x, y: st.y, h: st.h, s: START_LINE },
     finish: { x: f.x, y: f.y, h: f.h, s: L.finish }, length: L.finish, sct };
 }
@@ -294,8 +295,11 @@ export class Body {
     const b = this.bolt, m = this.mode, w = this.want;
     if (["stand", "sit", "lie", "rise"].includes(m)) return b.run({ command: m === "rise" ? "stand" : m, turn: 0, speed: 0.2 });
     if (m === "sharp") {
-      const steer = w.turn ? w.turn * 1.2 : w.steer || 0, top = Math.min(1.4, b.maxTurn(0.5));
-      return b.run({ command: "walk", turn: clamp(w.turn ? w.turn * 1.1 : 2.5 * steer, -top, top), speed: clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6) });
+      const steer = w.turn ? w.turn * 1.2 : w.steer || 0, top = Math.min(1.4, b.maxTurn(this.vs || 0.5));
+      // speed eased toward the target (a sudden change of asked speed while turning tipped run 12 over)
+      const target = w.turn ? 0.5 : Math.abs(steer) < 0.3 ? 0.8 : clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6);
+      this.vs = this.mt < 0.03 ? 0.5 : target > this.vs ? Math.min(target, this.vs + 0.6 * b.dt) : Math.max(target, this.vs - 1.0 * b.dt);
+      return b.run({ command: "walk", turn: clamp(w.turn ? w.turn * 1.1 : 2.5 * steer, -top, top), speed: this.vs });
     }
     if (m === "brake") return b.run({ command: "walk", turn: 0, speed: this.mt < 0.6 ? 0.4 : 0.2 });
     this.dog.tick();
@@ -395,8 +399,10 @@ export class Run {
   }
   // Bolt could not get up in 2 tries: the handler stands it up where it fell (a rare case), 10 s lost
   rescue() {
-    const q = this.local(), b = this.body;
-    const p = this.course.at(this.lineS);
+    const b = this.body, o = this.obstacle;
+    // back on the line where it fell; in front of a hurdle not yet judged, 3 m before it (to jump it again)
+    const p = this.course.at(o && o.kind === "hurdle" && this.lineS > o.s - 3 ? o.s - 3 : this.lineS);
+    b.jumped = null;
     const bars = this.course.obstacles.filter((o) => o.kind === "hurdle").map((o) => this.bolt.barPose(o.slot)[0].slice());
     this.bolt.teleport(this.start, this.world(p.x, p.y), this.course.yaw0 + p.h);
     placeHurdles(this.bolt, this.course);   // the teleport parked them; knocked bars stay knocked for the judge
@@ -404,7 +410,6 @@ export class Run {
     this.bolt.mj.mj_forward(this.bolt.model, this.bolt.data);
     if (this.clock !== null) this.clock += 10;
     b.reset(); b.stuck = false; this.cmd = "stand"; this.say("The handler helped Bolt up: +10 s", "bad");
-    void q;
   }
   judge() {
     const C = this.course, q = this.local(), b = this.body;
