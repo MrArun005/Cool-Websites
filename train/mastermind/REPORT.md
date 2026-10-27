@@ -175,3 +175,179 @@ Reproduce (from `train/`, `MUJOCO_GL=osmesa OMP_NUM_THREADS=1`, run 18e at `$IMI
         --beta-floor 0.2 --hidden 1024,512,256 --epochs0 15 --epochs 6 --out runs/mastermind/v2 --seed 2
     python mastermind/test_master.py --brain runs/mastermind/v2/student_r5.pt --n 30 --exam --out mastermind/results/student.json
     python mastermind/baseline.py --imitate 18e --n 30 --out mastermind/results/manager_18e.json
+
+## v3: the student retrained with the best teachers (2026-10-27)
+
+**Result.** With the new teachers the student succeeds at **84.5% of switches (721/853, ± 1.2)** on REPORT's v2
+rows (N=60, seed sets 1000 and 5000), up from the v2 student's **72% (589/818)** and above the skill manager running the
+same new brains (**79.8%, 676/847**). With the new 50 cm jump rows added it is **81% (792/972)**, against 67% and 75%.
+Per seed set: 85.9% (seed 1000) and 83.2% (seed 5000), so both seed sets agree. Every switch is level or better than the
+v2 student except **canter->trot, which got worse (85% -> 68%)**. The owner's targets are **not** met: 95% of switches
+(we are at 81-85%), a 70% canter copy with no falls (66%, 1 fall in 30), and 50 cm jumps (43% clean from a trot).
+
+### Teachers (teacher set "v3", `teachers.SETS`)
+
+| behaviour | v2 teacher | v3 teacher |
+|---|---|---|
+| walk, trot, pace, turns, sit, lie | 18e at 20M | 18e at 36M (`models/bolt-dog-switching-18e-36M`) |
+| canter clip (also the 0.6 s bridge after a landing) | 18e | running brain 18c at 29.5M (`models/bolt-dog-running-18c-29.5M`; the coordinator's update over 24.5M) |
+| jump | 16g, handed over 1.1 m before the bar | run-up brain 16i at 35.5M (`models/bolt-dog-jump-runup-16i-35.5M`), handed over 1.1 m before the bar, clock input t/200, at most 200 steps |
+| the 2.6 s after a landing (bridge + first 2 s of trot) | 18e | I'm-possible's research student r4 (`models/bolt-dog-imitate-pps-student-r4`) |
+| stand, recovery | posture brain, self-right 17e | the same, with the recovery phase shown on the command input (`rec_cmd`, below) |
+
+**Step 1: each new teacher inside the MasterMind world** (`check_teachers.py`, `results/teachers_v3.json`):
+
+* 18c-29.5M canter, exam_canter protocol (N=30, seeds 5000+): tracking **69.7%, 0/30 falls**, speed 72%. Standalone:
+  68%, 1/30. (24.5M in the world: 65.0%, 1/30, the same as its standalone 65%, 1/30.)
+* 18e-36M, imitate_env.exam (4 per clip, seed 9000): walk .865, trot .827, pace .895, turns .850/.851, sit .923, lie .915.
+  Its best.json: .864, .83, .896, .849/.854, .925, .913. Same.
+* 16i, jump_env's fair protocol run on the shared world (1.5 m, 2 m/s, fixed physics, N=30, seeds 7000+):
+  40 cm **100%**, 50 cm **83%**. Standalone exam_30.json: 100%, 77%.
+
+So the world was right for all three; no fix was needed there.
+
+**The jump hand-over had to change, but not the way planned.** 16i trained from 0.5-1.5 m, arriving at up to 3 m/s
+(`jobs/run16i-jump-runup.json`: `--approach 0.5 1.5 --max-steps 200 --approach-speed 3.0`), and its exam is 1.5 m at
+2 m/s. It turned out to need that speed. On the same world with randomized physics, at 1.5 m: 2.0 m/s gives 40 cm 100%
+and 50 cm 45%; 1.6 m/s gives 35% and 20%; from standing it gets 0% at every height. At 1.1 m and 1.7 m/s: 100% and 85%.
+A 2 s trot reaches the hand-over at only 1.52 ± 0.08 m/s. Clean jumps (no touch, landed) from the trot, teacher chain,
+N=30, seed 1000, for 20/30/40/50 cm:
+
+| hand-over | clean 20 / 30 / 40 / 50 cm |
+|---|---|
+| 1.5 m (its exam distance) | 57 / 27 / 20 / 7% |
+| 1.3 m | 63 / 53 / 20 / 3% |
+| 1.2 m | - / 60 / 40 / 13% |
+| **1.1 m** | **80 / 70 / 53 / 20%** |
+| 1.0 m | - / 63 / 40 / 7% |
+| 0.9 m | - / 50 / 20 / 3% |
+| canter run-up (switch to canter for the approach), 1.1 / 1.3 / 1.5 m | 30 cm 23 / 17 / 20%: falls in the approach |
+| hand-over gated on the trot's phase (0.5-0.75 of the stride, within 1.35 m) | 83 / 67 / 47 / 27% (no clear gain) |
+
+Almost every failure knocked the bar out of its cups. So v3 hands over at 1.1 m, the same distance as before. The
+handler bars are 15-55 cm, placed 1.5-2.2 m ahead. Landing teacher (jump_from 1.1, N=30, seed 1000), landing->trot over
+20/30/40/50 cm: 18e alone 74/118; with r4 for 2.6 s **94/118**; a 1.0 s bridge 78/118; no bridge 53/118 (at 1.5 m).
+These settings were chosen on seed 1000, the same seeds as the test's first half. Seed 5000 was not looked at, and it
+gives the same picture.
+
+### DAgger (`dagger.py --teachers v3`)
+
+Same recipe as v2: round 0 is 400k teacher states with DART noise; rounds 1-7 add 200k each (beta 0.5 -> floor 0.2,
+1.8M states); the net is 1024-512-256 ELU; 3 workers; about 70 min of 3 cores per run.
+
+* **Run a (lost the recovery).** Shoves stood up 0 / 85 / 0 / 70 / 0 / 35% of 20 after rounds 0-5 (seed 1000),
+  and 2 of 12 after round 7 (dev seeds). Once lying belly-down, the posture brain's "keep tucking" and "stand up" labels fall on the same
+  states; the switch is by joint distance, or by a timeout in the test. The command input said "stand" throughout, so
+  a student hovering at the boundary stayed down. Its gaits and jumps were fine.
+* **Run b (`rec_cmd`).** The recovery phase is on the command input: "stand" while self-righting, "lie" while tucking,
+  "stand" again once tucked, and the command clock restarts at each change. The fit dropped from 0.111 to 0.071 rad RMS
+  and the recovery held: 75-100% from round 3 on. **The page must reproduce this** (`export_v3/model.json` "recovery"
+  spells the rule out: upright > 0.9 and still for 15 steps or 4 s -> "lie" until joints within 0.6 rad of LIE_POSE or
+  2 s -> "stand" 3 s).
+* **Round choice.** It was made on separate dev seeds (20000+37k, N=12 per sequence), never on the test seeds. Pooled:
+  r3 79%, r4 82%, **r5 82%** (recovery 12/12), r6 81%, r7 79%. We took r5.
+* A bug fix on the way: a fall in the approach read the jump flags of an earlier jump (or crashed in a fresh world).
+  The flags are now reset at the jump command. This did not change any earlier number, because a fall in the approach
+  already counted as a failed jump.
+
+### Step 3: switch success (N=60: seed sets 1000 and 5000, 30 each; rate ± binomial s.e. in points)
+
+The old student ran in its own world (teacher set v2). Its 50 cm rows are new runs (`student_v2_r5_jump50*.json`).
+"Manager, v3 brains" is `baseline.py --teachers v3` (the `Manager` subclass of skills.Bolt, with skills.py unchanged).
+"Teacher chain in env" is the same teachers driving the MasterMind env.
+
+| switch | old student v2 r5 | manager, v3 brains | teacher chain in env, v3 | **new student v3 r5** |
+|---|---|---|---|---|
+| walk->trot | 59/60 98% ± 2 | 59/60 98% ± 2 | 59/60 98% ± 2 | 60/60 100% ± 0 |
+| trot->canter | 46/59 78% ± 5 | 54/59 92% ± 4 | 55/59 93% ± 3 | 57/60 95% ± 3 |
+| canter->trot | 39/46 85% ± 5 | 40/54 74% ± 6 | 36/54 67% ± 6 | 39/57 68% ± 6 |
+| trot->walk | 39/39 100% ± 0 | 38/38 100% ± 0 | 36/36 100% ± 0 | 39/39 100% ± 0 |
+| walk->sit [pose reached] | 31/60 52% ± 6 | 49/60 82% ± 5 | 49/60 82% ± 5 | 49/60 82% ± 5 |
+| sit->lie [pose reached] | 31/60 52% ± 6 | 49/60 82% ± 5 | 49/60 82% ± 5 | 49/60 82% ± 5 |
+| lie->stand (posture) | 31/31 100% ± 0 | 49/49 100% ± 0 | 49/49 100% ± 0 | 49/49 100% ± 0 |
+| trot->jump 20 cm | 42/60 70% ± 6 | 43/60 72% ± 6 | 45/60 75% ± 6 | 47/60 78% ± 5 |
+| jump 20 cm->(canter)->trot | 26/52 50% ± 7 | 47/60 78% ± 5 | 43/59 73% ± 6 | 47/58 81% ± 5 |
+| trot->jump 30 cm | 45/60 75% ± 6 | 34/60 57% ± 6 | 41/60 68% ± 6 | 47/60 78% ± 5 |
+| jump 30 cm->(canter)->trot | 30/58 52% ± 7 | 43/57 75% ± 6 | 49/60 82% ± 5 | 51/60 85% ± 5 |
+| trot->jump 40 cm | 33/60 55% ± 6 | 18/60 30% ± 6 | 26/60 43% ± 6 | 37/60 62% ± 6 |
+| jump 40 cm->(canter)->trot | 31/60 52% ± 6 | 45/56 80% ± 5 | 44/59 75% ± 6 | 48/59 81% ± 5 |
+| fall -> recover (stood up) | 53/60 88% ± 4 | 54/60 90% ± 4 | 50/60 83% ± 5 | 51/60 85% ± 5 |
+| recover -> walk | 53/53 100% ± 0 | 54/54 100% ± 0 | 50/50 100% ± 0 | 51/51 100% ± 0 |
+| trot->jump 50 cm | 11/60 18% ± 5 | 8/60 13% ± 4 | 9/60 15% ± 5 | 26/60 43% ± 6 |
+| jump 50 cm->(canter)->trot | 30/57 53% ± 7 | 40/57 70% ± 6 | 44/55 80% ± 5 | 45/59 76% ± 6 |
+| **pooled** | **630/935 67% ± 2** | **724/964 75% ± 1** | **734/961 76% ± 1** | **792/972 81% ± 1** |
+
+On REPORT's v2 rows (no 50 cm): old student 589/818 **72.0 ± 1.6%**, manager with the v2 brains 501/788 63.6 ± 1.7%,
+manager with the v3 brains 676/847 **79.8 ± 1.4%**, teacher chain in env 681/846 80.5 ± 1.4%, **new student 721/853
+84.5 ± 1.2%**.
+
+Canter copy, exam_canter protocol (N=30, seeds 5000+, `canter_exam.py`; tracking / falls / speed):
+
+* old student: **0.33** / 6 of 30 / 0.38
+* new student: **0.66** / 1 of 30 / 0.68
+* its teacher 18c-29.5M in the world: 0.70 / 0 of 30 / 0.72
+
+Per-clip exam of the new student (4 per clip): walk .870, trot .829, pace .905, canter .697 (0/4 falls), turns
+.855/.862, sit .927, lie .890. Trot and walk keep the 0.83-0.87 of v2.
+
+### What got better, what got worse
+
+* **Better:**
+  * sit/lie pose reached 52% -> 82%. That is all teacher: 18e-36M.
+  * trot->canter 78% -> 95%
+  * every landing->trot: 50-53% -> 76-85%. This is 18c in the bridge and r4 after the landing.
+  * 50 cm jumps 18% -> 43%
+  * canter copy 33% -> 66% with 1 fall in 30 instead of 6
+* **Distillation beat its teachers again on jumps.** The manager with the same brains jumps clean 72/57/30/13%; the
+  student does 78/78/62/43% at 20/30/40/50 cm. As in v2, the take-off is learned from the bar distance in the same input
+  it trots with.
+* **Worse: canter->trot 85% -> 68% ± 6.** The manager with the v3 brains also dropped (74%). The new canter is real and
+  faster (72% of the dog's speed against 38%), and 18e's trot, which takes over at the switch, falls sideways out of it.
+  No teacher here has learned that switch: 18c never trained switches, and 18e never saw 18c's canter.
+* **Level, within error:**
+  * recovery 88% -> 85%
+  * 40 cm jump 55% -> 62%
+  * 20 and 30 cm: 70 -> 78%, 75 -> 78%
+* **Targets not met:**
+  * 95% of switches (81% with the 50 cm rows, 84.5% without)
+  * canter copy 66% (target 70%+, no falls). The teacher itself is at 70%, and the student copies it to within 3 points.
+  * 50 cm 43%. The jump teacher only clears 50 cm reliably at about 2 m/s, which a trot never reaches.
+
+### Caveats
+
+* One training seed of the student per configuration; the seed-to-seed spread of distillation is still unmeasured.
+* The jump hand-over and landing teacher were tuned on test seed set 1000 (teacher chain only). Seed set 5000 was
+  untouched and agrees (83.2% vs 85.9% pooled).
+* The student was run only through the Python env. In the browser, the page needs the `rec_cmd` command rule for
+  recovery (in model.json).
+
+### Next
+
+1. **Canter teacher upgrade:** `models/bolt-dog-running-18f-30M` (fair canter about 70.6%, 0/60 falls vs 18c-29.5M's
+   68%, 1/30) arrived after this DAgger run. Set `SETS["v3"]["canter"]` to it (add it to `imitate_brain`) and rerun
+   DAgger, about 70 min.
+2. **canter->trot:** label it with a brain that has learned that switch: 18c/18f fine-tuned with switches, as 18e was.
+   Or keep the canter brain in charge for about 0.5 s while it slows down.
+3. **Jumps from a trot:** fine-tune 16i on hand-overs from recorded trot states at 1.0-1.5 m and 1.4-1.7 m/s. Its run-up
+   training only started from a standing stance with a velocity kick. Or train a speed-up into the approach.
+
+### Files (v3)
+
+* `teachers.py` (teacher sets), `env.py` (sets, run_up / land / jump_phase / rec_cmd options), `dagger.py`
+  (`--teachers --over`), `baseline.py` (`Manager`, `--teachers`, `--with-50`), `test_master.py` (`--teachers --over --with-50`),
+  `compare.py` (`--col` merges seed sets, pooled ± s.e.), `check_teachers.py`, `canter_exam.py`, `export.py` (teacher set,
+  recovery rule)
+* results: `teachers_v3.json`, `manager_v3_n30*.json`, `teacher_in_env_v3_n30*.json`, `student_v3_r5_n30*.json`,
+  `student_v2_r5_jump50*.json`, `canter30_student_v2/v3.json`, `dagger_v3_history.json`
+* `export_v3/`: brain.json (torch parity 1e-5), model.json, student.pt (run b round 5)
+* Big files: `train/runs/mastermind/v3/` (gitignored): run a `dagger/`, run b `daggerb/`, variant tests `var/`, dev
+  tests `dev/`, `devb/`
+
+Reproduce (from `train/`, `MUJOCO_GL=osmesa OMP_NUM_THREADS=1`):
+
+    python mastermind/check_teachers.py --teachers v3 --out mastermind/results/teachers_v3.json
+    python mastermind/dagger.py --teachers v3 --rounds 8 --steps0 400000 --steps 200000 --workers 3 --beta-floor 0.2 \
+        --hidden 1024,512,256 --epochs0 20 --epochs 6 --out runs/mastermind/v3/daggerb --seed 4
+    python mastermind/test_master.py --brain runs/mastermind/v3/daggerb/student_r5.pt --teachers v3 --n 30 --seed 1000 --with-50 --exam --out mastermind/results/student_v3_r5_n30.json
+    python mastermind/baseline.py --teachers v3 --n 30 --seed 1000 --with-50 --out mastermind/results/manager_v3_n30.json
+    python mastermind/compare.py --col "new=mastermind/results/student_v3_r5_n30.json,mastermind/results/student_v3_r5_n30_seed5000.json"
