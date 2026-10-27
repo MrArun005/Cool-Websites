@@ -27,6 +27,8 @@ import numpy as np  # noqa: E402
 
 OUT = HERE.parent / "runs" / "mastermind" / "out"   # big files (data set, checkpoints): gitignored
 GAIT_W = {"walk": 3, "trot": 3, "pace": 1, "canter": 2, "turn_left": 1, "turn_right": 1}
+HANDLER = {"v3": dict(jump_h=(0.15, 0.55), jump_ahead=(1.5, 2.5),
+                      gait_w={"walk": 3, "trot": 3, "pace": 1, "canter": 3, "turn_left": 1, "turn_right": 1})}
 
 
 def pick(rng, weights):
@@ -36,27 +38,30 @@ def pick(rng, weights):
 
 
 class Handler:
-    """Says what to do next, like a person with a dog on a course."""
+    """Says what to do next, like a person with a dog on a course. jump_h / jump_ahead: the bar heights and distances
+    (v2: 15-45 cm, 1.5-2 m; v3: 15-55 cm, 1.5-2.5 m, as the run-up jump brain takes over 1.5 m before the bar)."""
 
-    def __init__(self, rng):
+    def __init__(self, rng, jump_h=(0.15, 0.45), jump_ahead=(1.5, 2.0), gait_w=None):
         self.rng = rng
+        self.jump_h, self.jump_ahead = jump_h, jump_ahead
+        self.gait_w = gait_w or GAIT_W
 
     def first(self):
         r = self.rng
         if r.random() < 0.15:
             return "sit", 0.0     # standing still at the start of the sit clip
-        return pick(r, GAIT_W), None
+        return pick(r, self.gait_w), None
 
     def next(self, cmd):
         """(command, kwargs, seconds) after `cmd` has run its time."""
         r = self.rng
-        if cmd in GAIT_W:
+        if cmd in self.gait_w:
             k = pick(r, dict(gait=50, jump=22, sit=12, stand=4, shove=8 if cmd in ("walk", "trot") else 2))
             if k == "gait":
-                g = pick(r, {g: w for g, w in GAIT_W.items() if g != cmd})
+                g = pick(r, {g: w for g, w in self.gait_w.items() if g != cmd})
                 return g, {}, r.uniform(1.5, 4.0)
             if k == "jump":
-                return "jump", dict(height=float(r.uniform(0.15, 0.45)), ahead=float(r.uniform(1.5, 2.0))), r.uniform(1.5, 3.0)
+                return "jump", dict(height=float(r.uniform(*self.jump_h)), ahead=float(r.uniform(*self.jump_ahead))), r.uniform(1.5, 3.0)
             if k == "sit":
                 return "sit", {}, r.uniform(3.0, 5.0)
             if k == "stand":
@@ -74,14 +79,15 @@ class Handler:
 
 def collect(args):
     """One worker: `steps` labelled states. Returns dict(obs, label, info)."""
-    (wid, seed, steps, student_path, beta, noise, imitate) = args
+    (wid, seed, steps, student_path, beta, noise, imitate, teachers, over) = args
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     import torch
     torch.set_num_threads(1)
     from env import Master
     from student import Student
     rng = np.random.default_rng(seed)
-    m = Master(seed=seed, imitate=imitate)
+    m = Master(seed=seed, imitate=imitate, teachers=teachers, **over)
+    hkw = HANDLER.get(teachers, {})
     m.patient = True
     brain = Student(student_path, m) if student_path else None
     X, Y = [], []
@@ -89,7 +95,7 @@ def collect(args):
     ep_seed = seed * 1000
     while len(X) < steps:
         ep_seed += 1
-        h = Handler(rng)
+        h = Handler(rng, **hkw)
         clip, tau = h.first()
         m.start(clip, tau=tau, seed=ep_seed)
         stats["tries"] += 1
@@ -175,7 +181,9 @@ def main():
     ap.add_argument("--epochs0", type=int, default=25)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--noise", type=float, default=0.08, help="max motor noise (rad) in teacher rollouts")
-    ap.add_argument("--imitate", default="18e")
+    ap.add_argument("--imitate", help="override the teacher set's dog-motion brain")
+    ap.add_argument("--teachers", default="v2", help="teacher set (teachers.SETS)")
+    ap.add_argument("--over", default="{}", help="JSON overrides of the teacher set (Master keyword arguments)")
     ap.add_argument("--hidden", default="512,512,256")
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--resume", action="store_true", help="continue from out/data.npz and out/student.pt")
@@ -198,7 +206,8 @@ def main():
         logf.write(s + "\n")
         logf.flush()
 
-    full = Master(seed=0, imitate=a.imitate).full
+    over = json.loads(a.over)
+    full = Master(seed=0, imitate=a.imitate, teachers=a.teachers, **over).full
     hidden = tuple(int(x) for x in a.hidden.split(","))
     student = out / "student.pt"
     if a.resume and (out / "data.npz").exists():
@@ -230,8 +239,8 @@ def main():
         net = fresh_net(X[0])
         t1 = time.time()
         train(net, X[0], Y[0], full, DOG, a.epochs0, a.lr, log)
-        save(net, student, round=0, imitate=a.imitate)
-        save(net, out / "student_r0.pt", round=0, imitate=a.imitate)
+        save(net, student, round=0, imitate=a.imitate, teachers=a.teachers, over=over)
+        save(net, out / "student_r0.pt", round=0, imitate=a.imitate, teachers=a.teachers, over=over)
         log(f"init student trained in {time.time() - t1:.0f} s")
     ctx = mp.get_context("fork")
     for rnd in range(r0, a.rounds):
@@ -240,7 +249,7 @@ def main():
         beta = 1.0 if rnd == 0 else max(a.beta_floor, 0.5 - 0.15 * (rnd - 1))
         noise = a.noise if rnd == 0 else 0.0
         per = steps // a.workers
-        jobs = [(w, a.seed * 100 + rnd * 10 + w, per, str(student) if rnd > 0 else None, beta, noise, a.imitate)
+        jobs = [(w, a.seed * 100 + rnd * 10 + w, per, str(student) if rnd > 0 else None, beta, noise, a.imitate, a.teachers, over)
                 for w in range(a.workers)]
         with ctx.Pool(a.workers) as pool:
             res = pool.map(collect, jobs)
@@ -254,8 +263,8 @@ def main():
             net = fresh_net(Xa)
         t1 = time.time()
         train(net, Xa, Ya, full, DOG, a.epochs0 if rnd == 0 else a.epochs, a.lr if rnd == 0 else a.lr * 0.5, log)
-        save(net, student, round=rnd, imitate=a.imitate)
-        save(net, out / f"student_r{rnd}.pt", round=rnd, imitate=a.imitate)
+        save(net, student, round=rnd, imitate=a.imitate, teachers=a.teachers, over=over)
+        save(net, out / f"student_r{rnd}.pt", round=rnd, imitate=a.imitate, teachers=a.teachers, over=over)
         np.savez(out / "data.npz", obs=Xa, label=Ya, round=rnd)
         history.append(dict(round=rnd, beta=beta, data=len(Xa), collect_s=round(t1 - t0), train_s=round(time.time() - t1), **st))
         (out / "history.json").write_text(json.dumps(history, indent=1))

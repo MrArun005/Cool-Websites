@@ -161,7 +161,7 @@ class Master:
             self.jump = dict(phase="approach", height=height, after=after or gait, steps=0, out=dict(
                 height=height, cleared=False, clean=False, landed=False, fell=False, fell_after=False, dropped=False,
                 touched=False))
-            self._to_clip(gait)
+            self._to_clip(self.ts.get("run_up") or gait)   # run_up: the gait of the approach (v3: canter, ~2 m/s)
         else:
             raise ValueError(name)
         self.b.skill = name
@@ -174,6 +174,7 @@ class Master:
         w.touched = w.cleared = w.landed = w.dropped = False
         w.clear_t, w.best_past = None, w.paws_past().min()
         self.jump["phase"] = "jump"
+        self.jump["out"]["v_handover"] = round(float((w._rotation().T @ self.data.qvel[0:3])[0]), 2)
         self.mode = ("jump",)
 
     def _start_recovery(self):
