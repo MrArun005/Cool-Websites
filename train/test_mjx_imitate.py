@@ -16,6 +16,7 @@ import numpy as np
 
 
 def dump(zip_path, warm_path, out):
+    import mujoco
     from imitate_env import ALL_CLIPS, ImitateEnv, ImitatePolicy
     from mjx_imitate import MjxImitatePolicy
     z = Path(zip_path)
@@ -41,8 +42,16 @@ def dump(zip_path, warm_path, out):
                 a = np.clip(pol.act(obs) + rng.normal(0, 0.1, 12), -1, 1)
                 obs, r, fell, done, info = env.step(a)
                 d = env.data
+                # the same senses with up-to-date kinematics (after mj_step, xmat and geom_xpos are from before the last
+                # substep, in MuJoCo and MJX alike); the JAX side recomputes them with mjx.forward
+                d2 = mujoco.MjData(env.model)
+                d2.qpos[:], d2.qvel[:], d2.ctrl[:] = d.qpos, d.qvel, d.ctrl
+                mujoco.mj_forward(env.model, d2)
+                env.data = d2
+                f_obs, (f_terms, f_err), f_bof = env._obs(), env.tracking(), env.body_on_floor()
+                env.data = d
                 legleg = sum(1 for cc in d.contact[:d.ncon] if cc.geom1 != env.floor and cc.geom2 != env.floor)
-                steps.append(dict(pre=pre, action=a, obs=obs, reward=r, terms={k: info[f"r_{k}"] for k in ("pose", "vel", "paw", "root", "root_vel")},
+                steps.append(dict(pre=pre, action=a, obs=obs, f_obs=f_obs, f_terms=f_terms, f_err=f_err, f_bof=f_bof, reward=r, terms={k: info[f"r_{k}"] for k in ("pose", "vel", "paw", "root", "root_vel")},
                                   height_err=info["height_err"], tilt=info["tilt"], body_on_floor=env.body_on_floor(), fell=fell,
                                   qpos=d.qpos.copy(), qvel=d.qvel.copy(), legleg=legleg, t=env.t))
                 if t == 20 and (c.loop or env.finished() > 0.5):   # a forced switch from here
@@ -106,12 +115,12 @@ def check(warm_path, cases):
     for s in C["steps"]:
         info = info_of(dict(s["pre"], t=s["t"], last_action=s["action"]))
         o, terms, err, bof = senses(jp.array(s["qpos"], jp.float32), jp.array(s["qvel"], jp.float32), info)
-        do.append(np.abs(np.asarray(o) - s["obs"]))
+        do.append(np.abs(np.asarray(o) - s["f_obs"]))
         for k in M.WEIGHTS:
-            dt[k].append(abs(float(terms[k]) - s["terms"][k]))
-        de.append(abs(float(err["tilt"]) - s["tilt"]) + abs(float(err["height_err"]) - s["height_err"]))
-        flo += bool(bof) != bool(s["body_on_floor"])
-        n_body += bool(s["body_on_floor"])
+            dt[k].append(abs(float(terms[k]) - s["f_terms"][k]))
+        de.append(abs(float(err["tilt"]) - s["f_err"]["tilt"]) + abs(float(err["height_err"]) - s["f_err"]["height_err"]))
+        flo += bool(bof) != bool(s["f_bof"])
+        n_body += bool(s["f_bof"])
     do = np.array(do)
     worst = np.argsort(do.max(0))[::-1][:3]
     print(f"[obs] {len(do)} states: max |diff| {do.max():.2e} (worst inputs {list(worst)}: {[f'{do.max(0)[i]:.1e}' for i in worst]}), mean {do.mean():.1e}")
@@ -122,7 +131,7 @@ def check(warm_path, cases):
     for s in C["starts"]:
         info = info_of(dict(s, t=0, last_action=np.zeros(12)))
         d = start_data(info, jp.float32(s["yaw"]))
-        q = np.asarray(d.qpos)
+        q = np.array(d.qpos)
         qq = s["qpos"].copy()
         if np.dot(q[3:7], qq[3:7]) < 0:
             q[3:7] *= -1
@@ -137,19 +146,19 @@ def check(warm_path, cases):
         tau0, limit = env.switch_to(info, jp.array(s["q"], jp.float32), jp.int32(s["new"]))
         bad += abs(float(tau0) - s["new_tau0"]) > 1e-4 or int(limit) != s["new_limit"]
     print(f"[switch] {len(C['switches'])} forced switches: {bad} differ in join time or end step")
-    # 4. one control step of physics (float32 MJX, floor-only contacts vs float64 MuJoCo)
-    dp, do1, ll, n_ll = [], [], [], 0
+    # 4. one control step of physics (float32 MJX vs float64 MuJoCo; MJX has the floor and thigh-torso contacts only)
+    dp, do1, wi = [], [], []
     for s in C["steps"][::3]:
         p = s["pre"]
-        info = info_of(p)
-        q, o = one_step(jp.array(p["qpos"], jp.float32), jp.array(p["qvel"], jp.float32), jp.array(p["ctrl"], jp.float32), info,
+        q, o = one_step(jp.array(p["qpos"], jp.float32), jp.array(p["qvel"], jp.float32), jp.array(p["ctrl"], jp.float32), info_of(p),
                         jp.array(s["action"], jp.float32))
         dp.append(np.abs(np.asarray(q)[7:19] - s["qpos"][7:19]).max())
-        do1.append(np.abs(np.asarray(o) - s["obs"]).max())
-        n_ll += s["legleg"] > 0
-    legleg_all = sum(s["legleg"] > 0 for s in C["steps"])
-    print(f"[one step] {len(dp)} steps: joints max |diff| {max(dp):.2e} rad (median {np.median(dp):.1e}), obs max {max(do1):.2e} "
-          f"(median {np.median(do1):.1e}); leg-on-leg contacts on the CPU (none in MJX) in {legleg_all} of {len(C['steps'])} states")
+        e = np.abs(np.asarray(o) - s["obs"])
+        do1.append(e.max())
+        wi.append(int(e.argmax()))
+    pc = lambda x: ", ".join(f"p{k} {np.percentile(x, k):.1e}" for k in (50, 90, 99)) + f", max {max(x):.1e}"
+    print(f"[one step] {len(dp)} steps: joint angles |diff| {pc(dp)} rad; obs |diff| {pc(do1)} (worst inputs {np.bincount(wi, minlength=75).argsort()[::-1][:3].tolist()}); "
+          f"CPU self-contacts (thigh-torso) in {sum(s['legleg'] > 0 for s in C['steps'])} of {len(C['steps'])} states")
     # 5. warm-started Brax policy vs ImitatePolicy.act
     W = pickle.loads(Path(warm_path).read_bytes())
     nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(75, 12)

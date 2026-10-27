@@ -9,8 +9,8 @@ state initialization (random clip and moment, Bolt starting in the dog's pose an
 termination (15 cm off the reference height, 0.8 rad tilt, or the body on the floor while the dog's was not), the
 A1 motor model every physics substep, physics randomization (motor gain, body mass, floor friction), sensor noise,
 and clip switching mid-try (switch_rate 0.3/s, NEXT rules, a gait joins the new gait at its closest-pose frame).
-Clips are drawn canter 3x, the others 1x. Differences, for speed: legs and body collide with the floor only (no leg-
-on-leg contact) and the physics is float32. Each try restarts from a fresh random clip and moment when it ends (not
+Clips are drawn canter 3x, the others 1x. Differences, for speed: the robot collides with the floor, and its thighs
+with the torso (the only self-contacts the CPU env ever has), but nothing else with itself, and the physics is float32. Each try restarts from a fresh random clip and moment when it ends (not
 from the env's first state as Brax's AutoResetWrapper would), and the end of a clip or of the 5 s on a loop is a
 time-out (truncation), not a failure, as in the CPU env.
 
@@ -58,6 +58,16 @@ def floor_only(xml):
     """Robot geoms collide with the floor only: robot contype 2 / conaffinity 1, floor contype 1 / conaffinity 2."""
     xml = re.sub(r'(<geom name="floor"[^>]*?)(/?>)', r'\1 contype="1" conaffinity="2"\2', xml, count=1)
     return xml.replace('<geom friction="1.0 0.02 0.01" condim="3"', '<geom friction="1.0 0.02 0.01" condim="3" contype="2" conaffinity="1"', 1)
+
+
+def collisions(xml):
+    """floor_only, plus the contacts of the thighs with the torso, which the CPU env has in about a third of all steps
+    (pushing at ~130 N): leg-on-leg contacts never happen there, so only these were missing."""
+    xml = floor_only(xml)
+    for leg in ("FL", "FR", "RL", "RR"):   # the thigh capsules, in this order in bolt.xml
+        xml = xml.replace('<geom class="thigh" fromto', f'<geom name="{leg}_thigh_geom" class="thigh" fromto', 1)
+    pairs = "".join(f'<pair geom1="torso" geom2="{leg}_thigh_geom" condim="3" friction="1 1 0.02 0.01 0.01"/>' for leg in ("FL", "FR", "RL", "RR"))
+    return xml.replace("</mujoco>", f"  <contact>{pairs}</contact>\n</mujoco>")
 
 
 def _rotz(a):
@@ -150,7 +160,7 @@ class MjxImitate:
     def __init__(self, randomize=True, clips=None, switch_rate=0.3, weights=None, clip_weights=None, clip_dir=CLIP_DIR):
         from brax.envs.base import State
         self.State = State
-        xml = floor_only((HERE / "bolt.xml").read_text())
+        xml = collisions((HERE / "bolt.xml").read_text())
         self.m = m = mujoco.MjModel.from_xml_string(xml)
         self.mx = mjx.put_model(m)
         self.randomize, self.switch_rate = randomize, switch_rate
@@ -166,6 +176,7 @@ class MjxImitate:
         self.next = jp.array([[b in NEXT.get(a, ()) and b != a for b in self.names] for a in self.names])
         self.canter = self.names.index("canter") if "canter" in self.names else -1
         self.torso, self.floor = m.body("torso").id, m.geom("floor").id
+        assert all(m.body(m.geom_bodyid[m.geom(f"{l}_thigh_geom").id]).name == f"{l}_thigh" for l in ("FL", "FR", "RL", "RR"))
         self.feet = jp.array([m.geom(f"{l}_foot").id for l in ("FL", "FR", "RL", "RR")])
         bodies = [mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, b) or "" for b in m.geom_bodyid]
         self.body_mask = jp.array([n[:2] not in ("FL", "FR", "RL", "RR") and g != self.floor for g, n in enumerate(bodies)])
