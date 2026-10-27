@@ -182,8 +182,12 @@
   }
   function current() { const list = cks(); return list[Math.min(ckIndex, list.length - 1)]; }
   function hudStatic() {
-    const c = current(); if (!c) return;
-    const R = L.runs[runName];
+    const c = current(), R = L.runs[runName];
+    if (!c) {   // a run with no checkpoint yet: say so, never leave the previous run's numbers up
+      $("hCk").textContent = "No checkpoint yet"; $("hRun").textContent = R.label + (R.where ? ` · ${R.where}` : "");
+      for (const id of ["hUp", "hDo", "hRes"]) $(id).textContent = "–";
+      $("hT").textContent = "0.0 s"; drawProps(null, 0); return;
+    }
     $("hCk").textContent = `${fmt(c.steps)} steps`;
     $("hRun").textContent = R.label + (R.where ? ` · ${R.where}` : "");
   }
