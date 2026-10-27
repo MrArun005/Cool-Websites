@@ -1,0 +1,9 @@
+training on clips ['walk', 'trot', 'pace', 'turn_left', 'turn_right', 'sit', 'lie'], 8 envs, 16384 samples per update
+update at 16384: reward/step 0.215, try length 71 steps (100 tries), 702 steps/s
+update at 32768: reward/step 0.216, try length 70 steps (100 tries), 642 steps/s
+update at 49152: reward/step 0.237, try length 86 steps (100 tries), 637 steps/s
+update at 65536: reward/step 0.239, try length 86 steps (100 tries), 646 steps/s
+update at 81920: reward/step 0.242, try length 84 steps (100 tries), 644 steps/s
+update at 98304: reward/step 0.248, try length 87 steps (100 tries), 648 steps/s
+update at 114688: reward/step 0.271, try length 103 steps (100 tries), 648 steps/s
+update at 131072: reward/step 0.272, try length 105 steps (100 tries), 651 steps/s
