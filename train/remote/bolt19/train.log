@@ -1,0 +1,49 @@
+Traceback (most recent call last):
+  File "/home/user/Cool-Websites/train/train.py", line 23, in <module>
+    from bolt_env import BoltEnv
+  File "/home/user/Cool-Websites/train/bolt_env.py", line 17, in <module>
+    import mujoco
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/mujoco/__init__.py", line 74, in <module>
+    from mujoco.rendering.classic.renderer import Renderer  # pyrefly: ignore[missing-import]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/mujoco/rendering/classic/renderer.py", line 20, in <module>
+    from mujoco.rendering.classic import gl_context
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/mujoco/rendering/classic/gl_context.py", line 38, in <module>
+    from mujoco.osmesa import GLContext as _GLContext
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/mujoco/osmesa/__init__.py", line 31, in <module>
+    from OpenGL import GL
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/OpenGL/GL/__init__.py", line 4, in <module>
+    from OpenGL.GL.VERSION.GL_1_1 import *
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/OpenGL/GL/VERSION/GL_1_1.py", line 14, in <module>
+    from OpenGL.raw.GL.VERSION.GL_1_1 import *
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/OpenGL/raw/GL/VERSION/GL_1_1.py", line 7, in <module>
+    from OpenGL.raw.GL import _errors
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/OpenGL/raw/GL/_errors.py", line 4, in <module>
+    _error_checker = _ErrorChecker( _p, _p.GL.glGetError )
+                                        ^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'glGetError'
+Traceback (most recent call last):
+  File "/home/user/Cool-Websites/train/train.py", line 23, in <module>
+    from bolt_env import BoltEnv
+  File "/home/user/Cool-Websites/train/bolt_env.py", line 17, in <module>
+    import mujoco
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/mujoco/__init__.py", line 74, in <module>
+    from mujoco.rendering.classic.renderer import Renderer  # pyrefly: ignore[missing-import]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/mujoco/rendering/classic/renderer.py", line 20, in <module>
+    from mujoco.rendering.classic import gl_context
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/mujoco/rendering/classic/gl_context.py", line 38, in <module>
+    from mujoco.osmesa import GLContext as _GLContext
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/mujoco/osmesa/__init__.py", line 31, in <module>
+    from OpenGL import GL
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/OpenGL/GL/__init__.py", line 4, in <module>
+    from OpenGL.GL.VERSION.GL_1_1 import *
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/OpenGL/GL/VERSION/GL_1_1.py", line 14, in <module>
+    from OpenGL.raw.GL.VERSION.GL_1_1 import *
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/OpenGL/raw/GL/VERSION/GL_1_1.py", line 7, in <module>
+    from OpenGL.raw.GL import _errors
+  File "/home/user/Cool-Websites/.venv/lib/python3.13/site-packages/OpenGL/raw/GL/_errors.py", line 4, in <module>
+    _error_checker = _ErrorChecker( _p, _p.GL.glGetError )
+                                        ^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'glGetError'
+resuming from ../models/bolt-dog-walk-sharp-12M/policy.zip at 12,000,000 steps
