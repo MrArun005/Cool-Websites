@@ -12,3 +12,5 @@ checkpoint 23500000 ready: {'jump_25': 0.8, 'jump_30': 0.6, 'jump_40': 0.4, 'jum
 checkpoint 24000000 ready: {'jump_25': 0.7, 'jump_30': 0.8, 'jump_40': 0.4, 'jump_50': 0.0} (practice bars now 30 cm)
 checkpoint 24500000 ready: {'jump_25': 1.0, 'jump_30': 1.0, 'jump_40': 0.3, 'jump_50': 0.0} (practice bars now 30 cm)
 new best at 24500000: score 0.57
+checkpoint 25000000 ready: {'jump_25': 0.7, 'jump_30': 1.0, 'jump_40': 0.7, 'jump_50': 0.0} (practice bars now 30 cm)
+new best at 25000000: score 0.60
