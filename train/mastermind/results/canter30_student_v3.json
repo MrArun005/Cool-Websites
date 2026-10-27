@@ -1,0 +1,14 @@
+{
+ "track_canter": 0.664,
+ "fall_canter": 0.03333333333333333,
+ "speed_canter": 0.68,
+ "track_trot": 0.83,
+ "fall_trot": 0.0,
+ "speed_trot": 0.82,
+ "track_walk": 0.869,
+ "fall_walk": 0.0,
+ "speed_walk": 0.9,
+ "brain": "runs/mastermind/v3/final/student_v3_r5.pt",
+ "teachers": "v3",
+ "n": 30
+}
