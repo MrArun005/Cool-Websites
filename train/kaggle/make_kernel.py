@@ -17,7 +17,7 @@ HERE = Path(__file__).resolve().parent.parent
 
 TEMPLATE = '''# Bolt robot dog: {slug}, trained on a Kaggle GPU (made by train/kaggle/make_kernel.py)
 import base64, os, subprocess, sys, pathlib
-subprocess.run([sys.executable, "-m", "pip", "install", "-q", "jax[cuda12]", "mujoco==3.17.0", "mujoco-mjx==3.17.0", "brax==0.14.2"], check=True)
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "jax[cuda12]==0.9.2", "jaxlib==0.9.2", "flax==0.12.6", "optax==0.2.8", "orbax-checkpoint==0.12.8", "mujoco==3.17.0", "mujoco-mjx==3.17.0", "brax==0.14.2"], check=True)
 work = pathlib.Path("/kaggle/working"); work.mkdir(exist_ok=True)
 FILES = {files}
 for name, blob in FILES.items():
