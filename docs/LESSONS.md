@@ -262,3 +262,8 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   A1 parkour onto 2x-hip-height boxes) that cap alone ruled out fast running and high jumps. With the real
   33.5 N·m (still 420 W and 21 rad/s), the unchanged 12M jump brain went from mostly failing to clearing
   20 cm 4/6 and 30 cm 3/6. Model the real motor; don't halve it "to be safe".
+- **Teach the jump to judge the bar, not just to get over it.** The jump reward only checked paws within 12 cm
+  of the bar, so with a longer run-up (run 16i) Bolt peaked at 0.72 m yet ran into a 40 cm bar: the bar's
+  distance and height were inputs, but nothing paid for using them. Now: rising in the take-off zone for this
+  height (about 1-1.5x the bar height before it, as agility dogs do) pays, being on the ground too close costs,
+  and over the bar the body centre should be at least bar height + 30 cm.

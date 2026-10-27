@@ -210,6 +210,19 @@ class JumpEnv(BoltEnv):
             reward += 15.0 * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
             self.best_past = max(self.best_past, past.min())
             reward += 0.5 * np.clip(p["vx"], -0.5, 1.0) * upright
+            # Judge the bar like a dog (run 16i). Take off from the right spot for THIS height: agility dogs leave the
+            # ground about 1-1.5x the bar height before it (further for higher bars); rising there pays, still
+            # being on the ground when too close to take off costs; and when the body passes over the bar its
+            # centre should be at least bar height + 30 cm (the legs hang below it). Before this, run 16i's 30M brain
+            # peaked at 0.72 m but ran into a 40 cm bar: nothing paid for timing the jump to the bar.
+            ahead, h = self.hurdle_ahead(), self.hurdle_h
+            grounded = self.feet_on_ground().sum() > 0
+            if 0.3 + 0.8 * h < ahead < 0.5 + 1.5 * h and not grounded:
+                reward += 0.5 * max(0.0, d.qvel[2])
+            if 0.0 < ahead < 0.25 + 0.5 * h and grounded:
+                reward -= 0.3
+            if abs(ahead) < 0.1:
+                reward += 2.0 * np.clip(d.qpos[2] - (h + 0.30), -0.2, 0.2)
             # tuck: a paw passing over the bar (within 12 cm of it) should be above it, with 3 cm to spare.
             # At 4-5M it cleared and landed 11 times in 12 at 10-12 cm, but the trailing rear legs clipped
             # the bar, so clean jumps stayed rare and the practice bar stuck at 10-12 cm.
