@@ -42,16 +42,16 @@ export const LEVELS = [
     obstacles: [{ kind: "hurdle", s: 6.5, h: 0.20 }, { kind: "hurdle", s: 17, h: 0.20 }, { kind: "table", s: 28, pose: "sit", hold: 3 }],
     finish: 32 },
   { n: 2, name: "Intermediate", blurb: "A curve, three hurdles of 20-30 cm, slalom markers and a down-stay on the table.",
-    pieces: [["S", 17], ["A", Math.PI / 2, 3.5], ["S", 26], ["A", -Math.PI / 2, 3.5], ["S", 18]],
-    obstacles: [{ kind: "hurdle", s: 6, h: 0.20 }, { kind: "slalom", s: 25, n: 5, gap: 2.4 }, { kind: "hurdle", s: 39.5, h: 0.25 },
-      { kind: "table", s: 57, pose: "lie", hold: 3 }, { kind: "hurdle", s: 64, h: 0.30 }],
-    finish: 70 },
+    pieces: [["S", 17], ["A", Math.PI / 2, 3.5], ["S", 28], ["A", -Math.PI / 2, 3.5], ["S", 18]],
+    obstacles: [{ kind: "hurdle", s: 6, h: 0.20 }, { kind: "slalom", s: 24, n: 5, gap: 2.4 }, { kind: "hurdle", s: 41, h: 0.25 },
+      { kind: "table", s: 59, pose: "lie", hold: 3 }, { kind: "hurdle", s: 66, h: 0.30 }],
+    finish: 72 },
   { n: 3, name: "Championship", blurb: "The full course: four hurdles of 30-40 cm, three curves, slalom, a sit and a down.",
-    pieces: [["S", 17], ["A", -Math.PI / 2, 3.2], ["S", 30], ["A", Math.PI / 2, 3.2], ["S", 22], ["A", Math.PI / 2, 3.5], ["S", 22]],
-    obstacles: [{ kind: "hurdle", s: 6, h: 0.30 }, { kind: "slalom", s: 24.5, n: 6, gap: 2.4 }, { kind: "hurdle", s: 41, h: 0.35 },
-      { kind: "table", s: 60, pose: "sit", hold: 3 }, { kind: "hurdle", s: 66, h: 0.40 }, { kind: "table", s: 87, pose: "lie", hold: 3 },
-      { kind: "hurdle", s: 94, h: 0.35 }],
-    finish: 103 },
+    pieces: [["S", 17], ["A", -Math.PI / 2, 3.2], ["S", 32], ["A", Math.PI / 2, 3.2], ["S", 22], ["A", Math.PI / 2, 3.5], ["S", 22]],
+    obstacles: [{ kind: "hurdle", s: 6, h: 0.30 }, { kind: "slalom", s: 24.5, n: 6, gap: 2.4 }, { kind: "hurdle", s: 43, h: 0.35 },
+      { kind: "table", s: 62, pose: "sit", hold: 3 }, { kind: "hurdle", s: 68, h: 0.40 }, { kind: "table", s: 89, pose: "lie", hold: 3 },
+      { kind: "hurdle", s: 96, h: 0.35 }],
+    finish: 105 },
 ];
 export const NAMES = { hurdle: "Hurdle", slalom: "Slalom", table: "Pause table" };
 export const SLALOM_SWING = 0.6;   // m: the handler's line swings this far either side of the markers
@@ -484,10 +484,14 @@ export class Bot {
       if (along > -4) want = "walk";
       if (along > -0.45 && along < 0.3 && Math.abs(side) < 0.4) want = o.pose;
     }
-    if (o && o.kind === "hurdle") {   // line up at a walk first: the jump brain wants Bolt square to the bar
-      const [along, side] = r.rel(o, o.hd);
-      if (along > -7 && along < -1.5 && (Math.abs(side) > 0.25 || r.lineOff > 0.3)) want = "walk";
-      else if (this.canter && along > -6) want = "trot";
+    if (o && o.kind === "hurdle") {   // line up at a walk first (the jump brain wants Bolt square to the bar), then trot in
+      const [along, side] = r.rel(o, o.hd), askew = Math.abs(wrap(r.local().h - o.hd));
+      if (along > -8 && along < -1.2) {
+        if (this.committed !== o.n) {
+          if (Math.abs(side) < 0.2 && askew < 0.12) this.committed = o.n; else want = "walk";
+        } else if (Math.abs(side) > 0.5) { this.committed = null; want = "walk"; }
+        if (this.canter && along > -6 && want !== "walk") want = "trot";
+      }
     }
     if (want !== r.cmd) { r.command(want); this.wait = 0.2 + 0.3 * this.rand(); }
   }

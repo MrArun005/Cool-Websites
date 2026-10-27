@@ -2,3 +2,10 @@ canter 0 {'track': 0.568, 'fell': False, 'seconds': 26.2, 'speed': np.float64(0.
 canter 1 {'track': 0.572, 'fell': False, 'seconds': 33.8, 'speed': np.float64(0.512)}
 canter 2 {'track': 0.585, 'fell': False, 'seconds': 37.0, 'speed': np.float64(0.669)}
 canter 3 {'track': 0.562, 'fell': False, 'seconds': 40.4, 'speed': np.float64(0.649)}
+canter 4 {'track': 0.532, 'fell': False, 'seconds': 25.1, 'speed': np.float64(0.597)}
+canter 5 {'track': 0.461, 'fell': False, 'seconds': 20.2, 'speed': np.float64(0.545)}
+canter 6 {'track': 0.515, 'fell': False, 'seconds': 41.7, 'speed': np.float64(0.558)}
+canter 7 {'track': 0.565, 'fell': False, 'seconds': 57.0, 'speed': np.float64(0.592)}
+canter 8 {'track': 0.548, 'fell': False, 'seconds': 50.7, 'speed': np.float64(0.62)}
+canter 9 {'track': 0.585, 'fell': False, 'seconds': 41.1, 'speed': np.float64(0.603)}
+{"clip": "canter", "n": 10, "track_mean": 0.549, "track_sd": 0.038, "track_se": 0.012, "falls": 0, "speed_mean": 0.598, "planner": {"calls": 400, "chose_plain": 375, "plain_fell": 5, "best_fell": 0}}
