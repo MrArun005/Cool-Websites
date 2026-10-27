@@ -118,6 +118,7 @@
   // ---------- the ground: solid to the horizon, a fine grid near Bolt, a faint 1 m grid far out, fog in the sky colour ----------
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshBasicMaterial({ toneMapped: false }));
   ground.position.z = -0.002; ground.receiveShadow = true; ground.renderOrder = -1; scene.add(ground);   // the shadow floor above it draws the shadows
+  floor.scale.set(0.2, 0.2, 1);   // the shadow-only floor: 12 m around Bolt is plenty (the sun's shadows reach 1.2 m) and keeps far pixels cheap
   scene.fog = new THREE.Fog(0xffffff, 10, 60);
   let coarse = null;
   function grids() {
@@ -413,7 +414,7 @@
       if (grid) grid.position.set(Math.round(x / 0.5) * 0.5, Math.round(yy / 0.5) * 0.5, 0.0004);
       sun.position.set(x + 4, yy - 5.6, 10.4); sun.target.position.set(x, yy, 0);
       if (coarse) coarse.position.set(Math.round(x), Math.round(yy), 0.0002);
-      ground.position.set(x, yy, -0.002);
+      ground.position.set(x, yy, -0.002); floor.position.set(x, yy, 0);
     } else clearJump();
     const d = camera.position.distanceTo(controls.target);   // fog starts past what you are looking at, the far ground melts into the sky
     scene.fog.near = 2 * d + 4; scene.fog.far = 5 * d + 30;
