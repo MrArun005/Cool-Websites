@@ -1,0 +1,30 @@
+{
+  "steps": 31000000,
+  "exam": {
+    "track_walk": 0.906,
+    "fall_walk": 0.0,
+    "speed_walk": 0.88,
+    "track_trot": 0.903,
+    "fall_trot": 0.0,
+    "speed_trot": 0.9,
+    "track_canter": 0.736,
+    "fall_canter": 0.0,
+    "speed_canter": 0.75,
+    "track_turn_left": 0.89,
+    "fall_turn_left": 0.0,
+    "speed_turn_left": 0.24,
+    "track_turn_right": 0.896,
+    "fall_turn_right": 0.0,
+    "speed_turn_right": 0.36
+  },
+  "score": 0.5396280000000001,
+  "clips": [
+    "walk",
+    "trot",
+    "canter",
+    "canter",
+    "canter",
+    "turn_left",
+    "turn_right"
+  ]
+}
