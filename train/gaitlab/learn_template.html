@@ -213,11 +213,11 @@
       const cm = /^j(\d+)$/.exec(kind);
       J = { dir: [dx / len, dy / len], bar: P.barpose.slice(0, 3), text: cm ? `${cm[1]} cm` : "bar" };
     }
-    if (aim) {   // side-on: square to the way Bolt travels (turned 25° toward the run-up so the bar reads as a bar), a little raised, aimed at the bar
+    if (aim) {   // side-on: square to the way Bolt travels (turned 12° toward the landing so the bar reads as a bar), a little raised, aimed at the bar
       aim = false; followOff = [0, 0];
       let px = -J.dir[1], py = J.dir[0];
       if ((camera.position.x - controls.target.x) * px + (camera.position.y - controls.target.y) * py < 0) { px = -px; py = -py; }
-      const a = 0.44, vx = Math.cos(a) * px - Math.sin(a) * J.dir[0], vy = Math.cos(a) * py - Math.sin(a) * J.dir[1];
+      const a = -0.21, vx = Math.cos(a) * px - Math.sin(a) * J.dir[0], vy = Math.cos(a) * py - Math.sin(a) * J.dir[1];
       const dist = Math.min(5, Math.max(2.8, 3.8 / camera.aspect)), [bx, by] = J.bar;   // far enough to fit run-up and landing, also on a narrow stage
       controls.target.set(bx, by, 0.32); camera.position.set(bx + dist * vx, by + dist * vy, 0.32 + 0.16 * dist); controls.update();
     }
