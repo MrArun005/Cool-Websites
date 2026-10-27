@@ -35,6 +35,11 @@ RUNS = {
                     measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
                                  lowText="none", highText="all clean"),
                     words=["clean jump", "not clean"]),
+    "jump16i": dict(branch="claude/train-jump16e", label="Run 16i: high jumps with a run-up (40-70 cm)", where="cloud machine 1",
+                    kinds=[["j40", "40 cm bar"], ["j50", "50 cm bar"], ["j60", "60 cm bar"], ["j70", "70 cm bar"]],
+                    measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
+                                 lowText="none", highText="all clean"),
+                    words=["clean jump", "not clean"]),
     "imitate18b": dict(branch="local", label="Run 18b: moving like a real dog, with the canter (dog running)", where="this machine (from run 18 at 9M)",
                       kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["canter", "Canter (run)"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"]],
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
@@ -105,15 +110,15 @@ def quat(xmat):
 
 
 # ---------- recording ----------
-def record_jump(d, exam, heights=(0.15, 0.20, 0.25, 0.30)):
+def record_jump(d, exam, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, steps=150):
     from jump_env import JumpEnv, JumpPolicy
     p = JumpPolicy(d)
-    env = JumpEnv(randomize=False, real=True, max_steps=150)
+    env = JumpEnv(randomize=False, real=True, max_steps=steps)
     m = env.model
     hurdle_body = m.body("hurdle0").id
     rec, prog = {}, {}
     for k, h in ((f"j{round(h * 100)}", h) for h in heights):
-        env.exam_bar, env.exam_askew = (0.55, h), (0.0, 0.0)
+        env.exam_bar, env.exam_askew = (dist, h), (0.0, 0.0)
         obs, _ = env.reset(seed=4321)
         static = [[int(m.geom_type[g]), np.round(m.geom_size[g], 4).tolist(), np.round(env.data.geom_xpos[g], 4).tolist(),
                    np.round(quat(env.data.geom_xmat[g]), 4).tolist()] for g in range(m.ngeom) if m.geom_bodyid[g] == hurdle_body]
@@ -259,7 +264,7 @@ def main():
                 tmp = Path(tmp)
                 fetch(run, n, folder, tmp)
                 try:
-                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_jump(tmp, ex, (0.30, 0.40, 0.50, 0.60)) if run == "jump16h" else record_walk(tmp) if run == "bolt19"
+                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_jump(tmp, ex, (0.30, 0.40, 0.50, 0.60)) if run == "jump16h" else record_jump(tmp, ex, (0.40, 0.50, 0.60, 0.70), 1.5, 220) if run == "jump16i" else record_walk(tmp) if run == "bolt19"
                                   else record_run(tmp) if run in ("run20", "run21", "run22", "run22b") else record_imitate(tmp, run))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)
