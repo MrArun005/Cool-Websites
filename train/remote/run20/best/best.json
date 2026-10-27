@@ -1,0 +1,19 @@
+{
+  "steps": 9000000,
+  "exam": {
+    "speed_v1": 1.03,
+    "fall_v1": 0.0,
+    "speed_v2": 1.06,
+    "fall_v2": 0.0,
+    "speed_v3": 1.01,
+    "fall_v3": 0.0,
+    "speed_v4": 0.9,
+    "fall_v4": 0.0,
+    "turn_w3": 0.07,
+    "fall_w3": 0.0,
+    "turn_w5": 0.03,
+    "fall_w5": 0.0,
+    "push_1.5": 0.83
+  },
+  "score": 4.436
+}
