@@ -1,0 +1,18 @@
+{
+  "name": "bolt-run16g-jump-higher",
+  "workdir": "..",
+  "env": {"MUJOCO_GL": "osmesa"},
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": ["python", "-u", "train_jump.py", "--name", "jump16g", "--steps", "28000000", "--lr", "1e-4", "--target-kl", "0.02",
+              "--n-steps", "2048", "--real", "--bar-start", "0.30", "--exam-heights", "0.25", "0.30", "0.40", "0.50", "--resume", "runs/jump16g_start/policy_20000000_steps.zip"],
+      "resume_cmd": ["python", "-u", "train_jump.py", "--name", "jump16g", "--steps", "28000000", "--lr", "1e-4", "--target-kl", "0.02",
+                     "--n-steps", "2048", "--real", "--bar-start", "0.30", "--exam-heights", "0.25", "0.30", "0.40", "0.50", "--resume", "{latest}"],
+      "latest": "runs/jump16g/checkpoints/policy_*_steps.zip",
+      "log": "runs/jump16g/train.log",
+      "done_when": {"exit_code": 0, "file": "runs/jump16g/policy.zip", "log_contains": "^done:"}
+    }
+  ]
+}
