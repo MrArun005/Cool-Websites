@@ -1,0 +1,93 @@
+[
+ {
+  "round": 0,
+  "beta": 1.0,
+  "data": 300000,
+  "collect_s": 789,
+  "train_s": 1009,
+  "tries": 301,
+  "falls": 366,
+  "jumps": 243,
+  "clean": 42,
+  "shoves": 55,
+  "recovered": 225
+ },
+ {
+  "round": 1,
+  "beta": 0.5,
+  "data": 450000,
+  "collect_s": 267,
+  "train_s": 344,
+  "tries": 149,
+  "falls": 186,
+  "jumps": 126,
+  "clean": 20,
+  "shoves": 28,
+  "recovered": 123
+ },
+ {
+  "round": 2,
+  "beta": 0.35,
+  "data": 600000,
+  "collect_s": 387,
+  "train_s": 107,
+  "tries": 153,
+  "falls": 177,
+  "jumps": 123,
+  "clean": 22,
+  "shoves": 27,
+  "recovered": 116
+ },
+ {
+  "round": 3,
+  "beta": 0.2,
+  "data": 750000,
+  "collect_s": 164,
+  "train_s": 132,
+  "tries": 152,
+  "falls": 164,
+  "jumps": 116,
+  "clean": 14,
+  "shoves": 18,
+  "recovered": 97
+ },
+ {
+  "round": 4,
+  "beta": 0.050000000000000044,
+  "data": 900000,
+  "collect_s": 161,
+  "train_s": 105,
+  "tries": 149,
+  "falls": 189,
+  "jumps": 100,
+  "clean": 22,
+  "shoves": 26,
+  "recovered": 76
+ },
+ {
+  "round": 5,
+  "beta": 0.0,
+  "data": 1050000,
+  "collect_s": 163,
+  "train_s": 126,
+  "tries": 151,
+  "falls": 228,
+  "jumps": 73,
+  "clean": 21,
+  "shoves": 25,
+  "recovered": 0
+ },
+ {
+  "round": 6,
+  "beta": 0.0,
+  "data": 1200000,
+  "collect_s": 160,
+  "train_s": 154,
+  "tries": 153,
+  "falls": 212,
+  "jumps": 102,
+  "clean": 25,
+  "shoves": 21,
+  "recovered": 0
+ }
+]
