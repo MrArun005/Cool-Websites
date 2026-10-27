@@ -159,7 +159,9 @@ class Bolt:
             self.frames.append(d.qpos[:19].copy())
             self.bars.append(d.qpos[self.world.bar_q:self.world.bar_q + 7].copy())
             self.phases.append(skill)
-        self.trace.append((self.t, skill, float(d.qpos[2]), float(R[2, 2]), float((R.T @ d.qvel[0:3])[0])))
+        # (step, skill, height, uprightness, forward speed, roll, nose-up pitch) every step, for the tests
+        self.trace.append((self.t, skill, float(d.qpos[2]), float(R[2, 2]), float((R.T @ d.qvel[0:3])[0]),
+                           float(np.arcsin(np.clip(R[2, 1], -1, 1))), float(np.arcsin(np.clip(R[2, 0], -1, 1)))))
         self.t += 1
         on_floor = any((c.geom1 == self.world.floor and c.geom2 in self.body_geoms) or
                        (c.geom2 == self.world.floor and c.geom1 in self.body_geoms) for c in d.contact[:d.ncon])

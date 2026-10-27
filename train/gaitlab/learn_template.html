@@ -218,8 +218,8 @@
       let px = -J.dir[1], py = J.dir[0];
       if ((camera.position.x - controls.target.x) * px + (camera.position.y - controls.target.y) * py < 0) { px = -px; py = -py; }
       const a = -0.21, vx = Math.cos(a) * px - Math.sin(a) * J.dir[0], vy = Math.cos(a) * py - Math.sin(a) * J.dir[1];
-      const dist = Math.min(5, Math.max(2.8, 3.8 / camera.aspect)), [bx, by] = J.bar;   // far enough to fit run-up and landing, also on a narrow stage
-      controls.target.set(bx, by, 0.32); camera.position.set(bx + dist * vx, by + dist * vy, 0.32 + 0.16 * dist); controls.update();
+      const dist = Math.min(5.5, Math.max(3.3, 4.2 / camera.aspect)), [bx, by] = J.bar;   // far enough to fit run-up, flight and landing, also on a narrow stage
+      controls.target.set(bx, by, 0.5); camera.position.set(bx + dist * vx, by + dist * vy, 0.5 + 0.18 * dist); controls.update();
     }
     fx.visible = true;
     for (const m of [trailMat, dotMat, peakMat, dropMat]) m.color.copy(C.accent);

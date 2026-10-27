@@ -46,14 +46,20 @@ class Tally:
 
 
 def window(bolt, t0, seconds=WINDOW):
-    """Fall in [t0, t0 + seconds)? Plus the lowest body height and uprightness in that window."""
+    """Fall in [t0, t0 + seconds)? With what the body did from t0 up to the fall (or the window's end): speed
+    at the switch, lowest height, least upright, and the roll and pitch as it went over (which way it fell)."""
     t1 = t0 + int(round(seconds / bolt.dt))
-    tr = [x for x in bolt.trace if t0 <= x[0] < t1]
     fall = next((e for e in bolt.events if e["kind"] == "fall" and t0 <= e["t"] < t1), None)
-    stats = dict(min_height=round(min(x[2] for x in tr), 3), min_up=round(min(x[3] for x in tr), 2)) if tr else {}
+    tr = [x for x in bolt.trace if t0 <= x[0] < (fall["t"] if fall else t1)]
+    stats = {}
+    if tr:
+        stats = dict(speed_at_switch=round(tr[0][4], 2), min_height=round(min(x[2] for x in tr), 3),
+                     min_up=round(min(x[3] for x in tr), 2))
     if fall:
-        stats.update(fell_after=round((fall["t"] - t0) * bolt.dt, 2), in_skill=fall["skill"],
-                     height=fall["height"], up=fall["up"])
+        last = tr[-1] if tr else None
+        stats.update(fell_after=round((fall["t"] - t0) * bolt.dt, 2), in_skill=fall["skill"], height=fall["height"],
+                     speed=round(last[4], 2) if last else None, roll=round(last[5], 2) if last else None,
+                     pitch=round(last[6], 2) if last else None)
     return fall is None, stats
 
 
