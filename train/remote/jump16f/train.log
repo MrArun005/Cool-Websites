@@ -1,1 +1,3 @@
 resuming from runs/jump16e_start/policy_12000000_steps.zip at 12,000,000 steps, learning rate 0.0001, target kl 0.02, 16384 samples per update
+checkpoint 12500000 ready: {'jump_15': 0.5, 'jump_20': 0.6, 'jump_25': 0.4, 'jump_30': 0.1} (practice bars now 15 cm)
+new best at 12500000: score 0.40
