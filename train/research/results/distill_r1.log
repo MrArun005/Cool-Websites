@@ -1,2 +1,16 @@
 try 0: 16 steps, fell=True, planner {'calls': 4, 'chose_plain': 0, 'plain_fell': 4, 'best_fell': 3}
 try 1: 200 steps, fell=False, planner {'calls': 44, 'chose_plain': 38, 'plain_fell': 4, 'best_fell': 3}
+try 2: 200 steps, fell=False, planner {'calls': 84, 'chose_plain': 78, 'plain_fell': 4, 'best_fell': 3}
+try 3: 200 steps, fell=False, planner {'calls': 124, 'chose_plain': 116, 'plain_fell': 5, 'best_fell': 3}
+try 4: 200 steps, fell=False, planner {'calls': 164, 'chose_plain': 154, 'plain_fell': 5, 'best_fell': 3}
+try 5: 200 steps, fell=False, planner {'calls': 204, 'chose_plain': 194, 'plain_fell': 5, 'best_fell': 3}
+try 6: 200 steps, fell=False, planner {'calls': 244, 'chose_plain': 226, 'plain_fell': 5, 'best_fell': 3}
+try 7: 200 steps, fell=False, planner {'calls': 284, 'chose_plain': 266, 'plain_fell': 5, 'best_fell': 3}
+try 8: 200 steps, fell=False, planner {'calls': 324, 'chose_plain': 306, 'plain_fell': 5, 'best_fell': 3}
+try 9: 200 steps, fell=False, planner {'calls': 364, 'chose_plain': 341, 'plain_fell': 5, 'best_fell': 3}
+try 10: 200 steps, fell=False, planner {'calls': 404, 'chose_plain': 376, 'plain_fell': 5, 'best_fell': 3}
+try 11: 200 steps, fell=False, planner {'calls': 444, 'chose_plain': 416, 'plain_fell': 5, 'best_fell': 3}
+try 12: 200 steps, fell=False, planner {'calls': 484, 'chose_plain': 453, 'plain_fell': 5, 'best_fell': 3}
+try 13: 26 steps, fell=True, planner {'calls': 490, 'chose_plain': 454, 'plain_fell': 11, 'best_fell': 5}
+try 14: 200 steps, fell=False, planner {'calls': 530, 'chose_plain': 494, 'plain_fell': 11, 'best_fell': 5}
+try 15: 200 steps, fell=False, planner {'calls': 570, 'chose_plain': 534, 'plain_fell': 11, 'best_fell': 5}

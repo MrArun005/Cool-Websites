@@ -13,7 +13,37 @@ const mj = await (await import(path.resolve(mujocoJs))).default();
 const read = (f) => JSON.parse(fs.readFileSync(path.join(dataDir, f)));
 const bundle = read("bolt_run.json"), bolt = new Bolt(mj, bundle);
 const dog = makeDog(bolt, read("imitate_brain.json"), read("imitate_clips.json"));
+// The drill: the handler's commands one after another on an empty stretch (auto-steer off), each held for the
+// time given; reports how often Bolt carried each one out and where it fell.
+const DRILL = [["walk", 3], ["trot", 4], ["turnL", 2.5], ["walk", 2], ["sit", 4], ["lie", 4], ["walk", 3], ["turnR", 2.5], ["stand", 3],
+  ["trot", 3], ["lie", 4], ["stand", 3], ["trot", 2.5], ["canter", 3], ["walk", 4], ["sit", 4], ["walk", 2]];
 const reached = (r, c) => (["sit", "lie"].includes(c) ? posture(bolt) === c : c === "stand" ? r.body.mode === "stand" : r.body.gait === c);
+if (levelsArg === "drill") {
+  const cmds = {}, fellIn = {};
+  let falls = 0;
+  for (let k = 0; k < +runsArg; k++) {
+    const run = new Run(bolt, dog, buildCourse(0), bundle.start), noise = rng(k * 7919 + 77);
+    for (let i = 6; i < 18; i++) bolt.data.qvel[i] += 0.1 * (noise() - 0.5);
+    run.autoSteer = false; run.autoJump = false;
+    for (let i = 0; i < 25; i++) run.step();
+    for (const [c, secs] of DRILL) {
+      const turn = c === "turnL" ? 1 : c === "turnR" ? -1 : 0, cmd = turn ? null : c, f0 = run.stats.falls, t0 = run.t;
+      if (cmd) run.command(cmd); run.turn = turn;
+      let ok = false;
+      const w0 = bolt.where().yaw;
+      while (run.t - t0 < secs) {
+        run.step();
+        if (cmd && !ok && run.stats.falls === f0 && reached(run, cmd)) ok = true;
+      }
+      if (turn) { const d = Math.atan2(Math.sin(bolt.where().yaw - w0), Math.cos(bolt.where().yaw - w0)); ok = run.stats.falls === f0 && Math.sign(d) === turn && Math.abs(d) > 0.5; }
+      run.turn = 0;
+      if (run.stats.falls > f0) { falls++; fellIn[c] = (fellIn[c] || 0) + 1; while (run.body.mode === "getup") run.step(); }
+      const e = cmds[c] || (cmds[c] = { ok: 0, n: 0 }); e.n++; e.ok += ok;
+    }
+  }
+  console.log(`drill x${runsArg}: ${Object.entries(cmds).map(([c, v]) => `${c} ${v.ok}/${v.n}`).join(", ")}; falls ${falls} (during ${JSON.stringify(fellIn)})`);
+  process.exit(0);
+}
 for (const n of levelsArg.split(",").map(Number)) {
   const rows = [], cmds = {};
   for (let k = 0; k < +runsArg; k++) {

@@ -34,13 +34,13 @@ export const GAITS = ["walk", "trot", "canter"];
 // ---------------------------------------------------------------- the courses
 // A course is a handler's line (straights and arcs, course coordinates: x ahead of Bolt at the start, y to its
 // left) with obstacles at distances s along it. Each hurdle sits on a straight with at least 3 m before it.
-// After each hurdle the line runs straight on for 9 m or more: Bolt lands at ~3.8 m/s and the jump brain needs
-// 5-8 m to stop it.
+// After each hurdle the line runs straight on for 9 m or more, and the next obstacle is 11 m or more away: Bolt
+// lands at ~3.8 m/s and the jump brain needs 5-8 m to stop it (a fall can add a metre or two).
 export const LEVELS = [
   { n: 1, name: "Novice", blurb: "A straight line: two 20 cm hurdles and the pause table (sit for 3 s).",
-    pieces: [["S", 34]], pace: 0.9,
-    obstacles: [{ kind: "hurdle", s: 6.5, h: 0.20 }, { kind: "hurdle", s: 17, h: 0.20 }, { kind: "table", s: 28, pose: "sit", hold: 3 }],
-    finish: 32 },
+    pieces: [["S", 37]], pace: 0.9,
+    obstacles: [{ kind: "hurdle", s: 6.5, h: 0.20 }, { kind: "hurdle", s: 19, h: 0.20 }, { kind: "table", s: 31, pose: "sit", hold: 3 }],
+    finish: 35 },
   { n: 2, name: "Intermediate", blurb: "A curve, three hurdles of 20-30 cm, slalom markers and a down-stay on the table.",
     pace: 0.8, pieces: [["S", 17], ["A", Math.PI / 2, 3.5], ["S", 28], ["A", -Math.PI / 2, 3.5], ["S", 18]],
     obstacles: [{ kind: "hurdle", s: 6, h: 0.20 }, { kind: "slalom", s: 24, n: 5, gap: 2.4 }, { kind: "hurdle", s: 41, h: 0.25 },
