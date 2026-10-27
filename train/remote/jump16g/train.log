@@ -21,3 +21,5 @@ checkpoint 26500000 ready: {'jump_25': 1.0, 'jump_30': 0.9, 'jump_40': 0.4, 'jum
 checkpoint 27000000 ready: {'jump_25': 1.0, 'jump_30': 0.9, 'jump_40': 0.7, 'jump_50': 0.1} (practice bars now 30 cm)
 new best at 27000000: score 0.68
 checkpoint 27500000 ready: {'jump_25': 1.0, 'jump_30': 1.0, 'jump_40': 0.7, 'jump_50': 0.0} (practice bars now 30 cm)
+checkpoint 28000000 ready: {'jump_25': 1.0, 'jump_30': 1.0, 'jump_40': 0.7, 'jump_50': 0.0} (practice bars now 30 cm)
+done: 28,011,200 steps in 146.5 min -> /home/user/Cool-Websites/train/runs/jump16g
