@@ -27,3 +27,4 @@ checkpoint 36500000 ready: {'jump_40': 1.0, 'jump_50': 0.9, 'jump_60': 0.2, 'jum
 checkpoint 37000000 ready: {'jump_40': 1.0, 'jump_50': 1.0, 'jump_60': 0.0, 'jump_70': 0.0, 'strict_40': 0.7, 'strict_50': 0.5, 'strict_60': 0.0, 'strict_70': 0.0} (practice bars now 40 cm)
 checkpoint 37500000 ready: {'jump_40': 1.0, 'jump_50': 0.9, 'jump_60': 0.3, 'jump_70': 0.0, 'strict_40': 0.8, 'strict_50': 0.7, 'strict_60': 0.1, 'strict_70': 0.0} (practice bars now 40 cm)
 checkpoint 38000000 ready: {'jump_40': 1.0, 'jump_50': 0.9, 'jump_60': 0.2, 'jump_70': 0.0, 'strict_40': 0.9, 'strict_50': 0.3, 'strict_60': 0.1, 'strict_70': 0.0} (practice bars now 40 cm)
+checkpoint 38500000 ready: {'jump_40': 1.0, 'jump_50': 1.0, 'jump_60': 0.0, 'jump_70': 0.0, 'strict_40': 0.8, 'strict_50': 0.6, 'strict_60': 0.2, 'strict_70': 0.0} (practice bars now 40 cm)
