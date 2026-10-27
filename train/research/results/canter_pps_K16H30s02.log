@@ -1,0 +1,4 @@
+canter 0 {'track': 0.568, 'fell': False, 'seconds': 26.2, 'speed': np.float64(0.635)}
+canter 1 {'track': 0.572, 'fell': False, 'seconds': 33.8, 'speed': np.float64(0.512)}
+canter 2 {'track': 0.585, 'fell': False, 'seconds': 37.0, 'speed': np.float64(0.669)}
+canter 3 {'track': 0.562, 'fell': False, 'seconds': 40.4, 'speed': np.float64(0.649)}
