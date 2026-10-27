@@ -31,7 +31,7 @@ forward plan and the brain adds corrections, with the full ACTION_SCALE range (a
 get-up brains), so it can still do whatever balance needs. residual=False gives the plain full-range
 control of jump_env/getup_env, centred on the dog stance, instead.
 
-Observation (OBS = 74 floats), in this order:
+Observation (OBS = 75 floats; 74 for brains from before the getup clip), in this order:
      0  gravity in the body frame            3
      3  angular velocity x 0.25 (body)       3
      6  linear velocity (body frame)         3
@@ -41,12 +41,12 @@ Observation (OBS = 74 floats), in this order:
     34  previous action                     12
     46  clip phase sin, cos (2 pi phase)     2   loops: position in the stride; sit/lie: progress 0..1
                                                  (held at 1 once the clip has finished)
-    48  clip one-hot                         8   ALL_CLIPS order (fixed, so brains stay swappable)
-    56  reference joints next step - stance 12
-    68  reference body height next step      1
-    69  reference body velocity (body frame) 3   next step
-    72  reference spin rate (yaw)            1   next step
-    73  time since clip end (s, 0 while it plays; sit/lie hold)  1
+    48  clip one-hot                         9   ALL_CLIPS order (fixed, so brains stay swappable; 8 before getup)
+    57  reference joints next step - stance 12
+    69  reference body height next step      1
+    70  reference body velocity (body frame) 3   next step
+    73  reference spin rate (yaw)            1   next step
+    74  time since clip end (s, 0 while it plays; sit/lie/getup hold)  1
 Physics randomization (motor strength, body mass, floor friction) and sensor noise as in the other envs.
 """
 from pathlib import Path
@@ -62,7 +62,7 @@ from bolt_env import ACTION_SCALE, STANCES, BoltEnv, physics
 
 DOG = STANCES["dog"]
 CLIP_DIR = Path(__file__).with_name("dogmotion") / "clips"
-ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie"]
+ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup"]   # getup: lie reversed (run 18d)
 DEFAULT_CLIPS = ["walk", "trot", "pace", "turn_left", "turn_right", "sit", "lie"]   # canter (3.4 m/s) later
 WEIGHTS = dict(pose=0.5, vel=0.05, paw=0.2, root=0.15, root_vel=0.1)
 HOLD = 1.0          # s: sit and lie hold their final pose this long
@@ -122,11 +122,13 @@ class Clip:
 
 
 class ImitateEnv(BoltEnv):
-    OBS = 74
+    OBS = 66 + len(ALL_CLIPS)
 
-    def __init__(self, randomize=True, seed=None, clips=None, residual=True, weights=None):
+    def __init__(self, randomize=True, seed=None, clips=None, residual=True, weights=None, slots=len(ALL_CLIPS)):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
                          skills=["stand"])
+        self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
+        self.OBS = 66 + slots
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.clip_names = list(clips or DEFAULT_CLIPS)
         self.clips = {n: Clip(n) for n in self.clip_names}
@@ -162,7 +164,7 @@ class ImitateEnv(BoltEnv):
     def _obs(self):
         d, R = self.data, self._rotation()
         ph = 2 * np.pi * self.clip.phase(self.tau())
-        onehot = np.zeros(len(ALL_CLIPS))
+        onehot = np.zeros(self.slots)
         onehot[ALL_CLIPS.index(self.clip.name)] = 1.0
         obs = np.concatenate([
             R.T @ np.array([0, 0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3], [d.qpos[2]],
@@ -261,10 +263,13 @@ class ImitatePolicy:
     def __init__(self, run_dir, zip_name="policy.zip", stats_name="vecnormalize.pkl"):
         run_dir = Path(run_dir)
         self.model = PPO.load(run_dir / zip_name, device="cpu")
-        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: ImitateEnv()]))
+        self.slots = self.model.observation_space.shape[0] - 66   # 8: a brain from before the getup clip
+        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: ImitateEnv(slots=self.slots)]))
         self.norm.training = False
 
     def act(self, obs):
+        if len(obs) > 66 + self.slots:   # an older brain: drop the clip slots it never had (they are 0)
+            obs = np.concatenate([obs[:48 + self.slots], obs[48 + len(ALL_CLIPS):]])
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
