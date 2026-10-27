@@ -1,7 +1,7 @@
 """Skill-manager baseline (skills.py + test_skills.py sequences) with a chosen dog-motion brain, so the
 student can be compared with the hand-over manager running the SAME teachers.
 
-    cd train && MUJOCO_GL=osmesa OMP_NUM_THREADS=1 python mastermind/baseline.py --imitate 18e --n 10 --out mastermind/baseline_18e.json
+    cd train && MUJOCO_GL=osmesa OMP_NUM_THREADS=1 python mastermind/baseline.py --imitate 18e --n 30 --out mastermind/results/manager_18e_n30.json
 """
 import argparse
 import json

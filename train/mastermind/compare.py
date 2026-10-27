@@ -23,7 +23,7 @@ def cell(r):
 
 
 def main(paths):
-    cols = [("manager 18b", HERE.parent / "skills_report.json"), ("manager 18e", HERE / "baseline_18e.json")]
+    cols = [("manager 18b", HERE / "results" / "manager_18b_n30.json"), ("manager 18e", HERE / "results" / "manager_18e_n30.json")]
     cols += [(Path(p).stem, p) for p in paths]
     data = [(name, rows(p)) for name, p in cols]
     keys = list(data[0][1])
