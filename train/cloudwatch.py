@@ -110,7 +110,7 @@ def quat(xmat):
 
 
 # ---------- recording ----------
-def record_jump(d, exam, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, steps=150):
+def record_jump(d, exam, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, steps=150, speed=None):
     from jump_env import JumpEnv, JumpPolicy
     p = JumpPolicy(d)
     env = JumpEnv(randomize=False, real=True, max_steps=steps)
@@ -119,6 +119,7 @@ def record_jump(d, exam, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, steps=150)
     rec, prog = {}, {}
     for k, h in ((f"j{round(h * 100)}", h) for h in heights):
         env.exam_bar, env.exam_askew = (dist, h), (0.0, 0.0)
+        env.exam_speed = speed
         obs, _ = env.reset(seed=4321)
         static = [[int(m.geom_type[g]), np.round(m.geom_size[g], 4).tolist(), np.round(env.data.geom_xpos[g], 4).tolist(),
                    np.round(quat(env.data.geom_xmat[g]), 4).tolist()] for g in range(m.ngeom) if m.geom_bodyid[g] == hurdle_body]
@@ -268,7 +269,7 @@ def main():
                 tmp = Path(tmp)
                 fetch(run, n, folder, tmp)
                 try:
-                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_jump(tmp, ex, (0.30, 0.40, 0.50, 0.60)) if run == "jump16h" else record_jump(tmp, ex, (0.40, 0.50, 0.60, 0.70), 1.5, 220) if run == "jump16i" else record_walk(tmp) if run == "bolt19"
+                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_jump(tmp, ex, (0.30, 0.40, 0.50, 0.60)) if run == "jump16h" else record_jump(tmp, ex, (0.40, 0.50, 0.60, 0.70), 1.5, 220, 2.0) if run == "jump16i" else record_walk(tmp) if run == "bolt19"
                                   else record_run(tmp) if run in ("run20", "run21", "run22", "run22b") else record_imitate(tmp, run))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)

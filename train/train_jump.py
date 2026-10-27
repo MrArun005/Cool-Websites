@@ -53,10 +53,10 @@ def widen(src, out):
 class Examiner(BaseCallback):
     """Every `every` steps: save a checkpoint, take the exam, keep the best."""
 
-    def __init__(self, out, every, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100):
+    def __init__(self, out, every, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None):
         super().__init__()
         self.out, self.every, self.next, self.best, self.heights = out, every, every, -1.0, heights
-        self.dist, self.max_steps = dist, max_steps
+        self.dist, self.max_steps, self.speed = dist, max_steps, speed
 
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
         self.next = (self.num_timesteps // self.every + 1) * self.every
@@ -71,7 +71,7 @@ class Examiner(BaseCallback):
         self.model.save(ck / f"policy_{n}_steps.zip")
         self.training_env.save(str(ck / f"policy_vecnormalize_{n}_steps.pkl"))
         result = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), heights=self.heights,
-                      dist=self.dist, max_steps=self.max_steps)
+                      dist=self.dist, max_steps=self.max_steps, speed=self.speed)
         fair = [v for k, v in result.items() if k.startswith("jump_")]   # the best brain is picked on the fair score
         score = sum(fair) / len(fair)
         levels = self.training_env.get_attr("bar_level")
@@ -103,6 +103,7 @@ def main():
     ap.add_argument("--approach", type=float, nargs=2, default=[0.45, 0.65], help="bar distance at the start (m), run 16i: 1.5 3.0")
     ap.add_argument("--max-steps", type=int, default=100, help="steps per try (50 per second); a run-up needs ~200")
     ap.add_argument("--approach-speed", type=float, default=0.0, help="half the tries start running at the bar, 1 m/s up to this (run 16i: 3)")
+    ap.add_argument("--exam-speed", type=float, help="exam: arrive at the bar at this speed (m/s), e.g. 2.0 as from a trot or canter")
     ap.add_argument("--exam-dist", type=float, default=0.55, help="bar distance in the exam (m), run 16i: 2.0")
     ap.add_argument("--exam-heights", type=float, nargs="+", default=[0.15, 0.20, 0.25, 0.30],
                     help="bar heights (m) of the exam, e.g. 0.25 0.30 0.40 0.50 for a brain that clears 30 cm")
@@ -131,7 +132,8 @@ def main():
                                        log_std_init=-0.5),
                     device="cpu", verbose=0)
     start = time.time()
-    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 500_000, tuple(args.exam_heights), args.exam_dist, args.max_steps),
+    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 500_000, tuple(args.exam_heights), args.exam_dist, args.max_steps,
+                                                                                          args.exam_speed),
                 reset_num_timesteps=not args.resume, progress_bar=False)
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))
