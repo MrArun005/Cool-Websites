@@ -40,11 +40,17 @@
   @media (max-width: 560px) { .newslist li { grid-template-columns: 1fr; } }
   /* the 3D ground: a solid floor that fades into the sky colour at the horizon */
   :root { --ground: #e4e7e1; --sky: #f3f4f1; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ground: #1b1f1d; --sky: #121413; } }
-  :root[data-theme="dark"] { --ground: #1b1f1d; --sky: #121413; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ground: #171a18; --sky: #222624; } }
+  :root[data-theme="dark"] { --ground: #171a18; --sky: #222624; }
   .tag3d { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); padding: 2px 7px; border-radius: 6px; font: 500 12px var(--mono); white-space: nowrap; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); color: var(--ink); pointer-events: none; }
   .tag3d.peak { color: var(--accent); border-color: var(--accent); }
   .tag3d[hidden] { display: none; }
+  @media (max-width: 560px) {   /* phones: a taller stage and slimmer readouts, so the 3D view is not hidden behind them */
+    .stage { aspect-ratio: 4 / 5; }
+    .hud { padding: 5px 8px; gap: 0; max-width: 47%; }
+    .hud b, .hud.tr b { font-size: .82rem; }
+    .hud .muted { display: none; }
+  }
   .notes { display: grid; gap: 10px; margin: 0; padding-left: 1.2em; max-width: 75ch; }
   @media (prefers-reduced-motion: reduce) { .live.on i { animation: none; } }
 </style>
@@ -207,12 +213,13 @@
       const cm = /^j(\d+)$/.exec(kind);
       J = { dir: [dx / len, dy / len], bar: P.barpose.slice(0, 3), text: cm ? `${cm[1]} cm` : "bar" };
     }
-    if (aim) {   // side-on: perpendicular to the way Bolt travels, about 2.8 m out, a little raised, aimed at the bar
+    if (aim) {   // side-on: square to the way Bolt travels (turned 25° toward the run-up so the bar reads as a bar), a little raised, aimed at the bar
       aim = false; followOff = [0, 0];
       let px = -J.dir[1], py = J.dir[0];
       if ((camera.position.x - controls.target.x) * px + (camera.position.y - controls.target.y) * py < 0) { px = -px; py = -py; }
-      const [bx, by] = J.bar;
-      controls.target.set(bx, by, 0.32); camera.position.set(bx + 2.8 * px, by + 2.8 * py, 0.75); controls.update();
+      const a = 0.44, vx = Math.cos(a) * px - Math.sin(a) * J.dir[0], vy = Math.cos(a) * py - Math.sin(a) * J.dir[1];
+      const dist = Math.min(5, Math.max(2.8, 3.8 / camera.aspect)), [bx, by] = J.bar;   // far enough to fit run-up and landing, also on a narrow stage
+      controls.target.set(bx, by, 0.32); camera.position.set(bx + dist * vx, by + dist * vy, 0.32 + 0.16 * dist); controls.update();
     }
     fx.visible = true;
     for (const m of [trailMat, dotMat, peakMat, dropMat]) m.color.copy(C.accent);
