@@ -351,3 +351,5 @@ update at 4980736: reward/step 0.822, try length 221 steps (100 tries), 669 step
 update at 4997120: reward/step 0.825, try length 218 steps (100 tries), 669 steps/s
 checkpoint 5000000 ready: {'track_walk': 0.874, 'fall_walk': 0.0, 'speed_walk': 0.84, 'track_trot': 0.852, 'fall_trot': 0.0, 'speed_trot': 0.84, 'track_pace': 0.888, 'fall_pace': 0.0, 'speed_pace': 0.84, 'track_turn_left': 0.861, 'fall_turn_left': 0.0, 'speed_turn_left': 0.37, 'track_turn_right': 0.86, 'fall_turn_right': 0.0, 'speed_turn_right': 0.36, 'track_sit': 0.913, 'fall_sit': 0.0, 'track_lie': 0.904, 'fall_lie': 0.0} (mean tracking 0.879, fall rate 0.00, score 0.663)
 new best at 5000000: score 0.663
+resuming from /home/user/Cool-Websites/train/runs/imitate18/checkpoints/policy_5000000_steps.zip at 5,000,000 steps
+training on clips ['walk', 'trot', 'pace', 'turn_left', 'turn_right', 'sit', 'lie'], 8 envs, 16384 samples per update
