@@ -220,7 +220,7 @@ export class GetUp {
       // tucked: every joint within 0.6 rad of the lying pose (standing from half-tucked legs toppled it), at
       // least GETUP.tuck s and at most twice that
       const q = b.data.qpos, L = b.c.lie_pose, tucked = L.every((v, i) => Math.abs(q[7 + i] - v) < 0.6);
-      if (this.st < GETUP.tuck || (!tucked && this.st < 2 * GETUP.tuck)) return { command: GETUP_TUCK === "lie" ? "lie" : "tuck", turn: 0, speed: 0.2 };
+      if (this.st < GETUP.tuck || (!tucked && GETUP_TUCK === "lie" && this.st < 2 * GETUP.tuck)) return { command: GETUP_TUCK === "lie" ? "lie" : "tuck", turn: 0, speed: 0.2 };
       this.stage = "stand"; this.st = 0; b.afterGetUp(GETUP_CARRY && GETUP_TUCK !== "lie");
     }
     if (this.stage === "stand") {
@@ -360,7 +360,8 @@ export class Game {
       if (!this.loseLife("Bolt fell!")) return;
       if (!b.canGetUp()) return this.respawn();
       // get up where it fell; a shout in progress is dropped (as on a restart), the shouts and the cannon wait
-      this.rec = { getup: new GetUp(b), from: this.phase, since: this.t };
+      // the clocks stop from the shout it fell during, if any (that shout's time was never credited back)
+      this.rec = { getup: new GetUp(b), from: this.phase, since: this.shout ? Math.min(this.t, this.shout.since) : this.t, fell: this.t };
       this.phase = "getup"; this.shout = null;
       this.cmd = { command: "rest", turn: 0, speed: 0.2 };
     }
@@ -378,6 +379,9 @@ export class Game {
     this.say(`Bolt got up by itself (${r.getup.secs.toFixed(1)} s)`, "good");
     const lost = this.t - r.since, k = this.task;
     this.rec = null; this.phase = r.from; this.driver.speed = 0.2; this.calmUntil = this.t + 1.5;
+    // the guard's schedule moves on by the time it took: shouts and shots due meanwhile came all at once
+    // the moment Bolt was up ("SIT!" and a 75 N shot together 1.5 s after getting up toppled it again)
+    for (const p of this.pendingShouts.concat(this.pendingShots)) p.t += this.t - r.fell;
     if (r.from === "ready") { this.readyFor = Math.max(this.readyFor, this.t + 1); return; }
     if (!k) return;
     if (k.timer !== null && k.timer !== undefined) k.timer += lost;

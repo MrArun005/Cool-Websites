@@ -25,6 +25,7 @@ import numpy as np
 import torch
 from stable_baselines3 import PPO
 
+import bolt_env
 import hurdle
 from bolt_env import ACTION_SCALE, LIE_POSE, HURDLE_HALF, HURDLE_MARGIN, HURDLE_XML, HURDLE_ZONE, MODEL, PAW_GAIT, STAND_POSE, STANCES, BoltEnv
 from evaluate import Policy, reset_standing
@@ -164,7 +165,8 @@ def main():
                        sharp_turns=env.sharp_turns, sharp_turn=env.SHARP_TURN,
                        hurdle_margin=HURDLE_MARGIN, hurdle_zone=list(HURDLE_ZONE), hurdle_half=HURDLE_HALF,
                        hip_x=HIP_X.tolist(), hip_y=HIP_Y.tolist(), real_hurdle=hurdle.constants(),
-                       commands=["stand", "sit", "lie", "walk"]),
+                       commands=["stand", "sit", "lie", "walk"],
+                       motor=getattr(bolt_env, "MOTOR", None)),   # real-motor limits (bolt_env.physics), if the body has them
         brains=dict(posture=dict(brain(args.posture), source=Path(args.posture).name),
                     walk=dict(brain(args.walk), source=Path(args.walk).name)),
         start=start,  # Bolt standing, as BoltEnv.reset leaves it (seed 0, no randomness)

@@ -274,6 +274,20 @@ export class Bolt {
   }
   rotation() { const x = this.data.xmat, k = 9 * this.torso; return Array.from({ length: 9 }, (_, i) => x[k + i]); }
   up() { return this.rotation()[8]; }
+  // n physics steps (bolt_env.physics): with c.motor, real-motor limits at every step: a motor driving its
+  // joint gives at most `power` W (less torque the faster it spins) and nothing past `speed` rad/s (fading
+  // to zero by `cutoff`); braking against the motion keeps the full torque
+  physics(n) {
+    const { mj, model: m, data: d } = this, M = this.c.motor, fr = m.actuator_forcerange, v = d.qvel;
+    for (let s = 0; s < n; s++) {
+      if (M) for (let j = 0; j < 12; j++) {
+        const w = Math.abs(v[6 + j]);
+        const drive = Math.min(M.torque, M.power / Math.max(w, 1e-6)) * clamp((M.cutoff - w) / (M.cutoff - M.speed), 0, 1);
+        fr[2 * j] = v[6 + j] < 0 ? -drive : -M.torque; fr[2 * j + 1] = v[6 + j] >= 0 ? drive : M.torque;
+      }
+      mj.mj_step(m, d);
+    }
+  }
   // what the brains feel (BoltEnv._obs with randomize=False, full size)
   obs() {
     const d = this.data, R = this.rotation(), qpos = d.qpos, qvel = d.qvel, c = this.c;
@@ -298,7 +312,7 @@ export class Bolt {
     const ctrl = base.map((b, i) => clamp(b + c.action_scale[i] * k * a[i], this.lo[i], this.hi[i]));
     d.ctrl.set(ctrl);
     this.applyPush(this.dt);
-    for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
+    this.physics(c.frame_skip);
     this.t += 1;
     this.phase += 2 * Math.PI * this.freq() * this.dt;
     this.lastAction = Float64Array.from(a);
@@ -330,11 +344,11 @@ export class Bolt {
     return o;
   }
   // full-range motor control around the dog stance (JumpEnv.step, GetUpEnv.step): 1/50 s
-  fullStep(a, scale = this.c.action_scale) {
+  fullStep(a, scale = this.c.action_scale, lo = this.lo, hi = this.hi) {
     const { mj, model: m, data: d, c } = this;
-    d.ctrl.set(c.dog_pose.map((b, i) => clamp(b + scale[i] * a[i], this.lo[i], this.hi[i])));
+    d.ctrl.set(c.dog_pose.map((b, i) => clamp(b + scale[i] * a[i], lo[i], hi[i])));
     this.applyPush(this.dt);
-    for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
+    this.physics(c.frame_skip);
   }
   jumpStep(action) {
     const a = Array.from(action, (v) => clamp(v, -1, 1));
@@ -363,15 +377,15 @@ export class Bolt {
   restTick() {
     const { mj, model: m, data: d, c } = this;
     this.applyPush(this.dt);
-    for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
+    this.physics(c.frame_skip);
   }
   // Tuck the legs under the body (the lying pose), moving the motor targets there from where the joints are
-  // over 0.6 s, then holding: the self-righting brain ends belly down with its legs anywhere (17d 7M: front
+  // over 0.7 s (35 steps, as measured in Python by the main session), then holding: the self-righting brain ends belly down with its legs anywhere (17d 7M: front
   // hips bent backwards, knees straight, hips out 0.9 rad), and the posture brain standing up from there
   // rolled Bolt onto its back; from the tucked legs it stands up.
   startTuck() { this.tt = 0; this.tuckFrom = Array.from(this.data.qpos.slice(7, 19)); }
   tuckTick() {
-    const a = Math.min(1, ++this.tt / 30), L = this.c.lie_pose;
+    const a = Math.min(1, ++this.tt / 35), L = this.c.lie_pose;
     this.data.ctrl.set(this.tuckFrom.map((v, i) => clamp(v + a * (L[i] - v), this.lo[i], this.hi[i])));
     this.restTick();
   }
@@ -382,7 +396,7 @@ export class Bolt {
   holdTick() {
     const { mj, model: m, data: d, c } = this;
     d.ctrl.set(c.dog_pose); this.applyPush(this.dt);
-    for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
+    this.physics(c.frame_skip);
   }
   // run one game command: walk/stand/sit/lie use the trained brains; "hold" and "jump" the jump sequence;
   // "rest" and "getup" getting up after a fall
