@@ -50,6 +50,11 @@ RUNS = {
                   measure=dict(label="Speed or turn rate kept (share of the asked)", lo=0, hi=1.2, unit="%",
                                lowText="stopped", highText="as asked"),
                   words=["kept going", "fell"]),
+    "run22b": dict(branch="claude/train-run22b", label="Run 22b: running like a dog, from scratch", where="cloud machine 6",
+                  kinds=[["v1", "1 m/s (trot)"], ["v2", "2 m/s"], ["v3", "3 m/s (gallop)"], ["v4", "4 m/s"], ["w3", "Spin 3 rad/s"]],
+                  measure=dict(label="Speed or turn rate kept (share of the asked)", lo=0, hi=1.2, unit="%",
+                               lowText="stopped", highText="as asked"),
+                  words=["kept going", "fell"]),
     "imitate18": dict(branch="local", label="Run 18: moving like a real dog", where="this machine (from 5M; cloud machine 3 before)",
                       kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"]],
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
@@ -265,7 +270,7 @@ def main():
                 fetch(run, n, folder, tmp)
                 try:
                     rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_walk(tmp) if run == "bolt19"
-                                  else record_run(tmp) if run in ("run20", "run21", "run22") else record_imitate(tmp, run))
+                                  else record_run(tmp) if run in ("run20", "run21", "run22", "run22b") else record_imitate(tmp, run))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)
                     continue
