@@ -2,3 +2,4 @@ checkpoint 1000000 ready: {'speed_v1': 0.0, 'fall_v1': 1.0, 'speed_v2': 0.0, 'fa
 new best at 1000000: score 0.00
 checkpoint 2000000 ready: {'speed_v1': 0.97, 'fall_v1': 0.0, 'speed_v2': 0.35, 'fall_v2': 0.67, 'speed_v3': 0.0, 'fall_v3': 1.0, 'speed_v4': 0.0, 'fall_v4': 1.0, 'turn_w3': 0.18, 'fall_w3': 0.0, 'turn_w5': 0.03, 'fall_w5': 0.67, 'push_1.5': 0.33} (practising up to 4.0 m/s, mean 3.8)
 new best at 2000000: score 1.22
+checkpoint 3000000 ready: {'speed_v1': 1.1, 'fall_v1': 0.0, 'speed_v2': 0.8, 'fall_v2': 0.33, 'speed_v3': 0.0, 'fall_v3': 1.0, 'speed_v4': 0.0, 'fall_v4': 1.0, 'turn_w3': 0.16, 'fall_w3': 0.0, 'turn_w5': 0.08, 'fall_w5': 0.33, 'push_1.5': 0.17} (practising up to 4.0 m/s, mean 4.0)
