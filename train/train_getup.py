@@ -76,7 +76,7 @@ def main():
         model = PPO("MlpPolicy", venv, n_steps=2048, batch_size=4096, n_epochs=5, learning_rate=3e-4, gamma=0.99,
                     gae_lambda=0.95, clip_range=0.2, ent_coef=0.0, max_grad_norm=1.0, target_kl=0.03,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]), activation_fn=torch.nn.ELU,
-                                       log_std_init=-0.5),
+                                       log_std_init=0.0),   # more exploration: rolling over needs big moves
                     device="cpu", verbose=0)
     start = time.time()
     model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 1_000_000),

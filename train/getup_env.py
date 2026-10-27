@@ -10,6 +10,12 @@ Each try: Bolt is dropped from 0.5 m in a random fallen pose (any roll, legs any
 it gets 4 s. It is paid for being upright, then for standing at its height in the dog stance, and for
 standing still once up; jerky or wasteful motor use costs a little. A tenth of the tries start already
 standing, slightly tipped, so it also learns not to fall over while standing.
+
+Run 17 learned to lie still: a charge on joint speed (0.001 x speed^2, all 12 joints) cost 1-5 per step
+while flailing to roll over, far more than being upright paid. A search over motor sequences (no
+learning) found a way to roll over from the side with this body, so it is possible. Run 17b: no
+joint-speed charge, a fifth of the effort charge, a bonus for each new best uprightness (progress), and
+more exploration at the start.
 """
 import gymnasium as gym
 import mujoco
@@ -89,6 +95,7 @@ class GetUpEnv(BoltEnv):
         self.kind = kind
         self.t, self.last_action = 0, np.zeros(12)
         self.stood_at = None
+        self.best_up = self._rotation()[2, 2]
         return self._obs(), {}
 
     def step(self, action):
@@ -105,6 +112,8 @@ class GetUpEnv(BoltEnv):
         stance = np.exp(-np.sum((d.qpos[7:19] - DOG) ** 2) / 1.0)
         speed = np.hypot(p["vx"], p["vy"])
         reward = 1.0 * (up + 1) / 2                           # turning over
+        reward += 5.0 * max(0.0, up - self.best_up)            # progress: each new best uprightness
+        self.best_up = max(self.best_up, up)
         reward += 1.0 * tall * upright                         # standing up to its height
         reward += 0.5 * stance * upright ** 2                  # in the dog stance
         standing = up > 0.9 and p["height"] > 0.38
@@ -112,8 +121,7 @@ class GetUpEnv(BoltEnv):
             reward += 0.5 * np.exp(-(speed / 0.3) ** 2) * np.exp(-(p["yaw_rate"] / 0.5) ** 2)   # and still
             if self.stood_at is None:
                 self.stood_at = self.t
-        reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 5e-5 * np.sum(d.actuator_force ** 2)
-        reward -= 1e-3 * np.sum(d.qvel[6:18] ** 2)
+        reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 1e-5 * np.sum(d.actuator_force ** 2)
         self.last_action = a
         done = self.t >= self.max_steps
         info = dict(p, up=up, standing=standing, stood_at=self.stood_at, kind=self.kind)

@@ -1,0 +1,16 @@
+{
+  "name": "bolt-run17b-getup",
+  "workdir": "..",
+  "env": {"MUJOCO_GL": "osmesa"},
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": ["python", "-u", "train_getup.py", "--name", "getup17b", "--steps", "15000000"],
+      "resume_cmd": ["python", "-u", "train_getup.py", "--name", "getup17b", "--steps", "15000000", "--resume", "{latest}"],
+      "latest": "runs/getup17b/checkpoints/policy_*_steps.zip",
+      "log": "runs/getup17b/train.log",
+      "done_when": {"exit_code": 0, "file": "runs/getup17b/policy.zip", "log_contains": "^done:"}
+    }
+  ]
+}
