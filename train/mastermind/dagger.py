@@ -27,7 +27,7 @@ import numpy as np  # noqa: E402
 
 OUT = HERE.parent / "runs" / "mastermind" / "out"   # big files (data set, checkpoints): gitignored
 GAIT_W = {"walk": 3, "trot": 3, "pace": 1, "canter": 2, "turn_left": 1, "turn_right": 1}
-HANDLER = {"v3": dict(jump_h=(0.15, 0.55), jump_ahead=(1.5, 2.5),
+HANDLER = {"v3": dict(jump_h=(0.15, 0.55), jump_ahead=(1.5, 2.2),
                       gait_w={"walk": 3, "trot": 3, "pace": 1, "canter": 3, "turn_left": 1, "turn_right": 1})}
 
 
@@ -39,7 +39,7 @@ def pick(rng, weights):
 
 class Handler:
     """Says what to do next, like a person with a dog on a course. jump_h / jump_ahead: the bar heights and distances
-    (v2: 15-45 cm, 1.5-2 m; v3: 15-55 cm, 1.5-2.5 m, as the run-up jump brain takes over 1.5 m before the bar)."""
+    (v2: 15-45 cm, 1.5-2 m; v3: 15-55 cm, 1.5-2.2 m)."""
 
     def __init__(self, rng, jump_h=(0.15, 0.45), jump_ahead=(1.5, 2.0), gait_w=None):
         self.rng = rng

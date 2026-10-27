@@ -304,7 +304,13 @@ class Master:
         if j is not None:
             if j["phase"] == "approach":
                 j["steps"] += 1
-                if w.hurdle_ahead() <= self.jump_from or j["steps"] >= 200 or w.hurdle_ahead() < -0.5:
+                ahead = w.hurdle_ahead()
+                gate = self.ts.get("jump_phase")
+                in_phase = False
+                if gate and self.mode[0] == "clip" and ahead <= self.ts["jump_max"]:
+                    ph = self.im.clip.phase(self.im.tau())
+                    in_phase = gate[0] <= ph < gate[1]
+                if ahead <= self.jump_from or in_phase or j["steps"] >= 200 or ahead < -0.5:
                     self._start_jump_brain()
             elif j["phase"] == "jump":
                 if w.landed or w.t >= self.ts["jump_limit"]:

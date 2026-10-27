@@ -1,9 +1,9 @@
 {
  "teachers": "v3",
  "canter_n30_seed5000": {
-  "track_canter": 0.65,
-  "fall_canter": 0.03333333333333333,
-  "speed_canter": 0.65
+  "track_canter": 0.697,
+  "fall_canter": 0.0,
+  "speed_canter": 0.72
  },
  "clips_exam_seed9000": {
   "track_walk": 0.865,
@@ -15,9 +15,9 @@
   "track_pace": 0.895,
   "fall_pace": 0.0,
   "speed_pace": 0.86,
-  "track_canter": 0.64,
+  "track_canter": 0.691,
   "fall_canter": 0.0,
-  "speed_canter": 0.63,
+  "speed_canter": 0.72,
   "track_turn_left": 0.85,
   "fall_turn_left": 0.0,
   "speed_turn_left": 0.28,

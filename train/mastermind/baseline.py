@@ -2,8 +2,9 @@
 student can be compared with the hand-over manager running the SAME teachers.
 
     cd train && MUJOCO_GL=osmesa OMP_NUM_THREADS=1 python mastermind/baseline.py --imitate 18e --n 30 --out mastermind/results/manager_18e_n30.json
-    ... --teachers v3     the manager with teacher set v3 (teachers.SETS: 18e-36M, 18c for the canter clip, the run-up
-                          jump brain 16i handed over 1.5 m before the bar); skills.py itself is unchanged
+    ... --teachers v3     the manager with teacher set v3 (teachers.SETS: 18e-36M, 18c-29.5M for the canter clip, the
+                          run-up jump brain 16i handed over 1.1 m before the bar, student r4 after landings);
+                          skills.py itself is unchanged
 --with-50: also the 50 cm jump sequence (trot, 50 cm bar 1.5-2 m ahead, trot), which test_skills.py does not have.
 """
 import argparse
@@ -32,7 +33,8 @@ EXTRA = {"jump50": test_skills.seq_jump(0.50)}
 
 class Manager(Bolt):
     """skills.Bolt with a teacher set: a separate canter brain, another jump brain, its hand-over distance, try
-    length, time limit and bridge. Same code as Bolt._clip/_jump otherwise."""
+    length, time limit and bridge, and a landing brain for land_s after a landing. Same code as Bolt._clip/_jump
+    otherwise."""
 
     def __init__(self, seed=0, teachers="v3", **over):
         ts = self.ts = teacher_set(teachers, **over)
@@ -40,6 +42,12 @@ class Manager(Bolt):
         self.jumper = JumpPolicy(ts["jump"])
         self.world.max_steps = ts["jump_steps"]
         self.canter = ImitatePolicy(*imitate_brain(ts["canter"])) if ts["canter"] else None
+        self.land = ImitatePolicy(*imitate_brain(ts["land"])) if ts["land"] else None
+        self.land_until = -1
+
+    def start(self, *a, **k):
+        super().start(*a, **k)
+        self.land_until = -1
 
     def _clip(self, name, seconds):
         im, d = self.im, self.data
@@ -55,7 +63,8 @@ class Manager(Bolt):
         im.limit = 10 ** 9
         pol = self.canter if (self.canter is not None and name == "canter") else self.dog
         for _ in range(int(round(seconds / self.dt))):
-            im.step(pol.act(im._obs()))
+            p = self.land if (self.land is not None and self.t < self.land_until) else pol
+            im.step(p.act(im._obs()))
             if self._after_step(name):
                 return self._fell(name)
         return True
@@ -93,6 +102,7 @@ class Manager(Bolt):
         if not w.landed:
             self.events.append(dict(t=self.t, kind="no_landing"))
         out["landed_at"] = self.t
+        self.land_until = self.t + int(round(ts["land_s"] / self.dt))
         ok = self._clip("canter", bridge) if bridge else True
         if ok and then:
             self.events.append(dict(t=self.t, kind="switch", skill=after, prev=self.skill))
