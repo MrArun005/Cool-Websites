@@ -175,7 +175,7 @@
       propGrp.clear(); barMesh = null; propKey = key;
       if (P) {
         for (const [type, size, pos, q] of P.static) { const g = geomMesh(type, size, propMat); g.position.set(...pos); g.quaternion.set(q[1], q[2], q[3], q[0]); propGrp.add(g); }
-        barMesh = geomMesh(5, P.bar, barMat); propGrp.add(barMesh);
+        barMesh = geomMesh(5, P.bar, barMat); barMesh.children[0].rotation.x = 0; propGrp.add(barMesh);   // the bar's capsule lies along its body's y axis
       }
     }
     if (P && barMesh) { const b = P.barpose, k = 7 * Math.min(i, b.length / 7 - 1); barMesh.position.set(b[k], b[k + 1], b[k + 2]); barMesh.quaternion.set(b[k + 4], b[k + 5], b[k + 6], b[k + 3]); }
@@ -418,6 +418,7 @@
     } else clearJump();
     const d = camera.position.distanceTo(controls.target);   // fog starts past what you are looking at, the far ground melts into the sky
     scene.fog.near = 2 * d + 4; scene.fog.far = 5 * d + 30;
+    if (grid) { grid.material.transparent = true; grid.material.opacity = Math.min(1, Math.max(0, (9 - d) / 4)); grid.visible = d < 9; }   // zoomed out, the 1 m grid is enough
     controls.update(); renderer.render(scene, camera); placeTags();
     requestAnimationFrame(tick);
   }
