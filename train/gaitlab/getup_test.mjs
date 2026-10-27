@@ -1,16 +1,20 @@
-// Knock Bolt over in the browser physics many times and let the get-up brain stand it up again.
-//   node getup_test.mjs <mujoco.js> <bolt_live.json> [tries per kind] [wait: "rest" | "now"]
+// Knock Bolt over in the browser physics many times and let it get up by itself, the way the games do it
+// (game.js GetUp: the self-righting brain rolls it onto its belly, the posture brain stands it up).
+//   node getup_test.mjs <mujoco.js> <bolt_live.json> [tries per kind] [wait: rest | now] [carry | zeros]
 // Two kinds of fall:
 //   lying:  started on its side, back or half-tipped (like GetUpEnv: dropped from 0.5 m in a random fallen
 //           pose, then 1 s lying still with the motors holding it), exactly how the brain practised;
 //   shoved: walking at 0.3-1.0 m/s, shoved 150 N sideways for 0.2 s until it falls (as in the games).
 // wait: "rest" lies still (motors keep their last targets) until Bolt has come to rest, up to 1.5 s, before
 // the get-up brain takes over (GetUpEnv always started from rest); "now" hands over the moment it fell.
-// Reports: got up within 6 s (and how long it took), still standing 2 s after on the standing brain, failures.
+// carry: the standing brain starts from the get-up brain's last action; zeros: from zeros.
+// Reports per kind: righted (belly down), standing (2 tries, 10 s), still standing 2 s later, failures.
 import fs from "fs";
 import { Bolt } from "./live.js";
+import { GetUp, setGetUpCarry, setGetUpWait } from "./game.js";
 
-const [mujocoJs, bundlePath, triesArg = "20", wait = "rest"] = process.argv.slice(2);
+const [mujocoJs, bundlePath, triesArg = "20", wait = "rest", carry = "zeros"] = process.argv.slice(2);
+setGetUpWait(wait); setGetUpCarry(carry === "carry");
 const mj = await (await import(mujocoJs)).default();
 const bundle = JSON.parse(fs.readFileSync(bundlePath));
 const bolt = new Bolt(mj, bundle);
@@ -47,36 +51,32 @@ function shoved() {
   for (let k = 0; k < 100; k++) { bolt.run({ command: "walk", turn, speed: v }); if (bolt.fell()) return true; }
   return false;
 }
-// from the moment it fell: (rest), get up, stand 2 s
+// from the moment it fell: the games' recovery (game.js GetUp: rest, self-right, stand), then 2 s more standing
 function getUp() {
-  const d = bolt.data;
-  let rested = 0;
-  if (wait === "rest") while (rested < 75) {   // up to 1.5 s for the body to stop rolling
-    bolt.restTick(); rested++;
-    const v = d.qvel, spin = Math.hypot(v[3], v[4], v[5]), speed = Math.hypot(v[0], v[1], v[2]);
-    if (rested >= 10 && spin < 0.5 && speed < 0.1) break;
+  const g = new GetUp(bolt);
+  let rightedAt = null;
+  while (!g.done && !g.failed) {
+    const cmd = g.step(bolt.dt);
+    if (rightedAt === null && g.stage === "stand") rightedAt = g.t;
+    if (!g.failed) bolt.run(cmd);
   }
-  bolt.startGetUp();
-  let t = 0;
-  while (!bolt.standing() && t < 300) { bolt.getUpTick(); t++; }
-  if (!bolt.standing()) return { up: false, rested };
-  bolt.afterGetUp();
+  if (!g.done) return { up: false, righted: rightedAt !== null, tries: g.tries };
   let fellAgain = false;
   for (let k = 0; k < 100; k++) { bolt.run({ command: "stand" }); if (bolt.fell()) fellAgain = true; }
-  return { up: true, secs: t * bolt.dt, rested, steady: !fellAgain && bolt.standing() };
+  return { up: true, righted: true, secs: g.secs, rightedAt, tries: g.tries, steady: !fellAgain && bolt.standing() };
 }
 
 const med = (a) => (a.length ? a.slice().sort((x, y) => x - y)[a.length >> 1].toFixed(2) : "-");
-console.log(`get-up brain ${bundle.brains.getup.source}, wait: ${wait}`);
+console.log(`get-up brain ${bundle.brains.getup.source} (goal ${bundle.brains.getup.goal || "stand"}), wait: ${wait}, standing brain starts from ${carry === "carry" ? "its last action" : "zeros"}`);
 for (const kind of ["side", "back", "tipped", "shoved"]) {
-  let n = 0, up = 0, steady = 0, stayedUp = 0, secs = [], rests = [];
+  let n = 0, up = 0, righted = 0, steady = 0, stayedUp = 0, second = 0, secs = [], rightSecs = [];
   for (let k = 0; k < tries; k++) {
     if (kind === "shoved" ? !shoved() : !lying(kind)) { stayedUp++; continue; }
     const r = getUp();
-    n++; rests.push(r.rested * bolt.dt);
-    if (r.up) { up++; secs.push(r.secs); if (r.steady) steady++; }
+    n++; righted += r.righted;
+    if (r.up) { up++; secs.push(r.secs); rightSecs.push(r.rightedAt); second += r.tries > 1; if (r.steady) steady++; }
   }
-  console.log(`${kind.padEnd(7)} falls ${n}${stayedUp ? ` (${stayedUp} shoves did not topple it)` : ""}: got up ${up}/${n} (median ${med(secs)} s, ` +
-    `slowest ${secs.length ? Math.max(...secs).toFixed(2) : "-"} s), still standing 2 s later ${steady}/${n}, failed ${n - up}` +
-    (wait === "rest" ? `, rested median ${med(rests)} s first` : ""));
+  console.log(`${kind.padEnd(7)} falls ${n}${stayedUp ? ` (${stayedUp} shoves did not topple it)` : ""}: righted ${righted}/${n}, standing ${up}/${n} ` +
+    `(${second} on the 2nd try; median ${med(secs)} s from the fall, slowest ${secs.length ? Math.max(...secs).toFixed(2) : "-"} s; belly down after ${med(rightSecs)} s), ` +
+    `still standing 2 s later ${steady}/${n}, failed ${n - up}`);
 }

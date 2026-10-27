@@ -164,7 +164,7 @@ export class Round {
     }
   }
   // eliminated by a fall: Bolt gets back up where it fell (the get-up brain), stands a moment, and the
-  // round ends (also if it is not up within GETUP_LIMIT s)
+  // round ends (also if it is not up after 2 tries or 10 s)
   recover(dt) {
     const g = this.getup;
     this.cmd = g.step(dt);

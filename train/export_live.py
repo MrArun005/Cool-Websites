@@ -113,16 +113,17 @@ def jump_reference(folder, bar=(0.55, 0.15), seed=1):
                 dropped=bool(info.get("dropped", False)))
 
 
-def getup_reference(folder, kind="side", seed=1):
+def getup_reference(folder, goal="selfright", kind="side", seed=1):
     """One get-up in Python (GetUpEnv, no randomness): Bolt dropped on its side and settled for 1 s (the
-    start state), then every step of the get-up brain's 4 s."""
+    start state), then every step of the get-up brain's 4 s. standing: righted (belly down, still) for the
+    self-righting brain, standing for a full get-up brain."""
     from getup_env import GetUpEnv, GetUpPolicy
     policy = GetUpPolicy(folder)
-    env = GetUpEnv(randomize=False)
+    env = GetUpEnv(randomize=False, goal=goal)
     env.exam_start = kind
     obs, _ = env.reset(seed=seed)
     d = env.data
-    start = dict(qpos=d.qpos.tolist(), qvel=d.qvel.tolist(), ctrl=d.ctrl.tolist(), kind=kind)
+    start = dict(qpos=d.qpos.tolist(), qvel=d.qvel.tolist(), ctrl=d.ctrl.tolist(), kind=kind, goal=goal)
     steps, info = [], {}
     for _ in range(env.max_steps):
         action = policy.act(obs)
@@ -142,6 +143,8 @@ def main():
     ap.add_argument("--competitor", action="append", default=[], metavar="NAME=FOLDER",
                     help="more walk brains for the agility competition (speed-control brains)")
     ap.add_argument("--getup", help="get-up brain folder (getup_env.py): the bundle gets it, and the reference a Python get-up")
+    ap.add_argument("--getup-goal", default="selfright", choices=["selfright", "stand"],
+                    help="what the get-up brain was trained for: roll onto the belly (then the posture brain stands), or stand")
     args = ap.parse_args()
     walk = Policy(args.walk)
     start, ref = reference(Policy(args.posture), walk)
@@ -174,9 +177,9 @@ def main():
         bundle["constants"]["jump_steps"] = 100
         ref["jump"] = jump_reference(args.jump)
     if args.getup:   # getting up after a fall by itself: its own brain (getup_env.py), 4 s per try in training
-        bundle["brains"]["getup"] = dict(brain(args.getup), source=Path(args.getup).name)
+        bundle["brains"]["getup"] = dict(brain(args.getup), source=Path(args.getup).name, goal=args.getup_goal)
         bundle["constants"]["getup_steps"] = 200
-        ref["getup"] = getup_reference(args.getup)
+        ref["getup"] = getup_reference(args.getup, args.getup_goal)
     Path(args.out).write_text(json.dumps(bundle, separators=(",", ":")))
     Path(args.reference).write_text(json.dumps(ref, separators=(",", ":")))
     print(f"wrote {args.out} ({Path(args.out).stat().st_size / 1e6:.1f} MB) and {args.reference} ({len(ref['steps'])} steps)")

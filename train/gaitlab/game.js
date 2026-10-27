@@ -177,37 +177,52 @@ export class Jumper {
   }
 }
 
-// Getting up after a fall, by itself, where it fell: the get-up brain (getup_env.py, live.js) rolls Bolt
-// over and stands it up, then the standing brain holds it for 0.8 s before the game carries on.
+// Getting up after a fall, by itself, where it fell, the way real robot dogs recover (ANYmal: Lee, Hwangbo
+// & Hutter 2019): a small selector over skills. Fallen: the self-righting brain (getup_env.py, run 17c) rolls
+// Bolt onto its belly, legs tucked, until it lies still (righted: up > 0.9, body under 0.2 m/s, for 0.3 s;
+// at most 4 s, its training tries); then the posture brain's "stand" gets up from there (from the lying
+// pose 20/20) and holds it 1.5 s; toppled again (up < 0.7): another try. Not standing after 2 tries or 10 s:
+// failed, and the game falls back to a restart. A get-up brain trained to stand (goal "stand") hands over
+// once standing instead.
 // The brain practised from rest (each try began after 1 s lying still), so by default Bolt first lies still
 // until it has stopped rolling (at most 1.5 s); "now" hands over the moment it falls.
 export let GETUP_WAIT = "rest";
 export function setGetUpWait(w) { GETUP_WAIT = w; }
-export const GETUP_LIMIT = 6;   // s from the fall to standing; after that the game falls back to a restart
+export let GETUP_CARRY = false;   // the standing brain starts from the get-up brain's last action (else zeros)
+export function setGetUpCarry(c) { GETUP_CARRY = c; }
+export const GETUP = { right: 4, still: 0.3, stand: 1.5, tries: 2, limit: 10 };
 export class GetUp {
-  constructor(bolt) { this.bolt = bolt; this.stage = "rest"; this.t = 0; this.rested = 0; this.stood = 0; this.done = false; this.failed = false; this.secs = null; this.tries = 0; }
-  // the command for this step; then read done (up, and stood 0.8 s) or failed (not up within GETUP_LIMIT s)
+  constructor(bolt) {
+    this.bolt = bolt; this.stage = "rest"; this.t = 0; this.st = 0; this.tries = 0; this.done = false; this.failed = false; this.secs = null;
+    this.goal = (bolt.brains.getup && bolt.brains.getup.goal) || "selfright";
+  }
+  // the command for this step; then read done (standing after 1.5 s on the standing brain) or failed
   step(dt) {
-    const b = this.bolt, v = b.data.qvel, rest = { command: "rest", turn: 0, speed: 0.2 };
-    this.t += dt;
+    const b = this.bolt, v = b.data.qvel, rest = { command: "rest", turn: 0, speed: 0.2 }, stand = { command: "stand", turn: 0, speed: 0.2 };
+    this.t += dt; this.st += dt;
+    const next = () => {   // another try, or give up
+      if (this.tries >= GETUP.tries) { this.failed = true; return rest; }
+      this.stage = "rest"; this.st = 0; return rest;
+    };
+    if (this.t > GETUP.limit) { this.failed = true; return rest; }
     if (this.stage === "stand") {
-      if (!b.fell()) {
-        if ((this.stood += dt) >= 0.8) this.done = true;
-        return { command: "stand", turn: 0, speed: 0.2 };
+      if (b.up() < 0.7) return next();
+      if (this.st >= GETUP.stand) {
+        if (b.standing()) { this.done = true; this.secs = this.t; return stand; }
+        return next();
       }
-      this.stage = "rest"; this.rested = 0;   // toppled again while steadying: get up again, same time limit
+      return stand;
     }
-    if (this.t > GETUP_LIMIT) { this.failed = true; return rest; }
     if (this.stage === "rest") {
-      this.rested += dt;
       const still = Math.hypot(v[3], v[4], v[5]) < 0.5 && Math.hypot(v[0], v[1], v[2]) < 0.1;
-      if (!(GETUP_WAIT === "now" || this.rested > 1.5 || (this.rested >= 0.2 && still))) return rest;
-      this.stage = "up"; this.tries += 1; b.startGetUp();
+      if (!(GETUP_WAIT === "now" || this.st > 1.5 || (this.st >= 0.2 && still))) return rest;
+      this.tries += 1; this.stage = "right"; this.st = 0; this.held = 0; b.startGetUp();
     }
-    if (b.standing()) {
-      b.afterGetUp(); this.stage = "stand"; this.stood = 0; if (this.secs === null) this.secs = this.t;
-      return { command: "stand", turn: 0, speed: 0.2 };
-    }
+    // stage "right": the self-righting brain until belly down and still (or a stand brain until standing)
+    const ok = this.goal === "stand" ? b.standing() : b.righted();
+    this.held = ok ? this.held + dt : 0;
+    if (this.held >= (this.goal === "stand" ? dt : GETUP.still)) { b.afterGetUp(GETUP_CARRY); this.stage = "stand"; this.st = 0; return stand; }
+    if (this.st > GETUP.right) return next();
     return { command: "getup", turn: 0, speed: 0.2 };
   }
 }
@@ -326,8 +341,8 @@ export class Game {
     }
   }
 
-  // After a fall: the get-up brain stands Bolt up where it fell, then the station goes on from there.
-  // Station clocks pause meanwhile (as for a shout). Not up within GETUP_LIMIT s: the old restart.
+  // After a fall: Bolt gets up where it fell (GetUp), then the station goes on from there. Station clocks
+  // pause meanwhile (as for a shout). Not up after 2 tries or 10 s: the old restart.
   recover(dt) {
     const r = this.rec, b = this.bolt;
     this.cmd = r.getup.step(dt);

@@ -342,9 +342,11 @@ export class Bolt {
     this.jt += 1; this.jumpLast = Float64Array.from(a);
   }
   jumpTick() { this.jumpStep(this.brains.jump.act(this.jumpObs())); }
-  // The get-up brain (GetUpEnv in getup_env.py): from lying on its side, back or half-tipped, roll over and
-  // stand in the dog stance. Trained on 4 s tries (200 steps), each starting after 1 s lying still with the
-  // motors holding the pose it fell in. startGetUp(), then getUpTick() until standing().
+  // The get-up brain (GetUpEnv in getup_env.py): from lying on its side, back or half-tipped, roll over.
+  // Run 17c's self-righting brain (goal "selfright", the ANYmal recipe) stops belly down, legs tucked, and
+  // lies still (righted()); the posture brain's "stand" then gets up from there. A brain trained with goal
+  // "stand" goes all the way to standing(). Trained on 4 s tries (200 steps), each starting after 1 s lying
+  // still with the motors holding the pose it fell in. startGetUp(), then getUpTick().
   startGetUp() { this.gt = 0; this.getUpLast = new Float64Array(12); }
   getUpObs() { return this.bodyObs(this.getUpLast); }   // GetUpEnv._obs with randomize=False
   getUpStep(action) {
@@ -355,15 +357,18 @@ export class Bolt {
   getUpTick() { this.getUpStep(this.brains.getup.act(this.getUpObs())); }
   // up as the get-up brain was taught it (GetUpEnv: upright within ~25° and the body 38 cm or more up)
   standing(ground = 0) { return this.up() > 0.9 && this.data.qpos[2] - ground > 0.38; }
+  // belly down and nearly still, as the self-righting brain was taught it (GetUpEnv goal "selfright")
+  righted() { const v = this.data.qvel; return this.up() > 0.9 && Math.hypot(v[0], v[1], v[2]) < 0.2; }
   // lie still after a fall: the motors keep their last targets (how every get-up try started)
   restTick() {
     const { mj, model: m, data: d, c } = this;
     this.applyPush(this.dt);
     for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
   }
-  // hand the body from the get-up brain to the standing brain: its stand maps actions to motors the same
-  // way (dog stance + action_scale x action), so its last action carries over
-  afterGetUp() { this.lastAction = Float64Array.from(this.getUpLast); this.command = "stand"; }
+  // hand the body from the get-up brain to the standing brain (its "stand" maps actions to motors the same
+  // way, dog stance + action_scale x action); carry: its last action carries over, else the stand starts
+  // from zeros
+  afterGetUp(carry = false) { this.lastAction = carry ? Float64Array.from(this.getUpLast) : new Float64Array(12); this.command = "stand"; }
   // the motors hold the dog stance (how every training jump started: 0.5 s of this, then the jump)
   holdTick() {
     const { mj, model: m, data: d, c } = this;

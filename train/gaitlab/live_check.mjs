@@ -60,11 +60,12 @@ if (ref.getup && bolt.brains.getup) {   // getting up: the same fall (settled fo
     bolt.getUpStep(bolt.brains.getup.act(o));
     const q = bolt.data.qpos, off = Math.hypot(q[0] - s.qpos[0], q[1] - s.qpos[1], q[2] - s.qpos[2]);
     wPos = Math.max(wPos, off);
-    if (stoodAt === null && bolt.standing()) stoodAt = i + 1;
+    if (stoodAt === null && (G.start.goal === "stand" ? bolt.standing() : bolt.righted())) stoodAt = i + 1;
     if ([0, 24, 49, 99, 149, 199].includes(i)) marks.push(`${i + 1}: obs ${wObs.toExponential(1)}, body ${(off * 1000).toFixed(2)} mm`);
   });
-  console.log(`getup (from its ${G.start.kind}, ${G.steps.length} steps; Python: standing at the end ${G.standing}, first stood at step ${G.stood_at}; ` +
-    `browser: standing ${bolt.standing()}, first stood at step ${stoodAt}): worst difference in what the get-up brain feels ` +
+  const ok = G.start.goal === "stand" ? bolt.standing() : bolt.righted(), what = G.start.goal === "stand" ? "standing" : "righted";
+  console.log(`getup, goal ${G.start.goal} (from its ${G.start.kind}, ${G.steps.length} steps; Python: ${what} at the end ${G.standing}, first at step ${G.stood_at}; ` +
+    `browser: ${what} ${ok}, first at step ${stoodAt}): worst difference in what the get-up brain feels ` +
     `${wObs.toExponential(1)}, its output on the same input ${wAct.toExponential(1)}, body position ${(wPos * 1000).toFixed(3)} mm`);
   console.log(`  by step: ${marks.join(" | ")}`);
 }
