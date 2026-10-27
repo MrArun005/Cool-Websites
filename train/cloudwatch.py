@@ -40,7 +40,7 @@ RUNS = {
                     measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
                                  lowText="none", highText="all clean"),
                     words=["clean jump", "not clean"]),
-    "imitate18b": dict(branch="local", label="Run 18b: moving like a real dog, with the canter (dog running)", where="this machine (from run 18 at 9M)",
+    "imitate18b": dict(branch="claude/train-run20", label="Run 18b: moving like a real dog, with the canter (dog running)", where="cloud machine 4 (moved at 18.5M)",
                       kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["canter", "Canter (run)"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"]],
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
                                    lowText="not at all", highText="exactly"),
