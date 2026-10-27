@@ -1,0 +1,212 @@
+{
+ "args": {
+  "clips": [
+   "canter"
+  ],
+  "n": 30,
+  "mode": "plain",
+  "brain": "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/c18f",
+  "zip": "policy.zip",
+  "stats": "vecnormalize.pkl",
+  "K": 16,
+  "H": 30,
+  "M": 5,
+  "sigma": 0.2,
+  "robust": false,
+  "seed": 7000,
+  "out": "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/c18f/exam_canter_30_seed7000.json"
+ },
+ "results": [
+  {
+   "clip": "canter",
+   "n": 30,
+   "track_mean": 0.704,
+   "track_sd": 0.043,
+   "track_se": 0.008,
+   "falls": 0,
+   "speed_mean": 0.72,
+   "tries": [
+    {
+     "track": 0.736992596189264,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.7411864018917119
+    },
+    {
+     "track": 0.7358010276954924,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7293031336257376
+    },
+    {
+     "track": 0.7243723641630929,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7020960839150721
+    },
+    {
+     "track": 0.7737593408319922,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7564039050829986
+    },
+    {
+     "track": 0.7481074031231927,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.781230712565583
+    },
+    {
+     "track": 0.7103170981258973,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.6991714597293528
+    },
+    {
+     "track": 0.7350176417027161,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.726031158142389
+    },
+    {
+     "track": 0.707123565915352,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.6794871038781974
+    },
+    {
+     "track": 0.7172146951458542,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7631261740596242
+    },
+    {
+     "track": 0.7291068167072813,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7314842193920292
+    },
+    {
+     "track": 0.6771200068865586,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7095824761201069
+    },
+    {
+     "track": 0.7103750610736056,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7755371701789217
+    },
+    {
+     "track": 0.6824858821854094,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7286572960432668
+    },
+    {
+     "track": 0.6802430203505271,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.717653806990356
+    },
+    {
+     "track": 0.701575584474803,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7284092889771553
+    },
+    {
+     "track": 0.6893905307313629,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.6971326104575258
+    },
+    {
+     "track": 0.6888457381315427,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7481548250845013
+    },
+    {
+     "track": 0.6826561359796065,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7030197626719775
+    },
+    {
+     "track": 0.5164075940711471,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.5065596492831825
+    },
+    {
+     "track": 0.683715365747076,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.6721245331537524
+    },
+    {
+     "track": 0.6861159958413634,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.719104472872191
+    },
+    {
+     "track": 0.6845048589665512,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7340007416500229
+    },
+    {
+     "track": 0.6889650815919921,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7017652528853381
+    },
+    {
+     "track": 0.7043503225520521,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7571972292226785
+    },
+    {
+     "track": 0.7375331684603706,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7660073533854692
+    },
+    {
+     "track": 0.6977025398097646,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7310927040082676
+    },
+    {
+     "track": 0.6888785031564262,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.6936563430252092
+    },
+    {
+     "track": 0.745240300151099,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7604896529338618
+    },
+    {
+     "track": 0.7231040865400244,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.7267327447370805
+    },
+    {
+     "track": 0.7338994548382135,
+     "fell": false,
+     "seconds": 0.2,
+     "speed": 0.7262067929562721
+    }
+   ]
+  }
+ ]
+}
