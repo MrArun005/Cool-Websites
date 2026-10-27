@@ -1,14 +1,14 @@
 {
-  "steps": 28500000,
+  "steps": 29000000,
   "exam": {
-    "jump_40": 0.2,
-    "jump_50": 0.0,
+    "jump_40": 0.6,
+    "jump_50": 0.2,
     "jump_60": 0.0,
     "jump_70": 0.0,
-    "strict_40": 0.5,
-    "strict_50": 0.1,
+    "strict_40": 0.8,
+    "strict_50": 0.0,
     "strict_60": 0.0,
     "strict_70": 0.0
   },
-  "score": 0.05
+  "score": 0.2
 }
