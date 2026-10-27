@@ -174,3 +174,16 @@ update at 2146304: reward/step 0.719, try length 221 steps (100 tries), 667 step
 update at 2162688: reward/step 0.714, try length 224 steps (100 tries), 667 steps/s
 update at 2179072: reward/step 0.716, try length 225 steps (100 tries), 667 steps/s
 update at 2195456: reward/step 0.713, try length 222 steps (100 tries), 667 steps/s
+update at 2211840: reward/step 0.718, try length 225 steps (100 tries), 668 steps/s
+update at 2228224: reward/step 0.719, try length 219 steps (100 tries), 668 steps/s
+update at 2244608: reward/step 0.721, try length 228 steps (100 tries), 669 steps/s
+update at 2260992: reward/step 0.724, try length 217 steps (100 tries), 669 steps/s
+update at 2277376: reward/step 0.732, try length 217 steps (100 tries), 669 steps/s
+update at 2293760: reward/step 0.723, try length 220 steps (100 tries), 670 steps/s
+update at 2310144: reward/step 0.719, try length 221 steps (100 tries), 670 steps/s
+update at 2326528: reward/step 0.728, try length 222 steps (100 tries), 671 steps/s
+update at 2342912: reward/step 0.723, try length 218 steps (100 tries), 671 steps/s
+update at 2359296: reward/step 0.723, try length 220 steps (100 tries), 671 steps/s
+update at 2375680: reward/step 0.724, try length 219 steps (100 tries), 672 steps/s
+update at 2392064: reward/step 0.735, try length 216 steps (100 tries), 672 steps/s
+update at 2408448: reward/step 0.732, try length 215 steps (100 tries), 672 steps/s
