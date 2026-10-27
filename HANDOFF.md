@@ -66,3 +66,10 @@ node --test ../pet/test/*.test.js
    learned skills could be self-balancing, following a person, expressive head motion.
 4. Reuse `train/` patterns: environment, exam, watcher, packaging after every run.
 5. Hook up `pet/js/brain.js` (or a language model) to command the new robot's skills.
+
+## Standing rule: real body, real motors
+Everything Bolt does must be something a real body with real motors could do (the user's rule). The
+physics carries a real-motor model (train/bolt_env.py MOTOR: 17 N·m cap, 420 W, 21 rad/s, the Unitree A1's
+class for a 12 kg dog) and real joint ranges (sideways hips ±48°, Go2). Check every new skill's peak joint
+speed, torque and power against it (scratchpad audit.py pattern) before trusting any result, and remove
+shortcuts no real robot has (teleports, kinematic carrying) or say plainly where one remains.

@@ -44,6 +44,31 @@ TARGETS = {
 }
 ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)  # radians per unit action: abd, hip, knee
 
+# The motors, as real ones: Bolt weighs what a Unitree A1 does (12 kg), whose joint motors give 33.5 N·m,
+# 21 rad/s and 420 W peak each. Bolt's are capped at 17 N·m. A motor driving a joint can give at most
+# 420 W (so less torque the faster it spins) and nothing past 21 rad/s (fading to zero by 25 rad/s);
+# braking against the motion keeps the full 17 N·m. Before this, the jump and self-righting brains spun
+# joints at up to 57 rad/s and 900 W, which no motor this size can. Sideways hips swing ±48° (Go2).
+MOTOR = dict(torque=17.0, power=420.0, speed=21.0, cutoff=25.0)
+
+
+def motor_limits(qvel):
+    """Per joint (lo, hi) torque limits for the current joint speeds (rad/s)."""
+    w = np.abs(qvel)
+    drive = np.minimum(MOTOR["torque"], MOTOR["power"] / np.maximum(w, 1e-6))
+    drive *= np.clip((MOTOR["cutoff"] - w) / (MOTOR["cutoff"] - MOTOR["speed"]), 0.0, 1.0)
+    lo = np.where(qvel < 0, -drive, -MOTOR["torque"])
+    hi = np.where(qvel >= 0, drive, MOTOR["torque"])
+    return lo, hi
+
+
+def physics(model, data, n):
+    """n physics steps with the real-motor limits applied at every one (joints are qvel[6:18])."""
+    for _ in range(n):
+        lo, hi = motor_limits(data.qvel[6:18])
+        model.actuator_forcerange[:, 0], model.actuator_forcerange[:, 1] = lo, hi
+        mujoco.mj_step(model, data)
+
 # What the built-in trot is built around (gait_generator="crouch" or "tall"). "crouch" is the
 # standing pose, a Z-shaped crouch with knees ~14 cm up: the walk looked like crawling and the
 # brain pushed knees onto the floor (runs 5-6). "tall" is a dog-like stance, front legs straighter
@@ -460,7 +485,7 @@ class BoltEnv(gym.Env):
     def step(self, action):
         action = np.clip(np.asarray(action, dtype=float), -1, 1)
         self.data.ctrl[:] = np.clip(self.base_pose() + self.action_scale() * action, self.lo, self.hi)
-        mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
+        physics(self.model, self.data, self.frame_skip)
         self.t += 1
         self.env_steps += 1
         if self.speed_control:

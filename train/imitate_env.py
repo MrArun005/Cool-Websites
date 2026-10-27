@@ -58,7 +58,7 @@ import torch  # noqa: F401  (imported by the policies below; keeps the import or
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
-from bolt_env import ACTION_SCALE, STANCES, BoltEnv
+from bolt_env import ACTION_SCALE, STANCES, BoltEnv, physics
 
 DOG = STANCES["dog"]
 CLIP_DIR = Path(__file__).with_name("dogmotion") / "clips"
@@ -243,7 +243,7 @@ class ImitateEnv(BoltEnv):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
         base = self.ref("joints", 1) if self.residual else DOG
         self.data.ctrl[:] = np.clip(base + ACTION_SCALE * a, self.lo, self.hi)
-        mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
+        physics(self.model, self.data, self.frame_skip)
         self.t += 1
         self.env_steps += 1
         terms, err = self.tracking()

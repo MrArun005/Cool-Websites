@@ -244,3 +244,8 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
 - **Hand a skill over in the pose the next skill knows.** Self-righting left Bolt belly-down with its legs
   splayed 2.5 rad from the lying pose, and the posture brain stood it up 0-1 times in 20. Folding the legs
   into the lying pose with the motors first (as Unitree tucks before standing) made it 15-17 in 20.
+- **Simulate the motors, not just the torque cap.** With only a 17 N·m cap, the jump and self-righting
+  brains spun joints at up to 57 rad/s and 900 W; a real motor for a 12 kg dog (Unitree A1: 21 rad/s,
+  420 W) can't. With a real motor model (power limit, top speed, braking allowed), self-righting fell from
+  17-18/20 to 8-9/20 and the jump from most to 1/10 at 15 cm: those results were partly impossible. Walking
+  and posture were unaffected; they never needed more than a real motor gives.

@@ -49,7 +49,7 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
-from bolt_env import ACTION_SCALE, STANCES, BoltEnv
+from bolt_env import ACTION_SCALE, STANCES, BoltEnv, physics
 
 DOG = STANCES["dog"]
 
@@ -160,7 +160,7 @@ class JumpEnv(BoltEnv):
         d.qpos[7:19] = d.ctrl[:] = np.clip(DOG + self.rng.normal(0, 0.02, 12), self.lo, self.hi)
         mujoco.mj_forward(m, d)
         for _ in range(25):  # settle into the dog stance on the motors
-            mujoco.mj_step(m, d, nstep=self.frame_skip)
+            physics(m, d, self.frame_skip)
         dist, h = self.exam_bar or (self.rng.uniform(0.45, 0.65), self._bar_height())
         if self.real:   # like a game: up to 11 degrees askew and 10 cm off the line
             askew, side = self.exam_askew or (self.rng.uniform(-0.2, 0.2), self.rng.uniform(-0.1, 0.1))
@@ -176,7 +176,7 @@ class JumpEnv(BoltEnv):
     def step(self, action):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
         self.data.ctrl[:] = np.clip(DOG + ACTION_SCALE * a, self.lo, self.hi)  # the full motor range
-        mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
+        physics(self.model, self.data, self.frame_skip)
         self.t += 1
         self.env_steps += 1
         d, R = self.data, self._rotation()
