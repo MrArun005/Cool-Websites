@@ -6,7 +6,10 @@
     kaggle kernels output <user>/bolt-run20-gpu -p out/   # train.log, progress.json, params.pkl, checkpoints/
 
     # dog imitation (mjx_imitate.py), warm-started from a CPU brain exported with `mjx_imitate.py warm`:
-    python kaggle/make_kernel.py --user <user> --job imitate --slug bolt-imitate-gpu --warm warm.pkl --steps 2000000000 -o /tmp/ki
+    # (warm.pkl is too big to embed: upload it once as a private dataset with  kaggle datasets create -p <dir with warm.pkl>)
+    python kaggle/make_kernel.py --user <user> --job imitate --slug bolt-imitate-gpu --warm-dataset <user>/bolt-imitate-warm \
+        --steps 360000000 --hours 9.5 -o /tmp/ki        # 4096 dogs on Kaggle's 2x T4: ~11.7k steps/s, 360M in ~8.6 h
+    kaggle kernels push -p /tmp/ki --accelerator NvidiaTeslaT4
 
 The script installs MuJoCo MJX and Brax with CUDA, writes the files it needs next to itself (bolt.xml and the trainer;
 for imitate also the dog clips and the warm-start brain) and runs the trainer, keeping everything under
@@ -73,7 +76,7 @@ def main():
         if args.warm or args.warm_dataset:
             cmd += ["--warm", "warm.pkl"]
     (out / "kernel.py").write_text(TEMPLATE.format(slug=args.slug, files=json.dumps(files), cmd=json.dumps(cmd),
-                                                   find_warm=bool(getattr(args, "warm_dataset", None))))
+                                                   find_warm=bool(args.warm_dataset)))
     (out / "kernel-metadata.json").write_text(json.dumps(dict(
         id=f"{args.user}/{args.slug}", title=args.slug, code_file="kernel.py", language="python", kernel_type="script",
         is_private=True, enable_gpu=True, enable_internet=True, dataset_sources=[args.warm_dataset] if args.job == "imitate" and args.warm_dataset else [], competition_sources=[], kernel_sources=[]), indent=1))
