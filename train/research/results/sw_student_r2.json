@@ -1,0 +1,311 @@
+{
+ "args": {
+  "mode": "plain",
+  "n": 10,
+  "seed": 1000,
+  "only": [
+   "rest",
+   "gaits"
+  ],
+  "K": 16,
+  "H": 30,
+  "M": 5,
+  "sigma": 0.2,
+  "brain": "runs/research/student_r2",
+  "out": "research/results/sw_student_r2.json"
+ },
+ "seconds": 26,
+ "switches": [
+  {
+   "switch": "walk->sit",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "walk->sit [pose reached]",
+   "ok": 4,
+   "tries": 10,
+   "rate": 0.4,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 0.97,
+     "min_height": 0.177,
+     "min_up": 0.8,
+     "end_height": 0.201,
+     "end_up": 0.88,
+     "end_pitch": -0.49
+    },
+    {
+     "speed_at_switch": 1.09,
+     "min_height": 0.183,
+     "min_up": 0.84,
+     "end_height": 0.2,
+     "end_up": 0.88,
+     "end_pitch": -0.49
+    },
+    {
+     "speed_at_switch": 0.84,
+     "min_height": 0.157,
+     "min_up": 0.76,
+     "end_height": 0.201,
+     "end_up": 0.88,
+     "end_pitch": -0.49
+    },
+    {
+     "speed_at_switch": 0.95,
+     "min_height": 0.19,
+     "min_up": 0.88,
+     "end_height": 0.196,
+     "end_up": 0.89,
+     "end_pitch": -0.48
+    },
+    {
+     "speed_at_switch": 0.7,
+     "min_height": 0.196,
+     "min_up": 0.84,
+     "end_height": 0.198,
+     "end_up": 0.88,
+     "end_pitch": -0.49
+    },
+    {
+     "speed_at_switch": 0.98,
+     "min_height": 0.196,
+     "min_up": 0.85,
+     "end_height": 0.2,
+     "end_up": 0.88,
+     "end_pitch": -0.49
+    }
+   ]
+  },
+  {
+   "switch": "sit->lie",
+   "ok": 4,
+   "tries": 10,
+   "rate": 0.4,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 0.01,
+     "min_height": 0.195,
+     "min_up": 0.47,
+     "fell_after": 1.36,
+     "in_skill": "lie",
+     "height": 0.353,
+     "speed": -0.33,
+     "roll": -0.56,
+     "pitch": -0.79,
+     "end_height": 0.541,
+     "end_up": 0.5,
+     "end_pitch": -0.01
+    },
+    {
+     "speed_at_switch": 0.0,
+     "min_height": 0.195,
+     "min_up": 0.47,
+     "fell_after": 1.34,
+     "in_skill": "lie",
+     "height": 0.341,
+     "speed": -0.32,
+     "roll": -0.6,
+     "pitch": -0.75,
+     "end_height": 0.427,
+     "end_up": 1.0,
+     "end_pitch": -0.09
+    },
+    {
+     "speed_at_switch": -0.0,
+     "min_height": 0.198,
+     "min_up": 0.5,
+     "fell_after": 1.3,
+     "in_skill": "lie",
+     "height": 0.336,
+     "speed": -0.26,
+     "roll": -0.58,
+     "pitch": -0.74,
+     "end_height": 0.426,
+     "end_up": 1.0,
+     "end_pitch": -0.09
+    },
+    {
+     "speed_at_switch": 0.0,
+     "min_height": 0.185,
+     "min_up": 0.48,
+     "fell_after": 1.4,
+     "in_skill": "lie",
+     "height": 0.351,
+     "speed": -0.25,
+     "roll": -0.54,
+     "pitch": -0.78,
+     "end_height": 0.423,
+     "end_up": 0.99,
+     "end_pitch": -0.11
+    },
+    {
+     "speed_at_switch": 0.01,
+     "min_height": 0.191,
+     "min_up": 0.5,
+     "fell_after": 1.34,
+     "in_skill": "lie",
+     "height": 0.341,
+     "speed": -0.3,
+     "roll": -0.56,
+     "pitch": -0.75,
+     "end_height": 0.422,
+     "end_up": 0.99,
+     "end_pitch": -0.11
+    },
+    {
+     "speed_at_switch": 0.0,
+     "min_height": 0.194,
+     "min_up": 0.49,
+     "fell_after": 1.36,
+     "in_skill": "lie",
+     "height": 0.343,
+     "speed": -0.32,
+     "roll": -0.57,
+     "pitch": -0.76,
+     "end_height": 0.425,
+     "end_up": 0.99,
+     "end_pitch": -0.1
+    }
+   ]
+  },
+  {
+   "switch": "sit->lie [pose reached]",
+   "ok": 4,
+   "tries": 10,
+   "rate": 0.4,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 0.01,
+     "min_height": 0.195,
+     "min_up": 0.47,
+     "fell_after": 1.36,
+     "in_skill": "lie",
+     "height": 0.353,
+     "speed": -0.33,
+     "roll": -0.56,
+     "pitch": -0.79,
+     "end_height": 0.541,
+     "end_up": 0.5,
+     "end_pitch": -0.01
+    },
+    {
+     "speed_at_switch": 0.0,
+     "min_height": 0.195,
+     "min_up": 0.47,
+     "fell_after": 1.34,
+     "in_skill": "lie",
+     "height": 0.341,
+     "speed": -0.32,
+     "roll": -0.6,
+     "pitch": -0.75,
+     "end_height": 0.427,
+     "end_up": 1.0,
+     "end_pitch": -0.09
+    },
+    {
+     "speed_at_switch": -0.0,
+     "min_height": 0.198,
+     "min_up": 0.5,
+     "fell_after": 1.3,
+     "in_skill": "lie",
+     "height": 0.336,
+     "speed": -0.26,
+     "roll": -0.58,
+     "pitch": -0.74,
+     "end_height": 0.426,
+     "end_up": 1.0,
+     "end_pitch": -0.09
+    },
+    {
+     "speed_at_switch": 0.0,
+     "min_height": 0.185,
+     "min_up": 0.48,
+     "fell_after": 1.4,
+     "in_skill": "lie",
+     "height": 0.351,
+     "speed": -0.25,
+     "roll": -0.54,
+     "pitch": -0.78,
+     "end_height": 0.423,
+     "end_up": 0.99,
+     "end_pitch": -0.11
+    },
+    {
+     "speed_at_switch": 0.01,
+     "min_height": 0.191,
+     "min_up": 0.5,
+     "fell_after": 1.34,
+     "in_skill": "lie",
+     "height": 0.341,
+     "speed": -0.3,
+     "roll": -0.56,
+     "pitch": -0.75,
+     "end_height": 0.422,
+     "end_up": 0.99,
+     "end_pitch": -0.11
+    },
+    {
+     "speed_at_switch": 0.0,
+     "min_height": 0.194,
+     "min_up": 0.49,
+     "fell_after": 1.36,
+     "in_skill": "lie",
+     "height": 0.343,
+     "speed": -0.32,
+     "roll": -0.57,
+     "pitch": -0.76,
+     "end_height": 0.425,
+     "end_up": 0.99,
+     "end_pitch": -0.1
+    }
+   ]
+  },
+  {
+   "switch": "lie->stand (posture)",
+   "ok": 4,
+   "tries": 4,
+   "rate": 1.0,
+   "not_reached": 6,
+   "failures": []
+  },
+  {
+   "switch": "walk->trot",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->canter",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "canter->trot",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->walk",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  }
+ ]
+}

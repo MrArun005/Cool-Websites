@@ -15,3 +15,7 @@ try 13: 120 steps, fell=True, planner {'calls': 964, 'chose_plain': 929, 'plain_
 try 14: 575 steps, fell=False, planner {'calls': 1059, 'chose_plain': 1021, 'plain_fell': 26, 'best_fell': 14}
 try 15: 119 steps, fell=True, planner {'calls': 1063, 'chose_plain': 1022, 'plain_fell': 30, 'best_fell': 18}
 try 16: 575 steps, fell=False, planner {'calls': 1158, 'chose_plain': 1116, 'plain_fell': 31, 'best_fell': 18}
+try 17: 575 steps, fell=False, planner {'calls': 1253, 'chose_plain': 1208, 'plain_fell': 31, 'best_fell': 18}
+try 18: 575 steps, fell=False, planner {'calls': 1348, 'chose_plain': 1299, 'plain_fell': 33, 'best_fell': 18}
+try 19: 575 steps, fell=False, planner {'calls': 1443, 'chose_plain': 1391, 'plain_fell': 36, 'best_fell': 18}
+saved 7209 planner samples, 0 anchor samples -> runs/research/rest_r0.npz

@@ -1,0 +1,13 @@
+try 0: 161 steps, fell=True, planner {'calls': 13, 'chose_plain': 5, 'plain_fell': 11, 'best_fell': 4}
+try 1: 113 steps, fell=True, planner {'calls': 16, 'chose_plain': 7, 'plain_fell': 14, 'best_fell': 7}
+try 2: 575 steps, fell=False, planner {'calls': 111, 'chose_plain': 99, 'plain_fell': 17, 'best_fell': 7}
+try 3: 120 steps, fell=True, planner {'calls': 115, 'chose_plain': 102, 'plain_fell': 21, 'best_fell': 11}
+try 4: 132 steps, fell=True, planner {'calls': 122, 'chose_plain': 102, 'plain_fell': 27, 'best_fell': 13}
+try 5: 120 steps, fell=True, planner {'calls': 126, 'chose_plain': 104, 'plain_fell': 31, 'best_fell': 15}
+try 6: 124 steps, fell=True, planner {'calls': 131, 'chose_plain': 106, 'plain_fell': 36, 'best_fell': 18}
+try 7: 114 steps, fell=True, planner {'calls': 134, 'chose_plain': 109, 'plain_fell': 39, 'best_fell': 21}
+try 8: 575 steps, fell=False, planner {'calls': 229, 'chose_plain': 203, 'plain_fell': 40, 'best_fell': 21}
+try 9: 155 steps, fell=True, planner {'calls': 240, 'chose_plain': 205, 'plain_fell': 50, 'best_fell': 25}
+try 10: 135 steps, fell=True, planner {'calls': 247, 'chose_plain': 208, 'plain_fell': 55, 'best_fell': 26}
+try 11: 115 steps, fell=True, planner {'calls': 250, 'chose_plain': 208, 'plain_fell': 58, 'best_fell': 29}
+saved 1239 planner samples, 0 anchor samples -> runs/research/rest_r1_32000.npz

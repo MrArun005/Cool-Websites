@@ -1,0 +1,7 @@
+try 0: 575 steps, fell=False, planner {'calls': 95, 'chose_plain': 95, 'plain_fell': 0, 'best_fell': 0}
+try 1: 575 steps, fell=False, planner {'calls': 190, 'chose_plain': 189, 'plain_fell': 0, 'best_fell': 0}
+try 2: 575 steps, fell=False, planner {'calls': 285, 'chose_plain': 284, 'plain_fell': 0, 'best_fell': 0}
+try 3: 117 steps, fell=True, planner {'calls': 289, 'chose_plain': 284, 'plain_fell': 4, 'best_fell': 3}
+try 4: 575 steps, fell=False, planner {'calls': 384, 'chose_plain': 376, 'plain_fell': 6, 'best_fell': 3}
+try 5: 575 steps, fell=False, planner {'calls': 479, 'chose_plain': 468, 'plain_fell': 9, 'best_fell': 4}
+try 6: 575 steps, fell=False, planner {'calls': 574, 'chose_plain': 560, 'plain_fell': 11, 'best_fell': 4}
