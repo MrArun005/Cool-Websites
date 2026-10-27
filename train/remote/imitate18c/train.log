@@ -477,3 +477,34 @@ update at 20938336: reward/step 0.698, try length 235 steps (100 tries), 2162 st
 update at 20954720: reward/step 0.695, try length 240 steps (100 tries), 2159 steps/s
 update at 20971104: reward/step 0.690, try length 239 steps (100 tries), 2156 steps/s
 update at 20987488: reward/step 0.677, try length 228 steps (100 tries), 2153 steps/s
+checkpoint 21000000 ready: {'track_walk': 0.896, 'fall_walk': 0.0, 'speed_walk': 0.85, 'track_trot': 0.892, 'fall_trot': 0.0, 'speed_trot': 0.87, 'track_canter': 0.588, 'fall_canter': 0.0, 'speed_canter': 0.48, 'track_turn_left': 0.875, 'fall_turn_left': 0.0, 'speed_turn_left': 0.24, 'track_turn_right': 0.854, 'fall_turn_right': 0.0, 'speed_turn_right': 0.28} (mean tracking 0.821, fall rate 0.00, score 0.454)
+new best at 21000000: score 0.454
+update at 21003872: reward/step 0.721, try length 234 steps (100 tries), 2147 steps/s
+update at 21020256: reward/step 0.710, try length 240 steps (100 tries), 2145 steps/s
+update at 21036640: reward/step 0.716, try length 238 steps (100 tries), 2142 steps/s
+update at 21053024: reward/step 0.700, try length 227 steps (100 tries), 2139 steps/s
+update at 21069408: reward/step 0.695, try length 233 steps (100 tries), 2136 steps/s
+update at 21085792: reward/step 0.706, try length 238 steps (100 tries), 2133 steps/s
+update at 21102176: reward/step 0.677, try length 232 steps (100 tries), 2131 steps/s
+update at 21118560: reward/step 0.686, try length 237 steps (100 tries), 2129 steps/s
+update at 21134944: reward/step 0.687, try length 238 steps (100 tries), 2126 steps/s
+update at 21151328: reward/step 0.687, try length 239 steps (100 tries), 2124 steps/s
+update at 21167712: reward/step 0.683, try length 237 steps (100 tries), 2121 steps/s
+update at 21184096: reward/step 0.718, try length 242 steps (100 tries), 2118 steps/s
+update at 21200480: reward/step 0.723, try length 243 steps (100 tries), 2116 steps/s
+update at 21216864: reward/step 0.732, try length 239 steps (100 tries), 2113 steps/s
+update at 21233248: reward/step 0.715, try length 240 steps (100 tries), 2110 steps/s
+update at 21249632: reward/step 0.712, try length 241 steps (100 tries), 2108 steps/s
+update at 21266016: reward/step 0.689, try length 238 steps (100 tries), 2105 steps/s
+update at 21282400: reward/step 0.706, try length 236 steps (100 tries), 2102 steps/s
+update at 21298784: reward/step 0.683, try length 223 steps (100 tries), 2100 steps/s
+update at 21315168: reward/step 0.676, try length 213 steps (100 tries), 2097 steps/s
+update at 21331552: reward/step 0.677, try length 228 steps (100 tries), 2095 steps/s
+update at 21347936: reward/step 0.703, try length 238 steps (100 tries), 2092 steps/s
+update at 21364320: reward/step 0.703, try length 237 steps (100 tries), 2090 steps/s
+update at 21380704: reward/step 0.682, try length 235 steps (100 tries), 2087 steps/s
+update at 21397088: reward/step 0.667, try length 232 steps (100 tries), 2085 steps/s
+update at 21413472: reward/step 0.662, try length 219 steps (100 tries), 2082 steps/s
+update at 21429856: reward/step 0.674, try length 226 steps (100 tries), 2080 steps/s
+update at 21446240: reward/step 0.698, try length 225 steps (100 tries), 2077 steps/s
+update at 21462624: reward/step 0.710, try length 237 steps (100 tries), 2075 steps/s
