@@ -1,0 +1,4 @@
+*.npz
+results/student*/
+*.zip
+*.pkl

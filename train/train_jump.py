@@ -53,12 +53,16 @@ def widen(src, out):
 class Examiner(BaseCallback):
     """Every `every` steps: save a checkpoint, take the exam, keep the best."""
 
-    def __init__(self, out, every, heights=(0.15, 0.20, 0.25, 0.30)):
+    def __init__(self, out, every, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None):
         super().__init__()
         self.out, self.every, self.next, self.best, self.heights = out, every, every, -1.0, heights
+        self.dist, self.max_steps, self.speed = dist, max_steps, speed
 
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
         self.next = (self.num_timesteps // self.every + 1) * self.every
+        best = self.out / "best" / "best.json"
+        if best.exists():   # a resumed run keeps its best brain (run 16i's reset to 0 at 44.5M and overwrote it)
+            self.best = json.loads(best.read_text()).get("score", self.best)
 
     def _on_step(self):
         if self.num_timesteps < self.next:
@@ -69,8 +73,10 @@ class Examiner(BaseCallback):
         n = self.num_timesteps
         self.model.save(ck / f"policy_{n}_steps.zip")
         self.training_env.save(str(ck / f"policy_vecnormalize_{n}_steps.pkl"))
-        result = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), heights=self.heights)
-        score = sum(result.values()) / len(result)
+        result = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), heights=self.heights,
+                      dist=self.dist, max_steps=self.max_steps, speed=self.speed)
+        fair = [v for k, v in result.items() if k.startswith("jump_")]   # the best brain is picked on the fair score
+        score = sum(fair) / len(fair)
         levels = self.training_env.get_attr("bar_level")
         print(f"checkpoint {n} ready: {result} (practice bars now {100 * sum(levels) / len(levels):.0f} cm)", flush=True)
         if result.get("jump_15", 1) == 0 and self.best > 0.3:   # collapsed (run 15c at 7M): say so loudly
@@ -97,6 +103,11 @@ def main():
     ap.add_argument("--n-steps", type=int, default=512, help="steps per env per update (x envs = samples per update)")
     ap.add_argument("--real", action="store_true", help="the real hurdle (hurdle.py) and heading inputs: run 16 on")
     ap.add_argument("--widen-from", help="a 49-input jump brain folder to start from (with --real)")
+    ap.add_argument("--approach", type=float, nargs=2, default=[0.45, 0.65], help="bar distance at the start (m), run 16i: 1.5 3.0")
+    ap.add_argument("--max-steps", type=int, default=100, help="steps per try (50 per second); a run-up needs ~200")
+    ap.add_argument("--approach-speed", type=float, default=0.0, help="half the tries start running at the bar, 1 m/s up to this (run 16i: 3)")
+    ap.add_argument("--exam-speed", type=float, help="exam: arrive at the bar at this speed (m/s), e.g. 2.0 as from a trot or canter")
+    ap.add_argument("--exam-dist", type=float, default=0.55, help="bar distance in the exam (m), run 16i: 2.0")
     ap.add_argument("--exam-heights", type=float, nargs="+", default=[0.15, 0.20, 0.25, 0.30],
                     help="bar heights (m) of the exam, e.g. 0.25 0.30 0.40 0.50 for a brain that clears 30 cm")
     ap.add_argument("--bar-start", type=float, help="the coach's starting bar height (m), e.g. 0.20 for a skilled brain")
@@ -104,7 +115,8 @@ def main():
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
-    venv = make_vec_env(JumpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(real=args.real))
+    venv = make_vec_env(JumpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(real=args.real, approach=tuple(args.approach), max_steps=args.max_steps,
+                                                                                           approach_speed=args.approach_speed))
     if args.widen_from and not args.resume:
         args.resume = str(widen(args.widen_from, out / "widened"))
     if args.resume:
@@ -123,7 +135,8 @@ def main():
                                        log_std_init=-0.5),
                     device="cpu", verbose=0)
     start = time.time()
-    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 500_000, tuple(args.exam_heights)),
+    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 500_000, tuple(args.exam_heights), args.exam_dist, args.max_steps,
+                                                                                          args.exam_speed),
                 reset_num_timesteps=not args.resume, progress_bar=False)
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))

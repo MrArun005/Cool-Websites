@@ -1,0 +1,19 @@
+{
+  "name": "bolt-mastermind-dagger",
+  "workdir": "..",
+  "env": {"MUJOCO_GL": "osmesa", "OMP_NUM_THREADS": "1", "IMITATE18E": "runs/mastermind/imitate18e"},
+  "check_every": 60,
+  "jobs": [
+    {
+      "name": "dagger",
+      "cmd": ["python", "-u", "mastermind/dagger.py", "--rounds", "20", "--steps0", "1000000", "--steps", "500000",
+              "--workers", "16", "--epochs0", "40", "--epochs", "10", "--hidden", "1024,512,256",
+              "--out", "runs/mastermind/cloud"],
+      "resume_cmd": ["python", "-u", "mastermind/dagger.py", "--rounds", "20", "--steps0", "1000000", "--steps", "500000",
+              "--workers", "16", "--epochs0", "40", "--epochs", "10", "--hidden", "1024,512,256",
+              "--out", "runs/mastermind/cloud", "--resume"],
+      "log": "runs/mastermind/cloud/dagger.log",
+      "done_when": {"exit_code": 0, "log_contains": "^round 19: trained"}
+    }
+  ]
+}

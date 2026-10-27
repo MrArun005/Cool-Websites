@@ -77,7 +77,8 @@ export function propQuat(p) {
 export class Bolt {
   constructor(mj, bundle) {
     this.mj = mj; this.c = bundle.constants; this.baseXml = bundle.xml;
-    this.brains = { posture: new Brain(bundle.brains.posture), walk: new Brain(bundle.brains.walk) };
+    this.brains = {};   // a bundle may bring only some brains (imitate_test.mjs: none, the imitation brain is separate)
+    for (const k of ["posture", "walk"]) if (bundle.brains[k]) this.brains[k] = new Brain(bundle.brains[k]);
     if (bundle.brains.jump) this.brains.jump = new Brain(bundle.brains.jump);   // jump_env.py: a real jump
     if (bundle.brains.getup) this.brains.getup = new Brain(bundle.brains.getup);   // getup_env.py: up after a fall
     this.build("");

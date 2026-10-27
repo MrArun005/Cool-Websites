@@ -1,0 +1,68 @@
+{
+  "name": "bolt-run18d-getup-like-a-dog",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train_imitate.py",
+        "--name",
+        "imitate18d",
+        "--steps",
+        "40000000",
+        "--clips",
+        "walk",
+        "trot",
+        "pace",
+        "canter",
+        "turn_left",
+        "turn_right",
+        "sit",
+        "lie",
+        "getup",
+        "getup",
+        "--exam-every",
+        "500000",
+        "--resume",
+        "remote/imitate18d_start/policy_14000000_steps.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train_imitate.py",
+        "--name",
+        "imitate18d",
+        "--steps",
+        "40000000",
+        "--clips",
+        "walk",
+        "trot",
+        "pace",
+        "canter",
+        "turn_left",
+        "turn_right",
+        "sit",
+        "lie",
+        "getup",
+        "getup",
+        "--exam-every",
+        "500000",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/imitate18d/checkpoints/policy_*_steps.zip",
+      "log": "runs/imitate18d/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/imitate18d/policy.zip",
+        "log_contains": "^done:"
+      }
+    }
+  ]
+}

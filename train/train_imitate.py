@@ -22,7 +22,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
-from imitate_env import DEFAULT_CLIPS, ImitateEnv, ImitatePolicy, exam, score
+from imitate_env import ALL_CLIPS, DEFAULT_CLIPS, ImitateEnv, ImitatePolicy, exam, score
 
 
 class Examiner(BaseCallback):
@@ -36,6 +36,9 @@ class Examiner(BaseCallback):
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
         self.next = (self.num_timesteps // self.every + 1) * self.every
         self.t0 = time.time()
+        best = self.out / "best" / "best.json"
+        if best.exists():   # a resumed run keeps its best brain instead of overwriting it with the next exam
+            self.best = json.loads(best.read_text()).get("score", self.best)
 
     def _on_rollout_end(self):
         eps = list(self.model.ep_info_buffer)
@@ -79,7 +82,11 @@ def main():
     ap.add_argument("--envs", type=int, default=8)
     ap.add_argument("--resume")
     ap.add_argument("--clips", nargs="*", default=DEFAULT_CLIPS)
+    ap.add_argument("--switch-rate", type=float, default=0.0, help="chance per second of switching clip mid-try (run 18e: 0.3)")
+    ap.add_argument("--slots", type=int, default=len(ALL_CLIPS), help="clip one-hot size: 8 for runs begun before the getup clip")
     ap.add_argument("--exam-every", type=int, default=1_000_000)
+    ap.add_argument("--lr", type=float, help="on --resume: a new learning rate (fine-tune, e.g. 1e-4; default keeps the saved 3e-4)")
+    ap.add_argument("--target-kl", type=float, default=0.03)
     ap.add_argument("--threads", type=int, default=2, help="torch threads")
     ap.add_argument("--root-vel-weight", type=float, help="reward weight of body velocity tracking (default 0.1, "
                     "DeepMimic); raise it if the exam's speed_ stays low while tracking is good")
@@ -88,11 +95,11 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(args.threads)
     venv = make_vec_env(ImitateEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(
-        clips=args.clips, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None))
+        clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None))
     if args.resume:
         ck = Path(args.resume)
         venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)
-        model = PPO.load(ck, env=venv, device="cpu")
+        model = PPO.load(ck, env=venv, device="cpu", custom_objects=dict(learning_rate=args.lr, target_kl=args.target_kl) if args.lr else None)
         print(f"resuming from {ck} at {model.num_timesteps:,} steps", flush=True)
     else:
         venv = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.95)

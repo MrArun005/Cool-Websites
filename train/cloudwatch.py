@@ -25,11 +25,6 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parent.parent
 RUNS = {
-    "jump16f": dict(branch="claude/train-jump16e", label="Run 16f: hurdle jump (real A1 motors)", where="cloud machine 1",
-                    kinds=[["j15", "15 cm bar"], ["j20", "20 cm bar"], ["j25", "25 cm bar"], ["j30", "30 cm bar"]],
-                    measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
-                                 lowText="none", highText="all clean"),
-                    words=["clean jump", "not clean"]),
     "jump16g": dict(branch="claude/train-jump16e", label="Run 16g: higher jumps, 30-50 cm (real A1 motors)", where="cloud machine 1",
                     kinds=[["j25", "25 cm bar"], ["j30", "30 cm bar"], ["j40", "40 cm bar"], ["j50", "50 cm bar"]],
                     measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
@@ -40,37 +35,32 @@ RUNS = {
                     measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
                                  lowText="none", highText="all clean"),
                     words=["clean jump", "not clean"]),
-    "bolt19": dict(branch="claude/train-walk19", label="Run 19: walking (real hip range)", where="cloud machine 2",
-                   kinds=[["walk", "Walk 0.4 m/s"], ["run", "Run 1 m/s"], ["turn", "Turn"], ["sharp", "Sharp turn"]],
-                   measure=dict(label="Speed kept (share of the asked speed; turns: of the asked turn rate)", lo=0, hi=1.2, unit="%",
-                                lowText="stopped", highText="asked speed"),
-                   words=["kept going", "fell"]),
-    "run20": dict(branch="claude/train-run20", label="Run 20: fast running (like Mini Cheetah)", where="cloud machine 4",
-                  kinds=[["v1", "1 m/s"], ["v2", "2 m/s"], ["v3", "3 m/s"], ["v4", "4 m/s"], ["w3", "Spin 3 rad/s"]],
-                  measure=dict(label="Speed kept (share of the asked speed or turn rate)", lo=0, hi=1.2, unit="%",
-                               lowText="stopped", highText="asked speed"),
-                  words=["kept going", "fell"]),
-    "run22": dict(branch="claude/train-run21", label="Run 22: running like a dog (gallop style)", where="cloud machine 5",
-                  kinds=[["v1", "1 m/s (trot)"], ["v2", "2 m/s"], ["v3", "3 m/s (gallop)"], ["v4", "4 m/s"], ["w3", "Spin 3 rad/s"]],
-                  measure=dict(label="Speed or turn rate kept (share of the asked)", lo=0, hi=1.2, unit="%",
-                               lowText="stopped", highText="as asked"),
-                  words=["kept going", "fell"]),
-    "run22b": dict(branch="claude/train-run22b", label="Run 22b: running like a dog, from scratch", where="cloud machine 6",
-                  kinds=[["v1", "1 m/s (trot)"], ["v2", "2 m/s"], ["v3", "3 m/s (gallop)"], ["v4", "4 m/s"], ["w3", "Spin 3 rad/s"]],
-                  measure=dict(label="Speed or turn rate kept (share of the asked)", lo=0, hi=1.2, unit="%",
-                               lowText="stopped", highText="as asked"),
-                  words=["kept going", "fell"]),
-    "imitate18": dict(branch="local", label="Run 18: moving like a real dog", where="this machine (from 5M; cloud machine 3 before)",
-                      kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"]],
-                      measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
-                                   lowText="not at all", highText="exactly"),
-                      words=["copied", "fell"]),
-    "imitate18b": dict(branch="local", label="Run 18b: moving like a real dog, with the canter (dog running)", where="this machine (from run 18 at 9M)",
+    "jump16i": dict(branch="claude/train-jump16e", label="Run 16i: high jumps with a run-up (40-70 cm)", where="cloud machine 1",
+                    kinds=[["j40", "40 cm bar"], ["j50", "50 cm bar"], ["j60", "60 cm bar"], ["j70", "70 cm bar"]],
+                    measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
+                                 lowText="none", highText="all clean"),
+                    words=["clean jump", "not clean"]),
+    "imitate18b": dict(branch="claude/train-run20", label="Run 18b: moving like a real dog, with the canter (dog running)", where="cloud machine 4 (moved at 18.5M)",
                       kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["canter", "Canter (run)"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"]],
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
                                    lowText="not at all", highText="exactly"),
                       words=["copied", "fell"]),
+    "imitate18d": dict(branch="claude/train-imitate18d", label="Run 18d: run 18b + getting up like a dog", where="cloud machine 7 (from run 18b at 14M)",
+                      kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["canter", "Canter (run)"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"], ["getup", "Get up"]],
+                      measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
+                                   lowText="not at all", highText="exactly"),
+                      words=["copied", "fell"]),
+    "imitate18e": dict(branch="claude/train-walk19", label="Run 18e: switching between motions like a dog", where="cloud machine 2 (from run 18b at 15.5M)",
+                      kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["canter", "Canter (run)"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"], ["getup", "Get up"]],
+                      measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
+                                   lowText="not at all", highText="exactly"),
+                      words=["copied", "fell"]),
     "imitate18c": dict(branch="claude/train-run22b", label="Run 18c: running like a real dog (walk, trot, canter)", where="cloud machine 6 (from run 18b at 13.5M)",
+                      kinds=[["walk", "Walk"], ["trot", "Trot"], ["canter", "Canter (run)"], ["turn_left", "Turn left"], ["turn_right", "Turn right"]],
+                      measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
+                                   lowText="not at all", highText="exactly"),
+                      words=["copied", "fell"]),
+    "imitate18f": dict(branch="claude/train-run22b", label="Run 18f: canter fine-tune (gentler learning, from 18c's best)", where="cloud machine 6 (from run 18c at 29.5M)",
                       kinds=[["walk", "Walk"], ["trot", "Trot"], ["canter", "Canter (run)"], ["turn_left", "Turn left"], ["turn_right", "Turn right"]],
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
                                    lowText="not at all", highText="exactly"),
@@ -125,15 +115,16 @@ def quat(xmat):
 
 
 # ---------- recording ----------
-def record_jump(d, exam, heights=(0.15, 0.20, 0.25, 0.30)):
+def record_jump(d, exam, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, steps=150, speed=None):
     from jump_env import JumpEnv, JumpPolicy
     p = JumpPolicy(d)
-    env = JumpEnv(randomize=False, real=True, max_steps=150)
+    env = JumpEnv(randomize=False, real=True, max_steps=steps)
     m = env.model
     hurdle_body = m.body("hurdle0").id
     rec, prog = {}, {}
     for k, h in ((f"j{round(h * 100)}", h) for h in heights):
-        env.exam_bar, env.exam_askew = (0.55, h), (0.0, 0.0)
+        env.exam_bar, env.exam_askew = (dist, h), (0.0, 0.0)
+        env.exam_speed = speed
         obs, _ = env.reset(seed=4321)
         static = [[int(m.geom_type[g]), np.round(m.geom_size[g], 4).tolist(), np.round(env.data.geom_xpos[g], 4).tolist(),
                    np.round(quat(env.data.geom_xmat[g]), 4).tolist()] for g in range(m.ngeom) if m.geom_bodyid[g] == hurdle_body]
@@ -191,7 +182,11 @@ def record_walk(d):
 
 def record_imitate(d, run="imitate18"):
     from imitate_env import ImitateEnv, ImitatePolicy
-    p = ImitatePolicy(d)
+    if (Path(d) / "params.pkl").exists():   # a brain trained on the GPU (mjx_imitate.py)
+        from mjx_imitate import MjxImitatePolicy
+        p = MjxImitatePolicy(Path(d) / "params.pkl")
+    else:
+        p = ImitatePolicy(d)
     env = ImitateEnv(randomize=False, clips=[k for k, _ in RUNS[run]["kinds"]])   # every clip shown on the page, canter included
     rec, prog = {}, {}
     for k, _ in RUNS[run]["kinds"]:
@@ -279,7 +274,7 @@ def main():
                 tmp = Path(tmp)
                 fetch(run, n, folder, tmp)
                 try:
-                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_jump(tmp, ex, (0.30, 0.40, 0.50, 0.60)) if run == "jump16h" else record_walk(tmp) if run == "bolt19"
+                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_jump(tmp, ex, (0.30, 0.40, 0.50, 0.60)) if run == "jump16h" else record_jump(tmp, ex, (0.40, 0.50, 0.60, 0.70), 1.5, 220, 2.0) if run == "jump16i" else record_walk(tmp) if run == "bolt19"
                                   else record_run(tmp) if run in ("run20", "run21", "run22", "run22b") else record_imitate(tmp, run))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)
