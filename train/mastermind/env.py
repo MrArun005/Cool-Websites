@@ -23,7 +23,10 @@ Who teaches (the active "mode", from the command and the state, the same chains 
            jump. Teacher sets (which brain teaches what) are in teachers.SETS.
     stand  the posture brain's stand
     after a fall (skills.py's detector)  the command becomes "stand" and the teacher is the recovery chain:
-           self-righting until belly-down and calm, the posture brain's lie (tuck), its stand for 3 s
+           self-righting until belly-down and calm, the posture brain's lie (tuck), its stand for 3 s. With rec_cmd
+           (teacher set v3) the student's command input follows the phase: "stand" while self-righting, "lie" while
+           tucking (from calm belly-down until every joint is within 0.6 rad of LIE_POSE, at most 2 s), then
+           "stand" again, the command clock restarting at each change
 At a switch the new teacher labels from the very first step; its bookkeeping "previous action" is the action
 actually executed, expressed in its own units.
 
@@ -158,6 +161,8 @@ class Master:
             gait = self.mode[1] if self.mode[0] == "clip" and self.mode[1] in GAITS else "walk"
             self.b.place_hurdle(ahead, height)
             self.hurdle_on = True
+            w = self.w   # no flags left over from an earlier jump (a fall in the approach reads them)
+            w.touched = w.cleared = w.landed = w.dropped = False
             self.jump = dict(phase="approach", height=height, after=after or gait, steps=0, out=dict(
                 height=height, cleared=False, clean=False, landed=False, fell=False, fell_after=False, dropped=False,
                 touched=False))
@@ -349,12 +354,20 @@ class Master:
             standing = env._rotation()[2, 2] > 0.9 and np.linalg.norm(d.qvel[0:3]) < 0.2
             r["calm"] = r["calm"] + 1 if standing else 0
             if r["calm"] >= 15 or (r["n"] >= 200 and not self.patient):
-                r["phase"], r["n"] = "tuck", 0
-                self._to_posture("lie")
+                if self.ts.get("tuck", True):
+                    r["phase"], r["n"] = "tuck", 0
+                    self._to_posture("lie")
+                    if self.ts.get("rec_cmd"):   # the student is told the phase: "lie" while tucking
+                        self.cmd, self.cmd_t = "lie", 0
+                else:   # straight to the stand: no lie/stand labels on the same lying states
+                    r["phase"], r["n"] = "stand", 0
+                    self._to_posture("stand")
         elif r["phase"] == "tuck":
             if np.abs(d.qpos[7:19] - LIE_POSE).max() < 0.6 or (r["n"] >= 100 and not self.patient):
                 r["phase"], r["n"] = "stand", 0
                 self._to_posture("stand")
+                if self.ts.get("rec_cmd"):   # ... and "stand" (clock from 0) once tucked
+                    self.cmd, self.cmd_t = "stand", 0
         elif r["phase"] == "stand" and r["n"] >= 150:
             p = env.posture()
             ok = bool(p["up"] > 0.9 and p["height"] > 0.38)

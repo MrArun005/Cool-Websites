@@ -50,8 +50,11 @@ SETS = {
     # 1.1 m 80/70/53/20%, 1.0 m -/63/40/7%; a canter run-up (switch to canter for the approach) fell often (<25%);
     # gating the hand-over on the trot's phase gave no clear gain. land: research student r4 (I'm-possible) for
     # 2.6 s after landing (bridge + first 2 s of trot): landing -> trot 74/118 -> 94/118 on the same tries.
+    # rec_cmd: the recovery phase is shown to the student on its command input (env.py). The first v3 DAgger run without
+    # it lost the recovery in alternate rounds (stood up 0-85% of 12-20 shoves): lying belly-down, "keep tucking" and
+    # "stand up" labels fall on the same states, and the student stayed down.
     "v3": dict(dog="18e36", canter="18c", land="r4", land_s=2.6, jump=MODELS / "bolt-dog-jump-runup-16i-35.5M",
-               jump_from=1.1, jump_steps=200, jump_limit=200, bridge=0.6),
+               jump_from=1.1, jump_steps=200, jump_limit=200, bridge=0.6, rec_cmd=True),
 }
 
 

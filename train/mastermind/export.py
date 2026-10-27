@@ -44,16 +44,27 @@ def main():
                  layers=[dict(w=f32(sd[k + ".weight"].numpy()), b=f32(sd[k + ".bias"].numpy()),
                               out=int(sd[k + ".weight"].shape[0]), inp=int(sd[k + ".weight"].shape[1])) for k in lin],
                  source=str(a.student), activation="elu")
-    m = Master(seed=0, randomize=False)
+    teachers = ck.get("teachers") or "v2"
+    m = Master(seed=0, randomize=False, teachers=teachers)
+    extra = {}
+    if m.ts.get("rec_cmd"):
+        extra["recovery"] = ("after a fall (tipped past 60 degrees, or the body on the floor for 0.1 s on its feet) the "
+                             "command input is 'stand' while self-righting; once upright (body z up > 0.9) and still (speed < "
+                             "0.2 m/s) for 15 steps, or after 4 s, it becomes 'lie' (tuck) until every joint is within 0.6 rad of LIE_POSE "
+                             "or 2 s passed, then 'stand' for 3 s; the command clock restarts at each change")
+        from bolt_env import LIE_POSE
+        extra["lie_pose"] = np.round(LIE_POSE, 5).tolist()
+    extra["jump"] = dict(note="the hurdle inputs are on from the jump command until 1.5 m past the bar; "
+                         "the jump clock input (s/2) runs from %.1f m before the bar" % m.ts["jump_from"])
     assert sum(n for _, n in OBS_LAYOUT) == OBS
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "brain.json").write_text(json.dumps(brain, separators=(",", ":")))
     (out / "model.json").write_text(json.dumps(dict(
-        obs_size=OBS, obs_layout=OBS_LAYOUT, commands=COMMANDS, imitate_teacher=ck.get("imitate"), dagger_round=ck.get("round"),
+        obs_size=OBS, obs_layout=OBS_LAYOUT, commands=COMMANDS, imitate_teacher=ck.get("imitate") or m.ts["dog"], dagger_round=ck.get("round"),
         action="ctrl = clip(dog_stance + full_range * output, lo, hi)  (joint position targets, rad)",
         dog_stance=np.round(DOG, 5).tolist(), full_range=np.round(m.full, 5).tolist(), lo=np.round(m.lo, 5).tolist(),
-        hi=np.round(m.hi, 5).tolist(), control_hz=50), indent=1))
+        hi=np.round(m.hi, 5).tolist(), control_hz=50, teachers=teachers, **extra), indent=1))
     print(f"wrote {out}/brain.json and model.json")
 
 
