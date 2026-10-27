@@ -120,13 +120,15 @@ export function courseProps(course, w) {
 // A new course in the simulator: its solid objects built in, Bolt at the start, the hurdles in place.
 export function setupCourse(bolt, course, start) {
   bolt.reset(start);
-  bolt.setProps(courseProps(course, bolt.where()));
+  const w = bolt.where();
+  course.origin = [w.x, w.y]; course.yaw0 = w.yaw;
+  bolt.setProps(courseProps(course, w));
   bolt.reset(start);
   placeHurdles(bolt, course);
 }
+// every hurdle in place, its bar in the cups (after bolt.reset(), which parks them)
 export function placeHurdles(bolt, course) {
-  const w = bolt.where(), c = Math.cos(w.yaw), s = Math.sin(w.yaw);
-  course.origin = [w.x, w.y]; course.yaw0 = w.yaw;
+  const [ox, oy] = course.origin, yaw = course.yaw0, c = Math.cos(yaw), s = Math.sin(yaw), w = { x: ox, y: oy, yaw };
   for (let k = 0; k < bolt.real.length; k++) bolt.placeReal(k, null, 0, 0);
   for (const o of course.obstacles) if (o.kind === "hurdle") bolt.placeReal(o.slot, [w.x + c * o.x - s * o.y, w.y + s * o.x + c * o.y], w.yaw + o.hd, o.h);
 }
@@ -395,7 +397,11 @@ export class Run {
   rescue() {
     const q = this.local(), b = this.body;
     const p = this.course.at(this.lineS);
+    const bars = this.course.obstacles.filter((o) => o.kind === "hurdle").map((o) => this.bolt.barPose(o.slot)[0].slice());
     this.bolt.teleport(this.start, this.world(p.x, p.y), this.course.yaw0 + p.h);
+    placeHurdles(this.bolt, this.course);   // the teleport parked them; knocked bars stay knocked for the judge
+    this.course.obstacles.filter((o) => o.kind === "hurdle").forEach((o, i) => { const H = this.bolt.real[o.slot]; if (Math.hypot(bars[i][0] - H.rest[0], bars[i][1] - H.rest[1], bars[i][2] - H.rest[2]) > 0.03) { this.bolt.data.qpos.set(bars[i], H.q); } });
+    this.bolt.mj.mj_forward(this.bolt.model, this.bolt.data);
     if (this.clock !== null) this.clock += 10;
     b.reset(); b.stuck = false; this.cmd = "stand"; this.say("The handler helped Bolt up: +10 s", "bad");
     void q;
@@ -470,7 +476,8 @@ export class Run {
 // right command and starts again once the judge says go.
 export class Bot {
   // rand: a random number generator (game.js rng) for the handler's reaction times
-  constructor(run, { canter = false, rand = Math.random } = {}) { this.run = run; this.canter = canter; this.rand = rand; this.wait = 0.2 + rand(); }
+  // style: "walk" (jumps from a walk), "trot" (trots the last 4 m into each jump), "canter" (canters the straights)
+  constructor(run, { style = "walk", rand = Math.random } = {}) { this.run = run; this.style = style; this.canter = style === "canter"; this.rand = rand; this.wait = 0.2 + rand(); }
   step() {
     const r = this.run, C = r.course, o = r.obstacle, s = r.lineS, b = r.body;
     if (r.over || b.busy) return;
@@ -484,13 +491,15 @@ export class Bot {
       if (along > -4) want = "walk";
       if (along > -0.45 && along < 0.3 && Math.abs(side) < 0.4) want = o.pose;
     }
-    if (o && o.kind === "hurdle") {   // line up at a walk first (the jump brain wants Bolt square to the bar), then trot in
+    if (o && o.kind === "hurdle") {
+      // walk in and jump from the walk: the walk can steer (turn clips, the run 12 brain), the trot cannot
+      // (each trot starts with a 0.1-0.2 rad swerve, and turning out of a trot fell 5-7 times in 12), and the jump
+      // brain wants Bolt square to the bar; or (style "trot") line up at a walk, then trot the last 4 m
       const [along, side] = r.rel(o, o.hd), askew = Math.abs(wrap(r.local().h - o.hd));
-      if (along > -8 && along < -1.2) {
-        if (this.committed !== o.n) {
-          if (Math.abs(side) < 0.2 && askew < 0.12) this.committed = o.n; else want = "walk";
-        } else if (Math.abs(side) > 0.5) { this.committed = null; want = "walk"; }
-        if (this.canter && along > -6 && want !== "walk") want = "trot";
+      if (along > -8 && along < -0.5) {
+        if (this.style !== "trot" || along < -4.5) want = "walk";
+        else if (this.committed !== o.n) { if (Math.abs(side) < 0.15 && askew < 0.08) this.committed = o.n; else want = "walk"; }
+        else if (Math.abs(side) > 0.5) want = "walk";
       }
     }
     if (want !== r.cmd) { r.command(want); this.wait = 0.2 + 0.3 * this.rand(); }
