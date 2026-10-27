@@ -10,9 +10,10 @@ termination (15 cm off the reference height, 0.8 rad tilt, or the body on the fl
 A1 motor model every physics substep, physics randomization (motor gain, body mass, floor friction), sensor noise,
 and clip switching mid-try (switch_rate 0.3/s, NEXT rules, a gait joins the new gait at its closest-pose frame).
 Clips are drawn canter 3x, the others 1x. Differences, for speed: the robot collides with the floor, and its thighs
-with the torso (the only self-contacts the CPU env ever has), but nothing else with itself, and the physics is float32. Each try restarts from a fresh random clip and moment when it ends (not
-from the env's first state as Brax's AutoResetWrapper would), and the end of a clip or of the 5 s on a loop is a
-time-out (truncation), not a failure, as in the CPU env.
+with the torso (the only self-contacts the CPU env ever has), but nothing else with itself, and the physics is
+float32 (test_mjx_imitate.py measures the gap). Each try restarts from a fresh random clip and moment when it ends
+(not from the env's first state as Brax's AutoResetWrapper would), and the end of a clip or of the 5 s on a loop is
+a time-out (truncation), not a failure, as in the CPU env.
 
 The brain: Brax PPO with SB3's network (ELU MLP, plain Gaussian with a learned log std, inputs normalized and clipped
 to +-10), so the CPU brain's weights load unchanged (warm), and a trained brain exports back to numpy
@@ -275,8 +276,12 @@ class MjxImitate:
                      root=jp.exp(-20 * e_h ** 2 - 10 * tilt ** 2), root_vel=jp.exp(-2 * e_v - 0.2 * e_w))
         return terms, dict(height_err=e_h, tilt=tilt)
 
+    @staticmethod
+    def contact(d):
+        return d._impl.contact if hasattr(d, "_impl") and hasattr(d._impl, "contact") else d.contact
+
     def body_on_floor(self, d):
-        c = d.contact
+        c = self.contact(d)
         other = jp.where(c.geom[:, 0] == self.floor, c.geom[:, 1], c.geom[:, 0])
         with_floor = (c.dist < 0.0) & ((c.geom[:, 0] == self.floor) | (c.geom[:, 1] == self.floor))
         return jp.any(with_floor & self.body_mask[other])
@@ -329,7 +334,7 @@ class MjxImitate:
         qvel = jp.concatenate([Rw @ self.ref(info, "v_body") * moving, self.ref(info, "w_body") * moving, self.ref(info, "joint_vel") * moving])
         d = mjx.make_data(mx).replace(qpos=qpos, qvel=qvel, ctrl=joints)
         d = mjx.forward(mx, d)
-        pen = jp.maximum(0.0, jp.max(-d.contact.dist))    # never start with a paw or the body in the floor
+        pen = jp.maximum(0.0, jp.max(-self.contact(d).dist))    # never start with a paw or the body in the floor
         d = d.replace(qpos=d.qpos.at[2].add(jp.where(pen > 0, pen + 0.002, 0.0)))
         return mjx.forward(mx, d)
 

@@ -176,7 +176,11 @@ def record_walk(d):
 
 def record_imitate(d, run="imitate18"):
     from imitate_env import ImitateEnv, ImitatePolicy
-    p = ImitatePolicy(d)
+    if (Path(d) / "params.pkl").exists():   # a brain trained on the GPU (mjx_imitate.py)
+        from mjx_imitate import MjxImitatePolicy
+        p = MjxImitatePolicy(Path(d) / "params.pkl")
+    else:
+        p = ImitatePolicy(d)
     env = ImitateEnv(randomize=False, clips=[k for k, _ in RUNS[run]["kinds"]])   # every clip shown on the page, canter included
     rec, prog = {}, {}
     for k, _ in RUNS[run]["kinds"]:
