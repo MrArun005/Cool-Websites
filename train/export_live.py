@@ -26,7 +26,7 @@ import torch
 from stable_baselines3 import PPO
 
 import hurdle
-from bolt_env import ACTION_SCALE, HURDLE_HALF, HURDLE_MARGIN, HURDLE_XML, HURDLE_ZONE, MODEL, PAW_GAIT, STAND_POSE, STANCES, BoltEnv
+from bolt_env import ACTION_SCALE, LIE_POSE, HURDLE_HALF, HURDLE_MARGIN, HURDLE_XML, HURDLE_ZONE, MODEL, PAW_GAIT, STAND_POSE, STANCES, BoltEnv
 from evaluate import Policy, reset_standing
 from record3d import describe
 from reference_gait import HIP_X, HIP_Y
@@ -179,6 +179,11 @@ def main():
     if args.getup:   # getting up after a fall by itself: its own brain (getup_env.py), 4 s per try in training
         bundle["brains"]["getup"] = dict(brain(args.getup), source=Path(args.getup).name, goal=args.getup_goal)
         bundle["constants"]["getup_steps"] = 200
+        # its motor range per joint: the self-righting brain uses each joint's full range around the dog stance
+        # (GetUpEnv.scale), a stand brain ACTION_SCALE
+        from getup_env import GetUpEnv
+        bundle["constants"]["getup_scale"] = np.asarray(GetUpEnv(randomize=False, goal=args.getup_goal).scale, dtype=float).tolist()
+        bundle["constants"]["lie_pose"] = LIE_POSE.tolist()   # where the legs tuck before the posture brain stands
         ref["getup"] = getup_reference(args.getup, args.getup_goal)
     Path(args.out).write_text(json.dumps(bundle, separators=(",", ":")))
     Path(args.reference).write_text(json.dumps(ref, separators=(",", ":")))

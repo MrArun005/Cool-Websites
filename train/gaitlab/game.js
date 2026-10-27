@@ -180,36 +180,54 @@ export class Jumper {
 // Getting up after a fall, by itself, where it fell, the way real robot dogs recover (ANYmal: Lee, Hwangbo
 // & Hutter 2019): a small selector over skills. Fallen: the self-righting brain (getup_env.py, run 17c) rolls
 // Bolt onto its belly, legs tucked, until it lies still (righted: up > 0.9, body under 0.2 m/s, for 0.3 s;
-// at most 4 s, its training tries); then the posture brain's "stand" gets up from there (from the lying
-// pose 20/20) and holds it 1.5 s; toppled again (up < 0.7): another try. Not standing after 2 tries or 10 s:
+// at most 4 s, its training tries); then the legs tuck under the body (1-2 s, the posture brain's "lie"; the
+// brain leaves the legs anywhere, and standing from there rolled Bolt onto its back 20 times in 20), and the
+// posture brain's "stand" gets up (from the lying pose 20/20) and holds it 1.5 s; toppled again (up < 0.7):
+// another try. Not standing after 2 tries or 10 s:
 // failed, and the game falls back to a restart. A get-up brain trained to stand (goal "stand") hands over
 // once standing instead.
-// The brain practised from rest (each try began after 1 s lying still), so by default Bolt first lies still
-// until it has stopped rolling (at most 1.5 s); "now" hands over the moment it falls.
-export let GETUP_WAIT = "rest";
+// When the brain takes over: "now", the moment Bolt falls, or "rest", once it has stopped rolling (at most
+// 1.5 s; the brain practised from rest, each try began after 1 s lying still). Measured (17d 7M, 20 falls of
+// each kind): now 70 of 80 stood up, rest 63; after a shove while walking now 18/20, rest 11/20 (lying
+// still on the walk's last motor targets, it settles where rolling over is harder, and the wait uses up time).
+export let GETUP_WAIT = "now";
 export function setGetUpWait(w) { GETUP_WAIT = w; }
 export let GETUP_CARRY = false;   // the standing brain starts from the get-up brain's last action (else zeros)
 export function setGetUpCarry(c) { GETUP_CARRY = c; }
-export const GETUP = { right: 4, still: 0.3, stand: 1.5, tries: 2, limit: 10 };
+// How the legs tuck before standing: the posture brain's "lie" (17d 7M, 80 falls: 70 stood up), "motors"
+// (targets moved straight to the lying pose: 55, it tucked the legs while rolling and tipped), or "none".
+export let GETUP_TUCK = "lie";
+export function setGetUpTuck(t) { GETUP_TUCK = t; }
+export const GETUP = { right: 4, still: 0.3, tuck: 1.0, stand: 1.5, tries: 2, limit: 10 };
 export class GetUp {
   constructor(bolt) {
     this.bolt = bolt; this.stage = "rest"; this.t = 0; this.st = 0; this.tries = 0; this.done = false; this.failed = false; this.secs = null;
+    this.misses = [];   // how each failed try ended
     this.goal = (bolt.brains.getup && bolt.brains.getup.goal) || "selfright";
   }
   // the command for this step; then read done (standing after 1.5 s on the standing brain) or failed
   step(dt) {
     const b = this.bolt, v = b.data.qvel, rest = { command: "rest", turn: 0, speed: 0.2 }, stand = { command: "stand", turn: 0, speed: 0.2 };
     this.t += dt; this.st += dt;
-    const next = () => {   // another try, or give up
+    const next = (why) => {   // another try, or give up
+      this.misses.push(why);
       if (this.tries >= GETUP.tries) { this.failed = true; return rest; }
       this.stage = "rest"; this.st = 0; return rest;
     };
-    if (this.t > GETUP.limit) { this.failed = true; return rest; }
+    if (this.t > GETUP.limit) { this.failed = true; this.misses.push("10 s"); return rest; }
+    if (this.stage === "tuck") {
+      if (b.up() < 0.7) return next("toppled tucking");
+      // tucked: every joint within 0.6 rad of the lying pose (standing from half-tucked legs toppled it), at
+      // least GETUP.tuck s and at most twice that
+      const q = b.data.qpos, L = b.c.lie_pose, tucked = L.every((v, i) => Math.abs(q[7 + i] - v) < 0.6);
+      if (this.st < GETUP.tuck || (!tucked && this.st < 2 * GETUP.tuck)) return { command: GETUP_TUCK === "lie" ? "lie" : "tuck", turn: 0, speed: 0.2 };
+      this.stage = "stand"; this.st = 0; b.afterGetUp(GETUP_CARRY && GETUP_TUCK !== "lie");
+    }
     if (this.stage === "stand") {
-      if (b.up() < 0.7) return next();
+      if (b.up() < 0.7) return next("toppled standing");
       if (this.st >= GETUP.stand) {
         if (b.standing()) { this.done = true; this.secs = this.t; return stand; }
-        return next();
+        return next("not up after 1.5 s");
       }
       return stand;
     }
@@ -221,8 +239,15 @@ export class GetUp {
     // stage "right": the self-righting brain until belly down and still (or a stand brain until standing)
     const ok = this.goal === "stand" ? b.standing() : b.righted();
     this.held = ok ? this.held + dt : 0;
-    if (this.held >= (this.goal === "stand" ? dt : GETUP.still)) { b.afterGetUp(GETUP_CARRY); this.stage = "stand"; this.st = 0; return stand; }
-    if (this.st > GETUP.right) return next();
+    if (this.held >= (this.goal === "stand" ? dt : GETUP.still)) {
+      this.st = 0;
+      // already on its feet (it fell only part way, or rolled back up): stand straight away
+      if (this.goal === "stand" || GETUP_TUCK === "none" || b.standing()) { b.afterGetUp(GETUP_CARRY); this.stage = "stand"; return stand; }
+      this.stage = "tuck";
+      if (GETUP_TUCK === "lie") { b.afterGetUp(false); return { command: "lie", turn: 0, speed: 0.2 }; }
+      b.startTuck(); return { command: "tuck", turn: 0, speed: 0.2 };
+    }
+    if (this.st > GETUP.right) return next("not righted in 4 s");
     return { command: "getup", turn: 0, speed: 0.2 };
   }
 }

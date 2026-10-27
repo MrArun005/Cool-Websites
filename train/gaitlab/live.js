@@ -330,9 +330,9 @@ export class Bolt {
     return o;
   }
   // full-range motor control around the dog stance (JumpEnv.step, GetUpEnv.step): 1/50 s
-  fullStep(a) {
+  fullStep(a, scale = this.c.action_scale) {
     const { mj, model: m, data: d, c } = this;
-    d.ctrl.set(c.dog_pose.map((b, i) => clamp(b + c.action_scale[i] * a[i], this.lo[i], this.hi[i])));
+    d.ctrl.set(c.dog_pose.map((b, i) => clamp(b + scale[i] * a[i], this.lo[i], this.hi[i])));
     this.applyPush(this.dt);
     for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
   }
@@ -351,7 +351,7 @@ export class Bolt {
   getUpObs() { return this.bodyObs(this.getUpLast); }   // GetUpEnv._obs with randomize=False
   getUpStep(action) {
     const a = Array.from(action, (v) => clamp(v, -1, 1));
-    this.fullStep(a);
+    this.fullStep(a, this.c.getup_scale || this.c.action_scale);   // run 17d on: each joint's whole range
     this.gt += 1; this.getUpLast = Float64Array.from(a);
   }
   getUpTick() { this.getUpStep(this.brains.getup.act(this.getUpObs())); }
@@ -365,9 +365,18 @@ export class Bolt {
     this.applyPush(this.dt);
     for (let s = 0; s < c.frame_skip; s++) mj.mj_step(m, d);
   }
-  // hand the body from the get-up brain to the standing brain (its "stand" maps actions to motors the same
-  // way, dog stance + action_scale x action); carry: its last action carries over, else the stand starts
-  // from zeros
+  // Tuck the legs under the body (the lying pose), moving the motor targets there from where the joints are
+  // over 0.6 s, then holding: the self-righting brain ends belly down with its legs anywhere (17d 7M: front
+  // hips bent backwards, knees straight, hips out 0.9 rad), and the posture brain standing up from there
+  // rolled Bolt onto its back; from the tucked legs it stands up.
+  startTuck() { this.tt = 0; this.tuckFrom = Array.from(this.data.qpos.slice(7, 19)); }
+  tuckTick() {
+    const a = Math.min(1, ++this.tt / 30), L = this.c.lie_pose;
+    this.data.ctrl.set(this.tuckFrom.map((v, i) => clamp(v + a * (L[i] - v), this.lo[i], this.hi[i])));
+    this.restTick();
+  }
+  // hand the body from the get-up brain to the standing brain. The stand starts from zeros (from belly down
+  // 20/20 either way); carry: from the get-up brain's last action (same mapping only with action_scale)
   afterGetUp(carry = false) { this.lastAction = carry ? Float64Array.from(this.getUpLast) : new Float64Array(12); this.command = "stand"; }
   // the motors hold the dog stance (how every training jump started: 0.5 s of this, then the jump)
   holdTick() {
@@ -382,6 +391,7 @@ export class Bolt {
     if (cmd.command === "jump") return this.jumpTick();
     if (cmd.command === "getup") return this.getUpTick();
     if (cmd.command === "rest") return this.restTick();
+    if (cmd.command === "tuck") return this.tuckTick();
     this.setCommand(cmd.command);
     if (cmd.command === "walk") { this.setTurn(cmd.turn); this.setSpeed(cmd.speed); }
     this.tick();
