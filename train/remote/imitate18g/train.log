@@ -1,0 +1,4 @@
+resuming from remote/imitate18g_start/policy_30000000_steps.zip at 30,000,000 steps
+training on clips ['walk', 'trot', 'canter', 'canter', 'canter', 'turn_left', 'turn_right'], 8 envs, 16384 samples per update
+update at 30016384: reward/step 0.743, try length 295 steps (100 tries), 1776691 steps/s
+update at 30032768: reward/step 0.701, try length 326 steps (100 tries), 836323 steps/s
