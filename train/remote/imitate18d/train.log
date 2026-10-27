@@ -1368,3 +1368,7 @@ update at 35544960: reward/step 0.832, try length 209 steps (100 tries), 1675 st
 update at 35561344: reward/step 0.830, try length 204 steps (100 tries), 1675 steps/s
 update at 35577728: reward/step 0.835, try length 212 steps (100 tries), 1675 steps/s
 update at 35594112: reward/step 0.831, try length 216 steps (100 tries), 1675 steps/s
+resuming from /home/user/Cool-Websites/train/runs/imitate18d/checkpoints/policy_35500000_steps.zip at 35,500,000 steps
+training on clips ['walk', 'trot', 'pace', 'canter', 'turn_left', 'turn_right', 'sit', 'lie', 'getup', 'getup'], 8 envs, 16384 samples per update
+update at 35516384: reward/step 0.851, try length 203 steps (100 tries), 2622840 steps/s
+update at 35532768: reward/step 0.833, try length 206 steps (100 tries), 1333144 steps/s
