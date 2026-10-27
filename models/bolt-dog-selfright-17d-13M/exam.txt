@@ -1,0 +1,1 @@
+{'up_side': 1.0, 'secs_side': 0.7, 'up_back': 1.0, 'secs_back': 0.73, 'up_tipped': 1.0, 'secs_tipped': 0.77, 'up_standing': 1.0, 'secs_standing': 0.06}

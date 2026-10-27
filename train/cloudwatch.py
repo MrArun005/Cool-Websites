@@ -30,11 +30,21 @@ RUNS = {
                     measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
                                  lowText="none", highText="all clean"),
                     words=["clean jump", "not clean"]),
+    "jump16g": dict(branch="claude/train-jump16e", label="Run 16g: higher jumps, 30-50 cm (real A1 motors)", where="cloud machine 1",
+                    kinds=[["j25", "25 cm bar"], ["j30", "30 cm bar"], ["j40", "40 cm bar"], ["j50", "50 cm bar"]],
+                    measure=dict(label="Clean jumps in the exam (10 tries per bar height)", lo=0, hi=1, unit="%",
+                                 lowText="none", highText="all clean"),
+                    words=["clean jump", "not clean"]),
     "bolt19": dict(branch="claude/train-walk19", label="Run 19: walking (real hip range)", where="cloud machine 2",
                    kinds=[["walk", "Walk 0.4 m/s"], ["run", "Run 1 m/s"], ["turn", "Turn"], ["sharp", "Sharp turn"]],
                    measure=dict(label="Speed kept (share of the asked speed; turns: of the asked turn rate)", lo=0, hi=1.2, unit="%",
                                 lowText="stopped", highText="asked speed"),
                    words=["kept going", "fell"]),
+    "run20": dict(branch="claude/train-run20", label="Run 20: fast running (like Mini Cheetah)", where="cloud machine 4",
+                  kinds=[["v1", "1 m/s"], ["v2", "2 m/s"], ["v3", "3 m/s"], ["v4", "4 m/s"], ["w3", "Spin 3 rad/s"]],
+                  measure=dict(label="Speed kept (share of the asked speed or turn rate)", lo=0, hi=1.2, unit="%",
+                               lowText="stopped", highText="asked speed"),
+                  words=["kept going", "fell"]),
     "imitate18": dict(branch="claude/train-imitate18", label="Run 18: moving like a real dog", where="cloud machine 3",
                       kinds=[["walk", "Walk"], ["trot", "Trot"], ["pace", "Pace"], ["turn_left", "Turn"], ["sit", "Sit"], ["lie", "Lie down"]],
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
@@ -79,14 +89,14 @@ def quat(xmat):
 
 
 # ---------- recording ----------
-def record_jump(d, exam):
+def record_jump(d, exam, heights=(0.15, 0.20, 0.25, 0.30)):
     from jump_env import JumpEnv, JumpPolicy
     p = JumpPolicy(d)
     env = JumpEnv(randomize=False, real=True, max_steps=150)
     m = env.model
     hurdle_body = m.body("hurdle0").id
     rec, prog = {}, {}
-    for k, h in (("j15", 0.15), ("j20", 0.20), ("j25", 0.25), ("j30", 0.30)):
+    for k, h in ((f"j{round(h * 100)}", h) for h in heights):
         env.exam_bar, env.exam_askew = (0.55, h), (0.0, 0.0)
         obs, _ = env.reset(seed=4321)
         static = [[int(m.geom_type[g]), np.round(m.geom_size[g], 4).tolist(), np.round(env.data.geom_xpos[g], 4).tolist(),
@@ -169,6 +179,30 @@ def record_imitate(d):
     return rec, prog
 
 
+def record_run(d):
+    from run_env import RunEnv, RunPolicy
+    p = RunPolicy(d)
+    env = RunEnv(randomize=False, pushes=False, max_steps=250)
+    rec, prog = {}, {}
+    for k, cmd in (("v1", (1, 0, 0)), ("v2", (2, 0, 0)), ("v3", (3, 0, 0)), ("v4", (4, 0, 0)), ("w3", (0.5, 0, 3.0))):
+        env.exam_command = cmd
+        obs, _ = env.reset(seed=4321)
+        frames, got, fell = [], [], False
+        for t in range(250):
+            if t % 2 == 0:
+                frames.append(env.data.qpos[:19].copy())
+            obs, _, fell, _, info = env.step(p.act(obs))
+            if t >= 100:
+                got.append(info["w"] if k[0] == "w" else info["vx"])
+            if fell:
+                break
+        kept = 0.0 if fell or not got else float(np.mean(got)) / (cmd[2] if k[0] == "w" else cmd[0])
+        rec[k] = np.round(np.concatenate(frames), 4).tolist()
+        prog[k] = dict(best=round(float(np.clip(kept, -0.2, 1.2)), 3), stood=not fell,
+                       text="fell" if fell else (f"{np.mean(got):.2f} rad/s" if k[0] == "w" else f"{np.mean(got):.2f} m/s"))
+    return rec, prog
+
+
 def news(path, run, n, prog):
     if not path:
         return
@@ -208,7 +242,8 @@ def main():
                 tmp = Path(tmp)
                 fetch(run, n, folder, tmp)
                 try:
-                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_walk(tmp) if run == "bolt19" else record_imitate(tmp))
+                    rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_walk(tmp) if run == "bolt19"
+                                  else record_run(tmp) if run == "run20" else record_imitate(tmp))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)
                     continue
