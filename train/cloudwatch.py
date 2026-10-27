@@ -45,8 +45,8 @@ RUNS = {
                   measure=dict(label="Speed kept (share of the asked speed or turn rate)", lo=0, hi=1.2, unit="%",
                                lowText="stopped", highText="asked speed"),
                   words=["kept going", "fell"]),
-    "run21": dict(branch="claude/train-run21", label="Run 21: fast turning (fixed turn reward)", where="cloud machine 5",
-                  kinds=[["v3", "3 m/s"], ["v4", "4 m/s"], ["w3", "Spin 3 rad/s"]],
+    "run22": dict(branch="claude/train-run21", label="Run 22: running like a dog (gallop style)", where="cloud machine 5",
+                  kinds=[["v1", "1 m/s (trot)"], ["v2", "2 m/s"], ["v3", "3 m/s (gallop)"], ["v4", "4 m/s"], ["w3", "Spin 3 rad/s"]],
                   measure=dict(label="Speed or turn rate kept (share of the asked)", lo=0, hi=1.2, unit="%",
                                lowText="stopped", highText="as asked"),
                   words=["kept going", "fell"]),
@@ -265,7 +265,7 @@ def main():
                 fetch(run, n, folder, tmp)
                 try:
                     rec, prog = (record_jump(tmp, ex) if run == "jump16f" else record_jump(tmp, ex, (0.25, 0.30, 0.40, 0.50)) if run == "jump16g" else record_walk(tmp) if run == "bolt19"
-                                  else record_run(tmp) if run in ("run20", "run21") else record_imitate(tmp, run))
+                                  else record_run(tmp) if run in ("run20", "run21", "run22") else record_imitate(tmp, run))
                 except Exception as e:   # a half-pushed or unreadable checkpoint: try again next round
                     print(f"{run} {n}: could not record ({e})", flush=True)
                     continue
