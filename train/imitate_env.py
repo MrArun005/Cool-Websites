@@ -124,13 +124,14 @@ class Clip:
 class ImitateEnv(BoltEnv):
     OBS = 74
 
-    def __init__(self, randomize=True, seed=None, clips=None, residual=True):
+    def __init__(self, randomize=True, seed=None, clips=None, residual=True, weights=None):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
                          skills=["stand"])
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.clip_names = list(clips or DEFAULT_CLIPS)
         self.clips = {n: Clip(n) for n in self.clip_names}
         self.residual = residual
+        self.weights = dict(WEIGHTS, **(weights or {}))   # e.g. {"root_vel": 0.25} if it keeps poses but not pace
         self.exam_start = None        # (clip name, start time s): exams set it; training draws it
         self.body_geoms = {g for g in range(self.model.ngeom) if self.geom_leg[g] < 0 and g != self.floor}
         self.clip, self.tau0 = self.clips[self.clip_names[0]], 0.0
@@ -246,7 +247,7 @@ class ImitateEnv(BoltEnv):
         self.t += 1
         self.env_steps += 1
         terms, err = self.tracking()
-        reward = sum(WEIGHTS[k] * v for k, v in terms.items())
+        reward = sum(self.weights[k] * v for k, v in terms.items())
         self.last_action = a
         floor_ok = self.ref("height") < 0.3     # sitting and lying: the body may rest on the floor
         lost = abs(err["height_err"]) > 0.15 or err["tilt"] > 0.8

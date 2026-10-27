@@ -1,0 +1,15 @@
+{
+  "name": "bolt-learnwatch",
+  "workdir": "..",
+  "env": {"MUJOCO_GL": "osmesa"},
+  "check_every": 60,
+  "jobs": [
+    {
+      "name": "watch",
+      "cmd": ["python", "-u", "learnwatch.py", "--out", "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/learn/site/data/learning.json",
+              "--run", "getup17:Run 17 (stopped: learned to lie still)", "--run", "getup17b:Run 17b (fixed rewards)"],
+      "log": "runs/learnwatch.log",
+      "done_when": {"exit_code": 0, "log_contains": "^finished"}
+    }
+  ]
+}

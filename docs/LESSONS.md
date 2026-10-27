@@ -214,3 +214,10 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   objects then exposed what pictures hid: the judge measured "lying down" from the floor, not the 4 cm
   table; number posts stood on the dogs' approach lines; a blocked dog pushed on forever; and a rigid
   56 cm body needs a wider line (0.5 m swing) and more time through 12 poles 1 m apart.
+- **Validate a mocap reader against someone else's numbers.** Our BVH forward kinematics matched Peng's
+  published dog keypoints to 3e-6 m before any retargeting was trusted.
+- **Copy the animal's paw path, not its leg shape; where the body differs, use the robot's own pose.**
+  Paws relative to the hips but paw height absolute keeps planted paws on the floor; a lying dog's long
+  folded paws wedged Bolt's knees under its body, so sit and lie blend into Bolt's own measured fold.
+- **Imitation learns the poses before the pace.** At 300k steps it tracked the poses and fell 4% of the
+  time while covering only 19% of the dog's distance; the exam has to measure distance, not just pose.

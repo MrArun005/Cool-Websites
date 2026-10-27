@@ -1,0 +1,236 @@
+<title>Bolt Learning Live</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+{{GAME_CSS}}
+  /* Layout: the latest attempt in 3D first, then the learning curve, then what changed and why.
+     Same look as the Gait Lab; one color per kind of fall. */
+  :root { --k-side: #2f6fb5; --k-back: #c4372f; --k-tipped: #d08a12; --k-standing: #2f8a4c; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; } }
+  :root[data-theme="dark"] { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; }
+  .stage { aspect-ratio: 16 / 10; min-height: 300px; }
+  .hud { position: absolute; display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--panel) 82%, transparent); border: 1px solid var(--line); pointer-events: none; max-width: min(60%, 340px); }
+  .hud b { font: 700 1.05rem var(--display); }
+  .muted { color: var(--muted); }
+  .live { display: inline-flex; align-items: center; gap: 8px; font: 500 .8rem var(--mono); color: var(--muted); }
+  .live i { width: 9px; height: 9px; border-radius: 50%; background: var(--good, #2f8a4c); box-shadow: 0 0 0 0 currentColor; }
+  .live.on i { animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--k-standing) 60%, transparent); } 100% { box-shadow: 0 0 0 8px transparent; } }
+  .kind { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  .slider { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; width: 100%; }
+  .slider input { width: 100%; }
+  .chart { width: 100%; overflow-x: auto; }
+  .chart svg { display: block; width: 100%; min-width: 520px; height: auto; }
+  .chart text { fill: var(--muted); font: 11px var(--mono); }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: .88rem; }
+  th { font: 500 .72rem var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .tablewrap { overflow-x: auto; }
+  .ok { color: var(--k-standing); font-weight: 600; }
+  .notes { display: grid; gap: 10px; margin: 0; padding-left: 1.2em; max-width: 75ch; }
+  @media (prefers-reduced-motion: reduce) { .live.on i { animation: none; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="label">Bolt robot dog · training, as it happens</span>
+    <h1>Bolt Learning Live</h1>
+    <p class="muted" style="margin:0;max-width:72ch">Bolt is learning to get up after a fall, from scratch, by trial and error. Every million practice steps the training saves a checkpoint. This page tests each one: it drops Bolt on its side, on its back, half tipped over and standing, and records what the brain does. Watch the latest attempt below, drag the slider to go back in time, and see on the chart how upright it manages to get. The page refreshes itself when a new checkpoint arrives.</p>
+    <span class="live" id="live"><i></i><span id="liveText">Loading…</span></span>
+  </header>
+
+  <section class="panel" aria-labelledby="watch">
+    <h2 id="watch">Watch it try</h2>
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">Loading…</div>
+      <div class="hud tl"><span class="label">Checkpoint</span><b id="hCk">–</b><span class="muted" id="hRun"></span></div>
+      <div class="hud tr"><span class="label">Upright</span><b id="hUp">–</b><span class="label">Result</span><b id="hRes">–</b><span class="label">Time</span><b id="hT">0.0 s</b></div>
+      <div class="hint"><span id="gridNote">grid = 50 cm</span> · drag to turn the view, scroll or pinch to zoom</div>
+    </div>
+    <div class="controls">
+      <div class="chips" id="runs" role="group" aria-label="Training run"></div>
+      <div class="chips" id="kinds" role="group" aria-label="Kind of fall"></div>
+      <button class="btn" id="play" type="button">Pause</button>
+      <div class="slider"><span class="label">Checkpoint</span><input id="ck" type="range" min="0" max="0" value="0" aria-label="Checkpoint"><button class="btn" id="latest" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Latest</button></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="curve">
+    <h2 id="curve">How upright it gets</h2>
+    <p class="muted" style="margin:0;max-width:72ch">For each kind of fall: the most upright Bolt got during the attempt, at each checkpoint. 1 is standing, 0 is on its side, −1 is flat on its back. A filled dot means it ended standing.</p>
+    <div class="chart" id="chart"></div>
+    <div class="tablewrap"><table id="table" aria-label="Exam results per checkpoint"></table></div>
+  </section>
+
+  <section class="panel" aria-labelledby="why">
+    <h2 id="why">What changed and why</h2>
+    <ol class="notes">
+      <li><strong>Run 17 learned to lie still.</strong> It was charged for fast joint movement. Thrashing to roll over cost 1–5 points every step, far more than being upright paid, so the cheapest thing was to do nothing. Stopped at 2M steps.</li>
+      <li><strong>Can this body roll over at all?</strong> A search over motor sequences, with no learning, found a way to roll Bolt over from its side. So it is possible.</li>
+      <li><strong>Run 17b:</strong> no charge for fast joint movement, a fifth of the effort charge, a bonus every time Bolt gets more upright than it has been so far, and more random trying at the start.</li>
+      <li><strong>Next, if it stays stuck on its back:</strong> widen the sideways leg swing from ±29° to about ±50°, like real robot dogs. The motor search found a roll from the back only with the wider swing.</li>
+    </ol>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+{{SCENE_JS}}
+  controls.maxDistance = 12;
+  let C = {};
+  function colors() { C = { accent: lin(css("--accent")) }; }
+
+  // ---------- Bolt: the same body as the Gait Lab, posed from the recorded attempt ----------
+  let parts = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp }; });
+  }
+  const m4 = new THREE.Matrix4();
+  let mj = null, model = null, data = null, lastPos = null;
+  function drawBolt() {
+    const xp = data.geom_xpos, xm = data.geom_xmat;
+    for (const pt of parts) {
+      if (!pt.obj) continue;
+      const i = pt.g.id, k = 9 * i;
+      m4.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.obj.position.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.obj.quaternion.setFromRotationMatrix(m4);
+    }
+  }
+
+  function resetView() {   // a close three-quarter view of where Bolt lies
+    const x = data ? data.qpos[0] : 0, y = data ? data.qpos[1] : 0;
+    camera.position.set(x + 1.3, y - 1.9, 1.2); controls.target.set(x, y, 0.2); controls.update(); lastPos = null;
+  }
+  // ---------- the recorded attempts ----------
+  const KINDS = [["side", "On its side"], ["back", "On its back"], ["tipped", "Half tipped"], ["standing", "Standing"]];
+  let L = null, runName = null, kind = "back", ckIndex = 0, follow = true, playing = true, clock = 0, lastUpdated = null;
+  const runsSorted = () => Object.keys(L.runs);
+  const cks = () => Object.values(L.runs[runName].checkpoints).sort((a, b) => a.steps - b.steps);
+  const fmt = (n) => (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + "M";
+  function chip(parent, label, pressed, onClick, color) {
+    const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-pressed", String(pressed));
+    if (color) { const s = document.createElement("span"); s.className = "kind"; s.style.background = color; b.append(s); }
+    b.append(label); b.addEventListener("click", onClick); parent.append(b);
+  }
+  function renderChips() {
+    $("runs").innerHTML = ""; $("kinds").innerHTML = "";
+    for (const r of runsSorted()) chip($("runs"), L.runs[r].label.split(" (")[0], r === runName, () => { runName = r; ckIndex = cks().length - 1; follow = true; refresh(); });
+    for (const [k, label] of KINDS) chip($("kinds"), label, k === kind, () => { kind = k; clock = 0; renderChips(); }, `var(--k-${k})`);
+  }
+  function refresh() {
+    const list = cks();
+    $("ck").max = String(Math.max(0, list.length - 1));
+    if (follow) ckIndex = list.length - 1;
+    $("ck").value = String(ckIndex); clock = 0;
+    renderChips(); chart(); table(); hudStatic();
+  }
+  function current() { const list = cks(); return list[Math.min(ckIndex, list.length - 1)]; }
+  function hudStatic() {
+    const c = current(); if (!c) return;
+    const R = L.runs[runName];
+    $("hCk").textContent = `${fmt(c.steps)} steps`;
+    $("hRun").textContent = R.label;
+  }
+
+  // ---------- chart: best uprightness per checkpoint, one line per kind of fall ----------
+  function chart() {
+    const list = cks(), W = 720, H = 260, l = 46, r = 16, t = 14, b = 34;
+    if (!list.length) { $("chart").innerHTML = '<p class="muted">No checkpoints yet. The first one arrives after 1M practice steps.</p>'; return; }
+    const maxS = Math.max(...list.map((c) => c.steps)), minS = 0;
+    const x = (s) => l + (W - l - r) * (s - minS) / Math.max(1, maxS - minS), y = (u) => t + (H - t - b) * (1 - u) / 2;
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Best uprightness per checkpoint">`;
+    for (const u of [1, 0.5, 0, -0.5, -1]) s += `<line x1="${l}" x2="${W - r}" y1="${y(u)}" y2="${y(u)}" stroke="var(--line)" stroke-width="1"/><text x="${l - 8}" y="${y(u) + 4}" text-anchor="end">${u > 0 ? "+" : ""}${u}</text>`;
+    s += `<text x="${l + 4}" y="${y(1) - 4}">standing</text><text x="${l + 4}" y="${y(-1) + 13}">on its back</text>`;
+    const ticks = Math.min(list.length, 8);
+    for (let i = 0; i < ticks; i++) { const c = list[Math.round(i * (list.length - 1) / Math.max(1, ticks - 1))]; s += `<text x="${x(c.steps)}" y="${H - 12}" text-anchor="middle">${fmt(c.steps)}</text>`; }
+    for (const [k] of KINDS) {
+      const pts = list.map((c) => [x(c.steps), y(c.progress[k].best), c.progress[k].stood]);
+      s += `<polyline fill="none" stroke="var(--k-${k})" stroke-width="2.2" points="${pts.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}"/>`;
+      for (const [px, py, stood] of pts) s += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${stood ? `var(--k-${k})` : "var(--panel)"}" stroke="var(--k-${k})" stroke-width="2"/>`;
+    }
+    const c = current(); if (c) s += `<line x1="${x(c.steps)}" x2="${x(c.steps)}" y1="${t}" y2="${H - b}" stroke="var(--ink)" stroke-dasharray="3 4" opacity=".5"/>`;
+    $("chart").innerHTML = s + "</svg>";
+  }
+  function table() {
+    const list = cks().slice().reverse();
+    const pct = (v) => (v === undefined || v === null ? "–" : `${Math.round(v * 100)}%`);
+    let h = `<thead><tr><th>Checkpoint</th>${KINDS.map(([k, label]) => `<th><span class="kind" style="background:var(--k-${k})"></span>${label}</th>`).join("")}</tr></thead><tbody>`;
+    for (const c of list) h += `<tr><td class="mono">${fmt(c.steps)}</td>${KINDS.map(([k]) => { const v = c.exam["up_" + k], sec = c.exam["secs_" + k]; return `<td class="${v > 0 ? "ok" : ""}">${pct(v)}${sec ? ` · ${sec} s` : ""}</td>`; }).join("")}</tr>`;
+    $("table").innerHTML = h + "</tbody>";
+  }
+
+  // ---------- load and refresh the recordings ----------
+  async function load() {
+    try {
+      const r = await fetch(`data/learning.json?t=${Date.now()}`); if (!r.ok) throw new Error(r.status);
+      const next = await r.json();
+      if (L && next.updated === lastUpdated) return;
+      L = next; lastUpdated = L.updated;
+      const names = runsSorted();
+      if (!runName || !L.runs[runName]) runName = names.filter((n) => Object.keys(L.runs[n].checkpoints).length).pop() || names[names.length - 1];   // the newest run
+      refresh();
+      const live = names.some((n) => !L.runs[n].finished);
+      $("live").classList.toggle("on", live);
+      $("liveText").textContent = `${live ? "Training now" : "Training finished"} · last checkpoint recorded ${new Date(L.updated).toLocaleString()}`;
+    } catch (e) { $("liveText").textContent = "Couldn't load the recordings. Reload the page to try again."; }
+  }
+
+  async function boot() {
+    try {
+      const [m, robot] = await Promise.all([import("./mujoco/mujoco.js"), fetch("data/robot.json").then((x) => x.json())]);
+      mj = await m.default();
+      model = mj.MjModel.from_xml_string(robot.xml); data = new mj.MjData(model);
+      buildDog(robot.geoms);
+    } catch (e) { console.error(e); $("loading").textContent = "The 3D view couldn't start in this browser."; return; }
+    $("loading").hidden = true;
+    await load();
+    setInterval(load, 60000);
+  }
+  $("ck").addEventListener("input", (e) => { ckIndex = +e.target.value; follow = ckIndex === cks().length - 1; clock = 0; hudStatic(); chart(); });
+  $("latest").addEventListener("click", () => { follow = true; refresh(); });
+  $("play").addEventListener("click", () => { playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; });
+
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stageEl);
+  const retheme = () => { colors(); makeGrid(); chart(); table(); };
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  const FPS = 25, PAUSE = 1.5;
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    const c = L && current();
+    if (c && data) {
+      const f = c.replays[kind], n = f.length / 19;
+      if (playing) clock += dt;
+      if (clock > n / FPS + PAUSE) clock = 0;   // loop, holding the last pose for a moment
+      const i = Math.min(n - 1, Math.floor(clock * FPS));
+      data.qpos.set(f.slice(19 * i, 19 * i + 19), 0);
+      mj.mj_forward(model, data); drawBolt();
+      const q = f.slice(19 * i + 3, 19 * i + 7), up = 1 - 2 * (q[1] * q[1] + q[2] * q[2]);   // body z axis vs vertical
+      $("hUp").textContent = up.toFixed(2);
+      const p = c.progress[kind];
+      $("hRes").textContent = i < n - 1 ? "trying…" : p.stood ? "stood up" : "didn't stand";
+      $("hT").textContent = `${(i / FPS).toFixed(1)} s`;
+      const x = data.qpos[0], yy = data.qpos[1];
+      if (lastPos) { const dx = x - lastPos[0], dy = yy - lastPos[1]; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy; }
+      lastPos = [x, yy];
+      if (grid) grid.position.set(Math.round(x / 0.5) * 0.5, Math.round(yy / 0.5) * 0.5, 0.0004);
+      sun.position.set(x + 4, yy - 5.6, 10.4); sun.target.position.set(x, yy, 0);
+    }
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  colors(); makeGrid(); resetView(); requestAnimationFrame(tick); boot();
+})();
+</script>
