@@ -30,6 +30,8 @@ FILES = {files}
 for name, blob in FILES.items():
     (work / name).parent.mkdir(parents=True, exist_ok=True)
     (work / name).write_bytes(base64.b64decode(blob))
+for w in sorted(pathlib.Path("/kaggle/input").rglob("warm.pkl")) if {find_warm} else []:   # warm start from an attached dataset
+    (work / "warm.pkl").write_bytes(w.read_bytes()); print("warm start from", w, flush=True); break
 os.chdir(work)
 import jax; print("devices:", jax.devices(), flush=True)
 with open(work / "train.log", "w") as log:
@@ -45,7 +47,9 @@ def main():
     ap.add_argument("--user", required=True)
     ap.add_argument("--job", choices=["run", "imitate"], default="run", help="run: mjx_run.py (run 20); imitate: mjx_imitate.py")
     ap.add_argument("--slug", default="bolt-run20-gpu")
-    ap.add_argument("--warm", help="imitate: the numpy brain to start from (mjx_imitate.py warm ...)")
+    ap.add_argument("--warm", help="imitate: the numpy brain to start from (mjx_imitate.py warm ...), embedded (Kaggle refuses "
+                    "scripts over ~1 MB, so a 512x256 brain must come as a dataset instead: --warm-dataset)")
+    ap.add_argument("--warm-dataset", help="imitate: <user>/<dataset> holding warm.pkl (kaggle datasets create), attached to the kernel")
     ap.add_argument("--hours", type=float, default=9.5, help="imitate: stop after this long even if steps remain (Kaggle allows 12 h)")
     ap.add_argument("--steps", type=int, default=200_000_000)
     ap.add_argument("--envs", type=int, default=4096)
@@ -66,11 +70,13 @@ def main():
                "--out", "run", "--hours", str(args.hours)]
         if args.warm:
             files["warm.pkl"] = enc(args.warm)
+        if args.warm or args.warm_dataset:
             cmd += ["--warm", "warm.pkl"]
-    (out / "kernel.py").write_text(TEMPLATE.format(slug=args.slug, files=json.dumps(files), cmd=json.dumps(cmd)))
+    (out / "kernel.py").write_text(TEMPLATE.format(slug=args.slug, files=json.dumps(files), cmd=json.dumps(cmd),
+                                                   find_warm=bool(getattr(args, "warm_dataset", None))))
     (out / "kernel-metadata.json").write_text(json.dumps(dict(
         id=f"{args.user}/{args.slug}", title=args.slug, code_file="kernel.py", language="python", kernel_type="script",
-        is_private=True, enable_gpu=True, enable_internet=True, dataset_sources=[], competition_sources=[], kernel_sources=[]), indent=1))
+        is_private=True, enable_gpu=True, enable_internet=True, dataset_sources=[args.warm_dataset] if args.job == "imitate" and args.warm_dataset else [], competition_sources=[], kernel_sources=[]), indent=1))
     print(f"kernel in {out}: push with  kaggle kernels push -p {out}")
 
 
