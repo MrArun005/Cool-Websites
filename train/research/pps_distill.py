@@ -29,7 +29,8 @@ sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
 
 from imitate_env import ImitateEnv, ImitatePolicy   # noqa: E402
-from pps import BatchBrain, Planner                   # noqa: E402
+from pps import Planner                              # noqa: E402
+from skills import closest_moment                    # noqa: E402
 
 BRAIN = HERE.parent.parent / "models" / "bolt-dog-imitate-18b-17.5M"
 ANCHOR_CLIPS = ["walk", "trot", "pace", "turn_left", "turn_right", "sit", "lie"]
@@ -51,29 +52,47 @@ def collect(args):
     driver = ImitatePolicy(args.student) if args.student else orig
     rng = np.random.default_rng(args.seed)
     O, E = [], []
-    env = ImitateEnv(randomize=True, clips=["canter"])
-    planner = Planner(driver, ["canter"], K=16, H=30, M=5, sigma=0.2, seed=args.seed)
-    c = env.clips["canter"]
+    rest = args.scenario == "rest"
+    names = ["walk", "trot", "sit", "lie"] if rest else ["canter"]
+    env = ImitateEnv(randomize=True, clips=names)
+    planner = Planner(driver, names, K=16, H=30, M=5, sigma=0.2, seed=args.seed)
     for k in range(args.tries):
-        env.exam_start = ("canter", float(rng.uniform(0, c.length)))
+        # segments: (clip, steps, planned and recorded). rest: walk or trot 2 s (bare driver), then sit 4 s and
+        # lie 5.5 s, each joined at the closest moment of the new clip (as skills.py's manager does)
+        first = (["walk", "trot"][k % 2]) if rest else "canter"
+        segs = [(first, 100, False), ("sit", 200, True), ("lie", 275, True)] if rest else [("canter", 200, True)]
+        c = env.clips[first]
+        env.exam_start = (first, float(rng.uniform(0, c.length)))
         obs, _ = env.reset(seed=args.seed + k)
-        env.limit = 200
-        planner.plan[:] = 0.0
-        queue = []
-        for t in range(200):
-            if not queue:
-                queue = list(planner.new_plan(env))
-            e = queue.pop(0)
-            if len(queue) == planner.M - 1:   # a new chunk: DAgger, follow the plan or the bare driver
-                follow = rng.random() < args.beta
-            o = slice_obs(orig, obs)
-            # label: what the planner made the DRIVER do, expressed as a raw action
-            O.append(o)
-            E.append(raw_mean(driver, o[None])[0] + e)
-            obs, r, fell, done, _ = env.step(np.clip(driver.act(obs) + (e if follow else 0.0), -1, 1))
+        env.limit = 10 ** 9
+        fell, n = False, 0
+        for name, steps, planned in segs:
+            if name != env.clip.name:
+                c = env.clips[name]
+                env.clip, env.tau0, env.t = c, closest_moment(c, env.data.qpos[7:19], env.data.qvel[6:18]), 0
+                obs = env._obs()
+            planner.plan[:] = 0.0
+            queue = []
+            for t in range(steps):
+                if not planned:
+                    obs, r, fell, done, _ = env.step(driver.act(obs))
+                else:
+                    if not queue:
+                        queue = list(planner.new_plan(env))
+                    e = queue.pop(0)
+                    if len(queue) == planner.M - 1:   # a new chunk: DAgger, follow the plan or the bare driver
+                        follow = rng.random() < args.beta
+                    o = slice_obs(orig, obs)
+                    # label: what the planner made the DRIVER do, expressed as a raw action
+                    O.append(o)
+                    E.append(raw_mean(driver, o[None])[0] + e)
+                    obs, r, fell, done, _ = env.step(np.clip(driver.act(obs) + (e if follow else 0.0), -1, 1))
+                n += 1
+                if fell:
+                    break
             if fell:
                 break
-        print(f"try {k}: {t + 1} steps, fell={fell}, planner {planner.stats}", flush=True)
+        print(f"try {k}: {n} steps, fell={fell}, planner {planner.stats}", flush=True)
     # anchor samples: the original brain on the other clips (its own states, its own actions)
     A = []
     env2 = ImitateEnv(randomize=True, clips=ANCHOR_CLIPS)
@@ -131,6 +150,7 @@ def main():
     ap.add_argument("--tries", type=int, default=30)
     ap.add_argument("--anchor-tries", type=int, default=40)
     ap.add_argument("--seed", type=int, default=20000)
+    ap.add_argument("--scenario", default="canter", choices=["canter", "rest"])
     ap.add_argument("--student")
     ap.add_argument("--beta", type=float, default=1.0, help="DAgger: chance per 0.1 s chunk of following the plan "
                     "(else the bare driver acts, still labelled with the plan)")

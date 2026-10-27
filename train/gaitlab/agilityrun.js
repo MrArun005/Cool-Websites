@@ -434,12 +434,15 @@ export class Run {
         if (jumped) { this.stats.jumps++; if (!dropped && b.jumpInfo && b.jumpInfo.landed) this.stats.cleanJumps++; }
         if (!jumped && Math.abs(side) > 0.7) this.fault("Missed the hurdle");
         else if (!jumped) this.fault("Refusal: ran through the hurdle");
-        if (dropped) this.fault("Knocked the bar down");
+        if (dropped && !k.knocked) this.fault("Knocked the bar down");   // one knock fault per hurdle
         if (jumped && !dropped) this.say(b.jumpInfo && b.jumpInfo.touched ? "Brushed the bar, it stayed up" : "Clear jump!", "good");
         b.disarm(); return this.next();
       }
       // fell in front of the bar, or ran past it to the side without jumping: the bar goes back up, try again
-      if (b.jumped === o.slot && along < -0.2 && !b.busy) { if (this.bolt.barDropped(o.slot)) { this.fault("Knocked the bar down"); this.bolt.resetBar(o.slot); } b.jumped = null; }
+      if (b.jumped === o.slot && along < -0.2 && !b.busy) {
+        if (this.bolt.barDropped(o.slot)) { if (!k.knocked) this.fault("Knocked the bar down"); k.knocked = true; this.bolt.resetBar(o.slot); }
+        b.jumped = null;
+      }
       if (along > -0.3 && Math.abs(side) > 0.7 && this.lineS > C.obstacles[this.index].s + 1.5) { this.fault("Missed the hurdle"); b.disarm(); return this.next(); }
       return;
     }

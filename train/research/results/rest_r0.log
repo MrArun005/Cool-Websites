@@ -1,0 +1,4 @@
+try 0: 575 steps, fell=False, planner {'calls': 95, 'chose_plain': 93, 'plain_fell': 1, 'best_fell': 0}
+try 1: 114 steps, fell=True, planner {'calls': 98, 'chose_plain': 94, 'plain_fell': 4, 'best_fell': 3}
+try 2: 575 steps, fell=False, planner {'calls': 193, 'chose_plain': 186, 'plain_fell': 6, 'best_fell': 3}
+try 3: 575 steps, fell=False, planner {'calls': 288, 'chose_plain': 278, 'plain_fell': 7, 'best_fell': 3}

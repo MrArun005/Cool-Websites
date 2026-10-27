@@ -34,12 +34,17 @@
   .weak { font-size: 0.88rem; }
   @media (max-width: 560px) {
     .stage { aspect-ratio: 3 / 4; }
-    .hud { padding: 6px 8px; max-width: 58%; }
+    .hud { padding: 6px 8px; }
+    .hud.tl { max-width: 50%; left: 6px; top: 6px; }
+    .hud.tr { max-width: 46%; right: 6px; top: 6px; }
+    .hud .label { font-size: 0.62rem; }
+    #hNext, .hud .sct { display: none; }
+    .hud.tr b { white-space: nowrap; }
     .hud b { font-size: 0.95rem; }
     .hud .muted { font-size: 0.74rem; }
     .hud.tr { column-gap: 6px; }
     .hud.tr b { font-size: 0.9rem; }
-    .stage canvas.map { width: 104px; height: 104px; bottom: 30px; }
+    .stage canvas.map { width: 92px; height: 92px; left: auto; right: 6px; bottom: 30px; }
     .pad { grid-template-columns: repeat(4, 1fr); gap: 6px; }
     .pad button { padding: 8px 2px; font-size: 0.85rem; }
     .banner { font-size: 1.5rem; padding: 10px 16px; }
@@ -58,7 +63,7 @@
     <div class="stage" id="stage">
       <div class="loading" id="loading">Loading…</div>
       <div class="hud tl"><span class="label">Command</span><b id="hCmd">Stand</b><span class="muted" id="hDoing">Bolt is standing at the start</span><span class="muted" id="hNext"></span></div>
-      <div class="hud tr"><span class="label">Time</span><b id="hTime">0.00 s</b><span class="label">Faults</span><b id="hFaults">0</b><span class="label">Speed</span><b id="hSpeed">0.0 m/s</b><span class="label">Course time</span><b id="hSct">–</b></div>
+      <div class="hud tr"><span class="label">Time</span><b id="hTime">0.00 s</b><span class="label">Faults</span><b id="hFaults">0</b><span class="label">Speed</span><b id="hSpeed">0.0 m/s</b><span class="label sct">Course time</span><b id="hSct" class="sct">–</b></div>
       <canvas class="map" id="map" width="300" height="300" aria-label="Mini map of the course"></canvas>
       <div class="banner" id="banner" aria-live="polite"></div>
       <div class="result" id="result" hidden><div class="card"><span class="label" id="rLabel">Run summary</span><div class="rank" id="rRank"></div><div class="summary" id="rSummary"></div><ul id="rList" class="muted" style="font-size:.85rem"></ul><div class="row"><button class="btn" type="button" id="again">Run again</button><button class="btn" type="button" id="nextLevel">Next level</button></div></div></div>
@@ -286,8 +291,9 @@
   }
   function resetView() {
     const w = bolt.where(), c = Math.cos(w.yaw), s = Math.sin(w.yaw);
+    const f = camera.aspect < 1 ? 1.5 : 1;   // a tall phone screen: stand further back to see the course ahead
     const target = new THREE.Vector3(w.x + 2.0 * c, w.y + 2.0 * s, 0.4);
-    camera.position.set(target.x - 5.2 * c + 2.6 * s, target.y - 5.2 * s - 2.6 * c, 3.4);
+    camera.position.set(target.x - f * 5.2 * c + f * 2.6 * s, target.y - f * 5.2 * s - f * 2.6 * c, f * 3.4);
     controls.target.copy(target); controls.update(); lastBolt = { x: w.x, y: w.y };
   }
   let lastBolt = null;

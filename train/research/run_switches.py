@@ -80,12 +80,14 @@ def main():
     ap.add_argument("--H", type=int, default=30)
     ap.add_argument("--M", type=int, default=5)
     ap.add_argument("--sigma", type=float, default=0.2)
+    ap.add_argument("--brain", help="dog-motion brain folder (policy.zip + vecnormalize.pkl); default 18b-17.5M")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
+    brain = (Path(args.brain), "policy.zip", "vecnormalize.pkl") if args.brain else BRAIN
     if args.mode == "pps":
-        bolt = PPSBolt(seed=args.seed, imitate=BRAIN, K=args.K, H=args.H, M=args.M, sigma=args.sigma)
+        bolt = PPSBolt(seed=args.seed, imitate=brain, K=args.K, H=args.H, M=args.M, sigma=args.sigma)
     else:
-        bolt = Bolt(seed=args.seed, imitate=BRAIN)
+        bolt = Bolt(seed=args.seed, imitate=brain)
     tally, started = ts.Tally(), time.time()
     for name in args.only:
         for k in range(args.n):

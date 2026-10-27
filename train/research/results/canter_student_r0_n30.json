@@ -1,0 +1,211 @@
+{
+ "args": {
+  "clips": [
+   "canter"
+  ],
+  "n": 30,
+  "mode": "plain",
+  "brain": "runs/research/student_r0",
+  "zip": "policy.zip",
+  "stats": "vecnormalize.pkl",
+  "K": 16,
+  "H": 30,
+  "M": 5,
+  "sigma": 0.2,
+  "robust": false,
+  "out": "research/results/canter_student_r0_n30.json"
+ },
+ "results": [
+  {
+   "clip": "canter",
+   "n": 30,
+   "track_mean": 0.493,
+   "track_sd": 0.155,
+   "track_se": 0.028,
+   "falls": 3,
+   "speed_mean": 0.538,
+   "tries": [
+    {
+     "track": 0.5709296844942853,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.6437883519605099
+    },
+    {
+     "track": 0.5805771845092789,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.5619954679136319
+    },
+    {
+     "track": 0.5892323326906617,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.6116074688250838
+    },
+    {
+     "track": 0.5875757911408366,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6450901713707771
+    },
+    {
+     "track": 0.5951667830192343,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.6183975068078073
+    },
+    {
+     "track": 0.5370605823761379,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.6440593471983812
+    },
+    {
+     "track": 0.5593387181541406,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.5972456203413231
+    },
+    {
+     "track": 0.5627237474784073,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.5489892290943994
+    },
+    {
+     "track": 0.073994403633071,
+     "fell": true,
+     "seconds": 0.1,
+     "speed": 0.13722217817234608
+    },
+    {
+     "track": 0.5419344920699664,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6204690320463562
+    },
+    {
+     "track": 0.45396789446986263,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.4873208813223595
+    },
+    {
+     "track": 0.48590238745927855,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.5462020488463213
+    },
+    {
+     "track": 0.4928368806320649,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.5764991326365135
+    },
+    {
+     "track": 0.5107062392146059,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.5174407133782406
+    },
+    {
+     "track": 0.023396311264843584,
+     "fell": true,
+     "seconds": 0.0,
+     "speed": 0.09534726866040871
+    },
+    {
+     "track": 0.4891962549007851,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.5612619585508292
+    },
+    {
+     "track": 0.5478213755358013,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.5835239416986431
+    },
+    {
+     "track": 0.5477247704952795,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.5955195746668841
+    },
+    {
+     "track": 0.47212535457256893,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.4965378250095661
+    },
+    {
+     "track": 0.0504643571143678,
+     "fell": true,
+     "seconds": 0.1,
+     "speed": 0.0763492656904798
+    },
+    {
+     "track": 0.5037998128745752,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.5345873385409234
+    },
+    {
+     "track": 0.5515475902090422,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6329459163648199
+    },
+    {
+     "track": 0.5310855216687591,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.581483581961001
+    },
+    {
+     "track": 0.5628596584076169,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.585017262571039
+    },
+    {
+     "track": 0.519830347791434,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.6203692176582195
+    },
+    {
+     "track": 0.5485158355748981,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.5937141696123529
+    },
+    {
+     "track": 0.5519061733799613,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.6126690290904587
+    },
+    {
+     "track": 0.5663256006324223,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.6152043694745696
+    },
+    {
+     "track": 0.5803602854255725,
+     "fell": false,
+     "seconds": 0.3,
+     "speed": 0.596624052320979
+    },
+    {
+     "track": 0.5923131129370148,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6046782695454088
+    }
+   ]
+  }
+ ]
+}
