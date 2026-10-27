@@ -79,6 +79,7 @@ def main():
     ap.add_argument("--envs", type=int, default=8)
     ap.add_argument("--resume")
     ap.add_argument("--clips", nargs="*", default=DEFAULT_CLIPS)
+    ap.add_argument("--switch-rate", type=float, default=0.0, help="chance per second of switching clip mid-try (run 18e: 0.3)")
     ap.add_argument("--slots", type=int, default=len(ALL_CLIPS), help="clip one-hot size: 8 for runs begun before the getup clip")
     ap.add_argument("--exam-every", type=int, default=1_000_000)
     ap.add_argument("--threads", type=int, default=2, help="torch threads")
@@ -89,7 +90,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(args.threads)
     venv = make_vec_env(ImitateEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(
-        clips=args.clips, slots=args.slots, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None))
+        clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None))
     if args.resume:
         ck = Path(args.resume)
         venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)

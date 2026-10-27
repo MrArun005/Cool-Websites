@@ -1,0 +1,70 @@
+{
+  "name": "bolt-run18e-switching",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train_imitate.py",
+        "--name",
+        "imitate18e",
+        "--steps",
+        "45000000",
+        "--clips",
+        "walk",
+        "trot",
+        "pace",
+        "canter",
+        "turn_left",
+        "turn_right",
+        "sit",
+        "lie",
+        "getup",
+        "--switch-rate",
+        "0.3",
+        "--exam-every",
+        "500000",
+        "--resume",
+        "remote/imitate18e_start/policy_15500000_steps.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train_imitate.py",
+        "--name",
+        "imitate18e",
+        "--steps",
+        "45000000",
+        "--clips",
+        "walk",
+        "trot",
+        "pace",
+        "canter",
+        "turn_left",
+        "turn_right",
+        "sit",
+        "lie",
+        "getup",
+        "--switch-rate",
+        "0.3",
+        "--exam-every",
+        "500000",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/imitate18e/checkpoints/policy_*_steps.zip",
+      "log": "runs/imitate18e/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/imitate18e/policy.zip",
+        "log_contains": "^done:"
+      }
+    }
+  ]
+}

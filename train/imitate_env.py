@@ -66,6 +66,11 @@ ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit",
 DEFAULT_CLIPS = ["walk", "trot", "pace", "turn_left", "turn_right", "sit", "lie"]   # canter (3.4 m/s) later
 WEIGHTS = dict(pose=0.5, vel=0.05, paw=0.2, root=0.15, root_vel=0.1)
 HOLD = 1.0          # s: sit and lie hold their final pose this long
+# Switching skills mid-try (run 18e): which clip may follow which. Gaits switch to any gait (joining at the frame
+# whose pose is closest) or to sit (the sit clip starts standing, so the brain learns to stop first); a finished
+# sit goes on to lie, a finished lie to getting up, a finished getup to walking or trotting.
+GAITS = ("walk", "trot", "pace", "canter", "turn_left", "turn_right")
+NEXT = {**{g: GAITS + ("sit",) for g in GAITS}, "sit": ("lie",), "lie": ("getup",), "getup": ("walk", "trot")}
 LOOP_SECONDS = 5.0  # s: longest try on a looping gait
 
 
@@ -124,10 +129,11 @@ class Clip:
 class ImitateEnv(BoltEnv):
     OBS = 66 + len(ALL_CLIPS)
 
-    def __init__(self, randomize=True, seed=None, clips=None, residual=True, weights=None, slots=len(ALL_CLIPS)):
+    def __init__(self, randomize=True, seed=None, clips=None, residual=True, weights=None, slots=len(ALL_CLIPS), switch_rate=0.0):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
                          skills=["stand"])
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
+        self.switch_rate = switch_rate   # chance per second of switching to a following clip mid-try (training only)
         self.OBS = 66 + slots
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.clip_names = list(clips or DEFAULT_CLIPS)
@@ -248,6 +254,8 @@ class ImitateEnv(BoltEnv):
         physics(self.model, self.data, self.frame_skip)
         self.t += 1
         self.env_steps += 1
+        if self.switch_rate and not self.exam_start:
+            self._maybe_switch()
         terms, err = self.tracking()
         reward = sum(self.weights[k] * v for k, v in terms.items())
         self.last_action = a
@@ -257,6 +265,23 @@ class ImitateEnv(BoltEnv):
         done = self.t >= self.limit
         info = dict(err, clip=self.clip.name, tau=self.tau(), fell=fell, **{f"r_{k}": float(v) for k, v in terms.items()})
         return self._obs(), float(reward), bool(fell), bool(done and not fell), info
+
+
+    def _maybe_switch(self):
+        """Now and then hand over to a clip that may follow this one (NEXT), as a dog changes what it does."""
+        ready = self.clip.loop or self.finished() > 0.5 * HOLD
+        nxt = [n for n in NEXT.get(self.clip.name, ()) if n in self.clips and n != self.clip.name]
+        if not ready or not nxt or self.rng.random() > self.switch_rate * self.dt:
+            return
+        c = self.clips[self.rng.choice(nxt)]
+        if c.loop:   # join the new gait at the frame whose pose is closest to the current one
+            k = int(np.argmin(np.sum((c.joints - self.data.qpos[7:19]) ** 2, 1)))
+            start = k / c.fps
+        else:        # sit, lie, getup play from their start
+            start = 0.0
+        self.clip, self.tau0 = c, start - self.t * self.dt
+        left = (c.length + HOLD - start) / self.dt if not c.loop else self.max_steps
+        self.limit = int(min(self.t + left, self.t + self.max_steps))
 
 
 class ImitatePolicy:
