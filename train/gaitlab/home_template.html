@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Bolt at home</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -8,6 +9,11 @@
   /* Bolt at home: the room in 3D with Bolt's mood on top, then ways to talk to it, then how it feels and
      what it did. Same look as the Gait Lab and the games. */
   .hud.tl { max-width: min(64%, 360px); }
+  @media (max-width: 600px) {
+    .stage { aspect-ratio: 4 / 5; }
+    .hud { padding: 6px 9px; } .hud b { font-size: 0.95rem; } .hud.tr { display: none; }
+    .stage .hint { font-size: 10px; }
+  }
   .say { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .say input { flex: 1 1 220px; min-width: 0; font: 400 0.95rem var(--body); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
   .say input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -49,7 +55,7 @@
     <form class="say" id="sayForm" autocomplete="off">
       <input id="say" type="text" placeholder="Say something to Bolt: “sit”, “come here buddy”, “you look tired”…" aria-label="Say something to Bolt">
       <button class="btn" type="submit">Say</button>
-      <button class="btn ghost mic" type="button" id="mic" aria-pressed="false" hidden>🎤 Speak</button>
+      <button class="btn ghost mic" type="button" id="mic" aria-pressed="false" hidden>Speak</button>
     </form>
     <p class="reply" id="reply"><span class="muted">Bolt is listening.</span></p>
     <div class="controls">
@@ -109,16 +115,16 @@
   const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.8, ...extra });
   function buildRoom(R) {
     const [W, H] = R.half;
-    const floorMesh = mesh(new THREE.PlaneGeometry(2 * W, 2 * H), std("#e4d6bd", { roughness: 0.9 }), [0, 0, 0.0002]);
+    const floorMesh = mesh(new THREE.PlaneGeometry(2 * W, 2 * H), std("#b89670", { roughness: 0.9 }), [0, 0, 0.0002]);
     floorMesh.castShadow = false; room.add(floorMesh);
-    for (let x = -W + 0.5; x < W; x += 0.5) { const s = mesh(new THREE.PlaneGeometry(0.008, 2 * H), std("#cdbd9f"), [x, 0, 0.0005]); s.castShadow = false; room.add(s); }
+    for (let x = -W + 0.5; x < W; x += 0.5) { const s = mesh(new THREE.PlaneGeometry(0.008, 2 * H), std("#9c7b56"), [x, 0, 0.0005]); s.castShadow = false; room.add(s); }
     const [rx, ry, rw, rh] = R.rug;
-    const rug = mesh(new THREE.PlaneGeometry(2 * rw, 2 * rh), std("#b85c3c", { roughness: 1 }), [rx, ry, 0.001]); rug.castShadow = false; room.add(rug);
-    const rug2 = mesh(new THREE.PlaneGeometry(2 * rw - 0.3, 2 * rh - 0.3), std("#d7a15a", { roughness: 1 }), [rx, ry, 0.0013]); rug2.castShadow = false; room.add(rug2);
+    const rug = mesh(new THREE.PlaneGeometry(2 * rw, 2 * rh), std("#8f3a26", { roughness: 1 }), [rx, ry, 0.001]); rug.castShadow = false; room.add(rug);
+    const rug2 = mesh(new THREE.PlaneGeometry(2 * rw - 0.3, 2 * rh - 0.3), std("#c27a34", { roughness: 1 }), [rx, ry, 0.0013]); rug2.castShadow = false; room.add(rug2);
     // the bed: a flat round cushion with a rim
     const [bx, by] = R.bed;
-    room.add(mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.012, 40), std("#6c8f6a"), [bx, by, 0.006], [Math.PI / 2, 0, 0]));
-    room.add(mesh(new THREE.TorusGeometry(0.6, 0.06, 12, 48), std("#577756"), [bx, by, 0.03]));
+    room.add(mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.012, 40), std("#4f7a4d"), [bx, by, 0.006], [Math.PI / 2, 0, 0]));
+    room.add(mesh(new THREE.TorusGeometry(0.6, 0.06, 12, 48), std("#3d613c"), [bx, by, 0.03]));
     // the door, in the middle of the south wall
     const [dx, dy] = R.door;
     room.add(mesh(new THREE.BoxGeometry(1.0, 0.02, 0.52), std("#8a5a33"), [dx, dy - 0.04, 0.26]));
@@ -207,7 +213,7 @@
   });
   const YOU = [["Throw the ball", () => { if (pet.throwBall()) reply("You throw the ball."); else reply("You're out: come home first."); }],
     ["Pet Bolt", () => say("pet")], ["Go out", () => (pet.person.present ? (pet.leave(), reply("You go out. Bolt watches the door.")) : (pet.arrive(), reply("You come home.")))],
-    ["Pause", () => { playing = !playing; }]];
+    ["Pause", () => { playing = !playing; }], ["Whole room", () => { follow = !follow; view(); }]];
   YOU.forEach(([label, fn], i) => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.id = `you${i}`;
     b.addEventListener("click", () => pet && fn()); $("you").append(b);
@@ -228,7 +234,7 @@
           if (r.isFinal) { say(text); $("say").value = ""; }
         };
         rec.onerror = (e) => reply(e.error === "not-allowed" ? "The microphone is blocked in this browser." : "Bolt couldn't hear that. Try again, or type it.");
-        rec.onend = () => { rec = null; mic.setAttribute("aria-pressed", "false"); mic.textContent = "🎤 Speak"; };
+        rec.onend = () => { rec = null; mic.setAttribute("aria-pressed", "false"); mic.textContent = "Speak"; };
         rec.start();
       } catch (err) { rec = null; reply("Speech isn't available here: type to Bolt instead."); }
     });
@@ -256,6 +262,7 @@
     if (s.name) $("memory").querySelector("b").textContent = s.name;
     $("you2").textContent = pet.person.present ? "Go out" : "Come home";
     $("you3").textContent = playing ? "Pause" : "Play";
+    $("you4").textContent = follow ? "Whole room" : "Follow Bolt";
     for (const b of $("commands").children) b.disabled = !pet.person.present;
     $("you0").disabled = $("you1").disabled = !pet.person.present;
   }
@@ -285,14 +292,25 @@
     } catch (e) {
       console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
     }
-    buildDog(bundle.geoms); buildRoom(pet.room); buildBall(pet.room.ball.r); $("loading").hidden = true; panel();
+    buildDog(bundle.geoms); buildRoom(pet.room); buildBall(pet.room.ball.r); $("loading").hidden = true; view(); panel();
   }
   let drawHurdles = () => {}, drawProps = () => {}, playing = true;
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  function view() {   // the whole room from above the door
+  // the camera: close behind Bolt, sliding along as it moves (whatever angle you turned it to), or the whole room
+  let follow = true, aim = null;
+  function view() {
     const narrow = stageEl.clientWidth < 600;
-    camera.position.set(0, narrow ? -12.5 : -9.6, narrow ? 12 : 8.6); controls.target.set(0, narrow ? 0.3 : -0.1, 0); controls.update();
+    if (follow && bolt) {
+      const w = bolt.where(); aim = new THREE.Vector3(w.x, w.y, 0.2);
+      camera.position.set(w.x, w.y - (narrow ? 4.2 : 3.6), narrow ? 3.6 : 2.7); controls.target.copy(aim);
+    } else { aim = null; camera.position.set(0, narrow ? -11 : -9.6, narrow ? 13 : 8.6); controls.target.set(0, narrow ? 0.3 : -0.1, 0); }
+    controls.update();
+  }
+  function track(dt) {
+    if (!follow || !aim) return;
+    const w = bolt.where(), k = Math.min(1, 2.5 * dt), dx = (w.x - aim.x) * k, dy = (w.y - aim.y) * k;
+    aim.x += dx; aim.y += dy; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy;
   }
   function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
   new ResizeObserver(resize).observe(stageEl);
@@ -313,7 +331,7 @@
       }
       while (seen < pet.events.length) { const e = pet.events[seen++]; log(e); if (e.kind === "doing" || e.kind === "good" || e.kind === "bad") bubble(e.text); }
       if (now > bubbleUntil) $("bubble").classList.remove("show");
-      drawBolt(); drawBall(); drawYou(); drawHurdles(); drawProps(); hud();
+      drawBolt(); drawBall(); drawYou(); drawHurdles(); drawProps(); track(dt); hud();
       if (now - lastPanel > 250) { lastPanel = now; panel(); }
       const s = now / 1000, [rate, amp] = pet.tail();
       if (tail && !reduced) tail.rotation.z = amp * Math.sin(2 * Math.PI * rate * s);
