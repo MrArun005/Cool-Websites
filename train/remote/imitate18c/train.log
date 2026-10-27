@@ -776,3 +776,39 @@ update at 25591392: reward/step 0.695, try length 237 steps (100 tries), 1691 st
 update at 25607776: reward/step 0.685, try length 234 steps (100 tries), 1690 steps/s
 update at 25624160: reward/step 0.690, try length 234 steps (100 tries), 1689 steps/s
 update at 25640544: reward/step 0.689, try length 230 steps (100 tries), 1689 steps/s
+resuming from /home/user/Cool-Websites/train/runs/imitate18c/checkpoints/policy_25500000_steps.zip at 25,500,000 steps
+training on clips ['walk', 'trot', 'canter', 'canter', 'canter', 'turn_left', 'turn_right'], 8 envs, 16384 samples per update
+update at 25516384: reward/step 0.702, try length 235 steps (100 tries), 1503680 steps/s
+update at 25532768: reward/step 0.694, try length 228 steps (100 tries), 729372 steps/s
+update at 25549152: reward/step 0.694, try length 234 steps (100 tries), 488813 steps/s
+update at 25565536: reward/step 0.689, try length 234 steps (100 tries), 369911 steps/s
+update at 25581920: reward/step 0.708, try length 243 steps (100 tries), 290543 steps/s
+update at 25598304: reward/step 0.724, try length 241 steps (100 tries), 239342 steps/s
+update at 25614688: reward/step 0.713, try length 240 steps (100 tries), 203731 steps/s
+update at 25631072: reward/step 0.711, try length 232 steps (100 tries), 176994 steps/s
+update at 25647456: reward/step 0.678, try length 227 steps (100 tries), 157562 steps/s
+update at 25663840: reward/step 0.701, try length 236 steps (100 tries), 141897 steps/s
+update at 25680224: reward/step 0.712, try length 236 steps (100 tries), 129564 steps/s
+update at 25696608: reward/step 0.695, try length 237 steps (100 tries), 118694 steps/s
+update at 25712992: reward/step 0.660, try length 218 steps (100 tries), 109600 steps/s
+update at 25729376: reward/step 0.701, try length 237 steps (100 tries), 101556 steps/s
+update at 25745760: reward/step 0.723, try length 243 steps (100 tries), 94860 steps/s
+update at 25762144: reward/step 0.721, try length 242 steps (100 tries), 89517 steps/s
+update at 25778528: reward/step 0.724, try length 240 steps (100 tries), 84694 steps/s
+update at 25794912: reward/step 0.749, try length 242 steps (100 tries), 80180 steps/s
+update at 25811296: reward/step 0.761, try length 245 steps (100 tries), 75937 steps/s
+update at 25827680: reward/step 0.727, try length 246 steps (100 tries), 72087 steps/s
+update at 25844064: reward/step 0.721, try length 243 steps (100 tries), 68995 steps/s
+update at 25860448: reward/step 0.712, try length 241 steps (100 tries), 66142 steps/s
+update at 25876832: reward/step 0.716, try length 241 steps (100 tries), 63256 steps/s
+update at 25893216: reward/step 0.733, try length 245 steps (100 tries), 60865 steps/s
+update at 25909600: reward/step 0.728, try length 242 steps (100 tries), 58768 steps/s
+update at 25925984: reward/step 0.717, try length 242 steps (100 tries), 56852 steps/s
+update at 25942368: reward/step 0.736, try length 250 steps (100 tries), 55010 steps/s
+update at 25958752: reward/step 0.732, try length 247 steps (100 tries), 53116 steps/s
+update at 25975136: reward/step 0.731, try length 243 steps (100 tries), 51396 steps/s
+update at 25991520: reward/step 0.721, try length 241 steps (100 tries), 49610 steps/s
+checkpoint 26000000 ready: {'track_walk': 0.898, 'fall_walk': 0.0, 'speed_walk': 0.87, 'track_trot': 0.889, 'fall_trot': 0.0, 'speed_trot': 0.87, 'track_canter': 0.612, 'fall_canter': 0.0, 'speed_canter': 0.67, 'track_turn_left': 0.881, 'fall_turn_left': 0.0, 'speed_turn_left': 0.24, 'track_turn_right': 0.875, 'fall_turn_right': 0.0, 'speed_turn_right': 0.2} (mean tracking 0.831, fall rate 0.00, score 0.470)
+new best at 26000000: score 0.470
+update at 26007904: reward/step 0.725, try length 242 steps (100 tries), 47182 steps/s
+update at 26024288: reward/step 0.723, try length 240 steps (100 tries), 45696 steps/s
