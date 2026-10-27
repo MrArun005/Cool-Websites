@@ -96,12 +96,35 @@ def attempts(ck, n, seed=4321, goal="stand"):
     return rec, prog
 
 
+NEWS = None   # set from --news: the page's news file
+
+
+def news(name, label, n, prog):
+    """One news item per checkpoint, so every result shows on the page as it arrives."""
+    if not NEWS:
+        return
+    path = Path(NEWS)
+    N = json.loads(path.read_text()) if path.exists() else dict(items=[])
+    words = {"side": "side", "back": "back", "tipped": "half tipped", "standing": "standing"}
+    parts = [f"{words[k]}: {v['wins']}/{v['tries']} stood up" if "wins" in v else f"{words[k]}: best {v['best']:+.2f}" for k, v in prog.items()]
+    good = any(v.get("wins", 0) for k, v in prog.items() if k != "standing")
+    now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    N["items"].append(dict(t=now, kind="good" if good else "news", title=f"{label.split(' (')[0]}: checkpoint {n / 1e6:g}M",
+                           body="; ".join(parts) + ". Watch the attempts below."))
+    N["items"].sort(key=lambda x: x["t"], reverse=True)
+    N["updated"] = now
+    path.write_text(json.dumps(N, ensure_ascii=False, indent=1))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--run", action="append", required=True, help="name:label, e.g. getup17b:Run 17b")
     ap.add_argument("--every", type=int, default=60)
+    ap.add_argument("--news", help="the page's news.json: one item per new checkpoint")
     args = ap.parse_args()
+    global NEWS
+    NEWS = args.news
     out = Path(args.out)
     data = json.loads(out.read_text()) if out.exists() else dict(runs={})
     runs = [r.split(":", 1) for r in args.run]
@@ -120,6 +143,7 @@ def main():
                 rec, prog = attempts(d / "checkpoints", n, goal="selfright" if name.startswith("selfright") else "stand")
                 R["checkpoints"][str(n)] = dict(steps=n, exam=ex[n], progress=prog, replays=rec)
                 changed = True
+                news(name, label, n, prog)
                 print(f"{name} {n}: {prog}", flush=True)
             R["finished"] = (d / "policy.zip").exists()
         if changed:

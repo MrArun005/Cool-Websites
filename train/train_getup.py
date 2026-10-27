@@ -61,6 +61,7 @@ def main():
     ap.add_argument("--envs", type=int, default=8)
     ap.add_argument("--resume")
     ap.add_argument("--goal", default="stand", choices=["stand", "selfright"])
+    ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints (each is tested and shown live)")
     args = ap.parse_args()
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
@@ -80,7 +81,7 @@ def main():
                                        log_std_init=0.0),   # more exploration: rolling over needs big moves
                     device="cpu", verbose=0)
     start = time.time()
-    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 1_000_000, args.goal),
+    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, args.every, args.goal),
                 reset_num_timesteps=not args.resume, progress_bar=False)
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))
