@@ -7,9 +7,9 @@
 {{GAME_CSS}}
   /* Layout: the latest attempt in 3D first, then the learning curve, then what changed and why.
      Same look as the Gait Lab; one color per kind of fall. */
-  :root { --k-side: #2f6fb5; --k-back: #c4372f; --k-tipped: #d08a12; --k-standing: #2f8a4c; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; } }
-  :root[data-theme="dark"] { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; }
+  :root { --k-side: #2f6fb5; --k-back: #c4372f; --k-tipped: #d08a12; --k-standing: #2f8a4c; --k-x5: #7a4fb8; --k-x6: #16867f; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; --k-x5: #b294ea; --k-x6: #4cc4bb; } }
+  :root[data-theme="dark"] { --k-side: #6aa5e8; --k-back: #ec7067; --k-tipped: #f0b34a; --k-standing: #5cc27e; --k-x5: #b294ea; --k-x6: #4cc4bb; }
   .stage { aspect-ratio: 16 / 10; min-height: 300px; }
   .hud { position: absolute; display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--panel) 82%, transparent); border: 1px solid var(--line); pointer-events: none; max-width: min(60%, 340px); }
   .hud b { font: 700 1.05rem var(--display); }
@@ -46,7 +46,7 @@
   <header style="display:grid;gap:6px">
     <span class="label">Bolt robot dog · training, as it happens</span>
     <h1>Bolt Learning Live</h1>
-    <p class="muted" style="margin:0;max-width:72ch">Bolt is learning to get up after a fall, by trial and error, the way real robot dogs do it: first roll onto its belly, then stand. Every million practice steps the training saves a checkpoint. This page tests each one: it drops Bolt on its side, on its back, half tipped over and standing, and records what the brain does. Watch the latest attempt below, drag the slider to go back in time, and see on the chart how upright it manages to get. The page refreshes itself when a new checkpoint arrives.</p>
+    <p class="muted" style="margin:0;max-width:72ch">Bolt is learning by trial and error, on four machines at once: getting up after a fall (roll onto its belly, then stand), jumping a real agility hurdle, walking with its real hip range, and moving like a real dog. Every 500k practice steps each run saves a checkpoint. This page tests each one and records what the brain does: pick a run and what to try. Watch the latest attempt below, drag the slider to go back in time, and see on the chart how upright it manages to get. The page refreshes itself when a new checkpoint arrives.</p>
     <span class="live" id="live"><i></i><span id="liveText">Loading…</span></span>
   </header>
 
@@ -73,7 +73,7 @@
 
   <section class="panel" aria-labelledby="curve">
     <h2 id="curve">How upright it gets</h2>
-    <p class="muted" style="margin:0;max-width:72ch">For each kind of fall: the most upright Bolt got during the attempt, at each checkpoint. 1 is standing, 0 is on its side, −1 is flat on its back. A filled dot means it reached the goal: standing (runs 17, 17b) or belly down and still (run 17c).</p>
+    <p class="muted" id="curveNote" style="margin:0;max-width:72ch">For each kind of fall: the most upright Bolt got during the attempt, at each checkpoint. 1 is standing, 0 is on its side, −1 is flat on its back. A filled dot means it reached the goal: standing (runs 17, 17b) or belly down and still (run 17c).</p>
     <div class="chart" id="chart"></div>
     <div class="tablewrap"><table id="table" aria-label="Exam results per checkpoint"></table></div>
   </section>
@@ -129,8 +129,35 @@
     const x = data ? data.qpos[0] : 0, y = data ? data.qpos[1] : 0;
     camera.position.set(x + 1.3, y - 1.9, 1.2); controls.target.set(x, y, 0.2); controls.update(); lastPos = null;
   }
+  // ---------- the hurdle in jump replays: its fixed parts, and the bar posed per frame ----------
+  const propGrp = new THREE.Group(); scene.add(propGrp);
+  let propKey = null, barMesh = null;
+  const propMat = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.6 }), barMat = new THREE.MeshStandardMaterial({ color: 0xd6452f, roughness: 0.5 });
+  function geomMesh(type, size, mat) {   // MuJoCo geom types: 3 capsule, 5 cylinder, 6 box (cylinders along z)
+    const g = new THREE.Group();
+    const m = type === 6 ? new THREE.Mesh(new THREE.BoxGeometry(2 * size[0], 2 * size[1], 2 * size[2]), mat)
+      : new THREE.Mesh(new THREE.CylinderGeometry(size[0], size[0], 2 * size[1], 16), mat);
+    if (type !== 6) m.rotation.x = Math.PI / 2;
+    m.castShadow = true; g.add(m); return g;
+  }
+  function drawProps(P, i) {
+    const key = P ? runName + kind + ckIndex : null;
+    if (key !== propKey) {
+      propGrp.clear(); barMesh = null; propKey = key;
+      if (P) {
+        for (const [type, size, pos, q] of P.static) { const g = geomMesh(type, size, propMat); g.position.set(...pos); g.quaternion.set(q[1], q[2], q[3], q[0]); propGrp.add(g); }
+        barMesh = geomMesh(5, P.bar, barMat); propGrp.add(barMesh);
+      }
+    }
+    if (P && barMesh) { const b = P.barpose, k = 7 * Math.min(i, b.length / 7 - 1); barMesh.position.set(b[k], b[k + 1], b[k + 2]); barMesh.quaternion.set(b[k + 4], b[k + 5], b[k + 6], b[k + 3]); }
+  }
+
   // ---------- the recorded attempts ----------
-  const KINDS = [["side", "On its side"], ["back", "On its back"], ["tipped", "Half tipped"], ["standing", "Standing"]];
+  const FALLS = [["side", "On its side"], ["back", "On its back"], ["tipped", "Half tipped"], ["standing", "Standing"]];
+  const FALL_MEASURE = { label: "best uprightness", lo: -1, hi: 1, lowText: "on its back", highText: "standing" };
+  const kinds = () => L.runs[runName].kinds || FALLS;
+  const measure = () => L.runs[runName].measure || FALL_MEASURE;
+  const kcol = (i) => `var(--k-${["side", "back", "tipped", "standing", "x5", "x6"][i % 6]})`;
   let L = null, runName = null, kind = "back", ckIndex = 0, follow = true, playing = true, clock = 0, lastUpdated = null;
   const runsSorted = () => Object.keys(L.runs);
   const cks = () => Object.values(L.runs[runName].checkpoints).sort((a, b) => a.steps - b.steps);
@@ -143,7 +170,8 @@
   function renderChips() {
     $("runs").innerHTML = ""; $("kinds").innerHTML = "";
     for (const r of runsSorted()) chip($("runs"), L.runs[r].label.split(" (")[0], r === runName, () => { runName = r; ckIndex = cks().length - 1; follow = true; refresh(); });
-    for (const [k, label] of KINDS) chip($("kinds"), label, k === kind, () => { kind = k; clock = 0; renderChips(); }, `var(--k-${k})`);
+    if (!kinds().some(([k]) => k === kind)) kind = kinds()[0][0];
+    kinds().forEach(([k, label], i) => chip($("kinds"), label, k === kind, () => { kind = k; clock = 0; renderChips(); }, kcol(i)));
   }
   function refresh() {
     const list = cks();
@@ -157,33 +185,41 @@
     const c = current(); if (!c) return;
     const R = L.runs[runName];
     $("hCk").textContent = `${fmt(c.steps)} steps`;
-    $("hRun").textContent = R.label;
+    $("hRun").textContent = R.label + (R.where ? ` · ${R.where}` : "");
   }
 
   // ---------- chart: best uprightness per checkpoint, one line per kind of fall ----------
+  let fallNote = null;
   function chart() {
     const list = cks(), W = 720, H = 260, l = 46, r = 16, t = 14, b = 34;
     if (!list.length) { $("chart").innerHTML = '<p class="muted">No checkpoints yet. The first one arrives after 1M practice steps.</p>'; return; }
     const maxS = Math.max(...list.map((c) => c.steps)), minS = 0;
-    const x = (s) => l + (W - l - r) * (s - minS) / Math.max(1, maxS - minS), y = (u) => t + (H - t - b) * (1 - u) / 2;
-    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Best uprightness per checkpoint">`;
-    for (const u of [1, 0.5, 0, -0.5, -1]) s += `<line x1="${l}" x2="${W - r}" y1="${y(u)}" y2="${y(u)}" stroke="var(--line)" stroke-width="1"/><text x="${l - 8}" y="${y(u) + 4}" text-anchor="end">${u > 0 ? "+" : ""}${u}</text>`;
-    s += `<text x="${l + 4}" y="${y(1) - 4}">standing</text><text x="${l + 4}" y="${y(-1) + 13}">on its back</text>`;
+    if (!fallNote) fallNote = $("curveNote").textContent;
+    const cloudRun = !!L.runs[runName].kinds;
+    $("curve").textContent = cloudRun ? "Progress per checkpoint" : "How upright it gets";
+    $("curveNote").textContent = cloudRun ? `${measure().label}, at each checkpoint, for each kind of try. A filled dot means that try worked in the recording.` : fallNote;
+    const M = measure(), x = (s) => l + (W - l - r) * (s - minS) / Math.max(1, maxS - minS), y = (u) => t + (H - t - b) * (M.hi - Math.max(M.lo, Math.min(M.hi, u))) / (M.hi - M.lo);
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${M.label} per checkpoint">`;
+    for (let j = 0; j <= 4; j++) { const u = M.lo + (M.hi - M.lo) * j / 4; s += `<line x1="${l}" x2="${W - r}" y1="${y(u)}" y2="${y(u)}" stroke="var(--line)" stroke-width="1"/><text x="${l - 8}" y="${y(u) + 4}" text-anchor="end">${M.unit === "%" ? Math.round(u * 100) + "%" : (u > 0 && M.lo < 0 ? "+" : "") + +u.toFixed(2)}</text>`; }
+    s += `<text x="${l + 4}" y="${y(M.hi) + 13}">${M.highText}</text><text x="${l + 4}" y="${y(M.lo) - 4}">${M.lowText}</text>`;
     const ticks = Math.min(list.length, 8);
     for (let i = 0; i < ticks; i++) { const c = list[Math.round(i * (list.length - 1) / Math.max(1, ticks - 1))]; s += `<text x="${x(c.steps)}" y="${H - 12}" text-anchor="middle">${fmt(c.steps)}</text>`; }
-    for (const [k] of KINDS) {
-      const pts = list.map((c) => [x(c.steps), y(c.progress[k].best), c.progress[k].stood]);
-      s += `<polyline fill="none" stroke="var(--k-${k})" stroke-width="2.2" points="${pts.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}"/>`;
-      for (const [px, py, stood] of pts) s += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${stood ? `var(--k-${k})` : "var(--panel)"}" stroke="var(--k-${k})" stroke-width="2"/>`;
-    }
+    kinds().forEach(([k], i) => {
+      const col = kcol(i), pts = list.filter((c) => c.progress[k]).map((c) => [x(c.steps), y(c.progress[k].best), c.progress[k].stood]);
+      s += `<polyline fill="none" stroke="${col}" stroke-width="2.2" points="${pts.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}"/>`;
+      for (const [px, py, stood] of pts) s += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${stood ? col : "var(--panel)"}" stroke="${col}" stroke-width="2"/>`;
+    });
     const c = current(); if (c) s += `<line x1="${x(c.steps)}" x2="${x(c.steps)}" y1="${t}" y2="${H - b}" stroke="var(--ink)" stroke-dasharray="3 4" opacity=".5"/>`;
     $("chart").innerHTML = s + "</svg>";
   }
   function table() {
     const list = cks().slice().reverse();
     const pct = (v) => (v === undefined || v === null ? "–" : `${Math.round(v * 100)}%`);
-    let h = `<thead><tr><th>Checkpoint</th>${KINDS.map(([k, label]) => `<th><span class="kind" style="background:var(--k-${k})"></span>${label}</th>`).join("")}</tr></thead><tbody>`;
-    for (const c of list) h += `<tr><td class="mono">${fmt(c.steps)}</td>${KINDS.map(([k]) => { const v = c.exam["up_" + k], sec = c.exam["secs_" + k]; return `<td class="${v > 0 ? "ok" : ""}">${pct(v)}${sec ? ` · ${sec} s` : ""}</td>`; }).join("")}</tr>`;
+    const cloud = !!L.runs[runName].kinds;
+    let h = `<thead><tr><th>Checkpoint</th>${kinds().map(([k, label], i) => `<th><span class="kind" style="background:${kcol(i)}"></span>${label}</th>`).join("")}</tr></thead><tbody>`;
+    for (const c of list) h += `<tr><td class="mono">${fmt(c.steps)}</td>${kinds().map(([k]) => {
+      if (cloud) { const p = c.progress[k]; return `<td class="${p && p.stood ? "ok" : ""}">${p ? p.text : "–"}</td>`; }
+      const v = c.exam["up_" + k], sec = c.exam["secs_" + k]; return `<td class="${v > 0 ? "ok" : ""}">${pct(v)}${sec ? ` · ${sec} s` : ""}</td>`; }).join("")}</tr>`;
     $("table").innerHTML = h + "</tbody>";
   }
 
@@ -192,6 +228,7 @@
     try {
       const r = await fetch(`data/learning.json?t=${Date.now()}`); if (!r.ok) throw new Error(r.status);
       const next = await r.json();
+      try { const cr = await fetch(`data/cloud.json?t=${Date.now()}`); if (cr.ok) { const C2 = await cr.json(); Object.assign(next.runs, C2.runs); if (C2.updated > next.updated) next.updated = C2.updated; } } catch (e) {}
       if (L && next.updated === lastUpdated) return;
       L = next; lastUpdated = L.updated;
       const names = runsSorted();
@@ -257,8 +294,9 @@
       const q = f.slice(19 * i + 3, 19 * i + 7), up = 1 - 2 * (q[1] * q[1] + q[2] * q[2]);   // body z axis vs vertical
       $("hUp").textContent = up.toFixed(2);
       const p = c.progress[kind];
-      const goalWord = L.runs[runName].goal === "selfright" ? ["on its belly", "not righted"] : ["stood up", "didn't stand"];
-      $("hRes").textContent = (i < n - 1 ? "trying…" : p.stood ? goalWord[0] : goalWord[1]) + (p.tries ? ` · ${p.wins} of ${p.tries} falls stood up` : "");
+      const RR = L.runs[runName], goalWord = RR.words || (RR.goal === "selfright" ? ["on its belly", "not righted"] : ["stood up", "didn't stand"]);
+      $("hRes").textContent = (i < n - 1 ? "trying…" : p.stood ? goalWord[0] : goalWord[1]) + (p.tries ? ` · ${p.wins} of ${p.tries} falls stood up` : p.text ? ` · ${p.text}` : "");
+      drawProps(c.replays[kind + "_props"], i);
       $("hT").textContent = `${(i / FPS).toFixed(1)} s`;
       const ph = c.replays[kind + "_phase"];
       $("hDo").textContent = ph ? ph[i] : (i < n - 1 ? "trying" : "–");
