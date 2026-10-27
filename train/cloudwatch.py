@@ -70,6 +70,11 @@ RUNS = {
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
                                    lowText="not at all", highText="exactly"),
                       words=["copied", "fell"]),
+    "imitate18c": dict(branch="claude/train-run22b", label="Run 18c: running like a real dog (walk, trot, canter)", where="cloud machine 6 (from run 18b at 13.5M)",
+                      kinds=[["walk", "Walk"], ["trot", "Trot"], ["canter", "Canter (run)"], ["turn_left", "Turn left"], ["turn_right", "Turn right"]],
+                      measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
+                                   lowText="not at all", highText="exactly"),
+                      words=["copied", "fell"]),
 }
 
 
@@ -187,7 +192,7 @@ def record_walk(d):
 def record_imitate(d, run="imitate18"):
     from imitate_env import ImitateEnv, ImitatePolicy
     p = ImitatePolicy(d)
-    env = ImitateEnv(randomize=False)
+    env = ImitateEnv(randomize=False, clips=[k for k, _ in RUNS[run]["kinds"]])   # every clip shown on the page, canter included
     rec, prog = {}, {}
     for k, _ in RUNS[run]["kinds"]:
         if k not in env.clip_names:
