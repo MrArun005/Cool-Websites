@@ -221,3 +221,13 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   folded paws wedged Bolt's knees under its body, so sit and lie blend into Bolt's own measured fold.
 - **Imitation learns the poses before the pace.** At 300k steps it tracked the poses and fell 4% of the
   time while covering only 19% of the dog's distance; the exam has to measure distance, not just pose.
+- **Never break off a posture halfway.** Bolt stood up 0.1 s into a sit to face a passing person and
+  tipped over. Finish a sit or lie (about 1.5 s) before rising; a sitting dog follows you with its eyes.
+- **Ramp the turn command.** A turn flipping from +0.7 to -1.5 rad/s in one step at a path corner, at
+  0.5-0.7 m/s, tipped Bolt. Slow into corners and change the turn rate by at most ~3.5 rad/s².
+- **Small loose objects trip a walking robot.** Bolt fell stepping on its own ball after dropping it under
+  its front paws: drop it ahead of the nose, plan paths around it.
+- **A robot that can't walk backwards must never put its nose into a corner.** Keep its centre 0.5 m from
+  walls and reach wall-side things from there.
+- **Test every behaviour from start to finish.** Fetch's score fell to zero the moment Bolt picked up the
+  ball, so another behaviour took over and the ball was never delivered.
