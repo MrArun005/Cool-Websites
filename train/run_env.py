@@ -22,16 +22,29 @@ DOG = STANCES["dog"]
 SCALE = np.tile([0.2, 0.5, 0.6], 4)   # rad per unit action: abd, hip, knee
 MAX_V, MAX_W = 4.0, 5.0               # curriculum ceilings: Mini Cheetah ran 3.9 m/s, turned 5.7 rad/s
 
+# Running like a dog (run 22): a style reward for being close to the nearest frame of a reference gait, joint
+# angles and (scaled) joint speeds, with no clock (a simple stand-in for adversarial motion priors, Escontrela
+# 2022). At 2 m/s and up: Bolt's own gallop, the run-out of the run 16f jump brain after landing (3.1 m/s,
+# real A1 motors); from 0.6 to 2 m/s: the real dog's trot (motion capture, retargeted).
+def _style_set(name):
+    from pathlib import Path
+    c = np.load(Path(__file__).with_name("dogmotion") / "clips" / f"{name}.npz")
+    return np.concatenate([c["joints"], 0.05 * c["joint_vel"]], 1).astype(np.float32)
+
 
 class RunEnv(gym.Env):
     OBS = 49
 
-    def __init__(self, randomize=True, seed=None, max_steps=1000, pushes=True):
+    def __init__(self, randomize=True, seed=None, max_steps=1000, pushes=True, turn_weight=0.75, turn_focus=0.0, style_weight=0.0):
         self.model = mujoco.MjModel.from_xml_path(str(MODEL))
         self.data = mujoco.MjData(self.model)
         m = self.model
         self.frame_skip, self.dt = 10, m.opt.timestep * 10
         self.randomize, self.max_steps, self.pushes = randomize, max_steps, pushes
+        # turn_weight: pay for tracking the turn rate; turn_focus: share of commands that are fast turns or spins (run 21)
+        self.turn_weight, self.turn_focus = turn_weight, turn_focus
+        self.style_weight = style_weight
+        self.styles = dict(gallop=_style_set("bolt_gallop"), trot=_style_set("trot")) if style_weight else None
         self.rng = np.random.default_rng(seed)
         self.torso = m.body("torso").id
         self.foot_ids = [m.geom(f"{l}_foot").id for l in ("FL", "FR", "RL", "RR")]
@@ -62,6 +75,9 @@ class RunEnv(gym.Env):
         vx = self.rng.uniform(0.6, 1.0) * self.top_v if r > 0.6 else vx   # often near the current top speed
         vy = self.rng.uniform(-0.5, 0.5) if self.rng.random() < 0.3 else 0.0
         w = self.rng.uniform(-self.top_w, self.top_w) if self.rng.random() < 0.6 else 0.0
+        if self.rng.random() < self.turn_focus:   # a fast turn or a spin on the spot
+            vx, vy = self.rng.uniform(0.0, 1.0), 0.0
+            w = self.rng.choice([-1, 1]) * self.rng.uniform(0.5, 1.0) * self.top_w
         return np.array([vx, vy, w])
 
     def _obs(self):
@@ -140,12 +156,15 @@ class RunEnv(gym.Env):
 
         e_v = np.sum((self.cmd[:2] - vb[:2]) ** 2)
         track_v = np.exp(-e_v / max(0.25, 0.1 * self.cmd[0] ** 2))   # tolerance grows with speed, as in fast-running work
-        track_w = np.exp(-(self.cmd[2] - w[2]) ** 2 / 0.25)
+        # tolerance grows with the asked turn rate, as for speed: with a fixed 0.25 a 3 rad/s turn
+        # scored ~0 for every try, so there was nothing to learn from (run 20 turned 0.2 rad/s of 3)
+        track_w = np.exp(-(self.cmd[2] - w[2]) ** 2 / max(0.25, 0.1 * self.cmd[2] ** 2))
         torque = d.actuator_force
-        r = (1.5 * track_v + 0.75 * track_w
+        style = self.style() if self.styles is not None else 0.0
+        r = (1.5 * track_v + self.turn_weight * track_w
              - 2.0 * vb[2] ** 2 - 0.05 * np.sum(w[:2] ** 2) - 1.0 * np.sum((R.T @ [0, 0, -1])[:2] ** 2)
              - 2e-4 * np.sum(torque ** 2) - 0.01 * np.sum((a - self.last_action) ** 2)
-             - 1.0 * knee + 1.0 * air_pay)
+             - 1.0 * knee + 1.0 * air_pay + self.style_weight * style)
         self.last_action = a
         self.track_sum += track_v
         self.track_n += 1
@@ -155,8 +174,18 @@ class RunEnv(gym.Env):
             r -= 10.0
         if fell or trunc:
             self._curriculum()
-        info = dict(track_v=float(track_v), vx=float(vb[0]), w=float(w[2]), top_v=self.top_v, fell=fell)
+        info = dict(style=float(style), track_v=float(track_v), vx=float(vb[0]), w=float(w[2]), top_v=self.top_v, fell=fell)
         return self._obs(), float(r), fell, trunc, info
+
+
+    def style(self):
+        """0..1: how close the legs are to the nearest frame of the reference gait for the asked speed."""
+        v = self.cmd[0]
+        if v < 0.6:
+            return 0.0
+        ref = self.styles["gallop" if v >= 2.0 else "trot"]
+        f = np.concatenate([self.data.qpos[7:19], 0.05 * self.data.qvel[6:18]])
+        return float(np.exp(-np.min(np.mean((ref - f) ** 2, 1)) / 0.1))   # run 20's own gait scores ~0.2, the gallop ~0.9
 
 
 class RunPolicy:
@@ -176,10 +205,10 @@ class RunPolicy:
 def exam(policy, episodes=3, seed=7000):
     """Speed kept at each asked speed (achieved / asked over the last 3 s of a 5 s run), turn rate kept,
     falls, and push survival (a 1.5 m/s sideways shove while trotting at 1 m/s)."""
-    env = RunEnv(randomize=True, pushes=False, max_steps=250)
+    env = RunEnv(randomize=True, pushes=False, max_steps=250, style_weight=1.0)   # weight only switches the style measure on
     out = {}
     for name, cmd in (("v1", (1, 0, 0)), ("v2", (2, 0, 0)), ("v3", (3, 0, 0)), ("v4", (4, 0, 0)), ("w3", (0.5, 0, 3.0)), ("w5", (0.5, 0, 5.0))):
-        kept, falls = [], 0
+        kept, falls, style = [], 0, []
         for k in range(episodes):
             env.exam_command = cmd
             obs, _ = env.reset(seed=seed + k)
@@ -188,12 +217,15 @@ def exam(policy, episodes=3, seed=7000):
                 obs, _, fell, trunc, info = env.step(policy.act(obs))
                 if t >= 100:
                     got.append(info["w"] if name[0] == "w" else info["vx"])
+                    style.append(info["style"])
                 if fell:
                     break
             falls += fell
             kept.append(0.0 if fell else np.mean(got) / (cmd[2] if name[0] == "w" else cmd[0]))
         out[f"speed_{name}" if name[0] == "v" else f"turn_{name}"] = round(float(np.mean(kept)), 2)
         out[f"fall_{name}"] = round(falls / episodes, 2)
+        if name in ("v2", "v3"):   # how dog-like the gait is: 1 = exactly the reference trot / gallop
+            out[f"style_{name}"] = round(float(np.mean(style)) if style else 0.0, 2)
     survived = 0
     for k in range(episodes * 2):
         env.exam_command = (1, 0, 0)
@@ -213,4 +245,5 @@ def exam(policy, episodes=3, seed=7000):
 def score(r):
     """Fastest speed held with no falls (m/s) + turn rate held, for picking the best brain."""
     top = max([v for v, k in ((1, "v1"), (2, "v2"), (3, "v3"), (4, "v4")) if r[f"fall_{k}"] == 0 and r[f"speed_{k}"] > 0.8] or [0])
-    return round(top + 0.3 * min(r["turn_w3"], 1.0) * (r["fall_w3"] == 0) + 0.5 * r["push_1.5"], 3)
+    return round(top + 0.3 * min(r["turn_w3"], 1.0) * (r["fall_w3"] == 0) + 0.5 * r["push_1.5"]
+                 + 2.0 * (r.get("style_v2", 0) + r.get("style_v3", 0)) / 2, 3)   # a dog's gait counts as much as 2 m/s of speed
