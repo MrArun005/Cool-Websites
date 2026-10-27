@@ -158,11 +158,15 @@ class MjxImitate:
     action_size = 12
     backend = "mjx"
 
-    def __init__(self, randomize=True, clips=None, switch_rate=0.3, weights=None, clip_weights=None, clip_dir=CLIP_DIR):
+    def __init__(self, randomize=True, clips=None, switch_rate=0.3, weights=None, clip_weights=None, clip_dir=CLIP_DIR,
+                 iterations=5, ls_iterations=8):
         from brax.envs.base import State
         self.State = State
         xml = collisions((HERE / "bolt.xml").read_text())
         self.m = m = mujoco.MjModel.from_xml_string(xml)
+        # contact solver: MuJoCo's 100/50 iterations run to the slowest env under vmap; 5/8 gives the same physics
+        # here (one control step off the CPU env by the same amounts as 100/50) at a third of the cost
+        m.opt.iterations, m.opt.ls_iterations = iterations, ls_iterations
         self.mx = mjx.put_model(m)
         self.randomize, self.switch_rate = randomize, switch_rate
         self.weights = dict(WEIGHTS, **(weights or {}))
