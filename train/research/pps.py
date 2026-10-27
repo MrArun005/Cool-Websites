@@ -45,7 +45,7 @@ class BatchBrain:
             obs = np.concatenate([obs[..., :48 + self.p.slots], obs[..., 57:]], axis=-1)
         x = torch.as_tensor(self.p.norm.normalize_obs(obs), dtype=torch.float32)
         with torch.no_grad():
-            a = self.p.model.policy.get_distribution(x).mode() if hasattr(self.p.model.policy, "get_distribution") else None
+            a = self.p.model.policy.get_distribution(x).mode()
         return np.clip(a.numpy(), -1, 1)
 
 
