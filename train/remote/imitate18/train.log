@@ -213,3 +213,16 @@ update at 2785280: reward/step 0.747, try length 228 steps (100 tries), 675 step
 update at 2801664: reward/step 0.739, try length 232 steps (100 tries), 675 steps/s
 update at 2818048: reward/step 0.753, try length 213 steps (100 tries), 675 steps/s
 update at 2834432: reward/step 0.761, try length 215 steps (100 tries), 676 steps/s
+update at 2850816: reward/step 0.753, try length 221 steps (100 tries), 675 steps/s
+update at 2867200: reward/step 0.759, try length 223 steps (100 tries), 675 steps/s
+update at 2883584: reward/step 0.754, try length 222 steps (100 tries), 675 steps/s
+update at 2899968: reward/step 0.764, try length 213 steps (100 tries), 675 steps/s
+update at 2916352: reward/step 0.754, try length 218 steps (100 tries), 675 steps/s
+update at 2932736: reward/step 0.754, try length 223 steps (100 tries), 675 steps/s
+update at 2949120: reward/step 0.759, try length 218 steps (100 tries), 675 steps/s
+update at 2965504: reward/step 0.764, try length 217 steps (100 tries), 675 steps/s
+update at 2981888: reward/step 0.761, try length 218 steps (100 tries), 675 steps/s
+update at 2998272: reward/step 0.759, try length 226 steps (100 tries), 675 steps/s
+checkpoint 3000000 ready: {'track_walk': 0.839, 'fall_walk': 0.0, 'speed_walk': 0.77, 'track_trot': 0.764, 'fall_trot': 0.0, 'speed_trot': 0.8, 'track_pace': 0.859, 'fall_pace': 0.0, 'speed_pace': 0.78, 'track_turn_left': 0.834, 'fall_turn_left': 0.0, 'speed_turn_left': 0.36, 'track_turn_right': 0.836, 'fall_turn_right': 0.0, 'speed_turn_right': 0.39, 'track_sit': 0.879, 'fall_sit': 0.0, 'track_lie': 0.856, 'fall_lie': 0.0} (mean tracking 0.838, fall rate 0.00, score 0.613)
+new best at 3000000: score 0.613
+update at 3014656: reward/step 0.757, try length 228 steps (100 tries), 672 steps/s
