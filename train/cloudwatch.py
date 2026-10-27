@@ -60,6 +60,11 @@ RUNS = {
                       measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
                                    lowText="not at all", highText="exactly"),
                       words=["copied", "fell"]),
+    "imitate18f": dict(branch="claude/train-run22b", label="Run 18f: canter fine-tune (gentler learning, from 18c's best)", where="cloud machine 6 (from run 18c at 29.5M)",
+                      kinds=[["walk", "Walk"], ["trot", "Trot"], ["canter", "Canter (run)"], ["turn_left", "Turn left"], ["turn_right", "Turn right"]],
+                      measure=dict(label="How closely Bolt copies the real dog (1 = exactly)", lo=0, hi=1, unit="",
+                                   lowText="not at all", highText="exactly"),
+                      words=["copied", "fell"]),
 }
 
 
