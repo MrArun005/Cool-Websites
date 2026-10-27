@@ -22,10 +22,35 @@ import torch
 
 torch.set_num_threads(1)
 
-from skills import Bolt   # noqa: E402
+from skills import IMITATE_RUN, Bolt   # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 WINDOW = 2.0   # s without a fall after a switch
+
+# What the recordings show (run of 2026-10-27, N=10, dog-motion brain run 18b at 15M; rates in skills_report.json)
+FINDINGS = [
+    "Gait switches mostly work (walk->trot 10/10, trot->canter 9/10, canter->trot 7/9, trot->walk 7/7). The falls are "
+    "sideways (roll ~1 rad when the uprightness drops below 0.5) 0.5-0.8 s after the switch, at 1.7-2 m/s. The 'canter' "
+    "is not a real canter: Bolt makes ~1.2 m/s of the dog's 3.3 m/s, so the canter clip is mostly a different trot.",
+    "walk->sit never falls but only 1 in 10 is a sit: at 1 m/s the sit clip (a dog standing still, then sitting) makes Bolt "
+    "brake by folding the front legs, and it ends nose DOWN (pitch -0.5 rad, the clip has +0.6) at 20 cm. From that pose "
+    "the lie clip tips it over (9/10 falls, 1.35 s in, nose down and rolled 0.6 rad). From standing still the same chain "
+    "works every time (sit 10/10 in pose, lie 10/10, posture stand 10/10). Starting the sit clip at its start instead of "
+    "the closest pose (8/8 fell), or braking first with the posture brain's stand (6-8 of 8 fell), did not help.",
+    "Jumps from a trot: the jump brain learned from a standstill 45-65 cm away; handed over at 1.1 m from a 1.5-1.9 m/s trot "
+    "it clears 20 cm 8/10 and 30 cm 7/10 cleanly, but 40 cm only 3/10 (every failure knocked the bar: the trailing legs "
+    "clip it; 1 in 10 also crashes). The bigger problem is after the landing: Bolt lands at 3-4 m/s, faster than any clip "
+    "the dog-motion brain can hold, and falls sideways within 0.5-2 s in 17 of 26 landings, at every height (a 0.6 s canter "
+    "bridge did not measurably help).",
+    "Recovery works: every shove topples Bolt, self-righting + tuck + stand stands it up 9/10 (the 10th ends at 38 cm, "
+    "just under the bar), and walking off after it works 9/9.",
+    "What would fix them: train the transitions instead of only the skills. (1) Imitation training that switches clips "
+    "mid-try at the closest pose (exactly what skills.py does) and starts sit/lie from moving walk/trot states, or a "
+    "'stop' clip, so it learns to brake before sitting. (2) The jump brain trained from a running approach (tries that "
+    "start from recorded trot states 1-2 m before the bar) and continuing 2 s into the trot reward after landing, or the "
+    "dog-motion brain given starts from the jump brain's landings (3-4 m/s). (3) A real canter (run 18c/22) so fast "
+    "landings have a gait to go to.",
+]
 
 
 class Tally:
@@ -81,19 +106,38 @@ def seq_gaits(bolt, seed, tally):
         prev = g
 
 
-def seq_rest(bolt, seed, tally):
-    """walk -> sit -> lie (imitation clips) -> stand (posture brain: the clips have no way back up)."""
-    bolt.start("walk", seed=seed)
-    bolt.do("walk", 2.0)
-    for prev, skill, secs in (("walk", "sit", 4.0), ("sit", "lie", 5.5), ("lie", "stand", 3.0)):
-        reached, t0 = clean_so_far(bolt), bolt.t
-        bolt.do(skill, secs)
-        ok, why = window(bolt, t0)
-        p = bolt.sr.posture()
-        why = dict(why, end_height=round(float(p["height"]), 3), end_up=round(float(p["up"]), 2))
-        if skill == "stand":   # really up: upright, body above 38 cm
-            ok = ok and p["up"] > 0.9 and p["height"] > 0.38
-        tally.add(f"{prev}->{skill}" + (" (posture)" if skill == "stand" else ""), ok if reached else None, why)
+POSE_OK = {   # the pose the clip ends in, reached (clip: sit 23 cm, nose up 0.6 rad; lie 16-17 cm, level)
+    "sit": lambda p: p["height"] < 0.27 and p["pitch"] > 0.3,
+    "lie": lambda p: p["height"] < 0.19 and p["up"] > 0.9,
+}
+
+
+def seq_rest(start):
+    def run(bolt, seed, tally):
+        """walk (or stand still: the sit clip's first second) -> sit -> lie (imitation clips) -> stand (posture
+        brain: the clips have no way back up). Also counts whether the sit and lie poses were really reached."""
+        if start == "walk":
+            bolt.start("walk", seed=seed)
+            bolt.do("walk", 2.0)
+            prev, tag = "walk", ""
+        else:
+            bolt.start("sit", tau=0.0, seed=seed)   # standing still at the start of the sit clip
+            prev, tag = "still", "still: "
+        for skill, secs in (("sit", 4.0), ("lie", 5.5), ("stand", 3.0)):
+            reached, t0 = clean_so_far(bolt), bolt.t
+            bolt.do(skill, secs)
+            ok, why = window(bolt, t0)
+            p = bolt.sr.posture()
+            why = dict(why, end_height=round(float(p["height"]), 3), end_up=round(float(p["up"]), 2),
+                       end_pitch=round(float(p["pitch"]), 2))
+            if skill == "stand":   # really up: upright, body above 38 cm
+                ok = ok and p["up"] > 0.9 and p["height"] > 0.38
+            name = f"{tag}{prev}->{skill}" + (" (posture)" if skill == "stand" else "")
+            tally.add(name, ok if reached else None, why)
+            if skill in POSE_OK:
+                tally.add(name + " [pose reached]", (ok and POSE_OK[skill](p)) if reached else None, why)
+            prev = skill
+    return run
 
 
 def seq_jump(height):
@@ -136,9 +180,10 @@ def seq_shove(bolt, seed, tally):
         tally.add("recover -> walk", None)
 
 
-SEQUENCES = {"gaits": seq_gaits, "rest": seq_rest, "jump20": seq_jump(0.20), "jump30": seq_jump(0.30),
+SEQUENCES = {"gaits": seq_gaits, "rest": seq_rest("walk"), "rest_still": seq_rest("still"), "jump20": seq_jump(0.20), "jump30": seq_jump(0.30),
              "jump40": seq_jump(0.40), "shove": seq_shove}
 LABELS = {"gaits": "Walk, trot, canter, trot, walk", "rest": "Walk, sit, lie down, stand up",
+          "rest_still": "Standing still, sit, lie down, stand up",
           "jump20": "Trot, jump a 20 cm bar, trot", "jump30": "Trot, jump a 30 cm bar, trot",
           "jump40": "Trot, jump a 40 cm bar, trot", "shove": "Shoved over, gets up, walks on"}
 
@@ -148,10 +193,12 @@ def main():
     ap.add_argument("--n", type=int, default=10, help="tries per sequence (different seeds and physics)")
     ap.add_argument("--seed", type=int, default=1000)
     ap.add_argument("--only", nargs="*", help="sequence names (default: all)")
+    ap.add_argument("--imitate-steps", type=int, help="dog-motion checkpoint (default: run 18b's newest)")
     ap.add_argument("--report", default=str(HERE / "skills_report.json"))
     ap.add_argument("--replays", default=str(HERE / "skills_replays.json"))
     args = ap.parse_args()
-    bolt = Bolt(seed=args.seed)
+    n = args.imitate_steps
+    bolt = Bolt(seed=args.seed, imitate=(IMITATE_RUN, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl") if n else None)
     tally, replays, progress, started = Tally(), {}, {}, time.time()
     for name in args.only or SEQUENCES:
         before = {k: tally.tries[k] - tally.ok[k] for k in tally.order}
@@ -184,7 +231,7 @@ def main():
                   brains=dict(imitate=str(Path(imitate[0]).relative_to(HERE.parent) / imitate[1]),
                               jump="models/bolt-dog-jump-a1-16g-27M", selfright="models/bolt-dog-selfright-17e-16.5M",
                               posture="models/bolt-dog-posture-getup-3M"),
-                  switches=rows)
+                  switches=rows, findings=FINDINGS)
     Path(args.report).write_text(json.dumps(report, indent=1))
     steps = int(imitate[1].split("_")[1])
     kinds = [[k, LABELS.get(k, LABELS.get(k.replace("_fail", ""), k) + " (a failing try)")] for k in progress]

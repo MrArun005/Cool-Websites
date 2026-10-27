@@ -49,11 +49,10 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
-import hurdle
-from bolt_env import BoltEnv, COMMANDS, LIE_POSE
+from bolt_env import LIE_POSE, BoltEnv
 from evaluate import Policy
 from getup_env import GetUpEnv, GetUpPolicy
-from imitate_env import ALL_CLIPS, ImitateEnv, ImitatePolicy
+from imitate_env import ImitateEnv, ImitatePolicy
 from jump_env import JumpEnv, JumpPolicy
 
 HERE = Path(__file__).resolve().parent
