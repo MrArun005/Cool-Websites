@@ -57,7 +57,7 @@ DOG = STANCES["dog"]
 class JumpEnv(BoltEnv):
     OBS = 49   # 51 with real=True
 
-    def __init__(self, randomize=True, seed=None, max_steps=100, real=False):
+    def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65)):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
                          hurdles="real" if real else True, skills=["stand"])
         self.real = real
@@ -71,6 +71,9 @@ class JumpEnv(BoltEnv):
             self.exam_askew = None   # (heading error rad, metres off the line) for exams
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.exam_bar = None  # (distance, height): exams set the bar; training draws it
+        # approach: how far ahead the bar starts (m). Up to run 16h 0.45-0.65 m, a standing jump; run 16i trains
+        # from 1.5-3 m so Bolt runs up and picks its own take-off, as dogs clear high bars (more steps per try)
+        self.approach = approach
         # adaptive bar height, like a coach: it goes up (0.5 cm) while clean jumps are common, down when rare
         self.bar_level, self.clean_rate = 0.12, 0.0
 
@@ -161,7 +164,7 @@ class JumpEnv(BoltEnv):
         mujoco.mj_forward(m, d)
         for _ in range(25):  # settle into the dog stance on the motors
             physics(m, d, self.frame_skip)
-        dist, h = self.exam_bar or (self.rng.uniform(0.45, 0.65), self._bar_height())
+        dist, h = self.exam_bar or (self.rng.uniform(*self.approach), self._bar_height())
         if self.real:   # like a game: up to 11 degrees askew and 10 cm off the line
             askew, side = self.exam_askew or (self.rng.uniform(-0.2, 0.2), self.rng.uniform(-0.1, 0.1))
             self.place_real(dist, h, askew, side)
@@ -243,17 +246,18 @@ class JumpPolicy:
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
-def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30)):
-    """Jump the bar from 55 cm away: cleared without touching it, landed, standing at the end, no fall.
+def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100):
+    """Jump the bar from `dist` m away (55 cm up to run 16h; 2 m with a run-up from run 16i): cleared without
+    touching it, landed, standing at the end, no fall.
     On the real hurdle (run 16 on), half the tries start 6 degrees askew and 5 cm off the line, and Bolt
     must end facing within 20 degrees of the jump."""
     out = {}
     real = getattr(policy, "real", False)
-    env = JumpEnv(randomize=True, real=real)
+    env = JumpEnv(randomize=True, real=real, max_steps=max_steps)
     for h in heights:
         wins = 0
         for k in range(episodes):
-            env.exam_bar = (0.55, h)
+            env.exam_bar = (dist, h)
             if real:
                 env.exam_askew = (0.0, 0.0) if k % 2 == 0 else ((0.1, 0.05) if k % 4 == 1 else (-0.1, -0.05))
             obs, _ = env.reset(seed=seed + k)

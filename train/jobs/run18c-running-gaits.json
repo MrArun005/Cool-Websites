@@ -1,0 +1,66 @@
+{
+  "name": "bolt-run18c-running-gaits",
+  "workdir": "..",
+  "env": {
+    "MUJOCO_GL": "osmesa"
+  },
+  "check_every": 30,
+  "jobs": [
+    {
+      "name": "train",
+      "cmd": [
+        "python",
+        "-u",
+        "train_imitate.py",
+        "--name",
+        "imitate18c",
+        "--steps",
+        "40000000",
+        "--clips",
+        "walk",
+        "trot",
+        "canter",
+        "canter",
+        "canter",
+        "turn_left",
+        "turn_right",
+        "--slots",
+        "8",
+        "--exam-every",
+        "500000",
+        "--resume",
+        "remote/imitate18c_start/policy_13500000_steps.zip"
+      ],
+      "resume_cmd": [
+        "python",
+        "-u",
+        "train_imitate.py",
+        "--name",
+        "imitate18c",
+        "--steps",
+        "40000000",
+        "--clips",
+        "walk",
+        "trot",
+        "canter",
+        "canter",
+        "canter",
+        "turn_left",
+        "turn_right",
+        "--slots",
+        "8",
+        "--exam-every",
+        "500000",
+        "--resume",
+        "{latest}"
+      ],
+      "latest": "runs/imitate18c/checkpoints/policy_*_steps.zip",
+      "log": "runs/imitate18c/train.log",
+      "done_when": {
+        "exit_code": 0,
+        "file": "runs/imitate18c/policy.zip",
+        "log_contains": "^done:"
+      }
+    }
+  ]
+}

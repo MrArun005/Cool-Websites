@@ -25,6 +25,10 @@
         "turn_right",
         "sit",
         "lie",
+        "--slots",
+        "8",
+        "--exam-every",
+        "500000",
         "--resume",
         "runs/imitate18/checkpoints/policy_9000000_steps.zip"
       ],
@@ -45,6 +49,10 @@
         "turn_right",
         "sit",
         "lie",
+        "--slots",
+        "8",
+        "--exam-every",
+        "500000",
         "--resume",
         "{latest}"
       ],

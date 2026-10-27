@@ -82,3 +82,15 @@ Training is not the goal; one working robot brain stack is. When runs 16e, 17d, 
 4. **Package.** models/<name>/ with ONNX, exam.json, MODEL.md for each brain; one README table of skills, success rates and limits (licence: dog-motion brains are CC BY-NC 4.0).
 5. **Ship.** Re-export the Gait Lab, castle, agility and pet pages with the new brains; remove the teleport fallback and the kinematic ball carry; republish; final news item on Bolt Learning Live.
 If a run ends worse than its start (e.g. the motor limits cost too much), fix the reward or curriculum and retrain that skill only; do not ship the regression.
+
+## Product goal: better together than the published research
+Each published system leads at one skill (Peng 2020 gaits, ANYmal recovery, parkour jumps, Mini Cheetah speed).
+Bolt's edge is the whole dog in one stack, measured honestly. Steps:
+1. Skill manager (train/skills.py, test_skills.py): dog gaits by speed (walk/trot/canter from runs 18b-18d), jump
+   (16g/16h), fall -> roll to belly (17e) -> get up front-first like a dog (18d getup clip), sit/lie. Target: 95%+
+   of switches without a fall.
+2. Robust for hardware: train with motor delay 0-20 ms, sensor noise, shoves; avoid inputs a real robot cannot measure.
+3. Benchmarks on the papers' terms (gait imitation vs Peng, recovery vs ANYmal/AFR, jump heights vs parkour, pushes
+   vs DreamWaQ, a Barkour-style course) and a scoreboard on Bolt Learning Live, each number marked sim or real.
+4. Demo: pet page and games on the combined Bolt; 4K video pushed to git.
+Do not claim to beat a specialist at its speciality unless the same test says so.
