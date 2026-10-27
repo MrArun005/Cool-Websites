@@ -318,7 +318,7 @@ export class Run {
     this.bolt = bolt; this.course = course; this.start = start;
     setupCourse(bolt, course, start);
     this.body = new Body(bolt, dog); this.body.reset();
-    this.t = 0; this.clock = null; this.index = 0; this.faults = []; this.events = []; this.over = false;
+    this.t = 0; this.clock = null; this.index = 0; this.faults = []; this.marks = []; this.events = []; this.over = false;
     this.cmd = "stand"; this.turn = 0; this.autoJump = true; this.autoSteer = true;
     this.fallTime = 0; this.task = this.newTask(); this.lineS = 0; this.lineOff = 0;
     this.stats = { commands: {}, falls: 0, jumps: 0, cleanJumps: 0 };
@@ -332,7 +332,7 @@ export class Run {
   rel(p, hd) { const q = this.local(), dx = q.x - p.x, dy = q.y - p.y; return [Math.cos(hd) * dx + Math.sin(hd) * dy, -Math.sin(hd) * dx + Math.cos(hd) * dy]; }
   get obstacle() { return this.course.obstacles[this.index]; }
   say(text, kind = "info") { this.events.push({ t: this.clock || 0, text, kind }); }
-  fault(why) { this.faults.push(why); this.say(`${why}: +${FAULT_SECONDS} s`, "bad"); }
+  fault(why) { this.faults.push(why); this.marks[this.index] = true; this.say(`${why}: +${FAULT_SECONDS} s`, "bad"); }
   get time() { return this.clock || 0; }
   get total() { return this.time + FAULT_SECONDS * this.faults.length; }
   newTask() { return { held: 0, marker: 0, missed: false, done: false, count: null }; }

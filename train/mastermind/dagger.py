@@ -25,7 +25,7 @@ sys.path.insert(0, str(HERE))
 
 import numpy as np  # noqa: E402
 
-OUT = HERE / "out"
+OUT = HERE.parent / "runs" / "mastermind" / "out"   # big files (data set, checkpoints): gitignored
 GAIT_W = {"walk": 3, "trot": 3, "pace": 1, "canter": 2, "turn_left": 1, "turn_right": 1}
 
 
