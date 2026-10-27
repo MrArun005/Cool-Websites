@@ -60,7 +60,7 @@
     <div class="stage" id="stage">
       <div class="loading" id="loading">Loading…</div>
       <div class="hud tl"><span class="label">Checkpoint</span><b id="hCk">–</b><span class="muted" id="hRun"></span></div>
-      <div class="hud tr"><span class="label">Upright</span><b id="hUp">–</b><span class="label">Result</span><b id="hRes">–</b><span class="label">Time</span><b id="hT">0.0 s</b></div>
+      <div class="hud tr"><span class="label">Upright</span><b id="hUp">–</b><span class="label">Doing</span><b id="hDo">–</b><span class="label">Result</span><b id="hRes">–</b><span class="label">Time</span><b id="hT">0.0 s</b></div>
       <div class="hint"><span id="gridNote">grid = 50 cm</span> · drag to turn the view, scroll or pinch to zoom</div>
     </div>
     <div class="controls">
@@ -258,8 +258,10 @@
       $("hUp").textContent = up.toFixed(2);
       const p = c.progress[kind];
       const goalWord = L.runs[runName].goal === "selfright" ? ["on its belly", "not righted"] : ["stood up", "didn't stand"];
-      $("hRes").textContent = i < n - 1 ? "trying…" : p.stood ? goalWord[0] : goalWord[1];
+      $("hRes").textContent = (i < n - 1 ? "trying…" : p.stood ? goalWord[0] : goalWord[1]) + (p.tries ? ` · ${p.wins} of ${p.tries} falls stood up` : "");
       $("hT").textContent = `${(i / FPS).toFixed(1)} s`;
+      const ph = c.replays[kind + "_phase"];
+      $("hDo").textContent = ph ? ph[i] : (i < n - 1 ? "trying" : "–");
       const x = data.qpos[0], yy = data.qpos[1];
       if (lastPos) { const dx = x - lastPos[0], dy = yy - lastPos[1]; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy; }
       lastPos = [x, yy];
