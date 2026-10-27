@@ -30,9 +30,9 @@ def exams(log):
     return out
 
 
-def attempts(ck, n, seed=4321):
+def attempts(ck, n, seed=4321, goal="stand"):
     p = GetUpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl")
-    env = GetUpEnv(randomize=False)
+    env = GetUpEnv(randomize=False, goal=goal)
     rec, prog = {}, {}
     for kind in KINDS:
         env.exam_start = kind
@@ -66,12 +66,13 @@ def main():
             d = Path(__file__).with_name("runs") / name
             R = data["runs"].setdefault(name, dict(label=label, checkpoints={}))
             R["label"] = label
+            R["goal"] = "selfright" if name.startswith("selfright") else "stand"
             ex = exams(d / "train.log")
             for zp in sorted((d / "checkpoints").glob("policy_*_steps.zip"), key=lambda p: int(p.stem.split("_")[1])):
                 n = int(zp.stem.split("_")[1])
                 if str(n) in R["checkpoints"] or n not in ex:
                     continue
-                rec, prog = attempts(d / "checkpoints", n)
+                rec, prog = attempts(d / "checkpoints", n, goal="selfright" if name.startswith("selfright") else "stand")
                 R["checkpoints"][str(n)] = dict(steps=n, exam=ex[n], progress=prog, replays=rec)
                 changed = True
                 print(f"{name} {n}: {prog}", flush=True)

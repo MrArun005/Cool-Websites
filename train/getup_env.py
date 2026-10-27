@@ -16,6 +16,11 @@ while flailing to roll over, far more than being upright paid. A search over mot
 learning) found a way to roll over from the side with this body, so it is possible. Run 17b: no
 joint-speed charge, a fifth of the effort charge, a bonus for each new best uprightness (progress), and
 more exploration at the start.
+
+Run 17c (goal="selfright"), the way real robot dogs recover (ANYmal: Lee, Hwangbo & Hutter 2019, a
+self-righting skill, then a standing skill, then walking, picked by a selector): this brain only rolls
+Bolt onto its belly with its legs tucked and lies still. Bolt's posture brain already stands up from
+there (20/20 from the lying pose, 17/20 with the legs 0.6 rad off it). Nothing pays for height.
 """
 import gymnasium as gym
 import mujoco
@@ -24,7 +29,7 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
-from bolt_env import ACTION_SCALE, STANCES, BoltEnv
+from bolt_env import ACTION_SCALE, LIE_POSE, STANCES, BoltEnv
 
 DOG = STANCES["dog"]
 STAND_HEIGHT = 0.43
@@ -33,8 +38,9 @@ STAND_HEIGHT = 0.43
 class GetUpEnv(BoltEnv):
     OBS = 46
 
-    def __init__(self, randomize=True, seed=None, max_steps=200):
+    def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand"):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", skills=["stand"])
+        self.goal = goal   # "stand": get all the way up; "selfright": belly down, legs tucked, still
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.exam_start = None   # "side", "back", "tipped" or "standing": exams set it; training draws it
 
@@ -114,13 +120,20 @@ class GetUpEnv(BoltEnv):
         reward = 1.0 * (up + 1) / 2                           # turning over
         reward += 5.0 * max(0.0, up - self.best_up)            # progress: each new best uprightness
         self.best_up = max(self.best_up, up)
-        reward += 1.0 * tall * upright                         # standing up to its height
-        reward += 0.5 * stance * upright ** 2                  # in the dog stance
-        standing = up > 0.9 and p["height"] > 0.38
-        if standing:
+        if self.goal == "selfright":   # belly down, legs tucked under, still: ready for the posture brain
+            fold = np.exp(-np.sum((d.qpos[7:19] - LIE_POSE) ** 2) / 2.0)
+            reward += 1.0 * fold * upright ** 2
+            still = np.exp(-(np.linalg.norm(d.qvel[0:3]) / 0.2) ** 2) * np.exp(-(np.linalg.norm(d.qvel[3:6]) / 0.5) ** 2)
+            reward += 0.5 * still * upright ** 2
+            standing = up > 0.9 and np.linalg.norm(d.qvel[0:3]) < 0.2   # "righted"
+        else:
+            reward += 1.0 * tall * upright                         # standing up to its height
+            reward += 0.5 * stance * upright ** 2                  # in the dog stance
+            standing = up > 0.9 and p["height"] > 0.38
+        if standing and self.goal != "selfright":
             reward += 0.5 * np.exp(-(speed / 0.3) ** 2) * np.exp(-(p["yaw_rate"] / 0.5) ** 2)   # and still
-            if self.stood_at is None:
-                self.stood_at = self.t
+        if standing and self.stood_at is None:
+            self.stood_at = self.t
         reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 1e-5 * np.sum(d.actuator_force ** 2)
         self.last_action = a
         done = self.t >= self.max_steps
@@ -140,11 +153,11 @@ class GetUpPolicy:
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
-def exam(policy, episodes=10, seed=7000, kinds=("side", "back", "tipped", "standing")):
+def exam(policy, episodes=10, seed=7000, kinds=("side", "back", "tipped", "standing"), goal="stand"):
     """From each kind of fall: standing (upright, at height) at the end of the 4 s, and the median time it
     took to first stand up."""
     out = {}
-    env = GetUpEnv(randomize=True)
+    env = GetUpEnv(randomize=True, goal=goal)
     for kind in kinds:
         wins, times = 0, []
         for k in range(episodes):

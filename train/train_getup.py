@@ -23,9 +23,9 @@ from getup_env import GetUpEnv, GetUpPolicy, exam
 class Examiner(BaseCallback):
     """Every `every` steps: save a checkpoint, take the exam (stood up from each kind of fall), keep the best."""
 
-    def __init__(self, out, every):
+    def __init__(self, out, every, goal="stand"):
         super().__init__()
-        self.out, self.every, self.next, self.best = out, every, every, -1.0
+        self.out, self.every, self.next, self.best, self.goal = out, every, every, -1.0, goal
 
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
         self.next = (self.num_timesteps // self.every + 1) * self.every
@@ -39,7 +39,7 @@ class Examiner(BaseCallback):
         n = self.num_timesteps
         self.model.save(ck / f"policy_{n}_steps.zip")
         self.training_env.save(str(ck / f"policy_vecnormalize_{n}_steps.pkl"))
-        result = exam(GetUpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"))
+        result = exam(GetUpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), goal=self.goal)
         rates = [v for k, v in result.items() if k.startswith("up_")]
         score = sum(rates) / len(rates)
         print(f"checkpoint {n} ready: {result}", flush=True)
@@ -60,11 +60,12 @@ def main():
     ap.add_argument("--steps", type=int, default=15_000_000)
     ap.add_argument("--envs", type=int, default=8)
     ap.add_argument("--resume")
+    ap.add_argument("--goal", default="stand", choices=["stand", "selfright"])
     args = ap.parse_args()
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
-    venv = make_vec_env(GetUpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv)
+    venv = make_vec_env(GetUpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(goal=args.goal))
     if args.resume:
         ck = Path(args.resume)
         venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)
@@ -79,7 +80,7 @@ def main():
                                        log_std_init=0.0),   # more exploration: rolling over needs big moves
                     device="cpu", verbose=0)
     start = time.time()
-    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 1_000_000),
+    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 1_000_000, args.goal),
                 reset_num_timesteps=not args.resume, progress_bar=False)
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))

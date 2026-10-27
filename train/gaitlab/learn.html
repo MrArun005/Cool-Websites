@@ -149,7 +149,7 @@
   <header style="display:grid;gap:6px">
     <span class="label">Bolt robot dog · training, as it happens</span>
     <h1>Bolt Learning Live</h1>
-    <p class="muted" style="margin:0;max-width:72ch">Bolt is learning to get up after a fall, from scratch, by trial and error. Every million practice steps the training saves a checkpoint. This page tests each one: it drops Bolt on its side, on its back, half tipped over and standing, and records what the brain does. Watch the latest attempt below, drag the slider to go back in time, and see on the chart how upright it manages to get. The page refreshes itself when a new checkpoint arrives.</p>
+    <p class="muted" style="margin:0;max-width:72ch">Bolt is learning to get up after a fall, by trial and error, the way real robot dogs do it: first roll onto its belly, then stand. Every million practice steps the training saves a checkpoint. This page tests each one: it drops Bolt on its side, on its back, half tipped over and standing, and records what the brain does. Watch the latest attempt below, drag the slider to go back in time, and see on the chart how upright it manages to get. The page refreshes itself when a new checkpoint arrives.</p>
     <span class="live" id="live"><i></i><span id="liveText">Loading…</span></span>
   </header>
 
@@ -171,7 +171,7 @@
 
   <section class="panel" aria-labelledby="curve">
     <h2 id="curve">How upright it gets</h2>
-    <p class="muted" style="margin:0;max-width:72ch">For each kind of fall: the most upright Bolt got during the attempt, at each checkpoint. 1 is standing, 0 is on its side, −1 is flat on its back. A filled dot means it ended standing.</p>
+    <p class="muted" style="margin:0;max-width:72ch">For each kind of fall: the most upright Bolt got during the attempt, at each checkpoint. 1 is standing, 0 is on its side, −1 is flat on its back. A filled dot means it reached the goal: standing (runs 17, 17b) or belly down and still (run 17c).</p>
     <div class="chart" id="chart"></div>
     <div class="tablewrap"><table id="table" aria-label="Exam results per checkpoint"></table></div>
   </section>
@@ -182,7 +182,9 @@
       <li><strong>Run 17 learned to lie still.</strong> It was charged for fast joint movement. Thrashing to roll over cost 1–5 points every step, far more than being upright paid, so the cheapest thing was to do nothing. Stopped at 2M steps.</li>
       <li><strong>Can this body roll over at all?</strong> A search over motor sequences, with no learning, found a way to roll Bolt over from its side. So it is possible.</li>
       <li><strong>Run 17b:</strong> no charge for fast joint movement, a fifth of the effort charge, a bonus every time Bolt gets more upright than it has been so far, and more random trying at the start.</li>
-      <li><strong>Next, if it stays stuck on its back:</strong> widen the sideways leg swing from ±29° to about ±50°, like real robot dogs. The motor search found a roll from the back only with the wider swing.</li>
+      <li><strong>Run 17b learned to roll.</strong> By 2M steps it rolled from flat on its back onto its side, and from half tipped nearly level, but never stood up.</li>
+      <li><strong>How real robot dogs do it.</strong> ETH Zurich's ANYmal (Lee, Hwangbo and Hutter, 2019) recovers from any fall in under 5 s, over 97% of the time, with separate skills: self-righting (roll onto the belly, legs tucked), then standing up, then walking, picked by a selector. Unitree's recovery stand follows the same steps.</li>
+      <li><strong>Run 17c does the same.</strong> It continues from run 17b and only learns to roll onto its belly with its legs tucked and lie still. Bolt's posture brain already stands up from there: 20 of 20 from the lying pose, 17 of 20 with the legs well off it.</li>
     </ol>
   </section>
 </div>
@@ -461,7 +463,8 @@
       const q = f.slice(19 * i + 3, 19 * i + 7), up = 1 - 2 * (q[1] * q[1] + q[2] * q[2]);   // body z axis vs vertical
       $("hUp").textContent = up.toFixed(2);
       const p = c.progress[kind];
-      $("hRes").textContent = i < n - 1 ? "trying…" : p.stood ? "stood up" : "didn't stand";
+      const goalWord = L.runs[runName].goal === "selfright" ? ["on its belly", "not righted"] : ["stood up", "didn't stand"];
+      $("hRes").textContent = i < n - 1 ? "trying…" : p.stood ? goalWord[0] : goalWord[1];
       $("hT").textContent = `${(i / FPS).toFixed(1)} s`;
       const x = data.qpos[0], yy = data.qpos[1];
       if (lastPos) { const dx = x - lastPos[0], dy = yy - lastPos[1]; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy; }

@@ -231,3 +231,8 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   walls and reach wall-side things from there.
 - **Test every behaviour from start to finish.** Fetch's score fell to zero the moment Bolt picked up the
   ball, so another behaviour took over and the ball was never delivered.
+- **Copy how real robots break a hard skill apart.** One brain paid for "be standing" never stood up from a
+  fall (runs 17, 17b). Real robot dogs split recovery into self-righting (roll onto the belly, legs tucked),
+  standing up, and walking, picked by a selector (ANYmal, Lee/Hwangbo/Hutter 2019: under 5 s, over 97%).
+  Bolt's posture brain already stood up from belly-down 17-20 times in 20, so run 17c only learns to roll
+  onto its belly and lie still.
