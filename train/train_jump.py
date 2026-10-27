@@ -60,6 +60,9 @@ class Examiner(BaseCallback):
 
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
         self.next = (self.num_timesteps // self.every + 1) * self.every
+        best = self.out / "best" / "best.json"
+        if best.exists():   # a resumed run keeps its best brain (run 16i's reset to 0 at 44.5M and overwrote it)
+            self.best = json.loads(best.read_text()).get("score", self.best)
 
     def _on_step(self):
         if self.num_timesteps < self.next:

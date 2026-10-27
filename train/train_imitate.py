@@ -36,6 +36,9 @@ class Examiner(BaseCallback):
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
         self.next = (self.num_timesteps // self.every + 1) * self.every
         self.t0 = time.time()
+        best = self.out / "best" / "best.json"
+        if best.exists():   # a resumed run keeps its best brain instead of overwriting it with the next exam
+            self.best = json.loads(best.read_text()).get("score", self.best)
 
     def _on_rollout_end(self):
         eps = list(self.model.ep_info_buffer)
