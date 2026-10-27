@@ -38,16 +38,16 @@ export const GAITS = ["walk", "trot", "canter"];
 // 5-8 m to stop it.
 export const LEVELS = [
   { n: 1, name: "Novice", blurb: "A straight line: two 20 cm hurdles and the pause table (sit for 3 s).",
-    pieces: [["S", 34]],
+    pieces: [["S", 34]], pace: 0.9,
     obstacles: [{ kind: "hurdle", s: 6.5, h: 0.20 }, { kind: "hurdle", s: 17, h: 0.20 }, { kind: "table", s: 28, pose: "sit", hold: 3 }],
     finish: 32 },
   { n: 2, name: "Intermediate", blurb: "A curve, three hurdles of 20-30 cm, slalom markers and a down-stay on the table.",
-    pieces: [["S", 17], ["A", Math.PI / 2, 3.5], ["S", 28], ["A", -Math.PI / 2, 3.5], ["S", 18]],
+    pace: 0.8, pieces: [["S", 17], ["A", Math.PI / 2, 3.5], ["S", 28], ["A", -Math.PI / 2, 3.5], ["S", 18]],
     obstacles: [{ kind: "hurdle", s: 6, h: 0.20 }, { kind: "slalom", s: 24, n: 5, gap: 2.4 }, { kind: "hurdle", s: 41, h: 0.25 },
       { kind: "table", s: 59, pose: "lie", hold: 3 }, { kind: "hurdle", s: 66, h: 0.30 }],
     finish: 72 },
   { n: 3, name: "Championship", blurb: "The full course: four hurdles of 30-40 cm, three curves, slalom, a sit and a down.",
-    pieces: [["S", 17], ["A", -Math.PI / 2, 3.2], ["S", 32], ["A", Math.PI / 2, 3.2], ["S", 22], ["A", Math.PI / 2, 3.5], ["S", 22]],
+    pace: 0.85, pieces: [["S", 17], ["A", -Math.PI / 2, 3.2], ["S", 32], ["A", Math.PI / 2, 3.2], ["S", 22], ["A", Math.PI / 2, 3.5], ["S", 22]],
     obstacles: [{ kind: "hurdle", s: 6, h: 0.30 }, { kind: "slalom", s: 24.5, n: 6, gap: 2.4 }, { kind: "hurdle", s: 43, h: 0.35 },
       { kind: "table", s: 62, pose: "sit", hold: 3 }, { kind: "hurdle", s: 68, h: 0.40 }, { kind: "table", s: 89, pose: "lie", hold: 3 },
       { kind: "hurdle", s: 96, h: 0.35 }],
@@ -84,11 +84,12 @@ export function buildCourse(levelIndex) {
     return out;
   });
   const f = at(L.finish), st = at(START_LINE);
-  // the standard course time: the line at a brisk trot-and-walk pace (1.0 m/s), plus each jump's steadying
-  // (~4 s: the jump brain stops Bolt, then it sits a moment and stands) and each table's stay plus getting
-  // into position and up again (~5 s)
+  // the standard course time: the line at the level's pace, the slalom at 0.5 m/s, plus each jump's steadying
+  // (~3.5 s: the jump brain stops Bolt, then it sits a moment and stands) and each table's stay plus getting
+  // into position and up again (~4 s)
   const jumps = obstacles.filter((o) => o.kind === "hurdle").length, tables = obstacles.filter((o) => o.kind === "table");
-  const sct = Math.round((L.finish - START_LINE) / 1.0 + 4 * jumps + tables.reduce((t, o) => t + o.hold + 5, 0));
+  const weave = obstacles.filter((o) => o.kind === "slalom").reduce((t, o) => t + (o.end - o.s + 2) * (1 / 0.5 - 1 / L.pace), 0);
+  const sct = Math.round((L.finish - START_LINE) / L.pace + weave + 3.5 * jumps + tables.reduce((t, o) => t + o.hold + 4, 0));
   return { level: L, index: levelIndex, pts, step, at, obstacles, start: { x: st.x, y: st.y, h: st.h, s: START_LINE },
     finish: { x: f.x, y: f.y, h: f.h, s: L.finish }, length: L.finish, sct };
 }
@@ -120,13 +121,15 @@ export function courseProps(course, w) {
 // A new course in the simulator: its solid objects built in, Bolt at the start, the hurdles in place.
 export function setupCourse(bolt, course, start) {
   bolt.reset(start);
-  bolt.setProps(courseProps(course, bolt.where()));
+  const w = bolt.where();
+  course.origin = [w.x, w.y]; course.yaw0 = w.yaw;
+  bolt.setProps(courseProps(course, w));
   bolt.reset(start);
   placeHurdles(bolt, course);
 }
+// every hurdle in place, its bar in the cups (after bolt.reset(), which parks them)
 export function placeHurdles(bolt, course) {
-  const w = bolt.where(), c = Math.cos(w.yaw), s = Math.sin(w.yaw);
-  course.origin = [w.x, w.y]; course.yaw0 = w.yaw;
+  const [ox, oy] = course.origin, yaw = course.yaw0, c = Math.cos(yaw), s = Math.sin(yaw), w = { x: ox, y: oy, yaw };
   for (let k = 0; k < bolt.real.length; k++) bolt.placeReal(k, null, 0, 0);
   for (const o of course.obstacles) if (o.kind === "hurdle") bolt.placeReal(o.slot, [w.x + c * o.x - s * o.y, w.y + s * o.x + c * o.y], w.yaw + o.hd, o.h);
 }
@@ -194,7 +197,7 @@ export class Body {
     this.t += dt; this.mt += dt;
     this.speed += (Math.hypot(v[0], v[1]) - this.speed) * 0.1;
     if (this.mode !== "getup" && this.fallen()) {
-      this.say("Bolt fell", "bad");
+      this.say("Bolt fell", "bad"); this.fellIn = this.mode;
       this.dog.stop(); this.armed = null; this.getup = new GetUp(b); this.go("getup");
       this.falls = (this.falls || 0) + 1;
     }
@@ -273,7 +276,8 @@ export class Body {
         if (moving && this.mt < 0.6) this.go("walk");
         else if (this.mt > 1.3) this.go("stand");
         break;
-      case "trot":
+      case "trot":   // at least 0.8 s of trot before leaving it (a trot that has just started still swerves)
+        if (this.mt < 0.8) break;
         if (w.gait === "canter" && this.mt > 1.0 && this.armed === null) this.go("canter");
         else if (w.gait !== "trot" && w.gait !== "canter") this.go("pace", { next: "walk", paceFor: 0.8 });
         else if (sharp && this.armed === null) this.go("pace", { next: "walk", paceFor: 0.8 });   // slow down to turn
@@ -292,8 +296,11 @@ export class Body {
     const b = this.bolt, m = this.mode, w = this.want;
     if (["stand", "sit", "lie", "rise"].includes(m)) return b.run({ command: m === "rise" ? "stand" : m, turn: 0, speed: 0.2 });
     if (m === "sharp") {
-      const steer = w.turn ? w.turn * 1.2 : w.steer || 0, top = Math.min(1.4, b.maxTurn(0.5));
-      return b.run({ command: "walk", turn: clamp(w.turn ? w.turn * 1.1 : 2.5 * steer, -top, top), speed: clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6) });
+      const steer = w.turn ? w.turn * 1.2 : w.steer || 0, top = Math.min(1.4, b.maxTurn(this.vs || 0.5));
+      // speed eased toward the target (a sudden change of asked speed while turning tipped run 12 over)
+      const target = w.turn ? 0.5 : Math.abs(steer) < 0.3 ? 0.8 : clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6);
+      this.vs = this.mt < 0.03 ? 0.5 : target > this.vs ? Math.min(target, this.vs + 0.6 * b.dt) : Math.max(target, this.vs - 1.0 * b.dt);
+      return b.run({ command: "walk", turn: clamp(w.turn ? w.turn * 1.1 : 2.5 * steer, -top, top), speed: this.vs });
     }
     if (m === "brake") return b.run({ command: "walk", turn: 0, speed: this.mt < 0.6 ? 0.4 : 0.2 });
     this.dog.tick();
@@ -311,7 +318,7 @@ export class Run {
     this.bolt = bolt; this.course = course; this.start = start;
     setupCourse(bolt, course, start);
     this.body = new Body(bolt, dog); this.body.reset();
-    this.t = 0; this.clock = null; this.index = 0; this.faults = []; this.events = []; this.over = false;
+    this.t = 0; this.clock = null; this.index = 0; this.faults = []; this.marks = []; this.events = []; this.over = false;
     this.cmd = "stand"; this.turn = 0; this.autoJump = true; this.autoSteer = true;
     this.fallTime = 0; this.task = this.newTask(); this.lineS = 0; this.lineOff = 0;
     this.stats = { commands: {}, falls: 0, jumps: 0, cleanJumps: 0 };
@@ -325,7 +332,7 @@ export class Run {
   rel(p, hd) { const q = this.local(), dx = q.x - p.x, dy = q.y - p.y; return [Math.cos(hd) * dx + Math.sin(hd) * dy, -Math.sin(hd) * dx + Math.cos(hd) * dy]; }
   get obstacle() { return this.course.obstacles[this.index]; }
   say(text, kind = "info") { this.events.push({ t: this.clock || 0, text, kind }); }
-  fault(why) { this.faults.push(why); this.say(`${why}: +${FAULT_SECONDS} s`, "bad"); }
+  fault(why) { this.faults.push(why); this.marks[this.index] = true; this.say(`${why}: +${FAULT_SECONDS} s`, "bad"); }
   get time() { return this.clock || 0; }
   get total() { return this.time + FAULT_SECONDS * this.faults.length; }
   newTask() { return { held: 0, marker: 0, missed: false, done: false, count: null }; }
@@ -384,7 +391,7 @@ export class Run {
     }
     const wasMode = b.mode;
     b.step(dt);
-    while (b.events.length) { const e = b.events.shift(); this.say(e.text, e.kind); if (e.text === "Bolt fell") this.stats.falls++; }
+    while (b.events.length) { const e = b.events.shift(); this.say(e.text, e.kind); if (e.text === "Bolt fell") { this.stats.falls++; (this.stats.fellIn || (this.stats.fellIn = {}))[b.fellIn] = (this.stats.fellIn[b.fellIn] || 0) + 1; } }
     if (b.mode === "getup" && wasMode !== "getup") this.fellAt = this.t;
     if (b.stuck) this.rescue();
     this.judge();
@@ -393,12 +400,17 @@ export class Run {
   }
   // Bolt could not get up in 2 tries: the handler stands it up where it fell (a rare case), 10 s lost
   rescue() {
-    const q = this.local(), b = this.body;
-    const p = this.course.at(this.lineS);
+    const b = this.body, o = this.obstacle;
+    // back on the line where it fell; in front of a hurdle not yet judged, 3 m before it (to jump it again)
+    const p = this.course.at(o && o.kind === "hurdle" && this.lineS > o.s - 3 ? o.s - 3 : this.lineS);
+    b.jumped = null;
+    const bars = this.course.obstacles.filter((o) => o.kind === "hurdle").map((o) => this.bolt.barPose(o.slot)[0].slice());
     this.bolt.teleport(this.start, this.world(p.x, p.y), this.course.yaw0 + p.h);
+    placeHurdles(this.bolt, this.course);   // the teleport parked them; knocked bars stay knocked for the judge
+    this.course.obstacles.filter((o) => o.kind === "hurdle").forEach((o, i) => { const H = this.bolt.real[o.slot]; if (Math.hypot(bars[i][0] - H.rest[0], bars[i][1] - H.rest[1], bars[i][2] - H.rest[2]) > 0.03) { this.bolt.data.qpos.set(bars[i], H.q); } });
+    this.bolt.mj.mj_forward(this.bolt.model, this.bolt.data);
     if (this.clock !== null) this.clock += 10;
     b.reset(); b.stuck = false; this.cmd = "stand"; this.say("The handler helped Bolt up: +10 s", "bad");
-    void q;
   }
   judge() {
     const C = this.course, q = this.local(), b = this.body;
@@ -461,7 +473,7 @@ export class Run {
   result() {
     const C = this.course, finished = this.phase === "finished", total = this.total;
     const rank = !finished ? "Keep practising" : this.faults.length === 0 && this.time <= C.sct ? "Clear round" : total <= 1.5 * C.sct ? "Qualified" : "Keep practising";
-    return { finished, time: this.time, faults: this.faults.slice(), total, sct: C.sct, rank, falls: this.stats.falls, jumps: this.stats.jumps, cleanJumps: this.stats.cleanJumps };
+    return { finished, time: this.time, faults: this.faults.slice(), total, sct: C.sct, rank, falls: this.stats.falls, fellIn: this.stats.fellIn || {}, jumps: this.stats.jumps, cleanJumps: this.stats.cleanJumps };
   }
 }
 
@@ -470,7 +482,8 @@ export class Run {
 // right command and starts again once the judge says go.
 export class Bot {
   // rand: a random number generator (game.js rng) for the handler's reaction times
-  constructor(run, { canter = false, rand = Math.random } = {}) { this.run = run; this.canter = canter; this.rand = rand; this.wait = 0.2 + rand(); }
+  // style: "walk" (jumps from a walk), "trot" (trots the last 4 m into each jump), "canter" (canters the straights)
+  constructor(run, { style = "walk", rand = Math.random } = {}) { this.run = run; this.style = style; this.canter = style === "canter"; this.rand = rand; this.wait = 0.2 + rand(); }
   step() {
     const r = this.run, C = r.course, o = r.obstacle, s = r.lineS, b = r.body;
     if (r.over || b.busy) return;
@@ -484,13 +497,15 @@ export class Bot {
       if (along > -4) want = "walk";
       if (along > -0.45 && along < 0.3 && Math.abs(side) < 0.4) want = o.pose;
     }
-    if (o && o.kind === "hurdle") {   // line up at a walk first (the jump brain wants Bolt square to the bar), then trot in
+    if (o && o.kind === "hurdle") {
+      // walk in and jump from the walk: the walk can steer (turn clips, the run 12 brain), the trot cannot
+      // (each trot starts with a 0.1-0.2 rad swerve, and turning out of a trot fell 5-7 times in 12), and the jump
+      // brain wants Bolt square to the bar; or (style "trot") line up at a walk, then trot the last 4 m
       const [along, side] = r.rel(o, o.hd), askew = Math.abs(wrap(r.local().h - o.hd));
-      if (along > -8 && along < -1.2) {
-        if (this.committed !== o.n) {
-          if (Math.abs(side) < 0.2 && askew < 0.12) this.committed = o.n; else want = "walk";
-        } else if (Math.abs(side) > 0.5) { this.committed = null; want = "walk"; }
-        if (this.canter && along > -6 && want !== "walk") want = "trot";
+      if (along > -8 && along < -0.5) {
+        if (this.style !== "trot" || along < -4.5) want = "walk";
+        else if (this.committed !== o.n) { if (Math.abs(side) < 0.15 && askew < 0.08) this.committed = o.n; else want = "walk"; }
+        else if (Math.abs(side) > 0.5) want = "walk";
       }
     }
     if (want !== r.cmd) { r.command(want); this.wait = 0.2 + 0.3 * this.rand(); }

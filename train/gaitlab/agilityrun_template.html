@@ -1,0 +1,392 @@
+<title>Bolt's Agility Run</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+  /* Layout: the course in 3D with the handler's HUD on top (command, speed, time, faults, a mini map),
+     the command pad under it, then the course list and what the judge said. Same look as the Agility Cup. */
+{{GAME_CSS}}
+  .stage { aspect-ratio: 16 / 9; }
+  .hud.tl b#hCmd { font: 800 1.25rem var(--display); color: var(--accent); }
+  .map { position: absolute; left: 10px; bottom: 26px; width: 150px; height: 150px; border-radius: 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 82%, transparent); pointer-events: none; }
+  .pad { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+  .pad button { display: grid; gap: 2px; justify-items: center; padding: 10px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font: 600 0.92rem var(--body); touch-action: manipulation; user-select: none; -webkit-user-select: none; min-height: 52px; }
+  .pad button kbd { font: 500 0.7rem var(--mono); color: var(--muted); }
+  .pad button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pad button[aria-pressed="true"] kbd { color: #fff; opacity: 0.85; }
+  .pad button.held { background: var(--accent-soft); border-color: var(--accent); }
+  .pad button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pad .jump { border-color: var(--accent); }
+  .toggles { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  .toggles label { display: inline-flex; gap: 6px; align-items: center; font-size: 0.88rem; cursor: pointer; }
+  .toggles input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .result .card .rank { font: 800 1.9rem var(--display); }
+  .result .card .rank.good { color: var(--good); } .result .card .rank.ok { color: var(--accent); } .result .card .rank.bad { color: var(--bad); }
+  .result .card .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .summary { display: grid; grid-template-columns: auto auto; gap: 2px 14px; text-align: left; font-size: 0.88rem; justify-content: center; }
+  .summary span:nth-child(odd) { color: var(--muted); }
+  .summary span:nth-child(even) { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .honest { font: 400 0.75rem/1.45 var(--mono); color: var(--muted); }
+  .weak { font-size: 0.88rem; }
+  @media (max-width: 560px) {
+    .stage { aspect-ratio: 3 / 4; }
+    .hud { padding: 6px 8px; max-width: 58%; }
+    .hud b { font-size: 0.95rem; }
+    .hud .muted { font-size: 0.74rem; }
+    .hud.tr { column-gap: 6px; }
+    .hud.tr b { font-size: 0.9rem; }
+    .map { width: 104px; height: 104px; bottom: 30px; }
+    .pad { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .pad button { padding: 8px 2px; font-size: 0.85rem; }
+    .banner { font-size: 1.7rem; }
+  }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="label">Bolt robot dog · a game on the live simulator</span>
+    <h1>Bolt's Agility Run</h1>
+    <p class="muted" style="margin:0;max-width:72ch">You are the handler. Call Bolt round an agility course: walk, trot or run, jump the hurdles, sit or lie down on the pause table, and turn it where the line bends. Bolt moves with its real trained brains in real physics, running in your browser, so it behaves like a young dog in training: it needs a moment to change gait, it slows down to turn, and a fast landing can tip it over. When it falls it gets back up by itself, which costs time. Scoring is time plus faults: a knocked bar, a refusal or a missed obstacle each add 5 s. Beat the course time with no faults for a clear round.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="ring">
+    <h2 id="ring" class="label" style="font-size:.72rem">The course</h2>
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">Loading…</div>
+      <div class="hud tl"><span class="label">Command</span><b id="hCmd">Stand</b><span class="muted" id="hDoing">Bolt is standing at the start</span><span class="muted" id="hNext"></span></div>
+      <div class="hud tr"><span class="label">Time</span><b id="hTime">0.00 s</b><span class="label">Faults</span><b id="hFaults">0</b><span class="label">Speed</span><b id="hSpeed">0.0 m/s</b><span class="label">Course time</span><b id="hSct">–</b></div>
+      <canvas class="map" id="map" width="300" height="300" aria-label="Mini map of the course"></canvas>
+      <div class="banner" id="banner" aria-live="polite"></div>
+      <div class="result" id="result" hidden><div class="card"><span class="label" id="rLabel">Run summary</span><div class="rank" id="rRank"></div><div class="summary" id="rSummary"></div><ul id="rList" class="muted" style="font-size:.85rem"></ul><div class="row"><button class="btn" type="button" id="again">Run again</button><button class="btn" type="button" id="nextLevel">Next level</button></div></div></div>
+      <div class="hint"><span id="gridNote">grid = 50 cm</span> · drag to turn the view</div>
+    </div>
+    <div class="pad" id="pad" role="group" aria-label="Handler commands">
+      <button type="button" data-cmd="walk">Walk<kbd>W</kbd></button>
+      <button type="button" data-cmd="trot">Trot<kbd>T</kbd></button>
+      <button type="button" data-cmd="canter">Run<kbd>R</kbd></button>
+      <button type="button" data-cmd="jump" class="jump">Jump<kbd>J</kbd></button>
+      <button type="button" data-turn="1">◀ Left<kbd>← / Q</kbd></button>
+      <button type="button" data-turn="-1">Right ▶<kbd>→ / E</kbd></button>
+      <button type="button" data-cmd="sit">Sit<kbd>S</kbd></button>
+      <button type="button" data-cmd="lie">Down<kbd>D</kbd></button>
+      <button type="button" data-cmd="stand">Stand<kbd>X</kbd></button>
+      <button type="button" id="pause">Pause<kbd>Space</kbd></button>
+    </div>
+    <div class="controls">
+      <span class="label">Level</span>
+      <div class="chips" id="levels" role="group" aria-label="Level"></div>
+      <button class="btn" id="restart" type="button">Restart</button>
+      <button class="btn" id="demo" type="button" style="background:var(--panel);color:var(--ink);border:1px solid var(--line)">Watch the demo handler</button>
+      <div class="toggles">
+        <label><input type="checkbox" id="autoJump" checked> Auto-jump</label>
+        <label><input type="checkbox" id="autoSteer" checked> Auto-steer along the line</label>
+      </div>
+    </div>
+    <p class="muted" id="levelBlurb" style="font-size:.9rem"></p>
+    <ul class="course" id="course" aria-label="The obstacles in order"></ul>
+  </section>
+
+  <div class="two">
+    <section class="panel" aria-labelledby="said">
+      <h2 id="said">The judge</h2>
+      <ul class="log" id="log"><li class="muted">Pick a level, then press Walk or Trot.</li></ul>
+    </section>
+    <section class="panel weak" aria-labelledby="how">
+      <h2 id="how">Handling tips, and where Bolt is weak</h2>
+      <ul>
+        <li>Turning: the dog-motion brain only turns gently, so for a sharp bend Bolt drops to a walk and another brain (run 12's walk) steps it round. Auto-steer follows the course line for you; the turn keys take over while you hold them.</li>
+        <li>Jumps: Bolt takes off about 1 m before the bar. Line up straight first: the jump brain only practised arriving within ~11° of square. 30 cm bars clear about 7 times in 10, 40 cm about 3 in 10.</li>
+        <li>Landings: Bolt lands at almost 4 m/s, faster than it can run, and the jump brain needs 5-8 m to stop it. It then sits for a moment to steady itself. About one landing in three still ends in a fall.</li>
+        <li>Sit and down: Bolt stops from a walk first. From a trot it shifts down through a pace (dropping straight to a walk fell 2 times in 8).</li>
+        <li>Run (canter) is fast but weak: the brain falls in about one canter in four.</li>
+      </ul>
+      <p class="honest" id="honest">Brains from training runs 18b (dog motion, 17.5M steps), 16g (jump, 27M) and 17e (self-righting, 16.5M), plus the posture brain and run 12's walk for sharp turns. Real MuJoCo physics with the A1 motor model, the same as in training.</p>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+{{SCENE_JS}}
+  controls.maxDistance = 22;
+
+  // ---------- Bolt: the same body as the Gait Lab, posed from the live simulator ----------
+  let parts = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp }; });
+  }
+  const m4 = new THREE.Matrix4();
+  function drawBolt() {
+    const d = bolt.data, xp = d.geom_xpos, xm = d.geom_xmat;
+    for (const pt of parts) {
+      if (!pt.obj) continue;
+      const i = pt.g.id, k = 9 * i;
+      m4.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.obj.position.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.obj.quaternion.setFromRotationMatrix(m4);
+    }
+  }
+
+  // ---------- the course in course coordinates (x ahead from the start, y to the left) ----------
+  const ring = new THREE.Group(); scene.add(ring);
+  const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.7, ...extra });
+  function box(w, d, h, mat, x, y, z) { return mesh(new THREE.BoxGeometry(w, d, h), mat, [x, y, z]); }
+  function label(text, bg, fg, size = 0.34) {   // a round sign facing the camera
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const g = c.getContext("2d");
+    g.beginPath(); g.arc(64, 64, 58, 0, 2 * Math.PI); g.fillStyle = bg; g.fill();
+    g.fillStyle = fg; g.font = `800 ${text.length > 2 ? 40 : text.length > 1 ? 58 : 72}px Archivo, Arial, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text, 64, 68);
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, toneMapped: false })); s.scale.set(size, size, 1); s.renderOrder = 3; return s;
+  }
+  function buildRing() {
+    while (ring.children.length) ring.remove(ring.children[0]);
+    const C = course, [ox, oy] = C.origin;
+    ring.position.set(ox, oy, 0); ring.rotation.set(0, 0, C.yaw0);
+    // the handler's line, painted faintly on the floor
+    const pts = C.pts.filter((_, i) => i % 4 === 0).map((p) => new THREE.Vector3(p.x, p.y, 0.002));
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: lin("#e3620b"), dashSize: 0.25, gapSize: 0.2, transparent: true, opacity: 0.6 }));
+    line.computeLineDistances(); ring.add(line);
+    for (const [g, text, color] of [[C.start, "GO", "#2f8a4c"], [C.finish, "END", "#c4372f"]]) {
+      const grp = new THREE.Group(); grp.position.set(g.x, g.y, 0); grp.rotation.z = g.h;
+      grp.add(box(0.05, 2.06, 0.22, std(color), 0, 0, 1.4));   // on two solid posts (props3d.js)
+      grp.add(box(0.04, 1.9, 0.004, std(color), 0, 0, 0.002));  // the line on the floor
+      const s = label(text, color, "#ffffff", 0.5); s.position.set(0, 0, 1.8); grp.add(s);
+      ring.add(grp);
+    }
+    for (const o of C.obstacles) {
+      const grp = new THREE.Group(); grp.position.set(o.x, o.y, 0); grp.rotation.z = o.hd; ring.add(grp);
+      if (o.kind === "table") {   // the pause table area: a mat on the floor
+        grp.add(box(2 * lib.TABLE.half, 2 * lib.TABLE.half, 0.012, std("#e3620b", { roughness: 0.9 }), 0, 0, 0.006));
+        grp.add(box(2 * lib.TABLE.half - 0.16, 2 * lib.TABLE.half - 0.16, 0.014, std(o.pose === "sit" ? "#f4c99f" : "#f0b27a", { roughness: 0.9 }), 0, 0, 0.007));
+      }
+      if (o.kind === "slalom") {   // a base strip under the markers (paint); the markers are solid (props3d.js)
+        grp.add(box(o.end - o.s + 0.3, 0.05, 0.004, std("#9aa19c"), (o.end - o.s) / 2, 0, 0.002));
+      }
+      const sign = label(String(o.n), "#ffffff", "#191b1a");
+      const c = Math.cos(-o.hd), s = Math.sin(-o.hd), dx = o.post[0] - o.x, dy = o.post[1] - o.y;
+      sign.position.set(c * dx - s * dy, s * dx + c * dy, 1.05); grp.add(sign);
+    }
+  }
+
+  // ---------- the mini map ----------
+  const mapEl = $("map"), mg = mapEl.getContext("2d");
+  let mapFit = null;
+  function fitMap() {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const p of course.pts) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); }
+    const W = mapEl.width, pad = 26, k = Math.min((W - 2 * pad) / Math.max(1, x1 - x0), (W - 2 * pad) / Math.max(1, y1 - y0));
+    // course x points up the map, y to the left
+    mapFit = (x, y) => [W / 2 - k * (y - (y0 + y1) / 2), W / 2 - k * (x - (x0 + x1) / 2)];
+    mapFit.k = k;
+  }
+  function drawMap() {
+    if (!course || !mapFit) return;
+    const W = mapEl.width, F = mapFit;
+    mg.clearRect(0, 0, W, W);
+    mg.lineWidth = 3; mg.strokeStyle = css("--muted"); mg.setLineDash([8, 6]); mg.beginPath();
+    course.pts.forEach((p, i) => { const [u, v] = F(p.x, p.y); if (i) mg.lineTo(u, v); else mg.moveTo(u, v); });
+    mg.stroke(); mg.setLineDash([]);
+    const done = (i) => run && i < run.index;
+    const perp = (p, h, half, color, width = 5) => { const [u, v] = F(p.x - Math.sin(h) * half, p.y + Math.cos(h) * half), [u2, v2] = F(p.x + Math.sin(h) * half, p.y - Math.cos(h) * half); mg.strokeStyle = color; mg.lineWidth = width; mg.beginPath(); mg.moveTo(u, v); mg.lineTo(u2, v2); mg.stroke(); };
+    perp(course.start, course.start.h, 1.0, css("--good")); perp(course.finish, course.finish.h, 1.0, css("--bad"));
+    course.obstacles.forEach((o, i) => {
+      const col = done(i) ? css("--muted") : run && i === run.index ? css("--accent") : css("--ink");
+      if (o.kind === "hurdle") perp({ x: o.x, y: o.y }, o.hd, 0.7, col, 6);
+      if (o.kind === "slalom") for (const m of o.markers) { const [u, v] = F(m.x, m.y); mg.fillStyle = col; mg.beginPath(); mg.arc(u, v, 4, 0, 7); mg.fill(); }
+      if (o.kind === "table") { const [u, v] = F(o.x, o.y), r = lib.TABLE.half * mapFit.k; mg.fillStyle = col; mg.globalAlpha = 0.5; mg.fillRect(u - r, v - r, 2 * r, 2 * r); mg.globalAlpha = 1; }
+    });
+    if (run) {   // Bolt: a dot with its heading
+      const q = run.local(), [u, v] = F(q.x, q.y);
+      mg.fillStyle = css("--accent"); mg.strokeStyle = css("--panel"); mg.lineWidth = 3;
+      mg.beginPath(); mg.arc(u, v, 9, 0, 7); mg.fill(); mg.stroke();
+      const [u2, v2] = F(q.x + 1.4 * Math.cos(q.h), q.y + 1.4 * Math.sin(q.h));
+      mg.strokeStyle = css("--accent"); mg.lineWidth = 4; mg.beginPath(); mg.moveTo(u, v); mg.lineTo(u2, v2); mg.stroke();
+    }
+  }
+
+  // ---------- the run ----------
+  let lib, live, bundle, dogBrain, dogClips, imitate, drawHurdles = () => {}, drawProps = () => {}, bolt = null, course = null, run = null, bot = null;
+  let level = 0, acc = 0, playing = true, seen = 0, bannerUntil = 0, finishedShown = false;
+  const NAMES = { stand: "Stand", walk: "Walk", trot: "Trot", canter: "Run", sit: "Sit", lie: "Down" };
+  const DOING = { stand: "standing", walk: "walking", turnclip: "walking, turning a little", sharp: "turning sharply at a walk (run 12 brain)", brake: "slowing down to stop",
+    trot: "trotting", canter: "running (canter)", pace: "shifting down through a pace", sit: "sitting", lie: "lying down", rise: "getting up",
+    jump: "jumping (jump brain)", land: "landing: the jump brain slows it down", settle: "steadying after the jump", getup: "fell: getting up by itself" };
+  function banner(text, kind) {
+    const el = $("banner"); el.textContent = text; el.className = `banner show ${kind === "good" ? "good" : kind === "bad" ? "bad" : ""}`;
+    bannerUntil = performance.now() + 1300;
+  }
+  function log(text, kind, t) {
+    const li = document.createElement("li");
+    li.innerHTML = `<time>${t === undefined ? "" : t.toFixed(1) + " s"}</time><span class="${kind}"></span>`; li.lastChild.textContent = text;
+    const list = $("log"); if (list.firstElementChild && list.firstElementChild.classList.contains("muted")) list.innerHTML = "";
+    list.prepend(li); while (list.children.length > 16) list.lastChild.remove();
+  }
+  function renderCourse() {
+    if (!course) return;
+    $("course").innerHTML = course.obstacles.map((o, i) => `<li class="${run && i === run.index && !run.over ? "now" : run && i < run.index ? (run.marks[i] ? "fail" : "pass") : ""}">${o.n}. ${o.title}</li>`).join("") + `<li>Course time ${course.sct} s</li>`;
+  }
+  function levelChips() {
+    $("levels").innerHTML = "";
+    lib.LEVELS.forEach((L, i) => {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = `${L.n}. ${L.name}`; b.setAttribute("aria-pressed", String(i === level));
+      b.addEventListener("click", () => { level = i; levelChips(); newRun(false); });
+      $("levels").append(b);
+    });
+  }
+  function newRun(demo) {
+    course = lib.buildCourse(level);
+    run = new lib.Run(bolt, imitate, course, bundle.start);
+    run.autoJump = demo || $("autoJump").checked; run.autoSteer = demo || $("autoSteer").checked;
+    bot = demo ? new lib.Bot(run, { style: "walk" }) : null;
+    buildRing(); fitMap();
+    seen = 0; acc = 0; finishedShown = false; heldTurn = 0; $("result").hidden = true;
+    $("levelBlurb").textContent = `Level ${course.level.n}, ${course.level.name}: ${course.level.blurb} Course time ${course.sct} s.`;
+    $("log").innerHTML = ""; log(demo ? "The demo handler runs the course. Press Restart to take over." : `Level ${course.level.n}: ${course.level.blurb} Press Walk or Trot to start.`, "info");
+    $("hSct").textContent = `${course.sct} s`;
+    renderCourse(); resetView(); syncPad();
+    if (!playing) togglePause();
+  }
+  function command(c) {
+    if (!run || run.over || bot) return;
+    if (!playing) togglePause();
+    run.command(c);
+    if (c !== "jump") syncPad(); else flashJump();
+  }
+  function syncPad() {
+    for (const b of $("pad").querySelectorAll("button[data-cmd]")) if (b.dataset.cmd !== "jump") b.setAttribute("aria-pressed", String(run && run.cmd === b.dataset.cmd));
+  }
+  function flashJump() { const b = $("pad").querySelector('[data-cmd="jump"]'); b.setAttribute("aria-pressed", "true"); setTimeout(() => b.setAttribute("aria-pressed", "false"), 250); }
+  let heldTurn = 0;
+  function setTurn(t) {
+    heldTurn = t; if (run && !bot) run.turn = t;
+    for (const b of $("pad").querySelectorAll("button[data-turn]")) b.classList.toggle("held", Number(b.dataset.turn) === t && t !== 0);
+  }
+  function showResult() {
+    const r = run.result(), C = course;
+    const kind = r.rank === "Clear round" ? "good" : r.rank === "Qualified" ? "ok" : "bad";
+    $("rLabel").textContent = `Level ${C.level.n} · ${C.level.name} · ${bot ? "demo handler" : "your run"}`;
+    $("rRank").textContent = r.rank; $("rRank").className = `rank ${kind}`;
+    $("rSummary").innerHTML = [["Time", `${r.time.toFixed(2)} s`], ["Faults", `${r.faults.length} × 5 s`], ["Total", `${r.total.toFixed(2)} s`], ["Course time", `${C.sct} s`],
+      ["Falls (got up)", String(r.falls)], ["Jumps clean", `${r.cleanJumps} of ${r.jumps}`]].map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join("");
+    $("rList").innerHTML = r.finished ? (r.faults.length ? r.faults.map((f) => `<li>${f}</li>`).join("") : "<li>No faults.</li>") : "<li>Over the maximum course time.</li>";
+    $("nextLevel").hidden = level >= lib.LEVELS.length - 1;
+    $("result").hidden = false;
+    banner(r.rank.toUpperCase(), kind === "bad" ? "bad" : "good");
+  }
+  function resetView() {
+    const w = bolt.where(), c = Math.cos(w.yaw), s = Math.sin(w.yaw);
+    const target = new THREE.Vector3(w.x + 2.0 * c, w.y + 2.0 * s, 0.4);
+    camera.position.set(target.x - 5.2 * c + 2.6 * s, target.y - 5.2 * s - 2.6 * c, 3.4);
+    controls.target.copy(target); controls.update(); lastBolt = { x: w.x, y: w.y };
+  }
+  let lastBolt = null;
+  function follow() {
+    const w = bolt.where();
+    if (lastBolt) { const dx = w.x - lastBolt.x, dy = w.y - lastBolt.y; camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy; }
+    lastBolt = { x: w.x, y: w.y };
+    if (grid) grid.position.set(Math.round(w.x / 0.5) * 0.5, Math.round(w.y / 0.5) * 0.5, 0.0004);
+    sun.position.set(w.x + 4, w.y - 5.6, 10.4); sun.target.position.set(w.x, w.y, 0);
+  }
+  function hud() {
+    if (!run) return;
+    const b = run.body, o = run.obstacle;
+    $("hCmd").textContent = (bot ? "Demo: " : "") + (NAMES[run.cmd] || run.cmd) + (run.turn ? (run.turn > 0 ? " · ◀" : " · ▶") : "");
+    $("hDoing").textContent = `Bolt is ${DOING[b.mode] || b.mode}`;
+    $("hNext").textContent = run.over ? "Run over" : o ? `Next: ${o.n}. ${o.title}` : "Next: the finish";
+    $("hTime").textContent = `${run.time.toFixed(2)} s`;
+    $("hFaults").textContent = String(run.faults.length);
+    $("hSpeed").textContent = `${b.speed.toFixed(1)} m/s`;
+  }
+  function togglePause() { playing = !playing; $("pause").firstChild.textContent = playing ? "Pause" : "Play"; $("pause").setAttribute("aria-pressed", String(!playing)); }
+
+  async function boot() {
+    try {
+      const [l, a, m, b, br, cl, h3, p3] = await Promise.all([import("./live.js"), import("./agilityrun.js"), import("./mujoco/mujoco.js"),
+        fetch("data/bolt_run.json").then((x) => x.json()), fetch("data/imitate_brain.json").then((x) => x.json()), fetch("data/imitate_clips.json").then((x) => x.json()),
+        import("./hurdles3d.js"), import("./props3d.js")]);
+      live = l; lib = a; bundle = b; dogBrain = br; dogClips = cl;
+      bolt = new live.Bolt(await m.default(), bundle);
+      imitate = lib.makeDog(bolt, dogBrain, dogClips);
+      drawHurdles = h3.makeHurdles(THREE, scene, bolt, mesh, lin); drawProps = p3.makeProps(THREE, scene, bolt, mesh, lin);
+    } catch (e) {
+      console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
+    }
+    buildDog(bundle.geoms); levelChips(); newRun(new URLSearchParams(location.search).has("demo")); $("loading").hidden = true;
+  }
+
+  // ---------- input: the pad, the keyboard ----------
+  $("pad").addEventListener("click", (e) => { const b = e.target.closest("button[data-cmd]"); if (b) command(b.dataset.cmd); });
+  for (const b of $("pad").querySelectorAll("button[data-turn]")) {
+    const t = Number(b.dataset.turn), off = () => { if (heldTurn === t) setTurn(0); };
+    b.addEventListener("pointerdown", (e) => { e.preventDefault(); if (!playing) togglePause(); setTurn(t); b.setPointerCapture && b.setPointerCapture(e.pointerId); });
+    b.addEventListener("pointerup", off); b.addEventListener("pointercancel", off); b.addEventListener("lostpointercapture", off);
+    b.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+  $("pause").addEventListener("click", togglePause);
+  const KEYS = { w: "walk", t: "trot", r: "canter", j: "jump", s: "sit", d: "lie", x: "stand" };
+  const TURNS = { arrowleft: 1, q: 1, arrowright: -1, e: -1 };
+  window.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k === " ") { e.preventDefault(); togglePause(); return; }
+    if (TURNS[k] !== undefined) { e.preventDefault(); if (!e.repeat) setTurn(TURNS[k]); return; }
+    if (KEYS[k] && !e.repeat) command(KEYS[k]);
+  });
+  window.addEventListener("keyup", (e) => { const t = TURNS[e.key.toLowerCase()]; if (t !== undefined && heldTurn === t) setTurn(0); });
+  window.addEventListener("blur", () => setTurn(0));
+  $("restart").addEventListener("click", () => bolt && newRun(false));
+  $("demo").addEventListener("click", () => bolt && newRun(true));
+  $("again").addEventListener("click", () => bolt && newRun(false));
+  $("nextLevel").addEventListener("click", () => { if (!bolt) return; level = Math.min(level + 1, lib.LEVELS.length - 1); levelChips(); newRun(false); });
+  $("autoJump").addEventListener("change", (e) => { if (run && !bot) run.autoJump = e.target.checked; });
+  $("autoSteer").addEventListener("change", (e) => { if (run && !bot) run.autoSteer = e.target.checked; });
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stageEl);
+  const retheme = () => { makeGrid(); };
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  const SPEED = Math.min(8, Math.max(1, Number(new URLSearchParams(location.search).get("speed")) || 1));   // ?speed=4: a faster replay (tests)
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (bolt && run) {
+      if (playing && !run.over) {
+        acc += dt * SPEED;
+        let n = 0;
+        while (acc >= bolt.dt && n < 10 * SPEED && !run.over) { if (bot) bot.step(); run.step(); acc -= bolt.dt; n++; }
+        if (n >= 10 * SPEED) acc = 0;
+        const before = run.index;
+        while (seen < run.events.length) {
+          const e = run.events[seen++];
+          log(e.text, e.kind, e.t);
+          if (e.kind === "bad") banner(e.text.split(":")[0], "bad");
+          else if (e.kind === "good" && !e.text.startsWith("Bolt")) banner(e.text.replace("Judge: ", "").replace("!", ""), "good");
+          else if (e.kind === "count") banner(e.text.replace("Judge: ", "").replace("…", ""), "info");
+        }
+        if (run.index !== before || seen) renderCourse();
+        if (bot) syncPad();
+      }
+      if (run.over && !finishedShown) { finishedShown = true; renderCourse(); showResult(); }
+      if (now > bannerUntil) $("banner").classList.remove("show");
+      drawBolt(); drawHurdles(); drawProps(); follow(); hud(); drawMap();
+      const s = now / 1000, m = run.body.mode;
+      if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (["walk", "trot", "canter", "turnclip", "sharp", "pace"].includes(m) ? 9 : 5));
+      eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));
+    }
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  makeGrid(40, 0.5); setReach(5); resize(); requestAnimationFrame(tick); boot();
+})();
+</script>

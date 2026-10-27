@@ -495,7 +495,7 @@ def train(args):
             num_evals=args.evals, network_factory=make_networks(hidden, float(np.mean(W["log_std"])) if W else -1.0),
             restore_params=restore, restore_value_fn=True, seed=args.seed, deterministic_eval=True,
             progress_fn=progress, policy_params_fn=save)
-        save(args.steps, None, params)
+        (out / "params.pkl").write_bytes(pickle.dumps(to_numpy(params, dict(steps=base + args.steps, source="mjx_imitate"))))
     except TimeoutError as e:
         print(f"stopped: {e}; the last saved brain is {out / 'params.pkl'}", flush=True)
     print(f"done: {(time.time() - start) / 60:.1f} min -> {out}", flush=True)

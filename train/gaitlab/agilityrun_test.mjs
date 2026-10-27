@@ -17,7 +17,9 @@ const reached = (r, c) => (["sit", "lie"].includes(c) ? posture(bolt) === c : c 
 for (const n of levelsArg.split(",").map(Number)) {
   const rows = [], cmds = {};
   for (let k = 0; k < +runsArg; k++) {
-    const course = buildCourse(n - 1), run = new Run(bolt, dog, course, bundle.start), bot = new Bot(run, { canter: style === "canter", rand: rng(((n * 1000 + k) * 2654435761) >>> 0) });
+    const course = buildCourse(n - 1), run = new Run(bolt, dog, course, bundle.start), bot = new Bot(run, { style: style || "walk", rand: rng(((n * 1000 + k) * 2654435761) >>> 0) });
+    const noise = rng(k * 7919 + n);   // a different start each run: tiny joint-speed noise, as a sensor would have
+    for (let i = 6; i < 18; i++) bolt.data.qvel[i] += 0.1 * (noise() - 0.5);
     const orig = run.command.bind(run);
     let pending = null;
     const settle = (ok) => { if (!pending) return; const c = cmds[pending.c] || (cmds[pending.c] = { ok: 0, n: 0 }); c.n++; c.ok += ok; pending = null; };
@@ -40,11 +42,11 @@ for (const n of levelsArg.split(",").map(Number)) {
     settle(false);
     const res = run.result();
     rows.push(res);
-    console.log(`  L${n} run ${k + 1}: ${res.finished ? "finished" : "NOT finished"} time ${res.time.toFixed(1)} s, faults ${res.faults.length} [${res.faults.join("; ")}], total ${res.total.toFixed(1)} / SCT ${res.sct} -> ${res.rank}; falls ${res.falls}, jumps ${res.cleanJumps}/${res.jumps} clean  (${((Date.now() - t0) / 1000).toFixed(0)} s wall)`);
+    console.log(`  L${n} run ${k + 1}: ${res.finished ? "finished" : "NOT finished"} time ${res.time.toFixed(1)} s, faults ${res.faults.length} [${res.faults.join("; ")}], total ${res.total.toFixed(1)} / SCT ${res.sct} -> ${res.rank}; falls ${res.falls} ${JSON.stringify(res.fellIn)}, jumps ${res.cleanJumps}/${res.jumps} clean  (${((Date.now() - t0) / 1000).toFixed(0)} s wall)`);
   }
   const mean = (a) => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length), fin = rows.filter((r) => r.finished);
   const ranks = {}; rows.forEach((r) => (ranks[r.rank] = (ranks[r.rank] || 0) + 1));
   console.log(`L${n} ${LEVELS[n - 1].name}: finished ${fin.length}/${rows.length}, mean time ${mean(fin.map((r) => r.time)).toFixed(1)} s, mean faults ${mean(rows.map((r) => r.faults.length)).toFixed(1)}, ` +
-    `falls ${rows.reduce((s, r) => s + r.falls, 0)} in ${rows.length} runs, clean jumps ${rows.reduce((s, r) => s + r.cleanJumps, 0)}/${rows.reduce((s, r) => s + r.jumps, 0)}, ranks ${JSON.stringify(ranks)}`);
+    `falls ${rows.reduce((s, r) => s + r.falls, 0)} in ${rows.length} runs ${JSON.stringify(rows.reduce((a, r) => { for (const [m, c] of Object.entries(r.fellIn)) a[m] = (a[m] || 0) + c; return a; }, {}))}, clean jumps ${rows.reduce((s, r) => s + r.cleanJumps, 0)}/${rows.reduce((s, r) => s + r.jumps, 0)}, ranks ${JSON.stringify(ranks)}`);
   console.log(`   commands carried out: ${Object.entries(cmds).map(([c, v]) => `${c} ${v.ok}/${v.n}`).join(", ")}`);
 }
