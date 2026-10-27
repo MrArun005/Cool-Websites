@@ -1,0 +1,29 @@
+resuming from remote/imitate18c_start/policy_13500000_steps.zip at 13,500,000 steps
+training on clips ['walk', 'trot', 'canter', 'canter', 'canter', 'turn_left', 'turn_right'], 8 envs, 16384 samples per update
+update at 13516384: reward/step 0.677, try length 234 steps (100 tries), 658703 steps/s
+update at 13532768: reward/step 0.561, try length 237 steps (100 tries), 322362 steps/s
+update at 13549152: reward/step 0.575, try length 234 steps (100 tries), 209597 steps/s
+update at 13565536: reward/step 0.654, try length 241 steps (100 tries), 155505 steps/s
+update at 13581920: reward/step 0.678, try length 239 steps (100 tries), 123448 steps/s
+update at 13598304: reward/step 0.598, try length 229 steps (100 tries), 102995 steps/s
+update at 13614688: reward/step 0.597, try length 230 steps (100 tries), 88911 steps/s
+update at 13631072: reward/step 0.645, try length 231 steps (100 tries), 78088 steps/s
+update at 13647456: reward/step 0.625, try length 239 steps (100 tries), 69645 steps/s
+update at 13663840: reward/step 0.616, try length 225 steps (100 tries), 62775 steps/s
+update at 13680224: reward/step 0.609, try length 222 steps (100 tries), 57323 steps/s
+update at 13696608: reward/step 0.614, try length 226 steps (100 tries), 52871 steps/s
+update at 13712992: reward/step 0.608, try length 235 steps (100 tries), 49077 steps/s
+update at 13729376: reward/step 0.612, try length 212 steps (100 tries), 45802 steps/s
+update at 13745760: reward/step 0.661, try length 223 steps (100 tries), 43014 steps/s
+update at 13762144: reward/step 0.634, try length 228 steps (100 tries), 40337 steps/s
+update at 13778528: reward/step 0.619, try length 219 steps (100 tries), 38049 steps/s
+update at 13794912: reward/step 0.591, try length 209 steps (100 tries), 35964 steps/s
+update at 13811296: reward/step 0.590, try length 210 steps (100 tries), 34069 steps/s
+update at 13827680: reward/step 0.632, try length 210 steps (100 tries), 32341 steps/s
+update at 13844064: reward/step 0.604, try length 209 steps (100 tries), 30858 steps/s
+update at 13860448: reward/step 0.587, try length 209 steps (100 tries), 29474 steps/s
+update at 13876832: reward/step 0.613, try length 205 steps (100 tries), 28108 steps/s
+update at 13893216: reward/step 0.590, try length 199 steps (100 tries), 26847 steps/s
+update at 13909600: reward/step 0.638, try length 210 steps (100 tries), 25715 steps/s
+update at 13925984: reward/step 0.619, try length 212 steps (100 tries), 24720 steps/s
+update at 13942368: reward/step 0.595, try length 207 steps (100 tries), 23791 steps/s
