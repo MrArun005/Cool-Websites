@@ -161,7 +161,7 @@ class MjxRun:
         air = jp.where(feet, 0.0, info["air"] + self.dt)
         e_v = jp.sum((cmd[:2] - vb[:2]) ** 2)
         track_v = jp.exp(-e_v / jp.maximum(0.25, 0.1 * cmd[0] ** 2))
-        track_w = jp.exp(-(cmd[2] - w[2]) ** 2 / 0.25)
+        track_w = jp.exp(-(cmd[2] - w[2]) ** 2 / jp.maximum(0.25, 0.1 * cmd[2] ** 2))   # as run_env
         g = R.T @ jp.array([0.0, 0.0, -1.0])
         r = (1.5 * track_v + 0.75 * track_w - 2.0 * vb[2] ** 2 - 0.05 * jp.sum(w[:2] ** 2) - 1.0 * jp.sum(g[:2] ** 2)
              - 2e-4 * jp.sum(d.actuator_force ** 2) - 0.01 * jp.sum((a - info["last_action"]) ** 2)

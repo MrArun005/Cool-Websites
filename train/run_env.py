@@ -26,12 +26,14 @@ MAX_V, MAX_W = 4.0, 5.0               # curriculum ceilings: Mini Cheetah ran 3.
 class RunEnv(gym.Env):
     OBS = 49
 
-    def __init__(self, randomize=True, seed=None, max_steps=1000, pushes=True):
+    def __init__(self, randomize=True, seed=None, max_steps=1000, pushes=True, turn_weight=0.75, turn_focus=0.0):
         self.model = mujoco.MjModel.from_xml_path(str(MODEL))
         self.data = mujoco.MjData(self.model)
         m = self.model
         self.frame_skip, self.dt = 10, m.opt.timestep * 10
         self.randomize, self.max_steps, self.pushes = randomize, max_steps, pushes
+        # turn_weight: pay for tracking the turn rate; turn_focus: share of commands that are fast turns or spins (run 21)
+        self.turn_weight, self.turn_focus = turn_weight, turn_focus
         self.rng = np.random.default_rng(seed)
         self.torso = m.body("torso").id
         self.foot_ids = [m.geom(f"{l}_foot").id for l in ("FL", "FR", "RL", "RR")]
@@ -62,6 +64,9 @@ class RunEnv(gym.Env):
         vx = self.rng.uniform(0.6, 1.0) * self.top_v if r > 0.6 else vx   # often near the current top speed
         vy = self.rng.uniform(-0.5, 0.5) if self.rng.random() < 0.3 else 0.0
         w = self.rng.uniform(-self.top_w, self.top_w) if self.rng.random() < 0.6 else 0.0
+        if self.rng.random() < self.turn_focus:   # a fast turn or a spin on the spot
+            vx, vy = self.rng.uniform(0.0, 1.0), 0.0
+            w = self.rng.choice([-1, 1]) * self.rng.uniform(0.5, 1.0) * self.top_w
         return np.array([vx, vy, w])
 
     def _obs(self):
@@ -140,9 +145,11 @@ class RunEnv(gym.Env):
 
         e_v = np.sum((self.cmd[:2] - vb[:2]) ** 2)
         track_v = np.exp(-e_v / max(0.25, 0.1 * self.cmd[0] ** 2))   # tolerance grows with speed, as in fast-running work
-        track_w = np.exp(-(self.cmd[2] - w[2]) ** 2 / 0.25)
+        # tolerance grows with the asked turn rate, as for speed: with a fixed 0.25 a 3 rad/s turn
+        # scored ~0 for every try, so there was nothing to learn from (run 20 turned 0.2 rad/s of 3)
+        track_w = np.exp(-(self.cmd[2] - w[2]) ** 2 / max(0.25, 0.1 * self.cmd[2] ** 2))
         torque = d.actuator_force
-        r = (1.5 * track_v + 0.75 * track_w
+        r = (1.5 * track_v + self.turn_weight * track_w
              - 2.0 * vb[2] ** 2 - 0.05 * np.sum(w[:2] ** 2) - 1.0 * np.sum((R.T @ [0, 0, -1])[:2] ** 2)
              - 2e-4 * np.sum(torque ** 2) - 0.01 * np.sum((a - self.last_action) ** 2)
              - 1.0 * knee + 1.0 * air_pay)
