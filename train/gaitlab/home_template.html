@@ -147,7 +147,7 @@
   }
   // you: a simple figure you can drag about
   const you = new THREE.Group(); scene.add(you);
-  const youMat = std("#2f6fb5", { roughness: 0.6 }), skin = std("#e9c6a5");
+  const youMat = std("#2f6fb5", { roughness: 0.6, transparent: true }), skin = std("#e9c6a5", { transparent: true });
   you.add(mesh(new THREE.CylinderGeometry(0.17, 0.2, 1.0, 20), youMat, [0, 0, 0.55], [Math.PI / 2, 0, 0]));
   you.add(mesh(new THREE.SphereGeometry(0.14, 20, 16), skin, [0, 0, 1.22]));
   you.add(mesh(new THREE.SphereGeometry(0.2, 20, 12), youMat, [0, 0, 1.05]));
@@ -158,6 +158,11 @@
   function drawYou() {
     const P = pet.person;
     you.visible = P.present; you.position.set(P.x, P.y, 0);
+    // see-through when standing between the camera and Bolt
+    const w = bolt.where(), cx = camera.position.x, cy = camera.position.y, ux = w.x - cx, uy = w.y - cy, L = Math.hypot(ux, uy) || 1;
+    const along = ((P.x - cx) * ux + (P.y - cy) * uy) / L, off = Math.abs((P.x - cx) * uy - (P.y - cy) * ux) / L;
+    const o = along > 0 && along < L && off < 0.6 ? 0.3 : 1;
+    youMat.opacity = skin.opacity = o; youMat.depthWrite = skin.depthWrite = o === 1;
     goalRing.visible = P.present && !!P.goal; if (P.goal) goalRing.position.set(P.goal[0], P.goal[1], 0.004);
   }
 
@@ -303,7 +308,7 @@
     const narrow = stageEl.clientWidth < 600;
     if (follow && bolt) {
       const w = bolt.where(); aim = new THREE.Vector3(w.x, w.y, 0.2);
-      camera.position.set(w.x, w.y - (narrow ? 4.2 : 3.6), narrow ? 3.6 : 2.7); controls.target.copy(aim);
+      camera.position.set(w.x, w.y - (narrow ? 3.6 : 3.2), narrow ? 4.6 : 3.9); controls.target.copy(aim);
     } else { aim = null; camera.position.set(0, narrow ? -11 : -9.6, narrow ? 13 : 8.6); controls.target.set(0, narrow ? 0.3 : -0.1, 0); }
     controls.update();
   }
