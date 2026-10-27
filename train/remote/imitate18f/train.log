@@ -75,3 +75,11 @@ update at 30614112: reward/step 0.790, try length 249 steps (100 tries), 26967 s
 update at 30630496: reward/step 0.786, try length 250 steps (100 tries), 26596 steps/s
 update at 30646880: reward/step 0.785, try length 250 steps (100 tries), 26241 steps/s
 update at 30663264: reward/step 0.781, try length 243 steps (100 tries), 25908 steps/s
+update at 30679648: reward/step 0.782, try length 244 steps (100 tries), 25580 steps/s
+update at 30696032: reward/step 0.769, try length 244 steps (100 tries), 25287 steps/s
+update at 30712416: reward/step 0.765, try length 241 steps (100 tries), 24986 steps/s
+update at 30728800: reward/step 0.745, try length 243 steps (100 tries), 24696 steps/s
+update at 30745184: reward/step 0.758, try length 248 steps (100 tries), 24411 steps/s
+update at 30761568: reward/step 0.773, try length 248 steps (100 tries), 24117 steps/s
+update at 30777952: reward/step 0.775, try length 248 steps (100 tries), 23848 steps/s
+update at 30794336: reward/step 0.760, try length 245 steps (100 tries), 23577 steps/s
