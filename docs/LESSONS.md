@@ -236,3 +236,8 @@ Petoi Bittle/Nybble, Sesame, and our own training of Bolt.
   standing up, and walking, picked by a selector (ANYmal, Lee/Hwangbo/Hutter 2019: under 5 s, over 97%).
   Bolt's posture brain already stood up from belly-down 17-20 times in 20, so run 17c only learns to roll
   onto its belly and lie still.
+- **A brain can only use the range its action scale reaches.** The self-righting brain inherited walking's
+  action scale (±0.4 rad sideways at the hip) and the body's ±0.5 rad joint limit; it rolled from its back
+  past its side but always settled at the same 0.16 tilt (run 17c). Real robot dogs swing their legs
+  sideways about ±48°; with ±0.9 rad and actions covering each joint's whole range, a motor search found a
+  full roll even from flat on the back (run 17d).

@@ -21,6 +21,11 @@ Run 17c (goal="selfright"), the way real robot dogs recover (ANYmal: Lee, Hwangb
 self-righting skill, then a standing skill, then walking, picked by a selector): this brain only rolls
 Bolt onto its belly with its legs tucked and lies still. Bolt's posture brain already stands up from
 there (20/20 from the lying pose, 17/20 with the legs 0.6 rad off it). Nothing pays for height.
+By 6M it rolled from its back past its side (up to 0.53) but always settled back at a 0.16 tilt. Two
+limits: the brain could only command the sideways hip joints to +-0.4 rad (ACTION_SCALE, made for
+walking), and the joints stopped at +-0.5 rad (real robot dogs: Unitree Go2 about +-0.84). Run 17d:
+Bolt's sideways hip range is +-0.9 rad (the other brains never command more than +-0.4 there), and the
+self-righting brain's actions cover each joint's whole range around the dog stance.
 """
 import gymnasium as gym
 import mujoco
@@ -41,6 +46,9 @@ class GetUpEnv(BoltEnv):
     def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand"):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", skills=["stand"])
         self.goal = goal   # "stand": get all the way up; "selfright": belly down, legs tucked, still
+        # self-righting reaches each joint's whole range around the dog stance (walking's ACTION_SCALE
+        # only reached +-0.4 rad sideways)
+        self.scale = np.maximum(self.hi - DOG, DOG - self.lo) if goal == "selfright" else ACTION_SCALE
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.exam_start = None   # "side", "back", "tipped" or "standing": exams set it; training draws it
 
@@ -106,7 +114,7 @@ class GetUpEnv(BoltEnv):
 
     def step(self, action):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
-        self.data.ctrl[:] = np.clip(DOG + ACTION_SCALE * a, self.lo, self.hi)   # the full motor range
+        self.data.ctrl[:] = np.clip(DOG + self.scale * a, self.lo, self.hi)   # the full motor range
         mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
         self.t += 1
         self.env_steps += 1
