@@ -94,3 +94,12 @@ Bolt's edge is the whole dog in one stack, measured honestly. Steps:
    vs DreamWaQ, a Barkour-style course) and a scoreboard on Bolt Learning Live, each number marked sim or real.
 4. Demo: pet page and games on the combined Bolt; 4K video pushed to git.
 Do not claim to beat a specialist at its speciality unless the same test says so.
+
+## Strict standing rules (set by the owner, 27 Oct)
+1. Every 30 minutes, check everything, whether or not anyone reported: each training run's log is fresh (< 40 min),
+   checkpoints arrive, exams improve; each agent is alive; this machine's background tasks are running; pages are
+   published with the latest data (with a "what's new" table); git is committed and pushed.
+2. Fix anything stalled or broken at once (restart, retune, replace); never leave a failure waiting for a report.
+3. Never stop: keep training and improving all day until the targets are reached (dog motions >= 90% incl. canter
+   >= 70% with no falls, switches >= 95%, clean jumps >= 50 cm with a run-up), then the GitHub release, game and 4K video.
+4. Re-arm the 30-minute check every time; never let it lapse.
