@@ -40,9 +40,9 @@
         "-u",
         "train_imitate.py",
         "--name",
-        "imitate18c",
+        "imitate18f",
         "--steps",
-        "40000000",
+        "45000000",
         "--clips",
         "walk",
         "trot",
@@ -56,13 +56,17 @@
         "--exam-every",
         "500000",
         "--resume",
-        "{latest}"
+        "{latest}",
+        "--lr",
+        "1e-4",
+        "--target-kl",
+        "0.015"
       ],
-      "latest": "runs/imitate18c/checkpoints/policy_*_steps.zip",
-      "log": "runs/imitate18c/train.log",
+      "latest": "runs/imitate18f/checkpoints/policy_*_steps.zip",
+      "log": "runs/imitate18f/train.log",
       "done_when": {
         "exit_code": 0,
-        "file": "runs/imitate18c/policy.zip",
+        "file": "runs/imitate18f/policy.zip",
         "log_contains": "^done:"
       }
     }
