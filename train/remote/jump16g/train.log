@@ -9,3 +9,4 @@ checkpoint 22000000 ready: {'jump_25': 0.9, 'jump_30': 0.7, 'jump_40': 0.3, 'jum
 checkpoint 22500000 ready: {'jump_25': 0.8, 'jump_30': 0.7, 'jump_40': 0.5, 'jump_50': 0.0} (practice bars now 30 cm)
 checkpoint 23000000 ready: {'jump_25': 0.9, 'jump_30': 0.7, 'jump_40': 0.3, 'jump_50': 0.0} (practice bars now 30 cm)
 checkpoint 23500000 ready: {'jump_25': 0.8, 'jump_30': 0.6, 'jump_40': 0.4, 'jump_50': 0.1} (practice bars now 30 cm)
+checkpoint 24000000 ready: {'jump_25': 0.7, 'jump_30': 0.8, 'jump_40': 0.4, 'jump_50': 0.0} (practice bars now 30 cm)
