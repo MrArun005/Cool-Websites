@@ -2,3 +2,4 @@ resuming from runs/jump16i_start/policy_27500000_steps.zip at 27,500,000 steps, 
 resuming from runs/jump16i_start/policy_27500000_steps.zip at 27,500,000 steps, learning rate 0.0001, target kl 0.02, 16384 samples per update
 checkpoint 28000000 ready: {'jump_40': 0.0, 'jump_50': 0.0, 'jump_60': 0.0, 'jump_70': 0.0, 'strict_40': 0.0, 'strict_50': 0.0, 'strict_60': 0.0, 'strict_70': 0.0} (practice bars now 40 cm)
 new best at 28000000: score 0.00
+checkpoint 28500000 ready: {'jump_40': 0.0, 'jump_50': 0.0, 'jump_60': 0.0, 'jump_70': 0.0, 'strict_40': 0.0, 'strict_50': 0.0, 'strict_60': 0.0, 'strict_70': 0.0} (practice bars now 40 cm)
