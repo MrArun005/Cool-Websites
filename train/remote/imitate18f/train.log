@@ -33,3 +33,6 @@ update at 29991520: reward/step 0.763, try length 248 steps (100 tries), 57200 s
 checkpoint 30000000 ready: {'track_walk': 0.905, 'fall_walk': 0.0, 'speed_walk': 0.87, 'track_trot': 0.899, 'fall_trot': 0.0, 'speed_trot': 0.9, 'track_canter': 0.717, 'fall_canter': 0.0, 'speed_canter': 0.75, 'track_turn_left': 0.891, 'fall_turn_left': 0.0, 'speed_turn_left': 0.24, 'track_turn_right': 0.888, 'fall_turn_right': 0.0, 'speed_turn_right': 0.31} (mean tracking 0.860, fall rate 0.00, score 0.525)
 new best at 30000000: score 0.525
 update at 30007904: reward/step 0.773, try length 250 steps (100 tries), 54643 steps/s
+update at 30024288: reward/step 0.768, try length 250 steps (100 tries), 53131 steps/s
+update at 30040672: reward/step 0.751, try length 243 steps (100 tries), 51828 steps/s
+update at 30057056: reward/step 0.755, try length 245 steps (100 tries), 50622 steps/s
