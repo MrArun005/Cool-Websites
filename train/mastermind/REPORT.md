@@ -720,3 +720,25 @@ Reproduce (from `train/`, `MUJOCO_GL=osmesa OMP_NUM_THREADS=1`, `BULLET_PYTHON` 
     python mastermind/sim2sim.py --engine mujoco --brain mastermind/export_v3/student.pt --teachers v3 --n 30 --exam --out mastermind/results/sim2sim/v3_mujoco.json
     python mastermind/sim2sim.py --engine bullet --brain mastermind/export_v3/student.pt --teachers v3 --n 30 --exam --out mastermind/results/sim2sim/v3_bullet.json
     python mastermind/compare.py --reached --col "v4 MuJoCo=mastermind/results/sim2sim/v4_mujoco.json" --col "v4 PyBullet=mastermind/results/sim2sim/v4_bullet.json"
+
+## Kaggle CPU run "v4-big" (28 Oct): not better than v4, v4 stays
+
+Kaggle kernel `bolt-mastermind`: teacher set v4, warm from the v3 student, hidden 1024,512,256, 17 rounds (1M then 500k labelled states per round, 4 workers), 10.6 h. Results in `results/kaggle_v4big/`.
+
+Round pick on dev seeds 20000 (N=30, `test_master.py --brain runs/kaggle-mastermind/run/student_r<k>.pt --teachers v4 --n 30 --seed 20000 --with-50`): r10 81.6%, **r13 83.3%**, r15 81.1%, r16 80.8%; the v4 student on the same seeds: 87.3%. (These pooled rates include the "still:" rows added on 28 Oct, so they are higher than the older tables.)
+
+Final test, seeds 1000 + 5000, N=30 each, `--with-50`, same code for both:
+
+| | v4 student (export_v4) | v4-big r13 |
+|---|---|---|
+| pooled (incl. still rows) | 1285/1465 87.7% | 1244/1476 84.3% |
+| pooled without 50 cm rows | 90.4% | 88.3% |
+| canter->trot | 51/59 86% | 54/60 90% |
+| walk->sit / sit->lie [pose reached] | 47/60 78% | 51/60 85% |
+| trot->jump 20 / 30 / 40 / 50 cm | 85 / 87 / 65 / 35% | 78 / 72 / 45 / 8% |
+| jump->(canter)->trot after 20 / 30 / 40 / 50 cm | 73 / 80 / 86 / 79% | 67 / 70 / 71 / 69% |
+| fall->recover | 90% | 90% |
+
+At 20 ms latency (seed 1000, N=30, `--latency-ms 20`): v4 317/420 75.5%, r13 298/411 72.5%; both fall in most walk->trot tries (5/20, 5/23). Neither brain was trained with latency.
+
+Verdict: the longer, bigger run gained on gaits and posture switches but lost clearly on jumps and landings; overall it is worse than v4, so v4 stays the MasterMind student. Next round: teachers with latency training (Kaggle `bolt-dog-gpu3`) and the new trot-jump brain, then DAgger with latency on.
