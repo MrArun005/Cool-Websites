@@ -1,0 +1,589 @@
+<meta charset="utf-8">
+<title>Bolt's Day Out</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+  /* Layout: the yard in 3D with Bolt's live HUD on top (what it is doing, which brain, clock, speed, drives),
+     the viewer's buttons under it, then the running log, the counters and how it works. Same look as the
+     Agility Run, with a daylight yard. */
+{{GAME_CSS}}
+  :root { --sky-top: #8fc1ea; --sky-bottom: #dcebf5; }
+  .stage { aspect-ratio: 16 / 9; background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
+  .hud.tl b#hDoing { font: 800 1.35rem/1.1 var(--display); color: var(--accent); }
+  .hud.tl .brain { font: 500 0.74rem/1.3 var(--mono); color: var(--muted); }
+  .hud.tr { grid-template-columns: auto auto; }
+  .meter { display: grid; grid-template-columns: 4.6em 1fr; gap: 6px; align-items: center; font: 500 0.7rem var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .meter .bar { height: 7px; min-width: 70px; }
+  .meter .bar > div { transition: width 0.4s; }
+  .meter.play .bar > div { background: var(--good); }
+  .meter.cur .bar > div { background: var(--warn); }
+  .ticker { position: absolute; left: 10px; right: 10px; bottom: 30px; display: grid; gap: 3px; justify-items: start; pointer-events: none; }
+  .ticker span { font: 500 0.82rem var(--body); padding: 3px 9px; border-radius: 8px; background: color-mix(in srgb, var(--panel) 80%, transparent); border: 1px solid var(--line); max-width: 100%; }
+  .ticker span:not(:last-child) { opacity: 0.7; }
+  .pad { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+  .pad button { display: grid; gap: 2px; justify-items: center; padding: 10px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font: 600 0.95rem var(--body); touch-action: manipulation; min-height: 54px; }
+  .pad button small { font: 400 0.72rem var(--body); color: var(--muted); }
+  .pad button:hover { border-color: var(--accent); }
+  .pad button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pad button:active { background: var(--accent-soft); }
+  .pad button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pad button[aria-pressed="true"] small { color: #fff; }
+  .runline { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 400 0.8rem var(--mono); color: var(--muted); }
+  .runline b { font-weight: 500; color: var(--ink); }
+  .counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px 16px; }
+  .counts div { display: grid; gap: 2px; }
+  .counts b { font: 600 1.25rem var(--mono); font-variant-numeric: tabular-nums; }
+  .two > .panel { align-content: start; }
+  .log { max-height: 360px; overflow-y: auto; align-content: start; }
+  .status { display: none; font: 400 0.78rem var(--mono); color: var(--muted); }
+  .log li span.cmd { color: var(--accent); }
+  .result .card .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .summary { display: grid; grid-template-columns: auto auto; gap: 3px 16px; text-align: left; font-size: 0.9rem; justify-content: center; }
+  .summary span:nth-child(odd) { color: var(--muted); }
+  .summary span:nth-child(even) { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .brains { display: grid; gap: 8px; }
+  .brains li { display: grid; gap: 1px; }
+  .brains li b { font-weight: 600; }
+  .brains li.on b { color: var(--accent); }
+  footer { font: 400 0.78rem/1.5 var(--mono); color: var(--muted); display: grid; gap: 4px; }
+  @media (max-width: 560px) {
+    .stage { aspect-ratio: 3 / 4; }
+    .hud { padding: 6px 8px; }
+    .hud.tl { max-width: 56%; left: 6px; top: 6px; }
+    .hud.tr { max-width: 42%; right: 6px; top: 6px; column-gap: 6px; }
+    .hud.tl b#hDoing { font-size: 1.05rem; }
+    .hud.tl .brain, .hud.tl .meter { display: none; }
+    .status { display: block; }
+    .hud .of { display: none; }
+    .hud .label { font-size: 0.6rem; }
+    .hud.tr b { font-size: 0.88rem; }
+    .meter { grid-template-columns: 3.6em 1fr; font-size: 0.6rem; }
+    .meter .bar { min-width: 40px; }
+    .ticker { bottom: 26px; left: 6px; right: 6px; }
+    .ticker span { font-size: 0.74rem; }
+    .ticker span:not(:last-child) { display: none; }
+    .pad { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .banner { font-size: 1.6rem; padding: 10px 16px; }
+  }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="label">Bolt robot dog · five live minutes in the front yard</span>
+    <h1>Bolt's Day Out</h1>
+    <p class="muted" style="margin:0;max-width:74ch">Nothing here is a recording. The physics runs in your browser, Bolt's trained brains choose every motor command fifty times a second, and a small dog mind decides what to do next from how tired, curious and playful Bolt feels, plus a roll of the dice. It sniffs the bins, trots about, gets the zoomies, naps by the porch, takes the jumps and stops at the kerb. Every run is different. Call it, throw its ball, give it a shove or set up a jump.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="yardTitle">
+    <h2 id="yardTitle" class="label" style="font-size:.72rem">The yard, live</h2>
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">Loading the physics and Bolt's brains (about 15 MB)…</div>
+      <div class="hud tl">
+        <span class="label">Bolt is</span><b id="hDoing">waking up</b>
+        <span class="brain" id="hBrain">brain: –</span>
+        <div class="meter"><span>Energy</span><div class="bar"><div id="mE" style="width:80%"></div></div></div>
+        <div class="meter cur"><span>Curious</span><div class="bar"><div id="mC" style="width:50%"></div></div></div>
+        <div class="meter play"><span>Play</span><div class="bar"><div id="mP" style="width:50%"></div></div></div>
+      </div>
+      <div class="hud tr"><span class="label">Time</span><b id="hTime">0:00 / 5:00</b><span class="label">Speed</span><b id="hSpeed">0.0 m/s</b><span class="label">Rate</span><b id="hRate">–</b></div>
+      <div class="ticker" id="ticker" aria-hidden="true"></div>
+      <div class="banner" id="banner" aria-live="polite"></div>
+      <div class="result" id="result" hidden><div class="card"><span class="label" id="rLabel">Five minutes with Bolt</span><h2 id="rTitle">That's five minutes</h2><div class="summary" id="rSummary"></div><p class="muted" id="rNote" style="font-size:.85rem"></p><div class="row"><button class="btn" type="button" id="again">Another five minutes</button></div></div></div>
+      <div class="hint">drag to look around · pinch or scroll to zoom</div>
+    </div>
+    <p class="status" id="status" aria-live="off"></p>
+    <div class="pad" id="pad" role="group" aria-label="Things you can do">
+      <button type="button" id="bCall">Call Bolt<small>it comes to you</small></button>
+      <button type="button" id="bBall">Throw the ball<small>it fetches</small></button>
+      <button type="button" id="bPush">Push<small>a shove; it must recover</small></button>
+      <button type="button" id="bJump">Set up a jump<small>40 cm, in front of Bolt</small></button>
+      <button type="button" id="bPause" aria-pressed="false">Pause<small>space bar</small></button>
+    </div>
+    <div class="runline"><span>Seed <b id="seed">–</b></span><span>Started <b id="started">–</b> IST</span><span id="rateNote">Physics at 500 Hz, brains at 50 Hz</span></div>
+  </section>
+
+  <div class="two">
+    <section class="panel" aria-labelledby="did">
+      <h2 id="did">What Bolt did</h2>
+      <ul class="log" id="log"><li class="muted">Bolt's day starts as soon as the physics has loaded.</li></ul>
+    </section>
+    <section class="panel" aria-labelledby="tally">
+      <h2 id="tally">So far</h2>
+      <div class="counts">
+        <div><span class="label">Jumps clear</span><b id="cJumps">0 of 0</b></div>
+        <div><span class="label">Bars knocked</span><b id="cKnock">0</b></div>
+        <div><span class="label">Falls</span><b id="cFalls">0</b></div>
+        <div><span class="label">Got up alone</span><b id="cUp">0</b></div>
+        <div><span class="label">Distance</span><b id="cDist">0 m</b></div>
+        <div><span class="label">Zoomies</span><b id="cZoom">0</b></div>
+        <div><span class="label">Naps</span><b id="cNaps">0</b></div>
+        <div><span class="label">Fetches</span><b id="cFetch">0</b></div>
+        <div><span class="label">Kerb stops</span><b id="cKerb">0</b></div>
+      </div>
+      <h3>Which brain moves what</h3>
+      <ul class="brains" id="brains">
+        <li data-b="gpu"><b>Dog-motion brain, GPU run (360M steps)</b><span class="muted">walk, trot, pace, gentle turns, sit, lie down and get up front legs first: copies of a real dog's motion capture</span></li>
+        <li data-b="g18"><b>Canter-switching brain (run 18g)</b><span class="muted">the canter for zoomies, and dropping from canter to trot (93% in tests)</span></li>
+        <li data-b="walk12"><b>Run 12 walk brain</b><span class="muted">sharp turns at a walk and slowing to a stop</span></li>
+        <li data-b="posture"><b>Posture brain</b><span class="muted">standing still to sniff, and standing up from a sit</span></li>
+        <li data-b="jump"><b>Run-up jump brain (run 16i)</b><span class="muted">takes over 1.1 m before the bar from a trot; clears 40 cm about half the time in tests</span></li>
+        <li data-b="getup"><b>Self-righting brain (run 17e) + posture brain</b><span class="muted">after a fall: roll onto the belly, tuck, stand</span></li>
+      </ul>
+    </section>
+  </div>
+
+  <footer>
+    <span>Dog motion capture data: CC BY-NC 4.0. Robot, brains and page built with AI assistance (Claude). Times in IST (India Standard Time).</span>
+    <span>Real MuJoCo physics with the Unitree A1 motor model, the same as in training. Falls are shown as they happen; Bolt gets itself up.</span>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+{{SCENE_JS}}
+  // ---------- daylight: sky, haze, sun ----------
+  const PHONE = Math.min(window.innerWidth, window.innerHeight) < 600 || (navigator.hardwareConcurrency || 8) <= 4;
+  camera.far = 400; camera.fov = 45; camera.updateProjectionMatrix();
+  controls.maxDistance = 26; controls.minDistance = 1.2; controls.maxPolarAngle = 1.48;
+  floor.visible = false;
+  renderer.setClearColor(0x000000, 0);
+  renderer.toneMappingExposure = 0.82;
+  scene.fog = new THREE.Fog(lin("#c4d8e6"), 60, 230);
+  scene.children.filter((o) => o.isHemisphereLight).forEach((h) => { h.color = lin("#cfe6ff"); h.groundColor = lin("#5d7a3a"); h.intensity = 0.5; });
+  sun.color = lin("#fff1dc"); sun.intensity = 1.9; sun.shadow.mapSize.set(PHONE ? 1024 : 2048, PHONE ? 1024 : 2048);
+  setReach(PHONE ? 6 : 9);
+  const SUN_DIR = new THREE.Vector3(6, -7, 11).normalize();
+
+  // canvas textures (no images are fetched: every texture is drawn here)
+  function canvasTex(w, h, draw, repeat) {
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    draw(c.getContext("2d"), w, h);
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+    if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+    return t;
+  }
+  let seedR = 12345; const R = () => ((seedR = (seedR * 1664525 + 1013904223) >>> 0) / 4294967296);   // fixed scenery
+  const speckle = (g, w, h, n, colors, size = [1, 2]) => { for (let i = 0; i < n; i++) { g.fillStyle = colors[(R() * colors.length) | 0]; const s = size[0] + R() * (size[1] - size[0]); g.fillRect(R() * w, R() * h, s, s); } };
+  const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.85, ...extra });
+  const texMat = (tex, extra = {}) => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9, ...extra });
+  const world = new THREE.Group(); scene.add(world);
+  function put(geo, mat, pos, rot, { cast = true, receive = true, parent = world } = {}) { const m = new THREE.Mesh(geo, mat); m.position.set(...pos); if (rot) m.rotation.set(...rot); m.castShadow = cast; m.receiveShadow = receive; parent.add(m); return m; }
+  const boxAt = (x0, x1, y0, y1, z0, z1, mat, opt) => put(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat, [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], null, opt);
+  const flat = (x0, x1, y0, y1, z, mat) => put(new THREE.PlaneGeometry(x1 - x0, y1 - y0), mat, [(x0 + x1) / 2, (y0 + y1) / 2, z], null, { cast: false });
+
+  // sky dome and clouds
+  {
+    const sky = canvasTex(4, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#4f8fd6"); gr.addColorStop(0.55, "#9cc8ee"); gr.addColorStop(0.8, "#d8e9f4"); gr.addColorStop(1, "#e9f1e9"); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2 + 0.05), new THREE.MeshBasicMaterial({ map: sky, side: THREE.BackSide, fog: false, depthWrite: false }));
+    dome.rotation.x = Math.PI / 2; dome.renderOrder = -1; scene.add(dome);
+    const cloudTex = canvasTex(256, 128, (g, w, h) => { for (let i = 0; i < 26; i++) { const x = 40 + R() * 176, y = 50 + R() * 40, r = 18 + R() * 30, gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, "rgba(255,255,255,0.9)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); } });
+    for (let i = 0; i < 9; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, fog: false, transparent: true, opacity: 0.85, depthWrite: false }));
+      const a = R() * Math.PI * 2, d = 140 + R() * 90; s.position.set(Math.cos(a) * d, Math.sin(a) * d, 55 + R() * 40); s.scale.set(70 + R() * 50, 30 + R() * 16, 1); scene.add(s); s.userData.drift = 0.6 + R();
+      (window.__clouds = window.__clouds || []).push(s);
+    }
+  }
+
+  // ---------- the ground: lawn, path, driveway, sidewalk, kerb, road ----------
+  const grassTex = canvasTex(512, 512, (g, w, h) => {
+    g.fillStyle = "#5f8f35"; g.fillRect(0, 0, w, h);
+    speckle(g, w, h, 9000, ["#4f7d2b", "#6d9c3d", "#79a845", "#557f2e", "#86b250", "#4a7327"], [1, 3]);
+    g.lineWidth = 1.2;
+    for (let i = 0; i < 2600; i++) { const x = R() * w, y = R() * h, l = 4 + R() * 9; g.strokeStyle = ["#7aab45", "#3f6b22", "#8fbd57", "#5b8c33"][(R() * 4) | 0]; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (R() - 0.5) * 3, y - l); g.stroke(); }
+  }, [60, 60]);
+  {   // one big lawn plane, with patches of lighter and darker grass as vertex colours
+    const geo = new THREE.PlaneGeometry(240, 240, 120, 120), pos = geo.attributes.position, col = [];
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), n = 0.5 + 0.25 * Math.sin(x * 0.31 + Math.sin(y * 0.17) * 2) + 0.25 * Math.sin(y * 0.23 + x * 0.07);
+      const far = Math.min(1, Math.max(0, (Math.hypot(x, y) - 40) / 60));
+      col.push(0.6 + 0.25 * n - 0.08 * far, 0.68 + 0.2 * n - 0.05 * far, 0.55 + 0.15 * n);
+      if (Math.hypot(x, y) > 45) pos.setZ(i, Math.max(0, (Math.hypot(x, y) - 45) * 0.04) * (0.6 + 0.4 * Math.sin(x * 0.05) * Math.cos(y * 0.07)));
+    }
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
+    const g = put(geo, new THREE.MeshStandardMaterial({ map: grassTex, vertexColors: true, roughness: 1 }), [0, 0, 0], null, { cast: false });
+  }
+  const gravelTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = "#b9a98d"; g.fillRect(0, 0, w, h); speckle(g, w, h, 6000, ["#a08f72", "#cbbd9f", "#8e7d61", "#d9ccb2", "#9a9384"], [1.5, 4]); }, [1, 10]);
+  const concreteTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = "#c9c6bd"; g.fillRect(0, 0, w, h); speckle(g, w, h, 4000, ["#bdb9af", "#d3d0c8", "#b2aea4"], [1, 2]); g.strokeStyle = "#9d998f"; g.lineWidth = 3; g.strokeRect(0, 0, w, h); }, [1, 1]);
+  const asphaltTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = "#45474a"; g.fillRect(0, 0, w, h); speckle(g, w, h, 7000, ["#3a3c3f", "#52555a", "#5e6166", "#2f3134"], [1, 2.5]); }, [40, 3]);
+  // the path from the sidewalk to the porch (gravel), the driveway and the sidewalk (concrete slabs)
+  flat(-3.6, -2.4, -13, 7.4, 0.004, texMat(gravelTex));
+  { const t = concreteTex.clone(); t.needsUpdate = true; t.repeat.set(1, 6); flat(5.5, 9.5, -15, 9, 0.005, texMat(t)); }
+  { const t = concreteTex.clone(); t.needsUpdate = true; t.repeat.set(60, 1); flat(-60, 60, -15, -13, 0.007, texMat(t)); }
+  boxAt(-60, 60, -15.18, -15, 0, 0.12, std("#d6d3cb", { roughness: 0.8 }), { cast: false });   // the kerb
+  flat(-60, 60, -22, -15.18, 0.003, texMat(asphaltTex, { roughness: 0.95 }));
+  { const t = concreteTex.clone(); t.needsUpdate = true; t.repeat.set(60, 1); flat(-60, 60, -24, -22, 0.007, texMat(t)); boxAt(-60, 60, -22, -21.82, 0, 0.12, std("#d6d3cb"), { cast: false }); }
+  {   // lane markings: a dashed centre line and edge lines
+    const white = new THREE.MeshBasicMaterial({ color: lin("#efefe6") }), yellow = new THREE.MeshBasicMaterial({ color: lin("#e7c445") });
+    for (let x = -60; x < 60; x += 4.5) flat(x, x + 2.5, -18.66, -18.54, 0.01, yellow);
+    flat(-60, 60, -15.62, -15.5, 0.01, white); flat(-60, 60, -21.5, -21.38, 0.01, white);
+  }
+  // a puddle on the lawn: still water reflecting the sky
+  {
+    const P = { at: [-2.2, -9.6], r: [0.9, 0.6] };
+    const m = put(new THREE.CircleGeometry(1, 40), new THREE.MeshStandardMaterial({ color: lin("#7c93a6"), roughness: 0.05, metalness: 0.6, transparent: true, opacity: 0.85 }), [P.at[0], P.at[1], 0.012], null, { cast: false });
+    m.scale.set(P.r[0], P.r[1], 1);
+    const mud = put(new THREE.CircleGeometry(1, 40), std("#6b5a43", { roughness: 1 }), [P.at[0], P.at[1], 0.009], null, { cast: false }); mud.scale.set(P.r[0] + 0.18, P.r[1] + 0.14, 1);
+  }
+
+  // ---------- grass blades (instanced; a breeze sways them) ----------
+  const breeze = { value: 0 };
+  {
+    const blade = new THREE.BufferGeometry();
+    blade.setAttribute("position", new THREE.Float32BufferAttribute([-0.012, 0, 0, 0.012, 0, 0, -0.007, 0, 0.05, 0.007, 0, 0.05, 0, 0, 0.1], 3));
+    blade.setAttribute("color", new THREE.Float32BufferAttribute([0.18, 0.32, 0.08, 0.18, 0.32, 0.08, 0.32, 0.52, 0.16, 0.32, 0.52, 0.16, 0.5, 0.7, 0.26], 3));
+    blade.setIndex([0, 1, 2, 1, 3, 2, 2, 3, 4]); blade.computeVertexNormals();
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = breeze;
+      sh.vertexShader = "uniform float uTime;\n" + sh.vertexShader.replace("#include <begin_vertex>",
+        "#include <begin_vertex>\n vec4 wp = instanceMatrix * vec4(0.,0.,0.,1.);\n float k = position.z * 10.0;\n transformed.x += k * k * 0.02 * sin(uTime * 1.7 + wp.x * 0.6 + wp.y * 0.4);");
+    };
+    const N = PHONE ? 22000 : 60000, inst = new THREE.InstancedMesh(blade, mat, N), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
+    const bare = (x, y) => (x > -3.7 && x < -2.3 && y < 7.5) || (x > 5.4 && x < 9.6) || y < -12.95 || (x > -5.2 && x < -0.8 && y > 7.3) || Math.hypot((x + 2.2) / 1.1, (y + 9.6) / 0.8) < 1;
+    let n = 0;
+    while (n < N) {
+      const x = -15 + 30 * R(), y = -13 + 22 * R();
+      if (bare(x, y)) continue;
+      e.set(0, 0, R() * Math.PI); q.setFromEuler(e); const h = 0.6 + 0.9 * R(); s.set(1, 1, h); p.set(x, y, 0);
+      m4.compose(p, q, s); inst.setMatrixAt(n++, m4);
+    }
+    inst.frustumCulled = false; inst.receiveShadow = false; inst.castShadow = false; world.add(inst);
+  }
+
+  // ---------- the house, porch and garage ----------
+  const sidingTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = "#e7dcc4"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 16) { g.fillStyle = "#d2c5aa"; g.fillRect(0, y, w, 3); g.fillStyle = "#f0e7d3"; g.fillRect(0, y + 3, w, 2); } }, [6, 2]);
+  const shingleTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = "#6d4c41"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 16) for (let x = (y / 16) % 2 ? -16 : 0; x < w; x += 32) { g.fillStyle = ["#5d4037", "#795548", "#6a4a3f", "#4e342e"][(R() * 4) | 0]; g.fillRect(x + 1, y + 1, 30, 14); } }, [6, 3]);
+  const brickTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = "#c9c2b6"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 16) for (let x = (y / 16) % 2 ? -16 : 0; x < w; x += 32) { g.fillStyle = ["#9c4a35", "#a5533b", "#8f4330", "#b0604a"][(R() * 4) | 0]; g.fillRect(x + 1, y + 1, 30, 14); } }, [1, 3]);
+  function gableRoof(x0, x1, y0, y1, z, rise, over = 0.35, ridgeAlongX = true) {
+    // two sloping planes and the gable ends: ridge along x
+    const W = x1 - x0 + 2 * over, D = (y1 - y0) / 2 + over, slope = Math.hypot(D, rise), ang = Math.atan2(rise, D), mat = texMat(shingleTex, { roughness: 0.8 });
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    for (const s of [1, -1]) put(new THREE.BoxGeometry(W, slope, 0.08), mat, [cx, cy + s * D / 2, z + rise / 2], [s * ang, 0, 0]);
+    const tri = new THREE.Shape([new THREE.Vector2(-(y1 - y0) / 2, 0), new THREE.Vector2((y1 - y0) / 2, 0), new THREE.Vector2(0, rise)]);
+    const g = new THREE.ShapeGeometry(tri), wall = texMat(sidingTex);
+    for (const x of [x0 + 0.01, x1 - 0.01]) put(g, wall, [x, cy, z], [Math.PI / 2, x < cx ? -Math.PI / 2 : Math.PI / 2, 0]);
+  }
+  function windowAt(x, y, z, w, h, facing = -1, parent = world) {   // facing -1: on a wall facing south (-y)
+    const frame = std("#fbfaf6", { roughness: 0.5 }), glass = new THREE.MeshStandardMaterial({ color: lin("#2c4a5e"), roughness: 0.08, metalness: 0.3, emissive: lin("#18242c"), emissiveIntensity: 0.4 });
+    put(new THREE.BoxGeometry(w + 0.12, 0.06, h + 0.12), frame, [x, y + facing * 0.02, z], null, { parent });
+    put(new THREE.BoxGeometry(w, 0.07, h), glass, [x, y + facing * 0.03, z], null, { parent, cast: false });
+    put(new THREE.BoxGeometry(0.04, 0.08, h), frame, [x, y + facing * 0.035, z], null, { parent, cast: false });
+    put(new THREE.BoxGeometry(w, 0.08, 0.04), frame, [x, y + facing * 0.035, z], null, { parent, cast: false });
+    for (const s of [-1, 1]) put(new THREE.BoxGeometry(0.32, 0.05, h + 0.1), std("#3f5f4a"), [x + s * (w / 2 + 0.24), y + facing * 0.03, z], null, { parent });   // shutters
+  }
+  {
+    const H = { x0: -9, x1: 3, y0: 9, y1: 17 }, wallH = 3.0;
+    boxAt(H.x0, H.x1, H.y0, H.y1, 0, 0.45, texMat(brickTex));                       // foundation
+    boxAt(H.x0, H.x1, H.y0, H.y1, 0.45, wallH, texMat(sidingTex));
+    gableRoof(H.x0, H.x1, H.y0, H.y1, wallH, 2.4);
+    boxAt(-7.6, -6.8, 13, 13.8, 3.0, 6.4, texMat(brickTex));                          // chimney
+    for (const x of [-7.6, -5.2, 0.6]) windowAt(x, H.y0, 1.75, 1.1, 1.3);
+    // the front door with its step light
+    boxAt(-3.5, -2.5, 8.94, 9.0, 0.45, 2.55, std("#8e2f25", { roughness: 0.5 }));
+    put(new THREE.SphereGeometry(0.04, 12, 8), std("#d8b048", { metalness: 0.8, roughness: 0.3 }), [-2.68, 8.92, 1.45]);
+    put(new THREE.SphereGeometry(0.09, 12, 8), new THREE.MeshStandardMaterial({ color: lin("#fff3d0"), emissive: lin("#ffe2a0"), emissiveIntensity: 0.8 }), [-1.95, 8.9, 2.3]);
+    // the porch: deck, two steps, posts and a little roof
+    const deck = std("#9b7653", { roughness: 0.8 });
+    boxAt(-5, -1, 7.4, 9, 0, 0.36, deck);
+    boxAt(-3.8, -2.2, 6.95, 7.4, 0, 0.24, deck); boxAt(-3.8, -2.2, 6.6, 6.95, 0, 0.12, deck);
+    for (const x of [-4.85, -1.15]) boxAt(x - 0.07, x + 0.07, 7.45, 7.59, 0.36, 2.7, std("#f4f1ea"));
+    put(new THREE.BoxGeometry(4.4, 1.9, 0.1), texMat(shingleTex), [-3, 8.3, 2.78], [-0.18, 0, 0]);
+    for (const x of [-4.4, -1.6]) boxAt(x - 0.6, x + 0.6, 7.45, 7.5, 0.36, 0.95, std("#f4f1ea"));   // railings
+    // garage with its panel door
+    const G = { x0: 4.5, x1: 10.5, y0: 9, y1: 16 };
+    boxAt(G.x0, G.x1, G.y0, G.y1, 0, 2.6, texMat(sidingTex));
+    gableRoof(G.x0, G.x1, G.y0, G.y1, 2.6, 1.6, 0.3);
+    const doorTex = canvasTex(256, 128, (g, w, h) => { g.fillStyle = "#f2efe8"; g.fillRect(0, 0, w, h); g.strokeStyle = "#c9c4b8"; g.lineWidth = 3; for (let y = 0; y < h; y += 32) for (let x = 0; x < w; x += 64) g.strokeRect(x + 5, y + 5, 54, 22); });
+    boxAt(5.6, 9.4, 8.96, 9.02, 0, 2.2, texMat(doorTex, { roughness: 0.6 }));
+    // flower beds along the house front: soil, and instanced flowers
+    const soil = std("#4b3a2a", { roughness: 1 });
+    for (const [a, b] of [[-8.8, -5.3], [-0.7, 2.8]]) boxAt(a, b, 8.2, 8.95, 0, 0.06, soil, { cast: false });
+    const fl = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.05, 0), new THREE.MeshStandardMaterial({ roughness: 0.7 }), 150), m4 = new THREE.Matrix4();
+    const cols = ["#e84a5f", "#f6c445", "#ffffff", "#b06ad9", "#ff8c42"].map(lin);
+    for (let i = 0; i < 150; i++) { const bed = i % 2 ? [-8.7, -5.4] : [-0.6, 2.7], x = bed[0] + (bed[1] - bed[0]) * R(), y = 8.3 + 0.6 * R(); m4.makeTranslation(x, y, 0.14 + 0.12 * R()); fl.setMatrixAt(i, m4); fl.setColorAt(i, cols[(R() * cols.length) | 0]); }
+    world.add(fl);
+  }
+
+  // ---------- trees, bushes, hedges ----------
+  const leafCols = ["#3e6b2a", "#4c7d32", "#365f24", "#5a8c3a", "#2f5520"];
+  function tree(x, y, h, r, kind = "oak") {
+    const trunk = std("#5b4433", { roughness: 1 });
+    put(new THREE.CylinderGeometry(r * 0.7, r, h * 0.55, 10), trunk, [x, y, h * 0.275], [Math.PI / 2, 0, 0]);
+    const n = kind === "pine" ? 4 : 7;
+    for (let i = 0; i < n; i++) {
+      const s = kind === "pine" ? h * (0.32 - i * 0.06) : h * (0.18 + 0.1 * R());
+      const g = kind === "pine" ? new THREE.ConeGeometry(s, h * 0.3, 9) : new THREE.IcosahedronGeometry(s, 1);
+      const m = put(g, std(leafCols[(R() * leafCols.length) | 0], { flatShading: true, roughness: 0.9 }), kind === "pine" ? [x, y, h * (0.42 + i * 0.16)] : [x + (R() - 0.5) * h * 0.3, y + (R() - 0.5) * h * 0.3, h * (0.62 + 0.25 * R())], kind === "pine" ? [Math.PI / 2, 0, 0] : null);
+      m.scale.z = kind === "pine" ? 1 : 0.85;
+    }
+  }
+  tree(-11, -4, 5.2, 0.2); tree(11.2, -7, 6, 0.22); tree(-6.5, 5.6, 3.6, 0.14);
+  for (const [x, y, h] of [[-18, 12, 7], [14, 19, 8], [-4, 21, 9], [6, 22, 7], [19, 4, 6], [-20, -6, 7], [22, -9, 6], [-24, 3, 8]]) tree(x, y, h, 0.25, R() < 0.4 ? "pine" : "oak");
+  function bush(x, y, s) { for (let i = 0; i < 3; i++) put(new THREE.IcosahedronGeometry(s * (0.6 + 0.4 * R()), 1), std(leafCols[(R() * 5) | 0], { flatShading: true }), [x + (R() - 0.5) * s, y + (R() - 0.5) * s, s * 0.5]); }
+  for (const [x, y, s] of [[-9.6, 8.4, 0.7], [3.6, 8.5, 0.6], [-14.3, 8.3, 0.8], [14.3, 8.3, 0.7], [-14.4, -2, 0.6], [14.4, 2.5, 0.65], [4.2, 8.4, 0.45]]) bush(x, y, s);
+
+  // ---------- fences: white pickets on both sides and the back ----------
+  {
+    const runs = [[[-15, -13], [-15, 9]], [[15, -13], [15, 9]], [[-15, 9], [-9, 9]], [[3, 9], [4.5, 9]], [[10.5, 9], [15, 9]]];
+    let count = 0; const posts = [];
+    for (const [a, b] of runs) { const L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.round(L / 0.16); for (let i = 0; i <= n; i++) posts.push([a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n, Math.atan2(b[1] - a[1], b[0] - a[0])]); }
+    const picket = new THREE.BoxGeometry(0.08, 0.025, 0.95); picket.translate(0, 0, 0.475);
+    const inst = new THREE.InstancedMesh(picket, std("#f7f5ef", { roughness: 0.7 }), posts.length), m4 = new THREE.Matrix4();
+    posts.forEach(([x, y, a], i) => { m4.makeRotationZ(a); m4.setPosition(x, y, 0); inst.setMatrixAt(count++, m4); });
+    inst.castShadow = true; inst.receiveShadow = true; world.add(inst);
+    for (const [a, b] of runs) for (const z of [0.3, 0.75]) { const L = Math.hypot(b[0] - a[0], b[1] - a[1]); put(new THREE.BoxGeometry(L, 0.03, 0.06), std("#efece4"), [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + (a[0] === b[0] ? 0 : 0.03), z], [0, 0, Math.atan2(b[1] - a[1], b[0] - a[0])]); }
+  }
+
+  // ---------- kennel, bins and trash, bench, mailbox, lamp, car ----------
+  {
+    const K = [-12.4, 6.2], wood = std("#b9773f", { roughness: 0.9 }), dark = new THREE.MeshBasicMaterial({ color: lin("#1a120c") });
+    boxAt(K[0] - 0.55, K[0] + 0.55, K[1] - 0.5, K[1] + 0.5, 0, 0.62, wood);
+    const roofM = std("#a23b2c");
+    for (const s of [1, -1]) put(new THREE.BoxGeometry(1.25, 0.72, 0.05), roofM, [K[0] + s * 0.3, K[1], 0.78], [0, s * 0.62, 0]);
+    put(new THREE.PlaneGeometry(0.42, 0.46), dark, [K[0], K[1] - 0.505, 0.26], [Math.PI / 2, 0, 0], { cast: false });
+    const plate = canvasTex(128, 40, (g) => { g.fillStyle = "#f4ead7"; g.fillRect(0, 0, 128, 40); g.fillStyle = "#3a2a1a"; g.font = "700 26px Archivo, Arial"; g.textAlign = "center"; g.fillText("BOLT", 64, 30); });
+    put(new THREE.PlaneGeometry(0.34, 0.1), new THREE.MeshStandardMaterial({ map: plate }), [K[0], K[1] - 0.506, 0.56], [Math.PI / 2, 0, 0], { cast: false });
+    // the wheelie bin, a knocked-over can, a bottle, a torn bag and paper
+    const B = [12.3, 7.6], green = std("#2f6b3f", { roughness: 0.6 });
+    put(new THREE.CylinderGeometry(0.3, 0.26, 0.95, 4, 1), green, [B[0], B[1], 0.5], [Math.PI / 2, Math.PI / 4, 0]).scale.set(1, 1, 1);
+    put(new THREE.BoxGeometry(0.66, 0.7, 0.06), std("#26573a"), [B[0], B[1] + 0.02, 1.0], [0.12, 0, 0]);
+    for (const s of [-1, 1]) put(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 14), std("#1d1f20"), [B[0] + s * 0.26, B[1] + 0.24, 0.09], [0, 0, Math.PI / 2]);
+    put(new THREE.CylinderGeometry(0.06, 0.06, 0.24, 16), std("#c9ccd0", { metalness: 0.8, roughness: 0.35 }), [11.5, 6.8, 0.06], [0, 0, 0.7]);
+    put(new THREE.CylinderGeometry(0.035, 0.035, 0.2, 12), new THREE.MeshStandardMaterial({ color: lin("#2f7d4a"), roughness: 0.1, transparent: true, opacity: 0.8 }), [11.2, 7.4, 0.04], [0, 0, 1.9]);
+    const bagGeo = new THREE.IcosahedronGeometry(0.22, 1), bp = bagGeo.attributes.position;
+    for (let i = 0; i < bp.count; i++) bp.setXYZ(i, bp.getX(i) * (0.8 + 0.4 * R()), bp.getY(i) * (0.8 + 0.4 * R()), bp.getZ(i) * (0.6 + 0.3 * R()));
+    bagGeo.computeVertexNormals();
+    put(bagGeo, std("#22262a", { roughness: 0.35, flatShading: true }), [12.0, 6.55, 0.14]);
+    for (const [x, y] of [[12.9, 6.6], [12.6, 6.1], [11.8, 6.0]]) put(new THREE.IcosahedronGeometry(0.06, 0), std("#f1efe8", { flatShading: true }), [x, y, 0.04]);
+    // a bench by the fence
+    const bench = std("#7a5634");
+    for (let i = 0; i < 3; i++) boxAt(-13.62 + i * 0.16, -13.5 + i * 0.16, -9.25, -7.75, 0.42, 0.46, bench);
+    for (const y of [-9.1, -7.9]) boxAt(-13.62, -13.2, y - 0.04, y + 0.04, 0, 0.42, std("#2d2f31"));
+    boxAt(-13.68, -13.62, -9.25, -7.75, 0.5, 0.9, bench);
+    // mailbox on its post, with the flag up
+    boxAt(4.65, 4.75, -12.65, -12.55, 0, 1.05, std("#6d5a45"));
+    put(new THREE.BoxGeometry(0.22, 0.45, 0.22), std("#2b4f86", { roughness: 0.5 }), [4.7, -12.6, 1.17]);
+    boxAt(4.82, 4.84, -12.5, -12.46, 1.17, 1.42, std("#d23a2c"));
+    // street lamp at the kerb
+    put(new THREE.CylinderGeometry(0.05, 0.08, 4, 10), std("#2f3438", { metalness: 0.5 }), [-13.2, -14.7, 2], [Math.PI / 2, 0, 0]);
+    put(new THREE.BoxGeometry(0.7, 0.08, 0.08), std("#2f3438"), [-12.9, -14.7, 3.95]);
+    put(new THREE.BoxGeometry(0.3, 0.2, 0.12), new THREE.MeshStandardMaterial({ color: lin("#fffbe8"), emissive: lin("#fff3c4"), emissiveIntensity: 0.4 }), [-12.6, -14.7, 3.87]);
+    // a parked car across the road edge
+    const C = [-5.5, -17.6], paint = new THREE.MeshPhysicalMaterial({ color: lin("#b8392f"), roughness: 0.25, metalness: 0.4, clearcoat: 0.8 });
+    put(new THREE.BoxGeometry(4.3, 1.75, 0.72), paint, [C[0], C[1], 0.62]);
+    put(new THREE.BoxGeometry(2.4, 1.6, 0.6), paint, [C[0] - 0.2, C[1], 1.25]);
+    const glass = new THREE.MeshStandardMaterial({ color: lin("#1f2c36"), roughness: 0.05, metalness: 0.5 });
+    put(new THREE.BoxGeometry(2.2, 1.64, 0.46), glass, [C[0] - 0.2, C[1], 1.27], null, { cast: false });
+    for (const sx of [-1.4, 1.4]) for (const sy of [-0.82, 0.82]) put(new THREE.CylinderGeometry(0.34, 0.34, 0.22, 20), std("#191a1b"), [C[0] + sx, C[1] + sy, 0.34]);
+    for (const sy of [-0.6, 0.6]) put(new THREE.BoxGeometry(0.05, 0.3, 0.12), new THREE.MeshStandardMaterial({ color: lin("#fff6dd"), emissive: lin("#fff1c4"), emissiveIntensity: 0.3 }), [C[0] + 2.16, C[1] + sy, 0.72], null, { cast: false });
+  }
+  // ---------- the street across the road: neighbours' houses, and hills far off ----------
+  {
+    const cols = ["#d9c9a8", "#b9cbd6", "#e3d6c5", "#c7d1b5", "#e8e1d4"];
+    for (let i = 0; i < 7; i++) {
+      const x = -36 + i * 12 + (R() - 0.5) * 3, y = -31 - R() * 3, w = 7 + R() * 3, d = 6 + R() * 2, h = 2.8 + R() * 1.2;
+      boxAt(x - w / 2, x + w / 2, y - d / 2, y + d / 2, 0, h, std(cols[i % cols.length]), { cast: false });
+      const roof = std(["#5b4a42", "#3f4a55", "#6a3f35"][i % 3]);
+      for (const s of [1, -1]) put(new THREE.BoxGeometry(w + 0.6, d / 2 + 0.6, 0.1), roof, [x, y + s * d / 4, h + 0.75], [s * 0.6, 0, 0], { cast: false });
+      for (const wx of [-w / 4, w / 4]) put(new THREE.BoxGeometry(1.0, 0.05, 1.0), glassy(), [x + wx, y + d / 2 + 0.02, 1.6], null, { cast: false });
+      tree(x + w / 2 + 2, y + d / 2 + 1, 5 + R() * 2, 0.2, R() < 0.5 ? "pine" : "oak");
+    }
+    function glassy() { return new THREE.MeshStandardMaterial({ color: lin("#33505f"), roughness: 0.1, metalness: 0.3 }); }
+    const hill = std("#6f8f58", { flatShading: true, roughness: 1 });
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2 + R() * 0.2, d = 150 + R() * 40, r = 30 + R() * 30; const m = put(new THREE.SphereGeometry(r, 12, 8), hill, [Math.cos(a) * d, Math.sin(a) * d, -r * 0.55], null, { cast: false, receive: false }); m.scale.z = 0.45 + R() * 0.3; }
+  }
+
+  // ---------- the ball ----------
+  const ballMesh = (() => {
+    const tex = canvasTex(128, 64, (g, w, h) => { g.fillStyle = "#d7e84a"; g.fillRect(0, 0, w, h); g.strokeStyle = "#f7f9ef"; g.lineWidth = 5; g.beginPath(); for (let x = 0; x <= w; x++) g.lineTo(x, h / 2 + Math.sin((x / w) * Math.PI * 4) * h * 0.28); g.stroke(); });
+    return put(new THREE.SphereGeometry(0.09, 24, 16), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }), [3, -8, 0.09]);
+  })();
+
+  // ---------- Bolt: the same body as the Gait Lab, posed from the live simulator ----------
+  let parts = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp }; });
+  }
+  const m4b = new THREE.Matrix4();
+  function drawBolt() {
+    const d = L.bolt.data, xp = d.geom_xpos, xm = d.geom_xmat;
+    for (const pt of parts) {
+      if (!pt.obj) continue;
+      const i = pt.g.id, k = 9 * i;
+      m4b.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.obj.position.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.obj.quaternion.setFromRotationMatrix(m4b);
+    }
+  }
+
+  // ---------- the day ----------
+  const DAY = 300;   // seconds
+  let lib, live, L = null, bundle = null, drawHurdles = () => {}, playing = true, seen = 0, ended = false, bannerUntil = 0, startedAt = null;
+  const q = new URLSearchParams(location.search);
+  const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  const ist = (d) => new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+  function banner(text, kind) { const el = $("banner"); el.textContent = text; el.className = `banner show ${kind === "good" ? "good" : kind === "bad" ? "bad" : ""}`; bannerUntil = performance.now() + 1400; }
+  const ticker = [];
+  function log(e) {
+    const li = document.createElement("li");
+    li.innerHTML = `<time>${fmt(e.t)}</time><span class="${e.kind}"></span>`; li.lastChild.textContent = e.text;
+    const list = $("log"); if (list.firstElementChild && list.firstElementChild.classList.contains("muted")) list.innerHTML = "";
+    list.prepend(li); while (list.children.length > 120) list.lastChild.remove();
+    ticker.push(e.text); while (ticker.length > 3) ticker.shift();
+    $("ticker").innerHTML = ""; for (const t of ticker) { const s = document.createElement("span"); s.textContent = t; $("ticker").append(s); }
+    if (/^Clear jump/.test(e.text)) banner("Clear!", "good");
+    else if (/^Bolt fell/.test(e.text)) banner("Fell!", "bad");
+    else if (/^Bolt got itself up/.test(e.text)) banner("Up again", "good");
+    else if (/zoomies!/.test(e.text)) banner("Zoomies!", "good");
+    else if (/^Got it/.test(e.text)) banner("Got it!", "good");
+  }
+  function newDay(seed) {
+    if (L.mind) lib.newDay(L, bundle, seed);
+    seen = 0; ended = false; ticker.length = 0; $("ticker").innerHTML = ""; $("result").hidden = true;
+    $("log").innerHTML = '<li class="muted">A new five minutes begins.</li>';
+    $("seed").textContent = String(seed); startedAt = new Date(); $("started").textContent = ist(startedAt);
+    rate.sim = 0; rate.wall = 0; rate.v = 1;
+    resetView();
+    if (!playing) togglePause();
+  }
+  function resetView() {
+    const w = L.bolt.where(), f = camera.aspect < 1 ? 1.35 : 1;
+    const target = new THREE.Vector3(w.x, w.y, 0.35);
+    camera.position.set(w.x - 3.0 * f, w.y - 4.6 * f, 2.3 * f);
+    controls.target.copy(target); controls.update(); look.x = w.x; look.y = w.y;
+  }
+  // the camera follows Bolt smoothly: the view keeps its angle, its centre eases toward Bolt
+  const look = { x: 0, y: 0 };
+  function follow(dt) {
+    const w = L.bolt.where(), k = 1 - Math.exp(-dt * 2.5), nx = look.x + (w.x - look.x) * k, ny = look.y + (w.y - look.y) * k;
+    const dx = nx - look.x, dy = ny - look.y; look.x = nx; look.y = ny;
+    camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy;
+    sun.position.set(look.x + SUN_DIR.x * 20, look.y + SUN_DIR.y * 20, SUN_DIR.z * 20); sun.target.position.set(look.x, look.y, 0);
+  }
+  // where you stand: under the camera, inside the yard (the ball comes from there; Bolt comes there)
+  function viewer() { return L.mind.inYard([camera.position.x, camera.position.y], 0.6); }
+
+  const SHOW = { stand: "standing", sniff: "sniffing", walk: "walking", turnclip: "walking", sharp: "turning", brake: "slowing down", trot: "trotting", ctrot: "trotting", pace: "pacing",
+    canter: "zoomies!", sit: "sitting", lie: "lying down", getup: "getting up, front legs first", rise: "standing up", jump: "jumping!", bridge: "landing", fallen: "fell over: getting up" };
+  function hud() {
+    const b = L.body, m = L.mind;
+    let doing = m.label;
+    if (["jump", "bridge", "fallen", "canter", "getup"].includes(b.mode)) doing = SHOW[b.mode];
+    else if (m.task && m.task.name === "nap" && b.mode === "lie") doing = "napping";
+    $("hDoing").textContent = doing;
+    const br = b.brain();
+    $("hBrain").textContent = `brain: ${lib.BRAIN_NAMES[br]} · ${SHOW[b.mode] || b.mode}`;
+    for (const li of $("brains").children) li.classList.toggle("on", li.dataset.b === br);
+    $("mE").style.width = `${Math.round(100 * m.energy)}%`; $("mC").style.width = `${Math.round(100 * m.curiosity)}%`; $("mP").style.width = `${Math.round(100 * m.play)}%`;
+    $("hTime").innerHTML = `${fmt(Math.min(DAY, m.t))}<span class="of"> / 5:00</span>`;
+    $("hSpeed").textContent = `${b.speed.toFixed(1)} m/s`;
+    $("hRate").textContent = `${rate.v.toFixed(2)}×`;
+    $("status").textContent = `${lib.BRAIN_NAMES[br]} · energy ${Math.round(100 * m.energy)}% · curious ${Math.round(100 * m.curiosity)}% · play ${Math.round(100 * m.play)}%`;
+    const S = m.stats;
+    $("cJumps").textContent = `${S.clean} of ${S.jumps}`; $("cKnock").textContent = S.knocked; $("cFalls").textContent = b.falls; $("cUp").textContent = b.recoveries;
+    $("cDist").textContent = `${S.distance.toFixed(0)} m`; $("cZoom").textContent = S.zoomies; $("cNaps").textContent = S.naps; $("cFetch").textContent = S.fetches; $("cKerb").textContent = m.kerbStops;
+  }
+  function summary() {
+    const b = L.body, m = L.mind, S = m.stats;
+    const did = Object.entries(m.counts).sort((a, c) => c[1] - a[1]).slice(0, 4).map(([k, v]) => `${{ wander: "explored", sniffSpot: "sniffed about", sniffBin: "checked the bin", trot: "trotted about", zoomies: "had the zoomies", jump: "went for a jump", pace: "paced", sit: "sat", nap: "napped", sidewalk: "walked the sidewalk", lookout: "watched the street", ball: "chased the ball", come: "came when called" }[k] || k} ×${v}`).join(", ");
+    $("rSummary").innerHTML = [["Distance", `${S.distance.toFixed(0)} m`], ["Jumps clear", `${S.clean} of ${S.jumps}`], ["Falls / got up alone", `${b.falls} / ${b.recoveries}`], ["Zoomies", S.zoomies], ["Naps", S.naps], ["Fetches", S.fetches], ["Energy left", `${Math.round(100 * m.energy)}%`], ["Seed", m.seed]]
+      .map(([a, c]) => `<span>${a}</span><span>${c}</span>`).join("");
+    $("rNote").textContent = `Mostly: ${did}. Started ${ist(startedAt)} IST, ended ${ist(new Date())} IST. Another five minutes will go differently.`;
+    $("result").hidden = false;
+  }
+  function togglePause() { playing = !playing; $("bPause").firstChild.textContent = playing ? "Pause" : "Play"; $("bPause").setAttribute("aria-pressed", String(!playing)); }
+
+  async function boot() {
+    try {
+      const [l, a, m, b, gpu, g18, j16, cl, h3] = await Promise.all([import("./live.js"), import("./doglife.js"), import("./mujoco/mujoco.js"),
+        fetch("data/bolt_run.json").then((x) => x.json()), fetch("data/dog_gpu360.json").then((x) => x.json()), fetch("data/dog_18g.json").then((x) => x.json()),
+        fetch("data/jump_16i.json").then((x) => x.json()), fetch("data/dog_clips.json").then((x) => x.json()), import("./hurdles3d.js")]);
+      live = l; lib = a; bundle = b;
+      const seed = Number(q.get("seed")) || (Date.now() % 1000000);
+      L = lib.makeLife(live, await m.default(), bundle, { gpu, g18, jump16i: j16 }, cl, seed);
+      drawHurdles = h3.makeHurdles(THREE, scene, L.bolt, mesh, lin);
+      buildDog(bundle.geoms);
+      newDay(seed);
+    } catch (e) {
+      console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return;
+    }
+    $("loading").hidden = true;
+  }
+  // ---------- the viewer's buttons ----------
+  const ready = () => L && L.mind && !ended;
+  $("bCall").addEventListener("click", () => { if (!ready()) return; L.mind.person = viewer(); L.mind.call(); });
+  $("bBall").addEventListener("click", () => {
+    if (!ready()) return;
+    const from = viewer(), w = L.bolt.where(), M = L.mind;
+    let to = null;   // somewhere on open lawn 6-11 m from you, away from Bolt's nose
+    for (let i = 0; i < 30 && !to; i++) { const a = Math.random() * Math.PI * 2, d = 6 + 5 * Math.random(), p = M.inYard([from[0] + d * Math.cos(a), from[1] + d * Math.sin(a)], 1.0); if (M.clear(p, 0.5) && Math.hypot(p[0] - w.x, p[1] - w.y) > 3) to = p; }
+    M.person = from; M.throwBall(from, to || M.randomSpot(2));
+  });
+  $("bPush").addEventListener("click", () => { if (!ready()) return; L.mind.push((Math.random() < 0.5 ? -1 : 1) * (70 + 50 * Math.random())); });
+  $("bJump").addEventListener("click", () => { if (ready()) L.mind.setJump(); });
+  $("bPause").addEventListener("click", togglePause);
+  $("again").addEventListener("click", () => { if (L) newDay(Date.now() % 1000000); });
+  window.addEventListener("keydown", (e) => { if (e.key === " " && e.target === document.body) { e.preventDefault(); togglePause(); } });
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stageEl);
+
+  // real time when the machine keeps up; slower than real time (and shown) when it cannot
+  const rate = { sim: 0, wall: 0, v: 1 };
+  // each frame: as many 1/50 s control steps as are due, within ~35 ms of compute (so a slow frame never
+  // freezes the page); the drawing drops detail if frames stay slow (grass blades, shadows, resolution)
+  const BUDGET = 35;
+  let last = performance.now(), acc = 0, slow = 0, quality = 3, grassMesh = world.children.find((o) => o.isInstancedMesh && o.count > 1000);
+  function lowerQuality() {
+    quality--;
+    if (quality === 2) renderer.setPixelRatio(1);
+    if (quality === 1) { sun.castShadow = false; if (grassMesh) grassMesh.visible = false; }
+    if (quality === 0) renderer.setPixelRatio(0.6);
+    resize(); $("rateNote").textContent = `Physics at 500 Hz, brains at 50 Hz · lighter drawing for this device`;
+  }
+  function tick(now) {
+    const wall = (now - last) / 1000, dt = Math.min(0.25, wall); last = now;
+    if (wall > 0.055 && quality > 0) { if ((slow += wall) > 3) { slow = 0; lowerQuality(); } } else slow = Math.max(0, slow - wall * 0.5);
+    if (L && L.mind) {
+      if (playing && !ended) {
+        acc += dt;
+        let n = 0;
+        const dtc = L.bolt.dt;
+        const t0 = performance.now();
+        while (acc >= dtc && performance.now() - t0 < BUDGET) {
+          L.mind.step(dtc); L.body.step(dtc); acc -= dtc; n++;
+          while (L.body.events.length) { const e = L.body.events.shift(); L.mind.say(e.text, e.kind); }
+          if (L.mind.t >= DAY) { ended = true; L.mind.say("Five minutes are up. Good dog, Bolt.", "good"); break; }
+        }
+        if (acc > 0.1) acc = 0.1;   // could not keep up: run slower than real time instead of piling up
+        rate.sim += n * dtc; rate.wall += wall;
+        if (rate.wall > 2) { rate.v = rate.sim / rate.wall; rate.sim = 0; rate.wall = 0; }
+        while (seen < L.mind.log.length) log(L.mind.log[seen++]);
+        if (ended) summary();
+        const B = L.mind.ball; ballMesh.position.set(B.pos[0], B.pos[1], B.pos[2]);
+        if (!B.held) ballMesh.rotation.x += Math.hypot(B.vel[0], B.vel[1]) * dt / 0.09;
+      }
+      if (now > bannerUntil) $("banner").classList.remove("show");
+      drawBolt(); drawHurdles(); follow(dt); hud();
+      if (!L.mind.person || !(L.mind.task && ["come", "ball"].includes(L.mind.task.name))) L.mind.person = viewer();
+      const s = now / 1000, m = L.body.mode;
+      if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (["walk", "trot", "canter", "ctrot", "pace", "sharp"].includes(m) || (L.mind.task && ["ball", "come", "zoomies"].includes(L.mind.task.name)) ? 11 : m === "lie" ? 2 : 5));
+      eyes.forEach((e) => (e.scale.z = m === "lie" && L.mind.task && L.mind.task.name === "nap" ? 0.15 : (s % 3.7) < 0.12 ? 0.12 : 1));
+    }
+    if (!reduced) { breeze.value = now / 1000; for (const c of window.__clouds || []) { c.position.x += c.userData.drift * dt; if (c.position.x > 260) c.position.x = -260; } }
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  resize(); requestAnimationFrame(tick); boot();
+  window.__doglife = () => L;   // for checks
+})();
+</script>

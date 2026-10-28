@@ -93,7 +93,9 @@ export function setupYard(bolt, bundle, Y = YARD) {
 
 // ---------------------------------------------------------------- the body: which brain is in charge
 export const TAKEOVER = 1.1;            // m before the bar the run-up jump brain takes over (teachers v3: 1.1 m from a trot)
-const POSTURE = ["stand", "rise", "brake", "sniff"];
+const POSTURE = ["stand", "rise", "brake", "sniff", "settle"];
+export let LANDING = "bridge";   // after a jump: "bridge" (a moment of canter, then trot: teachers v3) or "land" (the jump brain stops Bolt)
+export function setLanding(l) { LANDING = l; }
 export const BRAIN_NAMES = {
   gpu: "GPU dog-motion brain (360M steps)", g18: "canter-switching brain (run 18g)", posture: "posture brain",
   walk12: "run 12 walk brain (sharp turns)", jump: "run-up jump brain (run 16i)", getup: "self-righting brain (run 17e) + posture brain",
@@ -108,12 +110,13 @@ export class DogBody {
     this.armed = null; this.jumpInfo = null; this.falls = 0; this.recoveries = 0;
   }
   say(text, kind = "info") { this.events.push({ text, kind }); }
-  get busy() { return ["jump", "land", "bridge", "fallen"].includes(this.mode); }
+  get busy() { return ["jump", "land", "settle", "bridge", "fallen"].includes(this.mode); }
   get gait() { const m = this.mode; return m === "turnclip" || m === "sharp" || m === "brake" ? "walk" : m === "ctrot" ? "trot" : m === "sniff" ? "stand" : m; }
   brain() {
     const m = this.mode;
     if (m === "fallen") return "getup";
     if (m === "jump" || m === "land") return "jump";
+    if (m === "settle") return "posture";
     if (m === "sharp" || m === "brake") return "walk12";
     if (POSTURE.includes(m)) return "posture";
     return this.dog === this.g18 ? "g18" : "gpu";
@@ -183,7 +186,17 @@ export class DogBody {
       const J = this.jumpInfo;
       if (b.hurdleHits()) J.touched = true;
       if (!J.cleared && Math.min(...this.pawsPast()) > 0.08) { J.cleared = true; J.at = b.jt; }
-      if ((J.cleared && b.jt - J.at >= 25 && b.up() > 0.85 && b.data.qpos[2] > 0.3) || b.jt >= this.jumpLimit) { J.landed = J.cleared; this.go("bridge"); }
+      if ((J.cleared && b.jt - J.at >= 25 && b.up() > 0.85 && b.data.qpos[2] > 0.3) || b.jt >= this.jumpLimit) { J.landed = J.cleared; this.go(LANDING === "bridge" ? "bridge" : "land"); }
+      return;
+    }
+    if (m === "land") {   // the jump brain slows Bolt down itself, then a moment sitting and standing (agilityrun.js)
+      b.jumpTick();
+      if ((Math.hypot(v[0], v[1]) < 1.0 && b.up() > 0.95 && Math.hypot(v[3], v[4]) < 0.5) || b.jt >= this.jumpLimit + 60) this.go("settle");
+      return;
+    }
+    if (m === "settle") {
+      b.run({ command: this.mt < 1.0 ? "sit" : "stand", turn: 0, speed: 0.2 });
+      if (this.mt > 2.0) this.go("stand");
       return;
     }
     if (m === "bridge") {   // Bolt lands at a gallop: a moment of canter (18g), then its trot (canter -> trot practised)
@@ -193,7 +206,9 @@ export class DogBody {
     // an armed jump: the jump brain takes over 1.1 m before the bar
     if (this.armed !== null && ["walk", "trot", "ctrot", "pace", "turnclip", "sharp"].includes(m)) {
       const ahead = b.hurdleAhead();
-      if (ahead <= TAKEOVER && ahead > 0.3) {
+      // the run-up jump brain needs the speed of a trot: from anything slower Bolt runs out instead
+      if (ahead <= TAKEOVER && ahead > 0.3 && m !== "trot" && m !== "ctrot") { this.armed = null; this.say("Bolt was not going fast enough and runs out of the jump"); }
+      else if (ahead <= TAKEOVER && ahead > 0.3) {
         this.dog.stop(); b.startJump();
         this.jumpInfo = { k: this.armed, cleared: false, touched: false, landed: false, from: ahead, speed: this.speed };
         this.jumped = this.armed; this.armed = null;
@@ -219,7 +234,7 @@ export class DogBody {
         break;
       case "sharp":
         if (w.gait === "sit" || w.gait === "lie" || w.gait === "stand" || w.gait === "sniff") this.go("brake");
-        else if (this.mt > 0.5 && (e === null || Math.abs(e) < 0.12)) this.go("walk");
+        else if (this.mt > 0.5 && (e === null || Math.abs(e) < 0.18)) this.go("walk");
         break;
       case "brake":
         if (moving && this.mt < 0.6) this.go("walk");
@@ -263,9 +278,15 @@ export class DogBody {
     if (m === "sharp") {
       const steer = w.steer || 0, top = Math.min(1.4, b.maxTurn(this.vs || 0.5));
       const target = Math.abs(steer) < 0.3 ? 0.65 : clamp(0.25 + 0.6 * Math.cos(steer), TURN.vmin, 0.6);
-      this.vs = target > this.vs ? Math.min(target, this.vs + 0.6 * b.dt) : Math.max(target, this.vs - 1.0 * b.dt);
+      this.vs = target > this.vs ? Math.min(target, this.vs + 0.6 * b.dt) : Math.max(target, this.vs - 0.4 * b.dt);
       const cap = Math.abs(steer) > 1.2 ? TURN.cap : top;   // turning right round: gently (1.4 rad/s tipped it over)
-      return b.run({ command: "walk", turn: clamp(2.5 * steer, -cap, cap), speed: this.vs });
+      // the asked turn changes smoothly and keeps its side while the goal is behind (a goal straight behind
+      // flips the heading error between +pi and -pi; a turn flipped at once tipped Bolt over)
+      let want = clamp(2.5 * steer, -cap, cap);
+      if (Math.abs(steer) > 1.8 && this.turnCmd && Math.sign(want) !== Math.sign(this.turnCmd)) want = -want;
+      const prev = this.mt < 0.03 ? 0 : this.turnCmd || 0;
+      this.turnCmd = prev + clamp(want - prev, -1.5 * b.dt, 1.5 * b.dt);
+      return b.run({ command: "walk", turn: this.turnCmd, speed: this.vs });
     }
     if (m === "brake") { this.vs = Math.max(0.2, this.vs - 0.6 * b.dt); return b.run({ command: "walk", turn: 0, speed: this.vs }); }
     this.dog.tick();
@@ -276,7 +297,7 @@ export class DogBody {
   }
 }
 // how Bolt gets up from a sit, and what follows the get-up clip (measured in doglife_test.mjs)
-export const TURN = { cap: 0.9, vmin: 0.3 };
+export const TURN = { cap: 0.7, vmin: 0.45 };
 export function setTurnLimits(cap, vmin) { TURN.cap = cap; TURN.vmin = vmin; }
 export let SIT_EXIT = "rise", GETUP_EXIT = "walk", LIE_FROM_WALK = false;
 export function setLieFromWalk(v) { LIE_FROM_WALK = v; }
@@ -369,8 +390,8 @@ export class Mind {
     const p = this.where(), k = this.Y.extra;
     let best = null;
     for (const da of [0, 0.4, -0.4, 0.8, -0.8, 1.6, -1.6, Math.PI]) {   // ahead of Bolt, where there is room
-      const yaw = p.yaw + da, at = [p.x + 5.5 * Math.cos(yaw), p.y + 5.5 * Math.sin(yaw)];
-      const run = [at[0] - 5 * Math.cos(yaw), at[1] - 5 * Math.sin(yaw)], land = [at[0] + 6 * Math.cos(yaw), at[1] + 6 * Math.sin(yaw)];
+      const yaw = p.yaw + da, at = [p.x + 8.5 * Math.cos(yaw), p.y + 8.5 * Math.sin(yaw)];
+      const run = [at[0] - 7 * Math.cos(yaw), at[1] - 7 * Math.sin(yaw)], land = [at[0] + 6 * Math.cos(yaw), at[1] + 6 * Math.sin(yaw)];
       const R = this.Y.roam, inside = (q) => q[0] > R.x0 && q[0] < R.x1 && q[1] > R.y0 && q[1] < R.y1;
       const saved = this.extra; this.extra = null;
       const ok = inside(run) && inside(land) && this.lineClear(run, land, 0.8);
@@ -447,9 +468,9 @@ export class Mind {
         // from whichever side Bolt is on: the hurdle is turned to face it (the bar sits the same either way)
         const fx = Math.cos(h.yaw), fy = Math.sin(h.yaw), side = (p.x - h.at[0]) * fx + (p.y - h.at[1]) * fy;
         let yaw = side > 0 ? wrap(h.yaw + Math.PI) : h.yaw;
-        const ok = (y) => { const R = this.Y.roam, q = [h.at[0] - 5 * Math.cos(y), h.at[1] - 5 * Math.sin(y)], l = [h.at[0] + 6 * Math.cos(y), h.at[1] + 6 * Math.sin(y)]; return q[0] > R.x0 && q[0] < R.x1 && q[1] > R.y0 && q[1] < R.y1 && l[0] > R.x0 - 1 && l[0] < R.x1 + 1 && l[1] > R.y0 - 1 && l[1] < R.y1 + 1; };
+        const ok = (y) => { const R = this.Y.roam, q = [h.at[0] - 7.5 * Math.cos(y), h.at[1] - 7.5 * Math.sin(y)], l = [h.at[0] + 6 * Math.cos(y), h.at[1] + 6 * Math.sin(y)]; return q[0] > R.x0 && q[0] < R.x1 && q[1] > R.y0 && q[1] < R.y1 && l[0] > R.x0 - 1 && l[0] < R.x1 + 1 && l[1] > R.y0 - 1 && l[1] < R.y1 + 1; };
         if (!ok(yaw)) yaw = wrap(yaw + Math.PI);
-        T.h = h; T.yaw = yaw; T.phase = "go"; T.to = [h.at[0] - 5.2 * Math.cos(yaw), h.at[1] - 5.2 * Math.sin(yaw)]; T.gait = "walk";
+        T.h = h; T.yaw = yaw; T.phase = "go"; T.to = [h.at[0] - 7.5 * Math.cos(yaw), h.at[1] - 7.5 * Math.sin(yaw)]; T.gait = "walk";
         T.label = `lining up for the ${Math.round(h.h * 100)} cm jump`;
         this.say(`Bolt eyes the ${Math.round(h.h * 100)} cm jump`); break;
       }
@@ -510,6 +531,8 @@ export class Mind {
     const done = (text, kind) => { if (text) this.say(text, kind); this.task = null; w.gait = body.mode === "sit" || body.mode === "lie" ? w.gait : "walk"; };
     const go = (to, gait, near = 0.6, skip = null) => {   // walk/trot to a spot; true on arrival
       const d = hyp(to[0] - p.x, to[1] - p.y), e = this.steerTo(to[0], to[1], skip);
+      // circling a spot closer than the turn allows: count it as reached
+      if (body.mode === "sharp" && body.mt > 5 && d < 2.0) return true;
       w.steer = e;
       w.gait = d < near ? "stand" : gait === "walk" || d < 3.0 ? "walk" : gait;
       return d < near;
@@ -562,12 +585,15 @@ export class Mind {
           const e = wrap(T.dir - p.yaw); w.steer = e; w.gait = "walk";
           if (Math.abs(e) < 0.12 || T.pt > 8) { T.phase = "run"; T.pt = 0; T.label = "zoomies!"; }
         } else if (T.phase === "run") {
-          const e = this.steerTo(b[0], b[1]), left = hyp(b[0] - p.x, b[1] - p.y);
-          w.steer = e;
-          w.gait = body.mode === "canter" && body.mt > T.canterFor ? "trot" : left < 8 ? "walk" : "canter";
-          if ((left < 8 && body.mode === "trot") || left < 3) w.gait = "walk";
+          // a canter cannot steer (the clip runs straight; asked to turn it drops to a trot), so Bolt runs on
+          // where it points and slows down early if the lawn ahead runs out or something is in the way
+          const fx = Math.cos(p.yaw), fy = Math.sin(p.yaw), R = this.Y.roam, look = body.mode === "canter" ? 8 : 6;
+          const ahead = [p.x + look * fx, p.y + look * fy];
+          const room = ahead[0] > R.x0 && ahead[0] < R.x1 && ahead[1] > R.y0 && ahead[1] < R.y1 && this.lineClear([p.x + fx, p.y + fy], [p.x + 5 * fx, p.y + 5 * fy], 0.4);
+          w.steer = ["canter", "ctrot", "trot", "pace"].includes(body.mode) ? null : this.steerTo(b[0], b[1]);
+          if (!room) T.slow = true;
           if (body.mode === "canter") T.cantered = true;
-          if (T.cantered && body.mode !== "canter" && w.gait === "trot") T.slowing = true;
+          w.gait = T.slow ? "walk" : body.mode === "canter" && body.mt > T.canterFor ? (T.slow = true, "walk") : "canter";
           if ((T.cantered && ["walk", "turnclip", "sharp", "stand"].includes(body.mode)) || T.pt > 20) { this.play = Math.max(0, this.play - 0.5); done(T.cantered ? "Zoomies over: Bolt slows to a walk" : null); }
         }
         break;
@@ -581,7 +607,7 @@ export class Mind {
           const aim = [h.at[0] + (along + 2.0) * fx, h.at[1] + (along + 2.0) * fy];
           w.steer = wrap(Math.atan2(aim[1] - p.y, aim[0] - p.x) - p.yaw); w.gait = "walk";
           const askew = Math.abs(wrap(p.yaw - T.yaw));
-          if (-along < 4.6 && -along > 2.6 && Math.abs(side) < 0.18 && askew < 0.1) {
+          if (-along < 4.8 && -along > 2.6 && Math.abs(side) < 0.25 && askew < 0.14) {
             T.phase = "commit"; T.pt = 0; body.arm(h.k); w.gait = "trot"; T.label = `jumping the ${Math.round(h.h * 100)} cm hurdle`;
           } else if (-along < 2.4 || T.pt > 15) { T.phase = "go"; T.pt = 0; T.tries = (T.tries || 0) + 1; this.say("Bolt was not lined up: it circles round for another go"); if (T.tries > 2) { this.say("Bolt gives up on the jump for now"); done(null); } }
         } else if (T.phase === "commit") {
@@ -660,15 +686,24 @@ export class Mind {
 }
 function E_OK(m) { return m.energy > 0.45; }
 
+// A new day in the same world (the page's "another five minutes"): the yard reset, a fresh body and mind.
+export function newDay(L, bundle, seed) {
+  setupYard(L.bolt, bundle);
+  L.gpu.stop(); L.g18.stop();
+  const body = new DogBody(L.bolt, L.gpu, L.g18);
+  body.jumpLimit = L.body.jumpLimit; body.snout = L.body.snout;
+  L.body = body; L.mind = new Mind(L.bolt, body, { seed });
+  return L;
+}
+
 // Everything for a page or a test. brains: { gpu, g18, jump16i } brain specs; clips: dog_clips.json
 export function makeLife(live, mj, bundle, brains, clips, seed) {
   const bolt = new live.Bolt(mj, bundle);
-  bolt.brains.jump = new live.Brain(brains.jump16i);
-  bolt.c = { ...bolt.c, jump_steps: brains.jump16i.jump_steps || 200 };
+  if (brains.jump16i) { bolt.brains.jump = new live.Brain(brains.jump16i); bolt.c = { ...bolt.c, jump_steps: brains.jump16i.jump_steps || 200 }; }
   setupYard(bolt, bundle);
   const gpu = new Imitate(bolt, brains.gpu, clips), g18 = new Imitate(bolt, brains.g18, clips);
   const body = new DogBody(bolt, gpu, g18);
-  body.jumpLimit = brains.jump16i.jump_steps || 200;
+  body.jumpLimit = brains.jump16i ? brains.jump16i.jump_steps || 200 : 150;
   const sn = (bundle.geoms || []).find((g) => g.part === "snout");
   body.snout = sn ? sn.id : undefined;
   const mind = new Mind(bolt, body, { seed });
