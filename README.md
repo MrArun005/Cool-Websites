@@ -1,4 +1,15 @@
-# Cool Websites
+# Bolt: a learned robot dog, built in simulation
+
+A 12 kg simulated quadruped with real Unitree A1 motor limits (torque, power, joint speed), trained with reinforcement learning (PPO) in MuJoCo and MuJoCo MJX: 4,096 parallel robots on free Colab and Kaggle GPUs. Nine learned gaits and postures (walk, trot, pace, turn, sit, lie, get up) score 91–97% on seeded exams with zero falls; a canter runs at ~2 m/s; a run-up jump clears 40 cm; self-righting from any fall takes under a second. Every trained policy ships in [`models/`](models/) with a model card, exam results and the command that produced them.
+
+- Training, environments and exams: [`train/README.md`](train/README.md)
+- Rules of the project, what exists and what is next: [`HANDOFF.md`](HANDOFF.md)
+- Techniques learned from open-source robots: [`docs/LESSONS.md`](docs/LESSONS.md)
+- Talk to the browser version (physics, tricks, voice, offline): open [`pet/index.html`](pet/index.html)
+
+The repo name is historical; everything below is the earlier material this project grew out of.
+
+---
 
 **Starting the new robot?** Read [HANDOFF.md](HANDOFF.md) first, then [docs/LESSONS.md](docs/LESSONS.md).
 
