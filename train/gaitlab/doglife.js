@@ -150,11 +150,12 @@ export class DogBody {
       this.clip(clipMode);
     } else if (POSTURE.includes(mode) && !POSTURE.includes(was)) {
       this.dog.stop(); b.afterGetUp(false);
-      if (mode === "brake") { b.lastAction = new Float64Array(12); b.command = "stand"; }
+      // the run 12 brain takes the walk at the speed Bolt is going (the GPU walk is ~0.9 m/s; asked 0.4 it fell)
+      if (mode === "brake") { b.lastAction = new Float64Array(12); b.command = "stand"; this.vs = clamp(this.speed, 0.3, 1.0); }
     } else if (mode === "sharp" && was !== "sharp" && was !== "brake") {
-      this.dog.stop(); b.lastAction = new Float64Array(12); b.command = "stand"; b.speedCmd = 0.5; this.vs = 0.5;
+      this.dog.stop(); b.lastAction = new Float64Array(12); b.command = "stand"; this.vs = clamp(this.speed, 0.3, 1.0); b.speedCmd = this.vs;
     }
-    this.mode = mode; this.mt = 0; Object.assign(this, extra);
+    this.prevMode = this.mode; this.mode = mode; this.mt = 0; Object.assign(this, extra);
   }
   fallen() { return this.bolt.up() < 0.5; }
   // arm a jump over hurdle k (aimed along its yaw)
@@ -167,6 +168,7 @@ export class DogBody {
     if (this.mode !== "fallen" && this.fallen()) {
       this.say(`Bolt fell (${this.mode === "land" || this.mode === "bridge" ? "landing a jump" : `while ${this.gait}`})`, "bad");
       this.falls++; this.fellIn = this.mode;
+      { const w = b.where(); this.fallInfo = { mode: this.mode, mt: +this.mt.toFixed(2), speed: +this.speed.toFixed(2), steer: this.want.steer === null ? null : +this.want.steer.toFixed(2), vs: this.vs, x: +w.x.toFixed(2), y: +w.y.toFixed(2), prev: this.prevMode }; }
       this.dog.stop(); this.armed = null; this.getup = new GetUp(b); this.go("fallen");
     }
     const m = this.mode;
@@ -221,7 +223,7 @@ export class DogBody {
         break;
       case "brake":
         if (moving && this.mt < 0.6) this.go("walk");
-        else if (this.mt > 1.3) this.go(w.gait === "sniff" ? "sniff" : w.gait === "lie" ? "lie" : "stand");
+        else if (this.mt > 1.3 && this.vs <= 0.25) this.go(w.gait === "sniff" ? "sniff" : w.gait === "lie" ? "lie" : "stand");
         break;
       case "trot": case "ctrot":
         if (m === "ctrot" && this.mt > 1.5) { this.use(this.gpu); this.mode = "trot"; }   // back to the GPU brain's trot
@@ -265,7 +267,7 @@ export class DogBody {
       const cap = Math.abs(steer) > 1.2 ? 0.9 : top;
       return b.run({ command: "walk", turn: clamp(2.5 * steer, -cap, cap), speed: this.vs });
     }
-    if (m === "brake") return b.run({ command: "walk", turn: 0, speed: this.mt < 0.6 ? 0.4 : 0.2 });
+    if (m === "brake") { this.vs = Math.max(0.2, this.vs - 0.6 * b.dt); return b.run({ command: "walk", turn: 0, speed: this.vs }); }
     this.dog.tick();
   }
   pawsPast() {
@@ -395,8 +397,8 @@ export class Mind {
       sniffSpot: 0.15 + 0.7 * C,
       sniffBin: 0.1 + 0.6 * C,
       trot: E > 0.35 ? 0.2 + 0.4 * P * E : 0,
-      zoomies: E > 0.5 ? 1.1 * P * E * E : 0,
-      jump: E > 0.4 ? 0.25 + 0.7 * P * E : 0,
+      zoomies: E > 0.45 ? 0.15 + 1.3 * P * E * E : 0,
+      jump: E > 0.4 ? 0.15 + 0.6 * P * E : 0,
       pace: 0.12 + 0.15 * E,
       sit: 0.18 + 0.3 * (1 - E),
       nap: E < 0.55 ? 0.3 + 1.6 * (1 - E) - 0.4 : 0.02,
@@ -473,10 +475,10 @@ export class Mind {
     const R = this.Y.roam, p = this.where();
     for (let i = 0; i < 60; i++) {
       const a = this.randomSpot(1.5), ang = this.rand() * 2 * Math.PI, d = [Math.cos(ang), Math.sin(ang)];
-      const b = [a[0] + 21 * d[0], a[1] + 21 * d[1]];
+      const b = [a[0] + 17 * d[0], a[1] + 17 * d[1]];
       if (b[0] < R.x0 + 0.5 || b[0] > R.x1 - 0.5 || b[1] < R.y0 + 0.5 || b[1] > R.y1 - 0.5) continue;
-      if (!this.lineClear(a, b, 1.0)) continue;
-      if (hyp(a[0] - p.x, a[1] - p.y) > 12) continue;
+      if (!this.lineClear(a, b, 0.7)) continue;
+      if (hyp(a[0] - p.x, a[1] - p.y) > 16) continue;
       return [a, b, ang];
     }
     return null;
@@ -560,8 +562,8 @@ export class Mind {
         } else if (T.phase === "run") {
           const e = this.steerTo(b[0], b[1]), left = hyp(b[0] - p.x, b[1] - p.y);
           w.steer = e;
-          w.gait = body.mode === "canter" && body.mt > T.canterFor ? "trot" : left < 10 ? "walk" : "canter";
-          if (left < 10 && body.mode === "trot" || left < 4) w.gait = "walk";
+          w.gait = body.mode === "canter" && body.mt > T.canterFor ? "trot" : left < 8 ? "walk" : "canter";
+          if ((left < 8 && body.mode === "trot") || left < 3) w.gait = "walk";
           if (body.mode === "canter") T.cantered = true;
           if (T.cantered && body.mode !== "canter" && w.gait === "trot") T.slowing = true;
           if ((T.cantered && ["walk", "turnclip", "sharp", "stand"].includes(body.mode)) || T.pt > 20) { this.play = Math.max(0, this.play - 0.5); done(T.cantered ? "Zoomies over: Bolt slows to a walk" : null); }

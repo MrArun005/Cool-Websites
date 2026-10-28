@@ -26,7 +26,7 @@ for (let i = 0; i * dt < secs; i++) {
   modeTime[body.mode] = (modeTime[body.mode] || 0) + dt;
   brainTime[body.brain()] = (brainTime[body.brain()] || 0) + dt;
   if (body.mode !== last) { const k = `${last}>${body.mode}`; trans[k] = (trans[k] || 0) + 1; last = body.mode; }
-  while (body.events.length) { const e = body.events.shift(); mind.say(e.text, e.kind); }
+  while (body.events.length) { const e = body.events.shift(); mind.say(e.text + (e.text.startsWith("Bolt fell") && process.env.DEBUG ? " " + JSON.stringify(body.fallInfo) : ""), e.kind); }
   while (seen < mind.log.length) { const e = mind.log[seen++], m = Math.floor(e.t / 60), s = (e.t % 60).toFixed(0).padStart(2, "0"); console.log(`  ${m}:${s} [${body.mode}] ${e.text}`); }
 }
 const r = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${typeof v === "number" && v % 1 ? v.toFixed(0) + "s" : v}`).join(", ");
