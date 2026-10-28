@@ -58,7 +58,12 @@ class JumpEnv(BoltEnv):
     OBS = 49   # 51 with real=True
 
     def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0,
-                 approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50, motor_brake=None):
+                 approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50, motor_brake=None, under_margin=0.0):
+        # under_margin (m): the body's centre must be at least bar height + this when it crosses the bar's line, or
+        # Bolt went UNDER the bar (28 Oct: bars of 60-75 cm are higher than Bolt's back, and "all paws past the bar"
+        # counted running under a 70 cm bar as a clean jump). 0 = centre above the bar top; a trunk that crosses
+        # lower than that either hits the bar or passes beneath it. Going under ends the try as a failure.
+        self.under_margin = under_margin
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
                          hurdles="real" if real else True, skills=["stand"], motor_brake=motor_brake)
         self.real = real
@@ -192,8 +197,9 @@ class JumpEnv(BoltEnv):
             R = self._rotation()
             d.qvel[0:2] = v0 * R[:2, 0] / np.linalg.norm(R[:2, 0])
         self.t, self.last_action = 0, np.zeros(12)
-        self.touched = self.cleared = self.landed = self.dropped = False
-        self.clear_t = None
+        self.touched = self.cleared = self.landed = self.dropped = self.under = False
+        self.clear_t = self.cross_z = None
+        self.prev_ahead = self.hurdle_ahead()
         self.best_past = self.paws_past().min()
         return self._obs(), {}
 
@@ -244,7 +250,16 @@ class JumpEnv(BoltEnv):
         e = self.heading_error() if self.real else 0.0
         facing = np.exp(-(e / 0.35) ** 2)   # 1 facing along the jump, ~0.5 at 17 degrees off
         just_cleared = False
-        if not self.cleared:
+        ahead_now = self.hurdle_ahead()
+        if self.cross_z is None and self.prev_ahead > 0 >= ahead_now:   # the body's centre crosses the bar's line
+            self.cross_z = float(d.qpos[2])
+            if self.cross_z < self.hurdle_h + self.under_margin:
+                self.under = True
+                reward -= 5.0   # under the bar: a refusal in agility, as bad as a knocked bar
+        self.prev_ahead = ahead_now
+        if self.under:
+            pass   # the try ends this step
+        elif not self.cleared:
             reward -= 0.1  # every moment still in front of the bar costs a little
             reward += 15.0 * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
             self.best_past = max(self.best_past, past.min())
@@ -286,12 +301,12 @@ class JumpEnv(BoltEnv):
         fell = R[2, 2] < 0.2
         if fell:
             reward -= 25.0 if self.cleared else 5.0   # diving over and crashing must not pay (15c/15d: -10 did)
-        if (fell or self.t >= self.max_steps) and self.exam_bar is None:
-            self._grade(self.landed and not (self.dropped if self.real else self.touched))
+        if (fell or self.under or self.t >= self.max_steps) and self.exam_bar is None:
+            self._grade(self.landed and not self.under and not (self.dropped if self.real else self.touched))
         info = dict(p, cleared=self.cleared, touched=self.touched, just_cleared=just_cleared, hits=hits,
                     bar=self.hurdle_h, past=float(past.min()), level=self.bar_level, landed=self.landed,
-                    dropped=self.dropped, heading_error=e)
-        return self._obs(), float(reward), bool(fell), self.t >= self.max_steps, info
+                    dropped=self.dropped, heading_error=e, under=self.under, cross_z=self.cross_z)
+        return self._obs(), float(reward), bool(fell or self.under), self.t >= self.max_steps, info
 
 
 class JumpPolicy:
