@@ -169,9 +169,10 @@ export class DogBody {
     this.t += dt; this.mt += dt;
     this.speed += (Math.hypot(v[0], v[1]) - this.speed) * 0.1;
     if (this.mode !== "fallen" && this.fallen()) {
+      // fallInfo first: say() listeners (doglife_jumptest.mjs) read it (before 28 Oct 22:10 they saw the previous fall's)
+      { const w = b.where(); this.fallInfo = { mode: this.mode, mt: +this.mt.toFixed(2), speed: +this.speed.toFixed(2), steer: this.want.steer === null ? null : +this.want.steer.toFixed(2), vs: this.vs, x: +w.x.toFixed(2), y: +w.y.toFixed(2), prev: this.prevMode }; }
       this.say(`Bolt fell (${this.mode === "land" || this.mode === "bridge" ? "landing a jump" : `while ${this.gait}`})`, "bad");
       this.falls++; this.fellIn = this.mode;
-      { const w = b.where(); this.fallInfo = { mode: this.mode, mt: +this.mt.toFixed(2), speed: +this.speed.toFixed(2), steer: this.want.steer === null ? null : +this.want.steer.toFixed(2), vs: this.vs, x: +w.x.toFixed(2), y: +w.y.toFixed(2), prev: this.prevMode }; }
       this.dog.stop(); this.armed = null; this.getup = new GetUp(b); this.go("fallen");
     }
     const m = this.mode;

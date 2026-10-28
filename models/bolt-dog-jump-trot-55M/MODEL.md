@@ -40,14 +40,12 @@ Load with `jump_env.JumpPolicy(folder, "policy.zip", "vecnormalize.pkl")`.
 
     cd train/gaitlab && node doglife_jumptest.mjs <mujoco.js> <data folder> <seed> 240
 
-| | jumps | clean | bar down | falls (of them: in the trot/canter hand-over after landing) |
-|---|---|---|---|---|
-| this brain | 29 | 21 | 7 | 21 (9) |
-| 16i-35.5M | 11 | 5 | 4 | 22 (falls mostly running into the jump: 11) |
+| landing | jumps | clean | bar down | falls | of them after landing | while sharp-turning (run 12 walk brain) |
+|---|---|---|---|---|---|---|
+| jump brain lands Bolt (`LAND=land`, Day Out now) | 29 | 23 | 4 | 7 | 1 | 4 |
+| canter -> trot bridge (`LAND=bridge`, before) | 29 | 21 | 7 | 21 | 12 | 7 |
 
-| this brain, landing itself (`LAND=land`) | 29 | 23 | 4 | 7 (0) |
-
-Per-run lines: `exams/dayout_jumptest.txt`. Most falls came from the canter->trot bridge after landing; letting this
-brain do the landing itself (it slows Bolt down, then sit and stand) cut falls from 21 to 7, so Bolt's Day Out now
-lands that way (doglife.js LANDING = "land"). 4 of the 7 falls are one fall at the start of every run, the same with
-both brains (not yet traced).
+16i-35.5M with the bridge (before the fall labels were fixed): 11 jumps, 5 clean, 22 falls.
+Per-run lines: `exams/dayout_jumptest.txt` (`LAND=... node doglife_jumptest.mjs <mujoco.js> <data> <seed> 240`). Fall
+labels read doglife.js fallInfo, which before 28 Oct 22:10 was set after the fall was announced, so each fall carried
+the previous fall's label; totals were right. Next weak spot: sharp turns at a walk (run 12 brain).
