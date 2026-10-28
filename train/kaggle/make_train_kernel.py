@@ -6,7 +6,8 @@ guard (--hours) that ends training cleanly before Kaggle's 12 h limit.
 
 Jobs (JOBS below):
   jump-trot  train_jump.py from the run-up brain 16i-35.5M: jump from a trot to a canter (1.2-2.4 m/s, most tries
-             mid-stride), practice bars up to 75 cm; exams at 1.5 m/s and 2.0 m/s from 1.5 m, 40-70 cm.
+             mid-stride), practice bars up to 75 cm; exams at 1.5 m/s and 2.0 m/s from 1.5 m, 40-70 cm, still legs;
+             best/ picked (from 28 Oct) on the mid-stride exam: 1.7 m/s from 1.1 m, 40/50/60 cm, legs mid-stride.
   recover    train_getup.py from self-righting 17e-16.5M: kicks, bad landings, ice, a second kick, wider physics;
              exam = the whole recovery (self-right, tuck, stand) from those falls.
 
@@ -18,7 +19,9 @@ Jobs (JOBS below):
     kaggle kernels output arunmallikarjuna/bolt-jump-trot -p runs/kaggle-jump-trot
 
 The output: runs/<name>/ (checkpoints/, best/ with best.json, train.log), fair_exam_*.txt (30 tries per test on
-fresh seeds 9000+, for the best brain and the starting brain), summary.json and kernel.log.
+fresh seeds 9000+, for the best brain and the starting brain; fair_exam_<tag>_2.txt the second final exam, each
+file starting with its command), summary.json and kernel.log. To re-pick a finished run's brain on the mid-stride
+exam afterwards: python research/reselect_jump.py runs/kaggle-jump-trot/runs/jumptrot
 
 Local smoke test of the exact kernel script, Kaggle's folders faked (tiny settings: --train-h 0.06 --every 8192
 --envs 2 --n-steps 1024 --exam-episodes 2 --final-episodes 2):
@@ -43,12 +46,21 @@ JOBS = {
               "--approach", "0.8", "2.0", "--approach-speed", "2.4", "--approach-speed-min", "1.2", "--run-frac", "0.85",
               "--gait-start", "0.7", "--bar-start", "0.45", "--bar-max", "0.75",
               "--exam-speed", "1.5", "--exam-dist", "1.5", "--exam-heights", "0.40", "0.50", "0.60", "0.70",
-              "--exam2", "2.0", "1.5"],
-        final=["jump", "--speeds", "1.5", "2.0", "--dist", "1.5", "--heights", "0.40", "0.50", "0.60", "0.70", "--gait"]),
+              "--exam2", "2.0", "1.5",
+              # best/ is picked on the mid-stride hand-over (28 Oct, research/handover_gap.py): 1.7 m/s from 1.1 m,
+              # legs mid-stride as MasterMind's trot hands over; the still-legs exams above are still logged
+              "--select", "midstride", "--select-speed", "1.7", "--select-dist", "1.1",
+              "--select-heights", "0.40", "0.50", "0.60"],
+        # final fair exams (fair_exam.py, seeds 9000+): still legs and mid-stride at 1.5/2.0 m/s from 1.5 m, then the
+        # trot hand-over case; tries of 220 steps (4.4 s), the model cards' setting
+        finals=[["jump", "--speeds", "1.5", "2.0", "--dist", "1.5", "--heights", "0.40", "0.50", "0.60", "0.70", "--gait",
+                 "--max-steps", "220"],
+                ["jump", "--speeds", "1.7", "--dist", "1.1", "--heights", "0.40", "0.50", "0.60", "--gait",
+                 "--max-steps", "220"]]),
     "recover": dict(
         name="recover", script="train_getup.py", start="../models/bolt-dog-selfright-17e-16.5M",
         args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015"],
-        final=["recover", "--easy"]),
+        finals=[["recover", "--easy"]]),
 }
 
 KERNEL = r'''# Bolt robot dog: PPO fine-tuning on a Kaggle CPU (made by train/kaggle/make_train_kernel.py)
@@ -125,14 +137,15 @@ for attempt in range(CFG["attempts"]):
         break
 # fair exams on fresh seeds (9000+): the best brain and the starting brain, the same tries
 best = RUN / "best"
-for tag, folder in (("best", best), ("start", Path(CFG["start"]))):
-    if (TRAIN / folder / "policy.zip").exists() and time.time() - T0 < CFG["hard_h"] * 3600 - 600:
-        cmd = [sys.executable, "-u", "fair_exam.py"] + [CFG["final"][0], str(folder)] + CFG["final"][1:] + \
-              ["--episodes", str(CFG["final_episodes"]), "--no-save"]
-        say(f"fair exam of the {tag} brain: " + " ".join(cmd[2:]))
-        r = subprocess.run(cmd, cwd=TRAIN, env=env, capture_output=True, text=True, timeout=max(60, CFG["hard_h"] * 3600 - (time.time() - T0) - 300))
-        (WORK / f"fair_exam_{tag}.txt").write_text(r.stdout + r.stderr)
-        print(r.stdout[-3000:], r.stderr[-2000:], flush=True)
+for i, final in enumerate(CFG["finals"]):
+    for tag, folder in (("best", best), ("start", Path(CFG["start"]))):
+        if (TRAIN / folder / "policy.zip").exists() and time.time() - T0 < CFG["hard_h"] * 3600 - 600:
+            cmd = [sys.executable, "-u", "fair_exam.py"] + [final[0], str(folder)] + final[1:] + \
+                  ["--episodes", str(CFG["final_episodes"]), "--no-save"]
+            say(f"fair exam {i + 1} of the {tag} brain: " + " ".join(cmd[2:]))
+            r = subprocess.run(cmd, cwd=TRAIN, env=env, capture_output=True, text=True, timeout=max(60, CFG["hard_h"] * 3600 - (time.time() - T0) - 300))
+            (WORK / f"fair_exam_{tag}{'' if i == 0 else f'_{i + 1}'}.txt").write_text(" ".join(cmd[2:]) + "\n" + r.stdout + r.stderr)
+            print(r.stdout[-3000:], r.stderr[-2000:], flush=True)
 summary = dict(hours=round((time.time() - T0) / 3600, 2), exit_code=rc, latest=latest(), config=CFG)
 if (best / "best.json").exists():
     summary["best"] = json.loads((best / "best.json").read_text())
@@ -180,7 +193,7 @@ def build_kernel(a):
         args += ["--exam-episodes", str(a.exam_episodes)]
     cfg = dict(pip=PIP, tar=TAR, script=job["script"], name=job["name"], start=job["start"], args=args,
                steps=a.steps, envs=a.envs, every=a.every or 1_000_000,
-               train_h=a.train_h, hard_h=a.hard_h, attempts=3, final=job["final"], final_episodes=a.final_episodes)
+               train_h=a.train_h, hard_h=a.hard_h, attempts=3, finals=job["finals"], final_episodes=a.final_episodes)
     (out / "kernel.py").write_text(KERNEL.replace("@CFG@", repr(cfg)))
     slug = a.slug or f"bolt-{a.job}"
     (out / "kernel-metadata.json").write_text(json.dumps(dict(

@@ -7,6 +7,11 @@
     python fair_exam.py recover runs/recover/best
     python fair_exam.py recover ../models/bolt-dog-selfright-17e-16.5M
 
+Each try lasts --max-steps control steps (50 per second); the default 220 (4.4 s) is the setting the model cards'
+fair 40/50/60 cm numbers were taken with (16i-35.5M: 100/77/3% at 2.0 m/s from 1.5 m, seed 7000). Before 28 Oct
+this script used a fixed 200 (4.0 s), which gives 16i-35.5M 83%/7% at 50/60 cm on the same tries: a shorter try,
+not different physics. Pass --max-steps 200 to reproduce those older fair_exam numbers.
+
 Seeds 9000+ by default: the training runs examine on seeds 5000+ (jump) and 7000+ (recovery), so these tries
 were never used to pick a brain. Writes <folder>/fair_exam_<what>.json unless --no-save.
 """
@@ -25,6 +30,8 @@ def main():
     ap.add_argument("--speeds", type=float, nargs="+", default=[1.5, 2.0])
     ap.add_argument("--dist", type=float, default=1.5)
     ap.add_argument("--heights", type=float, nargs="+", default=[0.40, 0.50, 0.60, 0.70])
+    ap.add_argument("--max-steps", type=int, default=220,
+                    help="jump: control steps per try (50 per second); 220 = 4.4 s, the model cards' setting (before 28 Oct: 200)")
     ap.add_argument("--gait", action="store_true", help="jump: also start mid-stride (trot/canter pose) at each speed")
     ap.add_argument("--strict", action="store_true", help="jump: also the old strict test (randomized physics, askew)")
     ap.add_argument("--easy", action="store_true", help="recover: also the old falls and physics (17e's exam conditions)")
@@ -34,9 +41,11 @@ def main():
     if a.what == "jump":
         from jump_env import JumpPolicy, exam
         pol = JumpPolicy(folder)
+        print(f"jump exam: {a.episodes} tries per height, seed {a.seed}, max steps {a.max_steps} ({a.max_steps / 50:.1f} s), "
+              f"bar {a.dist} m away, heights {a.heights}", flush=True)
         for sp in a.speeds:
             for gait in ((False, True) if a.gait else (False,)):
-                r = exam(pol, episodes=a.episodes, seed=a.seed, heights=tuple(a.heights), dist=a.dist, max_steps=200,
+                r = exam(pol, episodes=a.episodes, seed=a.seed, heights=tuple(a.heights), dist=a.dist, max_steps=a.max_steps,
                          speed=sp, strict_too=a.strict, gait=gait)
                 tag = f"v{round(sp * 10)}{'_gait' if gait else ''}"
                 out.update({f"{tag}_{k}": v for k, v in r.items()})
@@ -56,6 +65,8 @@ def main():
             out.update({f"old_{k}": v for k, v in r.items()})
         stood = [v for k, v in out.items() if k.startswith("full_stood_")]
         out["full_stood_mean"] = sum(stood) / len(stood)
+    if a.what == "jump":
+        out["max_steps"], out["dist"] = a.max_steps, a.dist
     out["episodes"], out["seed"], out["minutes"] = a.episodes, a.seed, round((time.time() - t0) / 60, 1)
     print(json.dumps(out, indent=1))
     if not a.no_save:

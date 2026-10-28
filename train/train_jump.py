@@ -1,6 +1,8 @@
 """Train Bolt's jump brain (jump_env.py) from scratch, examining every checkpoint and keeping the best.
 
     python train_jump.py --name jump1 --steps 6000000 [--resume runs/jump1/checkpoints/policy_X_steps.zip] [--lr 1e-4]
+    # pick best/ on the mid-stride hand-over (MasterMind's trot -> jump): 1.7 m/s from 1.1 m, legs mid-stride
+    python train_jump.py ... --select midstride --select-speed 1.7 --select-dist 1.1 --select-heights 0.40 0.50 0.60
 
 Writes runs/<name>/checkpoints/, runs/<name>/best/ (policy.zip, vecnormalize.pkl, best.json) and prints
 "checkpoint N ready: {...}" / "new best" lines (watch.log style) as it goes.
@@ -53,7 +55,8 @@ def widen(src, out):
 class Examiner(BaseCallback):
     """Every `every` steps: save a checkpoint, take the exam, keep the best."""
 
-    def __init__(self, out, every, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None, extra=()):
+    def __init__(self, out, every, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None, extra=(),
+                 select="still", mid=None):
         super().__init__()
         self.exam_first = False
         self.out, self.every, self.next, self.best, self.heights = out, every, every, -1.0, heights
@@ -61,6 +64,11 @@ class Examiner(BaseCallback):
         # extra exams, (speed, dist) each, fair score only, keys "v<speed x10>_jump_<cm>" (e.g. v20_jump_50): run
         # jump-trot examines 1.5 m/s (main) and 2.0 m/s, and picks the best brain on all their fair jump keys
         self.extra = list(extra)
+        # the mid-stride exam (28 Oct): the jump brain takes over from a trot with the legs mid-stride (MasterMind's
+        # hand-over, research/handover_gap.py), not from the settled still-legs stance of the exams above.
+        # mid = dict(speed, dist, heights, episodes, seed) or None (no mid-stride exam); keys "mid_v<speed x10>_<cm>".
+        # select: which fair keys pick best/: "still" (the exams above, as before 28 Oct), "midstride" or "both".
+        self.select, self.mid = select, mid
 
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
         self.next = (self.num_timesteps // self.every + 1) * self.every
@@ -68,7 +76,12 @@ class Examiner(BaseCallback):
             self._exam(self.num_timesteps)   # the starting brain, on the same exam: the bar to beat
         best = self.out / "best" / "best.json"
         if best.exists():   # a resumed run keeps its best brain (run 16i's reset to 0 at 44.5M and overwrote it)
-            self.best = json.loads(best.read_text()).get("score", self.best)
+            old = json.loads(best.read_text())
+            if old.get("select", "still") == self.select:
+                self.best = old.get("score", self.best)
+            else:   # a score on another exam is not comparable: the next checkpoint becomes the best
+                print(f"best/ was picked on the {old.get('select', 'still')} exam, now selecting on {self.select}: "
+                      f"its score {old.get('score')} is not carried over", flush=True)
 
     def _on_step(self):
         if self.num_timesteps < self.next:
@@ -88,10 +101,25 @@ class Examiner(BaseCallback):
             more = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), heights=self.heights,
                         dist=di, max_steps=self.max_steps, speed=sp, strict_too=False)
             result.update({f"v{round(sp * 10)}_{k}": v for k, v in more.items()})
-        fair = [v for k, v in result.items() if "jump_" in k]   # the best brain is picked on the fair score(s)
+        still = [v for k, v in result.items() if "jump_" in k]   # the fair still-legs score(s)
+        mid = []
+        if self.mid:
+            m = self.mid
+            more = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), episodes=m["episodes"],
+                        seed=m["seed"], heights=m["heights"], dist=m["dist"], max_steps=self.max_steps, speed=m["speed"],
+                        strict_too=False, gait=True)
+            tag = f"mid_v{round(m['speed'] * 10)}"
+            mid = list(more.values())
+            result.update({f"{tag}_{k.split('_')[-1]}": v for k, v in more.items()})   # no "jump_" in these keys
+            result["mid_mean"] = sum(mid) / len(mid)
+        fair = {"still": still, "midstride": mid, "both": still + mid}[self.select]   # the best brain is picked on these
         score = sum(fair) / len(fair)
         levels = self.training_env.get_attr("bar_level")
         print(f"checkpoint {n} ready: {result} (practice bars now {100 * sum(levels) / len(levels):.0f} cm)", flush=True)
+        if mid:
+            print(f"checkpoint {n} mid-stride: {self.mid['speed']} m/s from {self.mid['dist']} m, legs mid-stride, "
+                  f"{result['mid_mean']:.2f} mean over {self.mid['heights']} m; still-legs mean {sum(still) / len(still):.2f}; "
+                  f"selecting on {self.select}", flush=True)
         if result.get("jump_15", 1) == 0 and self.best > 0.3:   # collapsed (run 15c at 7M): say so loudly
             print(f"collapse warning at {n}: no clean 15 cm jumps (best score so far {self.best:.2f})", flush=True)
         if score > self.best:
@@ -100,7 +128,7 @@ class Examiner(BaseCallback):
             best.mkdir(exist_ok=True)
             shutil.copy(ck / f"policy_{n}_steps.zip", best / "policy.zip")
             shutil.copy(ck / f"policy_vecnormalize_{n}_steps.pkl", best / "vecnormalize.pkl")
-            (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=score), indent=2))
+            (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=score, select=self.select), indent=2))
             print(f"new best at {n}: score {score:.2f}", flush=True)
 
 
@@ -149,6 +177,17 @@ def main():
     ap.add_argument("--bar-max", type=float, default=0.50, help="highest practice bar (m); 16i: 0.50, jump-trot: 0.75")
     ap.add_argument("--exam2", type=float, nargs=2, action="append", default=[], metavar=("SPEED", "DIST"),
                     help="an extra fair exam at SPEED m/s from DIST m (repeatable), e.g. --exam2 2.0 1.5")
+    ap.add_argument("--select", choices=["still", "midstride", "both"], default="still",
+                    help="which fair exam keys pick best/: still = the still-legs exams (--exam-speed, --exam2; the "
+                         "behaviour before 28 Oct), midstride = the mid-stride exam only, both = the mean of all")
+    ap.add_argument("--select-gait", action="store_true", help="shorthand for --select midstride")
+    ap.add_argument("--select-speed", type=float, help="mid-stride exam speed (m/s); default --exam-speed. Trot hand-over: 1.7")
+    ap.add_argument("--select-dist", type=float, help="mid-stride exam bar distance (m); default --exam-dist. Trot hand-over: 1.1")
+    ap.add_argument("--select-heights", type=float, nargs="+", help="mid-stride exam bar heights (m); default --exam-heights")
+    ap.add_argument("--select-episodes", type=int, default=10, help="mid-stride exam tries per height (default 10, as the still-legs exam)")
+    ap.add_argument("--select-seed", type=int, default=5000, help="mid-stride exam first seed (default 5000, as the still-legs exam)")
+    ap.add_argument("--no-midstride-log", action="store_true",
+                    help="skip the mid-stride exam (it runs at every checkpoint whenever a speed is known, to log its score)")
     ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints and exams")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
@@ -184,8 +223,16 @@ def main():
                                        log_std_init=-0.5),
                     device="cpu", verbose=0)
     start = time.time()
+    select = "midstride" if args.select_gait else args.select
+    mid_speed = args.select_speed if args.select_speed is not None else args.exam_speed
+    mid = None if (args.no_midstride_log or not mid_speed) else dict(
+        speed=mid_speed, dist=args.select_dist if args.select_dist is not None else args.exam_dist,
+        heights=tuple(args.select_heights or args.exam_heights), episodes=args.select_episodes, seed=args.select_seed)
+    if select != "still" and not mid:
+        ap.error("--select midstride/both needs a mid-stride exam: give --select-speed or --exam-speed")
+    print(f"best/ picked on the {select} exam; mid-stride exam: {mid}", flush=True)
     cbs = [Examiner(out, args.every, tuple(args.exam_heights), args.exam_dist, args.max_steps, args.exam_speed,
-                    [tuple(e) for e in args.exam2])]
+                    [tuple(e) for e in args.exam2], select=select, mid=mid)]
     cbs[0].exam_first = args.exam_first
     if args.hours:
         cbs.append(TimeGuard(args.hours, out))
