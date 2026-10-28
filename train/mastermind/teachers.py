@@ -45,6 +45,18 @@ def imitate_brain(which="18e"):
     raise ValueError(which)
 
 
+GPU360 = MODELS / "bolt-dog-imitate-gpu-360M" / "params.pkl"   # Kaggle GPU brain (MJX PPO, 360M steps, 9 clips)
+
+
+def imitate_policy(which):
+    """A loaded dog-motion brain (act(obs) on the ImitateEnv observation): any imitate_brain() name, or 'gpu360'."""
+    if which == "gpu360":
+        from mjx_imitate import MjxImitatePolicy
+        return MjxImitatePolicy(GPU360)
+    from imitate_env import ImitatePolicy
+    return ImitatePolicy(*imitate_brain(which))
+
+
 # dog: the dog-motion brain for every clip; canter: a brain for the canter clip only (None: dog); land: a brain for
 # the clips played in the first `land_s` seconds after a jump's landing (None: as usual); jump: jump brain folder,
 # handed over `jump_from` m before the bar, `jump_steps` its try length (its clock input is t / jump_steps), at most
@@ -72,6 +84,10 @@ SETS["v4"] = dict(SETS["v3"], canter=None, clips=_G4)
 SETS["v4a"] = dict(SETS["v4"], approach="18e36")
 SETS["v4d"] = dict(SETS["v4"], dog="18d")
 SETS["v4g"] = dict(SETS["v3"], dog="18g35", canter=None)
+# the GPU brain (arrived during the v4 DAgger run), compared in the teacher chain on dev seeds only
+SETS["v4gpu_c"] = dict(SETS["v4"], clips=dict(_G4, canter="gpu360"))
+SETS["v4gpu_s"] = dict(SETS["v4"], clips=dict(_G4, sit="gpu360", lie="gpu360"))
+SETS["v4gpu_all"] = dict(SETS["v4"], clips={c: "gpu360" for c in ("walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie")})
 
 
 def teacher_set(name="v2", **over):

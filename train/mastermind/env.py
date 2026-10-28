@@ -58,7 +58,7 @@ from bolt_env import ACTION_SCALE, LIE_POSE, BoltEnv  # noqa: E402
 from imitate_env import ALL_CLIPS, DOG, ImitatePolicy  # noqa: E402
 from jump_env import JumpPolicy  # noqa: E402
 from skills import CLIPS, GAITS, JUMP, Bolt, closest_moment  # noqa: E402
-from teachers import imitate_brain, teacher_set  # noqa: E402
+from teachers import imitate_brain, imitate_policy, teacher_set  # noqa: E402
 
 COMMANDS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "stand", "jump"]
 OBS = 84
@@ -90,15 +90,15 @@ class Master:
         if Path(ts["jump"]) != JUMP:
             b.jumper = JumpPolicy(ts["jump"])
         self.w.max_steps = ts["jump_steps"]   # the jump brain's clock input is t / its try length
-        self.canter = ImitatePolicy(*imitate_brain(ts["canter"])) if ts["canter"] else None
-        self.land = ImitatePolicy(*imitate_brain(ts["land"])) if ts["land"] else None
+        self.canter = imitate_policy(ts["canter"]) if ts["canter"] else None
+        self.land = imitate_policy(ts["land"]) if ts["land"] else None
         loaded, self.clip_pol = {}, {}   # clips: {clip: brain name}, one ImitatePolicy per brain
         for c, n in (ts.get("clips") or {}).items():
             if n not in loaded:
-                loaded[n] = ImitatePolicy(*imitate_brain(n))
+                loaded[n] = imitate_policy(n)
             self.clip_pol[c] = loaded[n]
         # approach: the brain for the gait clip of a jump's run-up (v4: 18e-36M, whose trot 16i's hand-over was tuned on)
-        self.approach = ImitatePolicy(*imitate_brain(ts["approach"])) if ts.get("approach") else None
+        self.approach = imitate_policy(ts["approach"]) if ts.get("approach") else None
         self.land_left = 0
         self.jump_from, self.bridge = ts["jump_from"], ts["bridge"]
         self.lo, self.hi = self.w.lo.copy(), self.w.hi.copy()

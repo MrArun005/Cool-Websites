@@ -26,7 +26,7 @@ import numpy as np  # noqa: E402
 from imitate_env import ImitatePolicy  # noqa: E402
 from jump_env import JumpPolicy  # noqa: E402
 from skills import CLIPS, GAITS, Bolt, closest_moment  # noqa: E402
-from teachers import imitate_brain, teacher_set  # noqa: E402
+from teachers import imitate_brain, imitate_policy, teacher_set  # noqa: E402
 
 EXTRA = {"jump50": test_skills.seq_jump(0.50)}
 
@@ -41,14 +41,14 @@ class Manager(Bolt):
         super().__init__(seed=seed, imitate=imitate_brain(ts["dog"]))
         self.jumper = JumpPolicy(ts["jump"])
         self.world.max_steps = ts["jump_steps"]
-        self.canter = ImitatePolicy(*imitate_brain(ts["canter"])) if ts["canter"] else None
-        self.land = ImitatePolicy(*imitate_brain(ts["land"])) if ts["land"] else None
+        self.canter = imitate_policy(ts["canter"]) if ts["canter"] else None
+        self.land = imitate_policy(ts["land"]) if ts["land"] else None
         self.land_until = -1
-        self.approach = ImitatePolicy(*imitate_brain(ts["approach"])) if ts.get("approach") else None
+        self.approach = imitate_policy(ts["approach"]) if ts.get("approach") else None
         loaded, self.clip_pol = {}, {}
         for c, n in (ts.get("clips") or {}).items():
             if n not in loaded:
-                loaded[n] = ImitatePolicy(*imitate_brain(n))
+                loaded[n] = imitate_policy(n)
             self.clip_pol[c] = loaded[n]
 
     def start(self, *a, **k):
