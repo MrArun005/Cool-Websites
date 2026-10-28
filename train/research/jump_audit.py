@@ -7,7 +7,20 @@ Runs the fair exam's tries (jump_env.exam: fixed physics, straight approach, `--
 seeds `--seed`+k, 200 steps) and records EVERY physics substep (not only the 50 Hz policy steps) of every
 try: joint speeds, the torque each motor gave (clipped by the motor model), the torque the position servo
 asked for (kp (target - q) - kv q'), and the motor model's limits at that speed. BOLT_MOTOR_TORQUE is set
-from --torque BEFORE bolt_env is imported, so the whole run uses that body.
+from --torque BEFORE bolt_env is imported, so the whole run uses that body. --motor-brake (default off) adds
+bolt_env's braking above --brake-speed; over_brake_speed_pct and peak_brake_torque per joint type then show it.
+
+    MUJOCO_GL=osmesa OMP_NUM_THREADS=1 python research/jump_audit.py ../models/bolt-dog-jump-runup-16i-34.5M \
+        --height 0.60 --motor-brake --out research/results/audit60_34.5M_brake.json
+
+Measured 28 Oct, 16i-34.5M at 60 cm, 30 tries (seed 7000, 200 steps; results/audit60_34.5M_*.json), peak joint
+speed over all tries hip / knee (rad/s), share of substeps above 21 rad/s hip / knee, clean tries:
+  brake off                        29.2 / 31.7   3.8% / 8.6%    4/30   (--out .../audit60_34.5M_nobrake.json)
+  --motor-brake (gain 1.6, 21)     27.7 / 28.0  11.4% / 15.3%   2/30   (--out .../audit60_34.5M_brake.json)
+  --motor-brake --brake-gain 3.5   25.1 / 26.0   9.2% / 14.5%   1/30   (--out .../audit60_34.5M_brake_g3.5.json)
+  --motor-brake --brake-gain 8     24.0 / 25.4   3.3% / 7.2%    0/30   (--out .../audit60_34.5M_brake_g8.json)
+The brake removes the landing back-drive spikes (above the 25 rad/s cutoff) but this brain still drives its joints
+in the 21-25 rad/s band where the motor model lets the drive fade out, so speeds sit at 21 + ~4-7 rad/s, not at 21.
 
 Per try: clean (agility rules: over, bar stays in its cups, lands upright), apex body height, body height
 over the bar, the lowest paw's clearance over the bar while crossing, and per joint type (abd, hip, knee):
@@ -39,14 +52,17 @@ def main():
     ap.add_argument("--episodes", type=int, default=30)
     ap.add_argument("--seed", type=int, default=7000)
     ap.add_argument("--best", type=int, default=5)
+    ap.add_argument("--max-steps", type=int, default=200, help="steps per try (default 200, as this audit always used)")
     ap.add_argument("--out", required=True)
-    a = ap.parse_args()
-    os.environ["BOLT_MOTOR_TORQUE"] = str(a.torque)
+    os.environ["BOLT_MOTOR_TORQUE"] = str(ap.parse_known_args()[0].torque)
     sys.path.insert(0, str(HERE.parent))
+    import bolt_env
+    bolt_env.add_brake_args(ap, default=False)
+    a = ap.parse_args()
+    print("motor brake (on, rad/s, N·m per rad/s):", bolt_env.set_motor_brake(a.motor_brake, a.brake_speed, a.brake_gain), flush=True)
     import numpy as np
     import torch
     torch.set_num_threads(1)
-    import bolt_env
     import jump_env
     from jump_env import JumpEnv, JumpPolicy
     assert bolt_env.MOTOR["torque"] == a.torque, bolt_env.MOTOR
@@ -54,18 +70,22 @@ def main():
     rec, env = [], None
 
     def physics(model, data, n):   # bolt_env.physics, recording every substep
+        on, bspeed, bgain = bolt_env.brake_settings(model)
         for _ in range(n):
             lo, hi = bolt_env.motor_limits(data.qvel[6:18])
             model.actuator_forcerange[:, 0], model.actuator_forcerange[:, 1] = lo, hi
+            brake = bolt_env.brake_torque(data.qvel[6:18], bspeed, bgain) if on else np.zeros(12)
+            if on:
+                data.qfrc_applied[6:18] = brake
             q, qd = data.qpos[7:19].copy(), data.qvel[6:18].copy()
             ask = model.actuator_gainprm[:, 0] * data.ctrl + model.actuator_biasprm[:, 1] * q + model.actuator_biasprm[:, 2] * qd
             bolt_env.mujoco.mj_step(model, data)
             down = float(env.feet_on_ground().sum()) if env is not None else 0.0
-            rec.append(np.concatenate([qd, data.actuator_force, ask, lo, hi, [down]]))   # qd and limits as at the step
+            rec.append(np.concatenate([qd, data.actuator_force, ask, lo, hi, [down], brake]))   # qd and limits as at the step
 
     jump_env.physics = physics
     pol = JumpPolicy(Path(a.folder), a.zip, a.stats)
-    env = JumpEnv(randomize=False, real=pol.real, max_steps=200)
+    env = JumpEnv(randomize=False, real=pol.real, max_steps=a.max_steps)
     env.exam_speed, env.exam_gait = a.speed, False
     h, sub = a.height, env.frame_skip
     tries = []
@@ -95,6 +115,7 @@ def main():
         motoring = np.where(f * qd > 0, tq * v, 0.0)
         end = clear_step or len(r)
         down = r[:end, 60]
+        brk = np.abs(r[:, 61:73])
         liftoff = int(np.nonzero(down > 0)[0].max()) + 1 if (down > 0).any() else end   # last paw leaves the floor
         w = slice(max(0, liftoff - int(0.3 / env.model.opt.timestep)), liftoff)   # the push: 0.3 s up to lift-off
         avail = np.where(ask >= 0, hi, -lo)      # what the motor could give in the asked direction
@@ -108,7 +129,9 @@ def main():
                                 takeoff_peak_speed=round(float(v[w][:, idx].max()), 1),
                                 takeoff_over_21_pct=round(100 * float((v[w][:, idx] > 21).mean()), 2),
                                 takeoff_peak_power_w=round(float(motoring[w][:, idx].max())),
-                                peak_asked_torque=round(float(np.abs(ask[:, idx]).max()), 1))
+                                peak_asked_torque=round(float(np.abs(ask[:, idx]).max()), 1),
+                                over_brake_speed_pct=round(100 * float((v[:, idx] > a.brake_speed).mean()), 2),
+                                peak_brake_torque=round(float(brk[:, idx].max()), 1))
         clean = bool(info["cleared"] and not info.get("dropped", info["touched"]) and not fell and info["up"] > 0.7)
         tries.append(dict(seed=a.seed + k, clean=clean, cleared=bool(info["cleared"]), dropped=bool(info.get("dropped")),
                           touched=bool(info["touched"]), fell=bool(fell), apex=round(apex, 3),

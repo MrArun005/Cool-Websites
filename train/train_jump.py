@@ -20,6 +20,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 from jump_env import JumpEnv, JumpPolicy, exam
+from bolt_env import add_brake_args, set_motor_brake
 
 
 def widen(src, out):
@@ -191,7 +192,9 @@ def main():
     ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints and exams")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
+    add_brake_args(ap, default=True)
     args = ap.parse_args()
+    print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
@@ -222,6 +225,7 @@ def main():
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]), activation_fn=torch.nn.ELU,
                                        log_std_init=-0.5),
                     device="cpu", verbose=0)
+    print("motor brake in the training envs (on, rad/s, N·m per rad/s):", venv.get_attr("motor_brake")[0], flush=True)
     start = time.time()
     select = "midstride" if args.select_gait else args.select
     mid_speed = args.select_speed if args.select_speed is not None else args.exam_speed

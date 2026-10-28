@@ -22,6 +22,7 @@ sys.path.insert(0, str(HERE))
 
 from imitate_env import ImitateEnv, ImitatePolicy   # noqa: E402
 from pps import Planner, PlannedController            # noqa: E402
+from bolt_env import add_brake_args, set_motor_brake   # noqa: E402
 
 BRAIN = HERE.parent.parent / "models" / "bolt-dog-imitate-18b-17.5M"
 
@@ -88,7 +89,9 @@ def main():
     ap.add_argument("--robust", action="store_true")
     ap.add_argument("--seed", type=int, default=9000)
     ap.add_argument("--out", required=True)
+    add_brake_args(ap, default=False)
     args = ap.parse_args()
+    print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     pol = ImitatePolicy(args.brain, args.zip, args.stats)
     res = dict(args=vars(args), results=[])
     for name in args.clips:

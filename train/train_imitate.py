@@ -23,6 +23,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 from imitate_env import ALL_CLIPS, DEFAULT_CLIPS, ImitateEnv, ImitatePolicy, exam, score
+from bolt_env import add_brake_args, set_motor_brake
 
 
 class Examiner(BaseCallback):
@@ -90,7 +91,9 @@ def main():
     ap.add_argument("--threads", type=int, default=2, help="torch threads")
     ap.add_argument("--root-vel-weight", type=float, help="reward weight of body velocity tracking (default 0.1, "
                     "DeepMimic); raise it if the exam's speed_ stays low while tracking is good")
+    add_brake_args(ap, default=True)
     args = ap.parse_args()
+    print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(args.threads)
@@ -110,6 +113,7 @@ def main():
                     policy_kwargs=dict(net_arch=dict(pi=[512, 256], vf=[512, 256]), activation_fn=torch.nn.ELU,
                                        log_std_init=-1.0),
                     device="cpu", verbose=0)
+    print("motor brake in the training envs (on, rad/s, N·m per rad/s):", venv.get_attr("motor_brake")[0], flush=True)
     start = time.time()
     print(f"training on clips {args.clips}, {args.envs} envs, {model.n_steps * args.envs} samples per update", flush=True)
     model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, args.exam_every, args.clips),

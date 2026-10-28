@@ -43,8 +43,9 @@ STAND_HEIGHT = 0.43
 class GetUpEnv(BoltEnv):
     OBS = 46
 
-    def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand", hard=False):
-        super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", skills=["stand"])
+    def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand", hard=False, motor_brake=None):
+        super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", skills=["stand"],
+                         motor_brake=motor_brake)
         # hard=True (run "recover", from 17e): tougher falls and physics, see HARD_KINDS and _hard_physics
         self.hard = hard
         self.shove_at, self.ice = None, False
@@ -243,11 +244,12 @@ class GetUpPolicy:
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
-def exam(policy, episodes=10, seed=7000, kinds=("side", "back", "tipped", "standing"), goal="stand", hard=False):
+def exam(policy, episodes=10, seed=7000, kinds=("side", "back", "tipped", "standing"), goal="stand", hard=False,
+         motor_brake=None):
     """From each kind of fall: standing (upright, at height) at the end of the 4 s, and the median time it
     took to first stand up."""
     out = {}
-    env = GetUpEnv(randomize=True, goal=goal, hard=hard)
+    env = GetUpEnv(randomize=True, goal=goal, hard=hard, motor_brake=motor_brake)   # motor_brake None: process default
     for kind in kinds:
         wins, times = 0, []
         for k in range(episodes):
@@ -311,12 +313,12 @@ def full_recovery(env, righter, obs):
     return ok, (first if ok else None)
 
 
-def exam_full(righter, episodes=10, seed=7000, kinds=EXAM_KINDS, hard=True):
+def exam_full(righter, episodes=10, seed=7000, kinds=EXAM_KINDS, hard=True, motor_brake=None):
     """Fair full-recovery exam: from each kind of fall (hard=True: run "recover"'s tougher falls and physics,
     the same fixed seeds for every brain, no second kick), stood_<kind>: share of tries standing at the end;
     tsec_<kind>: median seconds from the hand-over to first standing (self-right + tuck + stand)."""
     out = {}
-    env = GetUpEnv(randomize=True, goal="selfright", hard=hard)
+    env = GetUpEnv(randomize=True, goal="selfright", hard=hard, motor_brake=motor_brake)   # motor_brake None: process default
     for kind in kinds:
         wins, times = 0, []
         for k in range(episodes):

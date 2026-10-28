@@ -24,6 +24,7 @@ import torch
 torch.set_num_threads(1)
 
 from skills import IMITATE_RUN, Bolt   # noqa: E402
+from bolt_env import add_brake_args, set_motor_brake   # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 WINDOW = 2.0   # s without a fall after a switch
@@ -214,7 +215,9 @@ def main():
     ap.add_argument("--imitate-steps", type=int, help="dog-motion checkpoint (default: run 18b's newest)")
     ap.add_argument("--report", default=str(HERE / "skills_report.json"))
     ap.add_argument("--replays", default=str(HERE / "skills_replays.json"))
+    add_brake_args(ap, default=False)
     args = ap.parse_args()
+    print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     n = args.imitate_steps
     bolt = Bolt(seed=args.seed, imitate=(IMITATE_RUN, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl") if n else None)
     tally, replays, progress, started = Tally(), {}, {}, time.time()

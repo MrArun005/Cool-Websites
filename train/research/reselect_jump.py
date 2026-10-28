@@ -18,6 +18,7 @@ copies the winner (highest mid-stride mean, ties broken by the still-legs mean, 
     MUJOCO_GL=osmesa OMP_NUM_THREADS=1 python research/reselect_jump.py <run> --every-k 2 --workers 4 \
         --compare ../models/bolt-dog-jump-runup-16i-35.5M <run>/best     # also score these folders (not candidates)
 
+Motor brake (bolt_env.MOTOR) off by default: run jump-trot was trained without it; --motor-brake for runs trained with it.
 <run> must hold checkpoints/policy_<n>_steps.zip with checkpoints/policy_vecnormalize_<n>_steps.pkl.
 """
 import argparse
@@ -31,6 +32,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
+from bolt_env import add_brake_args, set_motor_brake   # noqa: E402
 
 
 def score_one(job):
@@ -70,7 +72,9 @@ def main():
     ap.add_argument("--workers", type=int, default=os.cpu_count(), help="parallel processes (default: all CPUs)")
     ap.add_argument("--out", help="JSON table (default <run>/reselect_jump.json)")
     ap.add_argument("--no-copy", action="store_true", help="do not write <run>/best_midstride/")
+    add_brake_args(ap, default=False)
     a = ap.parse_args()
+    print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(a.motor_brake, a.brake_speed, a.brake_gain), flush=True)
     run = Path(a.run)
     ck = run / "checkpoints"
     cks = []
@@ -84,12 +88,13 @@ def main():
     if picked[-1] != cks[-1]:
         picked.append(cks[-1])
     settings = dict(episodes=a.episodes, seed=a.seed, heights=a.heights, max_steps=a.max_steps, mid_speed=a.mid_speed,
-                    mid_dist=a.mid_dist, still_speed=a.still_speed, still_dist=a.still_dist, exam_kw={})
+                    mid_dist=a.mid_dist, still_speed=a.still_speed, still_dist=a.still_dist, exam_kw=dict(motor_brake=a.motor_brake))
     jobs = [(n, str(ck), f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl", settings) for n in picked]
     jobs += [(f"compare:{c}", c, "policy.zip", "vecnormalize.pkl", settings) for c in a.compare]
     print(f"{len(picked)} of {len(cks)} checkpoints + {len(a.compare)} comparison folders; mid-stride {a.mid_speed} m/s "
           f"from {a.mid_dist} m, still legs {a.still_speed} m/s from {a.still_dist} m, heights {a.heights}, "
-          f"{a.episodes} tries, seed {a.seed}, max steps {a.max_steps}, {a.workers} workers", flush=True)
+          f"{a.episodes} tries, seed {a.seed}, max steps {a.max_steps}, motor brake {'on' if a.motor_brake else 'off'}, "
+          f"{a.workers} workers", flush=True)
     t0, rows = time.time(), []
     with ProcessPoolExecutor(max_workers=max(1, min(a.workers, len(jobs)))) as pool:
         for row in pool.map(score_one, jobs):
@@ -99,6 +104,7 @@ def main():
     cands = [r for r in rows if isinstance(r["label"], int)]
     win = max(cands, key=lambda r: (r["mid_mean"], r["still_mean"], r["label"]))
     out = dict(command="python " + " ".join([sys.argv[0]] + sys.argv[1:]), settings={k: v for k, v in settings.items() if k != "exam_kw"},
+               motor_brake=dict(on=a.motor_brake, speed=a.brake_speed, gain=a.brake_gain),
                winner=win["label"], rows=rows, minutes=round((time.time() - t0) / 60, 1))
     path = Path(a.out) if a.out else run / "reselect_jump.json"
     path.write_text(json.dumps(out, indent=1))

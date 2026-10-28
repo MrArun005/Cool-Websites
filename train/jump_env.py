@@ -58,9 +58,9 @@ class JumpEnv(BoltEnv):
     OBS = 49   # 51 with real=True
 
     def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0,
-                 approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50):
+                 approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50, motor_brake=None):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
-                         hurdles="real" if real else True, skills=["stand"])
+                         hurdles="real" if real else True, skills=["stand"], motor_brake=motor_brake)
         self.real = real
         self.OBS = 51 if real else 49
         if real:
@@ -308,18 +308,20 @@ class JumpPolicy:
 
 
 def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None,
-         strict_too=True, gait=False):
+         strict_too=True, gait=False, motor_brake=None):
     """Jump the bar from `dist` m away (55 cm up to run 16h; 1.5 m with a run-up from run 16i), optionally
     arriving at `speed` m/s. Two scores per height:
     jump_<cm>  fair, agility rules: straight approach, fixed physics; a jump counts if the bar stays in its
                cups (a brush is no fault, as in dog agility) and Bolt lands on its feet without falling.
     strict_<cm> the old test: randomized physics, half the tries 6 degrees askew and 5 cm off the line, no touch
                at all, standing tall at the end and facing within 20 degrees of the jump.
-    strict_too=False: the fair score only. gait=True (with speed): start mid-stride in the dog's trot/canter pose."""
+    strict_too=False: the fair score only. gait=True (with speed): start mid-stride in the dog's trot/canter pose.
+    motor_brake: None = the process default (bolt_env.MOTOR["brake"]: off unless a training script or
+    BOLT_MOTOR_BRAKE turned it on), True/False for this exam."""
     out = {}
     real = getattr(policy, "real", False)
     for strict in ((False, True) if strict_too else (False,)):
-        env = JumpEnv(randomize=strict, real=real, max_steps=max_steps)
+        env = JumpEnv(randomize=strict, real=real, max_steps=max_steps, motor_brake=motor_brake)
         env.exam_speed, env.exam_gait = speed, gait
         for h in heights:
             wins = 0

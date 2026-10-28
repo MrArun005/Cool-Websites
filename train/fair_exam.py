@@ -19,6 +19,7 @@ import argparse
 import json
 import time
 from pathlib import Path
+from bolt_env import add_brake_args, set_motor_brake
 
 
 def main():
@@ -36,7 +37,9 @@ def main():
     ap.add_argument("--strict", action="store_true", help="jump: also the old strict test (randomized physics, askew)")
     ap.add_argument("--easy", action="store_true", help="recover: also the old falls and physics (17e's exam conditions)")
     ap.add_argument("--no-save", action="store_true")
+    add_brake_args(ap, default=False)
     a = ap.parse_args()
+    print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(a.motor_brake, a.brake_speed, a.brake_gain), flush=True)
     folder, out, t0 = Path(a.folder), {}, time.time()
     if a.what == "jump":
         from jump_env import JumpPolicy, exam
@@ -67,6 +70,7 @@ def main():
         out["full_stood_mean"] = sum(stood) / len(stood)
     if a.what == "jump":
         out["max_steps"], out["dist"] = a.max_steps, a.dist
+    out["motor_brake"] = dict(on=a.motor_brake, speed=a.brake_speed, gain=a.brake_gain)
     out["episodes"], out["seed"], out["minutes"] = a.episodes, a.seed, round((time.time() - t0) / 60, 1)
     print(json.dumps(out, indent=1))
     if not a.no_save:

@@ -19,6 +19,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 from train_jump import TimeGuard
 from getup_env import EXAM_KINDS, GetUpEnv, GetUpPolicy, exam, exam_full
+from bolt_env import add_brake_args, set_motor_brake
 
 
 class Examiner(BaseCallback):
@@ -93,7 +94,9 @@ def main():
     ap.add_argument("--n-steps", type=int, help="steps per env per update (default 2048 / the saved one)")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
+    add_brake_args(ap, default=True)
     args = ap.parse_args()
+    print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
@@ -118,6 +121,7 @@ def main():
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]), activation_fn=torch.nn.ELU,
                                        log_std_init=0.0),   # more exploration: rolling over needs big moves
                     device="cpu", verbose=0)
+    print("motor brake in the training envs (on, rad/s, N·m per rad/s):", venv.get_attr("motor_brake")[0], flush=True)
     start = time.time()
     cbs = [Examiner(out, args.every, args.goal, args.full_exam, args.exam_episodes)]
     cbs[0].exam_first = args.exam_first

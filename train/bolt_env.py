@@ -54,6 +54,65 @@ ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)  # radians per unit action: abd, hip,
 # joints at up to 57 rad/s and 900 W, which no motor this size can. Sideways hips swing ±48° (Go2).
 MOTOR = dict(torque=float(os.environ.get("BOLT_MOTOR_TORQUE", 33.5)), power=420.0, speed=21.0, cutoff=25.0)
 
+# Motor braking above the rated speed (--motor-brake, owner decision 28 Oct). The motor model above only stops
+# DRIVING a joint past 21 rad/s; nothing slows a joint that a landing or a swinging leg back-drives faster, so
+# simulated joints reached 30-57 rad/s. A real brushless motor driven past its no-load speed brakes itself: its
+# back-EMF (k_e * w) exceeds the driver's supply voltage, current flows backwards and the motor makes a torque
+# against the motion, k_t (k_e * w - V) / R. That is the motor's own torque-speed line continued past no-load
+# speed, linear in the excess speed. Here: above brake_speed (rad/s, default the rated speed, 21) each joint gets
+#     torque = -sign(w) * min(brake_gain * (|w| - brake_speed), torque)
+# brake_gain in N·m per rad/s of excess speed; default torque / speed = 33.5 / 21 = 1.6 N·m·s/rad, the slope of
+# the A1 motor's torque-speed line (33.5 N·m at stall falling to 0 at 21 rad/s), capped at the motor's peak
+# torque (the driver's current limit). It acts on the joint whatever the brain commands (the servo's own torque,
+# clipped by motor_limits, is added on top), as back-EMF braking does.
+# Process default: OFF (BOLT_MOTOR_BRAKE unset or 0), so every brain trained before 28 Oct is examined in the
+# body it was trained in and old exam numbers stay bit-for-bit the same. The training scripts turn it ON
+# (set_motor_brake, their --motor-brake flag, default on). Env vars, as BOLT_MOTOR_TORQUE: BOLT_MOTOR_BRAKE=1,
+# BOLT_MOTOR_BRAKE_SPEED (rad/s), BOLT_MOTOR_BRAKE_GAIN (N·m per rad/s); one env: BoltEnv(motor_brake=True/False).
+MOTOR.update(brake=os.environ.get("BOLT_MOTOR_BRAKE", "0").lower() in ("1", "true", "on", "yes"),
+             brake_speed=float(os.environ.get("BOLT_MOTOR_BRAKE_SPEED", MOTOR["speed"])),
+             brake_gain=float(os.environ.get("BOLT_MOTOR_BRAKE_GAIN", MOTOR["torque"] / MOTOR["speed"])))
+_BRAKE = {}   # id(MjModel) -> (on, speed, gain) for envs given motor_brake explicitly; others use MOTOR's
+
+
+def set_motor_brake(on, speed=None, gain=None):
+    """Process-wide brake setting (and the env vars, so subprocess environments created later inherit it).
+    speed / gain None keep the current values. Returns MOTOR's brake settings."""
+    MOTOR["brake"] = bool(on)
+    if speed is not None:
+        MOTOR["brake_speed"] = float(speed)
+    if gain is not None:
+        MOTOR["brake_gain"] = float(gain)
+    os.environ["BOLT_MOTOR_BRAKE"] = "1" if on else "0"
+    os.environ["BOLT_MOTOR_BRAKE_SPEED"] = repr(MOTOR["brake_speed"])
+    os.environ["BOLT_MOTOR_BRAKE_GAIN"] = repr(MOTOR["brake_gain"])
+    return brake_settings()
+
+
+def brake_settings(model=None):
+    """(on, speed rad/s, gain N·m·s/rad) in effect for this model (an env's explicit setting, else MOTOR's)."""
+    if model is not None and id(model) in _BRAKE:
+        return _BRAKE[id(model)]
+    return MOTOR["brake"], MOTOR["brake_speed"], MOTOR["brake_gain"]
+
+
+def add_brake_args(ap, default):
+    """--motor-brake/--no-motor-brake, --brake-speed, --brake-gain on an argparse parser (default: on or off)."""
+    import argparse
+    ap.add_argument("--motor-brake", action=argparse.BooleanOptionalAction, default=default,
+                    help=f"motor braking above --brake-speed (bolt_env.MOTOR, back-EMF model); default {'on' if default else 'off'}"
+                         + ("" if default else " (old brains were trained without it)"))
+    ap.add_argument("--brake-speed", type=float, default=MOTOR["brake_speed"],
+                    help=f"rad/s where braking starts (default {MOTOR['brake_speed']:g}, the motor's rated speed)")
+    ap.add_argument("--brake-gain", type=float, default=MOTOR["brake_gain"],
+                    help=f"braking N·m per rad/s above --brake-speed (default {MOTOR['brake_gain']:.3g} = torque / rated speed)")
+
+
+def brake_torque(qvel, speed, gain):
+    """Per joint braking torque (N·m) at joint speeds qvel (rad/s): zero up to `speed`, then against the motion."""
+    excess = np.maximum(np.abs(qvel) - speed, 0.0)
+    return -np.sign(qvel) * np.minimum(gain * excess, MOTOR["torque"])
+
 
 def motor_limits(qvel):
     """Per joint (lo, hi) torque limits for the current joint speeds (rad/s)."""
@@ -66,10 +125,14 @@ def motor_limits(qvel):
 
 
 def physics(model, data, n):
-    """n physics steps with the real-motor limits applied at every one (joints are qvel[6:18])."""
+    """n physics steps with the real-motor limits applied at every one (joints are qvel[6:18]); with the brake
+    on (brake_settings), the braking torque goes in data.qfrc_applied on the joints, also at every step."""
+    on, speed, gain = brake_settings(model)
     for _ in range(n):
         lo, hi = motor_limits(data.qvel[6:18])
         model.actuator_forcerange[:, 0], model.actuator_forcerange[:, 1] = lo, hi
+        if on:
+            data.qfrc_applied[6:18] = brake_torque(data.qvel[6:18], speed, gain)
         mujoco.mj_step(model, data)
 
 # What the built-in trot is built around (gait_generator="crouch" or "tall"). "crouch" is the
@@ -113,7 +176,7 @@ class BoltEnv(gym.Env):
 
     def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
                  skills=None, gait_generator=False, turning=False, handover_brain=None, speed_control=False,
-                 sharp_turns=False, getting_up=False, hurdles=False):
+                 sharp_turns=False, getting_up=False, hurdles=False, motor_brake=None):
         # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
         # brain only adds corrections on top (residual control, as in "policies modulating trajectory
         # generators"). The legs are coordinated from the first step instead of having to discover it.
@@ -147,6 +210,13 @@ class BoltEnv(gym.Env):
             from scale_robot import scaled_xml
             self.model = mujoco.MjModel.from_xml_string(scaled_xml(scale))
         self.data = mujoco.MjData(self.model)
+        # motor_brake: True/False for this env only (speed and gain from MOTOR); None = the process default
+        if motor_brake is not None:
+            import weakref
+            key = id(self.model)
+            _BRAKE[key] = (bool(motor_brake), MOTOR["brake_speed"], MOTOR["brake_gain"])
+            weakref.finalize(self, _BRAKE.pop, key, None)
+        self.motor_brake = brake_settings(self.model)
         self.frame_skip = 10  # 0.002 s physics step × 10 = 50 Hz control
         self.dt = self.model.opt.timestep * self.frame_skip
         self.randomize = randomize
