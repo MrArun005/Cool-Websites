@@ -59,19 +59,22 @@ MOTOR = dict(torque=float(os.environ.get("BOLT_MOTOR_TORQUE", 33.5)), power=420.
 # simulated joints reached 30-57 rad/s. A real brushless motor driven past its no-load speed brakes itself: its
 # back-EMF (k_e * w) exceeds the driver's supply voltage, current flows backwards and the motor makes a torque
 # against the motion, k_t (k_e * w - V) / R. That is the motor's own torque-speed line continued past no-load
-# speed, linear in the excess speed. Here: above brake_speed (rad/s, default the rated speed, 21) each joint gets
+# speed, linear in the excess speed. Here: above brake_speed (rad/s, default the drive cutoff, 25: where this model's
+# driving torque has already faded to zero, so drive fade and brake never overlap) each joint gets
 #     torque = -sign(w) * min(brake_gain * (|w| - brake_speed), torque)
-# brake_gain in N·m per rad/s of excess speed; default torque / speed = 33.5 / 21 = 1.6 N·m·s/rad, the slope of
-# the A1 motor's torque-speed line (33.5 N·m at stall falling to 0 at 21 rad/s), capped at the motor's peak
+# brake_gain in N·m per rad/s of excess speed; default BRAKE_GAIN = 3.5 N·m·s/rad, the estimate from the A1 motor's
+# constants (k_t * k_e / R at the joint) rather than the gentler 1.6 (torque / rated speed, 33.5 / 21): owner decision
+# 28 Oct to take the stricter, more realistic body so results are not flattered. Capped at the motor's peak
 # torque (the driver's current limit). It acts on the joint whatever the brain commands (the servo's own torque,
 # clipped by motor_limits, is added on top), as back-EMF braking does.
 # Process default: OFF (BOLT_MOTOR_BRAKE unset or 0), so every brain trained before 28 Oct is examined in the
 # body it was trained in and old exam numbers stay bit-for-bit the same. The training scripts turn it ON
 # (set_motor_brake, their --motor-brake flag, default on). Env vars, as BOLT_MOTOR_TORQUE: BOLT_MOTOR_BRAKE=1,
 # BOLT_MOTOR_BRAKE_SPEED (rad/s), BOLT_MOTOR_BRAKE_GAIN (N·m per rad/s); one env: BoltEnv(motor_brake=True/False).
+BRAKE_GAIN = 3.5   # N·m per rad/s of excess speed (see above); override with BOLT_MOTOR_BRAKE_GAIN or --brake-gain
 MOTOR.update(brake=os.environ.get("BOLT_MOTOR_BRAKE", "0").lower() in ("1", "true", "on", "yes"),
-             brake_speed=float(os.environ.get("BOLT_MOTOR_BRAKE_SPEED", MOTOR["speed"])),
-             brake_gain=float(os.environ.get("BOLT_MOTOR_BRAKE_GAIN", MOTOR["torque"] / MOTOR["speed"])))
+             brake_speed=float(os.environ.get("BOLT_MOTOR_BRAKE_SPEED", MOTOR["cutoff"])),
+             brake_gain=float(os.environ.get("BOLT_MOTOR_BRAKE_GAIN", BRAKE_GAIN)))
 _BRAKE = {}   # id(MjModel) -> (on, speed, gain) for envs given motor_brake explicitly; others use MOTOR's
 
 
@@ -103,7 +106,7 @@ def add_brake_args(ap, default):
                     help=f"motor braking above --brake-speed (bolt_env.MOTOR, back-EMF model); default {'on' if default else 'off'}"
                          + ("" if default else " (old brains were trained without it)"))
     ap.add_argument("--brake-speed", type=float, default=MOTOR["brake_speed"],
-                    help=f"rad/s where braking starts (default {MOTOR['brake_speed']:g}, the motor's rated speed)")
+                    help=f"rad/s where braking starts (default {MOTOR['brake_speed']:g}, the drive cutoff)")
     ap.add_argument("--brake-gain", type=float, default=MOTOR["brake_gain"],
                     help=f"braking N·m per rad/s above --brake-speed (default {MOTOR['brake_gain']:.3g} = torque / rated speed)")
 

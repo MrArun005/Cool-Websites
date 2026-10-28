@@ -99,6 +99,11 @@ Do not claim to beat a specialist at its speciality unless the same test says so
 ## Strict standing rules (set by the owner, 27 Oct)
 0. (28 Oct) Always give times to the owner in Indian Standard Time (IST, UTC+5:30), e.g. "08:29 IST".
 0b. (28 Oct) Kaggle runs stay LONG: size each job to use nearly all of Kaggle's 12 h session limit (time guard ~10.5-11.5 h), results once a day, rather than short 2-4 h runs.
+0c. (28 Oct, owner delegated these calls "best for our reputation in the real world"):
+   - Body = 33.5 N·m A1 motors (420 W, 21 rad/s rated, drive fades to 0 at 25 rad/s).
+   - --motor-brake: brake starts at 25 rad/s (the drive cutoff, so fade and brake don't overlap), gain 3.5 N·m·s/rad (motor-constant estimate, the stricter choice). ON for all new training; exams default OFF for old brains; brains trained with the brake are examined with it ON, and their reports show both.
+   - Step 1 landing starts approved as built (0.5 s grace, 0.6 s canter bridge then trot, both flags). Steps continue in order 2, 3, 6; 60 cm reward shaping (Step 8 proposal) approved, but trained only with the brake on and only after Steps 2-3; Step 7 stays a design note until Steps 1-3 are measured.
+   - Public claims: only numbers from fair exams on fresh seeds, with the command; say "in simulation"; disclose AI assistance; dog motion data CC BY-NC (non-commercial).
 1. Every 30 minutes, check everything, whether or not anyone reported: each training run's log is fresh (< 40 min),
    checkpoints arrive, exams improve; each agent is alive; this machine's background tasks are running; pages are
    published with the latest data (with a "what's new" table); git is committed and pushed.
