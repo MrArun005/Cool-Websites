@@ -511,6 +511,139 @@ Reproduce (from `train/`, `MUJOCO_GL=osmesa OMP_NUM_THREADS=1`):
     python mastermind/baseline.py --teachers v4 --n 30 --seed 1000 --with-50 --out mastermind/results/manager_v4_n30.json
     python mastermind/canter_exam.py --brain mastermind/export_v4/student.pt --teachers v4 --out mastermind/results/canter30_student_v4.json
 
+## Sim-to-real stress test: how far MasterMind is from hardware-ready (2026-10-28, in simulation)
+
+**Question.** The switch tests above run in a perfect world: exact sensors, motors that act on the same 20 ms tick,
+and the trained PD gains. How much do the v4 and v3 students lose to the imperfections of a real robot?
+
+**Result.**
+* Clean, 83% of switches (v4 411/494, N=30 on seed set 1000).
+* Things that barely matter:
+  * Sensor noise at the levels used to take A1/Go1/Go2 policies to hardware: v4 83%, v3 77%.
+  * PD gains ±20%: 84% and 80%.
+  * The motor brake (25 rad/s, 3.5 N·m·s/rad): 82%.
+* **Action latency is what breaks it:**
+  * 6 ms: 77%
+  * 10 ms: 67%
+  * **20 ms, one control step: 50%**, and only 37% of the planned switches are even reached, because Bolt falls while
+    walking before the switch
+  * 40 ms: 18%, 6% reached
+* A 10 ms first-order motor lag costs 14 points (69%), mostly the jumps and the landings.
+* **All together:** 52% with 10 ms of latency, 43% with 20 ms.
+
+v3 behaves the same. It is a little less robust to noise and lag, and as fragile to latency.
+
+**Verdict.** In simulation, MasterMind is **not hardware-ready**. A real 50 Hz loop has 10-20 ms between reading the
+sensors and the motors acting. The students were never trained with any delay, and the whole recipe (experts and
+students) assumed none. The fix is known and cheap compared with the port: train the experts and the DAgger student with
+a random 0-40 ms action delay, and keep the brake, noise and gain randomization on. Re-run this table, aiming at 20 ms
+within a few points of clean, before any hardware.
+
+### The switches (same format as above)
+
+* N=30 tries per sequence on seed set 1000 only (not 1000 + 5000), to keep the compute small. The ± is the binomial
+  s.e. over the tries reached.
+* **A harsher condition also reaches fewer switches.** A fall before a switch skips it, so read the pooled rate together
+  with the last row.
+* Mass and friction shifts are in every column already: torso mass ±15%, floor friction ×0.6-1.3 and kp ±15%, drawn
+  per try (the randomized physics of every test above).
+
+| perturbation | flag | what it is |
+|---|---|---|
+| noise | `--obs-noise` (×1) | uniform noise on the student's inputs: gravity vector ±0.05, gyro ±0.2 rad/s, joint angles ±0.01 rad, joint speeds ±1.5 rad/s (legged_gym's `noise_scales`, Rudin et al. 2021, the setup used to take A1/Go1/Go2 policies to hardware); body linear velocity ±0.1 m/s and body height ±0.02 m stand in for a state estimator (a real robot has no sensor for them; the 0.02 m is our assumption). Added on top of the 0.01 noise the students trained with. Unitree publishes no encoder or IMU noise figures that we could find |
+| 6 / 10 / 20 / 40 ms | `--latency-ms` | the motors get the targets sent that long ago, in 2 ms physics steps (20 ms = 1 control step); the brain's "previous output" input is what it sent |
+| lag 10 ms | `--motor-lag-ms 10` | the joint targets pass a first-order low-pass (time constant 10 ms) at the 500 Hz physics rate: a stand-in for driver and current-loop dynamics that the model leaves out |
+| gains ×0.8 / ×1.2 | `--gain-scale` | kp and kv of every servo ×0.8 or ×1.2, on top of the ±15% kp randomization |
+| brake | `--motor-brake` | `bolt_env.set_motor_brake`, 25 rad/s, 3.5 N·m·s/rad (HANDOFF 0c) |
+| all, 20 ms / all, 10 ms | all of the above | noise + latency + lag 10 ms + gains ×0.8 + brake |
+
+**v4 student (export_v4, teacher set v4):**
+
+| switch | clean | noise | 6 ms | 10 ms | 20 ms | 40 ms | lag 10 ms | gains ×0.8 | gains ×1.2 | brake | all, 20 ms | all, 10 ms |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| walk->trot | 30/30 100% ± 0 | 30/30 100% ± 0 | 30/30 100% ± 0 | 29/30 97% ± 3 | 5/20 25% ± 10 | 0/1 0% ± 0 | 30/30 100% ± 0 | 30/30 100% ± 0 | 30/30 100% ± 0 | 30/30 100% ± 0 | 3/14 21% ± 11 | 23/30 77% ± 8 |
+| trot->canter | 29/30 97% ± 3 | 30/30 100% ± 0 | 30/30 100% ± 0 | 27/29 93% ± 5 | 1/2 50% ± 35 | - | 28/30 93% ± 5 | 30/30 100% ± 0 | 28/30 93% ± 5 | 29/30 97% ± 3 | 0/2 0% ± 0 | 12/21 57% ± 11 |
+| canter->trot | 26/29 90% ± 6 | 28/30 93% ± 5 | 26/30 87% ± 6 | 19/23 83% ± 8 | - | - | 24/27 89% ± 6 | 29/30 97% ± 3 | 23/28 82% ± 7 | 26/29 90% ± 6 | - | 4/7 57% ± 19 |
+| trot->walk | 25/26 96% ± 4 | 27/28 96% ± 4 | 24/26 92% ± 5 | 18/19 95% ± 5 | - | - | 24/24 100% ± 0 | 29/29 100% ± 0 | 21/22 95% ± 4 | 25/26 96% ± 4 | - | 2/2 100% ± 0 |
+| walk->sit [pose reached] | 25/30 83% ± 7 | 28/30 93% ± 5 | 25/30 83% ± 7 | 24/30 80% ± 7 | 20/28 71% ± 9 | 1/8 12% ± 12 | 21/30 70% ± 8 | 24/30 80% ± 7 | 26/30 87% ± 6 | 25/30 83% ± 7 | 16/24 67% ± 10 | 25/30 83% ± 7 |
+| sit->lie [pose reached] | 25/30 83% ± 7 | 28/30 93% ± 5 | 25/30 83% ± 7 | 24/30 80% ± 7 | 20/24 83% ± 8 | 0/1 0% ± 0 | 21/30 70% ± 8 | 24/30 80% ± 7 | 26/30 87% ± 6 | 25/30 83% ± 7 | 16/22 73% ± 9 | 25/30 83% ± 7 |
+| lie->stand (posture) | 25/25 100% ± 0 | 28/28 100% ± 0 | 25/25 100% ± 0 | 24/24 100% ± 0 | 20/20 100% ± 0 | - | 21/21 100% ± 0 | 24/24 100% ± 0 | 26/26 100% ± 0 | 25/25 100% ± 0 | 16/16 100% ± 0 | 25/25 100% ± 0 |
+| trot->jump 20 cm | 26/30 87% ± 6 | 24/30 80% ± 7 | 22/30 73% ± 8 | 20/30 67% ± 9 | 0/12 0% ± 0 | 0/2 0% ± 0 | 26/30 87% ± 6 | 26/30 87% ± 6 | 26/30 87% ± 6 | 26/30 87% ± 6 | 0/12 0% ± 0 | 6/27 22% ± 8 |
+| jump 20 cm->(canter)->trot | 21/30 70% ± 8 | 25/30 83% ± 7 | 18/27 67% ± 9 | 11/26 42% ± 10 | - | - | 13/30 43% ± 9 | 27/30 90% ± 5 | 23/29 79% ± 8 | 23/30 77% ± 8 | 1/2 50% ± 35 | 3/17 18% ± 9 |
+| trot->jump 30 cm | 26/30 87% ± 6 | 23/30 77% ± 8 | 24/30 80% ± 7 | 12/30 40% ± 9 | 0/12 0% ± 0 | 0/2 0% ± 0 | 20/30 67% ± 9 | 25/30 83% ± 7 | 22/30 73% ± 8 | 25/30 83% ± 7 | 0/12 0% ± 0 | 6/27 22% ± 8 |
+| jump 30 cm->(canter)->trot | 23/30 77% ± 8 | 21/28 75% ± 8 | 16/26 62% ± 10 | 12/23 52% ± 10 | - | - | 18/30 60% ± 9 | 28/30 93% ± 5 | 21/29 72% ± 8 | 22/29 76% ± 8 | 0/1 0% ± 0 | 5/17 29% ± 11 |
+| trot->jump 40 cm | 20/30 67% ± 9 | 14/30 47% ± 9 | 16/30 53% ± 9 | 8/30 27% ± 8 | 0/12 0% ± 0 | 0/2 0% ± 0 | 10/30 33% ± 9 | 20/30 67% ± 9 | 19/30 63% ± 9 | 21/30 70% ± 8 | 0/12 0% ± 0 | 3/27 11% ± 6 |
+| jump 40 cm->(canter)->trot | 26/29 90% ± 6 | 25/30 83% ± 7 | 17/29 59% ± 9 | 12/23 52% ± 10 | 0/2 0% ± 0 | - | 17/29 59% ± 9 | 21/30 70% ± 8 | 20/30 67% ± 9 | 21/30 70% ± 8 | 0/1 0% ± 0 | 7/17 41% ± 12 |
+| fall -> recover (stood up) | 27/30 90% ± 5 | 29/30 97% ± 3 | 27/30 90% ± 5 | 24/30 80% ± 7 | 16/28 57% ± 9 | 4/11 36% ± 15 | 24/30 80% ± 7 | 27/30 90% ± 5 | 23/30 77% ± 8 | 29/30 97% ± 3 | 9/27 33% ± 9 | 19/30 63% ± 9 |
+| recover -> walk | 27/27 100% ± 0 | 29/29 100% ± 0 | 27/27 100% ± 0 | 24/24 100% ± 0 | 12/16 75% ± 11 | 1/4 25% ± 22 | 24/24 100% ± 0 | 27/27 100% ± 0 | 23/23 100% ± 0 | 29/29 100% ± 0 | 8/9 89% ± 10 | 19/19 100% ± 0 |
+| trot->jump 50 cm | 9/30 30% ± 8 | 8/30 27% ± 8 | 7/30 23% ± 8 | 4/30 13% ± 6 | 1/12 8% ± 8 | 0/2 0% ± 0 | 2/30 7% ± 5 | 4/30 13% ± 6 | 6/30 20% ± 7 | 11/30 37% ± 9 | 1/12 8% ± 8 | 1/27 4% ± 4 |
+| jump 50 cm->(canter)->trot | 21/28 75% ± 8 | 21/29 72% ± 8 | 15/27 56% ± 10 | 13/25 52% ± 10 | 0/1 0% ± 0 | - | 12/29 41% ± 9 | 27/30 90% ± 5 | 24/29 83% ± 7 | 18/29 62% ± 9 | 1/1 100% ± 0 | 5/15 33% ± 12 |
+| **pooled** | **411/494 83% ± 2** | **418/502 83% ± 2** | **374/487 77% ± 2** | **305/456 67% ± 2** | **95/189 50% ± 4** | **6/33 18% ± 7** | **335/484 69% ± 2** | **422/500 84% ± 2** | **387/486 80% ± 2** | **410/497 82% ± 2** | **71/167 43% ± 4** | **190/368 52% ± 3** |
+| switches reached (tried / planned) | 494/510 97% | 502/510 98% | 487/510 95% | 456/510 89% | 189/510 37% | 33/510 6% | 484/510 95% | 500/510 98% | 486/510 95% | 497/510 97% | 167/510 33% | 368/510 72% |
+
+**v3 student (export_v3, teacher set v3):**
+
+| switch | clean | noise | 6 ms | 10 ms | 20 ms | 40 ms | lag 10 ms | gains ×0.8 | gains ×1.2 | brake | all, 20 ms | all, 10 ms |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| walk->trot | 30/30 100% ± 0 | 30/30 100% ± 0 | 29/30 97% ± 3 | 29/30 97% ± 3 | 11/27 41% ± 9 | 1/4 25% ± 22 | 30/30 100% ± 0 | 30/30 100% ± 0 | 30/30 100% ± 0 | 30/30 100% ± 0 | 7/24 29% ± 9 | 26/30 87% ± 6 |
+| trot->canter | 27/30 90% ± 5 | 30/30 100% ± 0 | 29/29 100% ± 0 | 26/29 90% ± 6 | 4/7 57% ± 19 | - | 29/30 97% ± 3 | 29/30 97% ± 3 | 29/30 97% ± 3 | 29/30 97% ± 3 | 1/4 25% ± 22 | 18/25 72% ± 9 |
+| canter->trot | 22/27 81% ± 7 | 18/28 64% ± 9 | 21/28 75% ± 8 | 16/25 64% ± 10 | 1/3 33% ± 27 | - | 16/28 57% ± 9 | 17/29 59% ± 9 | 19/29 66% ± 9 | 23/29 79% ± 8 | - | 5/13 38% ± 13 |
+| trot->walk | 22/22 100% ± 0 | 18/18 100% ± 0 | 21/21 100% ± 0 | 16/16 100% ± 0 | - | - | 16/16 100% ± 0 | 17/17 100% ± 0 | 19/19 100% ± 0 | 23/23 100% ± 0 | - | 2/4 50% ± 25 |
+| walk->sit [pose reached] | 24/30 80% ± 7 | 25/30 83% ± 7 | 23/30 77% ± 8 | 23/30 77% ± 8 | 21/29 72% ± 8 | 1/10 10% ± 9 | 22/30 73% ± 8 | 22/30 73% ± 8 | 26/30 87% ± 6 | 24/30 80% ± 7 | 20/28 71% ± 9 | 15/30 50% ± 9 |
+| sit->lie [pose reached] | 24/30 80% ± 7 | 25/30 83% ± 7 | 23/30 77% ± 8 | 23/29 79% ± 8 | 21/25 84% ± 7 | 1/5 20% ± 18 | 22/29 76% ± 8 | 22/30 73% ± 8 | 26/30 87% ± 6 | 24/30 80% ± 7 | 20/25 80% ± 8 | 15/30 50% ± 9 |
+| lie->stand (posture) | 24/24 100% ± 0 | 25/25 100% ± 0 | 23/23 100% ± 0 | 23/23 100% ± 0 | 20/21 95% ± 5 | 0/1 0% ± 0 | 22/22 100% ± 0 | 22/22 100% ± 0 | 26/26 100% ± 0 | 24/24 100% ± 0 | 18/20 90% ± 7 | 15/15 100% ± 0 |
+| trot->jump 20 cm | 25/30 83% ± 7 | 21/30 70% ± 8 | 23/30 77% ± 8 | 17/30 57% ± 9 | 2/18 11% ± 7 | 0/4 0% ± 0 | 25/30 83% ± 7 | 26/30 87% ± 6 | 23/30 77% ± 8 | 25/30 83% ± 7 | 1/14 7% ± 7 | 10/30 33% ± 9 |
+| jump 20 cm->(canter)->trot | 26/29 90% ± 6 | 19/28 68% ± 9 | 17/27 63% ± 9 | 12/23 52% ± 10 | 0/2 0% ± 0 | - | 25/30 83% ± 7 | 27/30 90% ± 5 | 23/30 77% ± 8 | 24/29 83% ± 7 | 0/2 0% ± 0 | 6/18 33% ± 11 |
+| trot->jump 30 cm | 25/30 83% ± 7 | 19/30 63% ± 9 | 21/30 70% ± 8 | 13/30 43% ± 9 | 2/18 11% ± 7 | 0/4 0% ± 0 | 23/30 77% ± 8 | 25/30 83% ± 7 | 22/30 73% ± 8 | 25/30 83% ± 7 | 0/14 0% ± 0 | 5/30 17% ± 7 |
+| jump 30 cm->(canter)->trot | 25/30 83% ± 7 | 19/29 66% ± 9 | 20/30 67% ± 9 | 8/23 35% ± 10 | 0/3 0% ± 0 | - | 18/29 62% ± 9 | 24/30 80% ± 7 | 21/30 70% ± 8 | 21/30 70% ± 8 | 0/2 0% ± 0 | 8/18 44% ± 12 |
+| trot->jump 40 cm | 18/30 60% ± 9 | 15/30 50% ± 9 | 17/30 57% ± 9 | 9/30 30% ± 8 | 1/18 6% ± 5 | 0/4 0% ± 0 | 13/30 43% ± 9 | 18/30 60% ± 9 | 18/30 60% ± 9 | 20/30 67% ± 9 | 0/14 0% ± 0 | 4/30 13% ± 6 |
+| jump 40 cm->(canter)->trot | 25/29 86% ± 6 | 17/27 63% ± 9 | 21/28 75% ± 8 | 13/26 50% ± 10 | 2/5 40% ± 22 | - | 16/30 53% ± 9 | 20/30 67% ± 9 | 18/29 62% ± 9 | 22/29 76% ± 8 | 0/1 0% ± 0 | 7/15 47% ± 13 |
+| fall -> recover (stood up) | 24/30 80% ± 7 | 27/30 90% ± 5 | 27/30 90% ± 5 | 26/30 87% ± 6 | 18/29 62% ± 9 | 6/18 33% ± 11 | 26/30 87% ± 6 | 28/30 93% ± 5 | 29/30 97% ± 3 | 28/30 93% ± 5 | 12/29 41% ± 9 | 25/30 83% ± 7 |
+| recover -> walk | 24/24 100% ± 0 | 27/27 100% ± 0 | 27/27 100% ± 0 | 26/26 100% ± 0 | 17/18 94% ± 5 | 2/6 33% ± 19 | 26/26 100% ± 0 | 28/28 100% ± 0 | 29/29 100% ± 0 | 28/28 100% ± 0 | 11/12 92% ± 8 | 25/25 100% ± 0 |
+| trot->jump 50 cm | 15/30 50% ± 9 | 10/30 33% ± 9 | 11/30 37% ± 9 | 3/30 10% ± 5 | 0/18 0% ± 0 | 0/4 0% ± 0 | 6/30 20% ± 7 | 10/30 33% ± 9 | 12/30 40% ± 9 | 15/30 50% ± 9 | 0/14 0% ± 0 | 2/30 7% ± 5 |
+| jump 50 cm->(canter)->trot | 21/30 70% ± 8 | 21/26 81% ± 8 | 13/28 46% ± 9 | 13/27 48% ± 10 | 0/4 0% ± 0 | - | 19/29 66% ± 9 | 23/30 77% ± 8 | 21/30 70% ± 8 | 24/30 80% ± 7 | 0/3 0% ± 0 | 7/20 35% ± 11 |
+| **pooled** | **401/485 83% ± 2** | **366/478 77% ± 2** | **366/481 76% ± 2** | **296/457 65% ± 2** | **120/245 49% ± 3** | **11/60 18% ± 5** | **354/479 74% ± 2** | **388/486 80% ± 2** | **391/492 79% ± 2** | **409/492 83% ± 2** | **90/206 44% ± 3** | **195/393 50% ± 3** |
+| switches reached (tried / planned) | 485/510 95% | 478/510 94% | 481/510 94% | 457/510 90% | 245/510 48% | 60/510 12% | 479/510 94% | 486/510 95% | 492/510 96% | 492/510 96% | 206/510 40% | 393/510 77% |
+
+**Defaults off reproduce today's numbers exactly.** The "clean" columns are fresh runs with every new flag off. They
+give the same counts, switch for switch, as `results/student_v4_r4_n30.json` and `results/student_v3_r5_n30.json`
+(v4 411/494, v3 401/485).
+
+Reading the table:
+* **Latency hits the dynamic skills first.**
+  * At 10 ms, clean jumps from a trot drop from 87/87/67% to 67/40/27% (20/30/40 cm), and the landings from 70-90% to
+    42-52%.
+  * At 20 ms the trot itself falls: walk->trot 25%, 13 of 30 shove tries reached.
+  * Sit, lie and stand survive best, because they are slow.
+* **The 10 ms motor lag** costs the same places: the 30-50 cm jumps and the landings.
+* **Noise.**
+  * v4: no change (83%).
+  * v3: drops to 77%, mostly canter->trot and the landings. v4's teachers (18g) trained the gait switches, so the v4
+    student may simply sit in states with more margin. Not checked.
+* **Gains.**
+  * ×0.8 (softer) is even slightly better on the landings (90/93/70%).
+  * ×1.2 costs a little (80%).
+* **The brake** changes nothing measurable, except 50 cm landings (75 -> 62%, within about 1.2 s.e.).
+
+Reproduce (from `train/`, `MUJOCO_GL=osmesa OMP_NUM_THREADS=1`; about 6-13 min each on one core):
+
+    python mastermind/test_master.py --brain mastermind/export_v4/student.pt --teachers v4 --n 30 --seed 1000 --with-50 --out mastermind/results/stress/student_v4_clean_n30.json
+    ... --obs-noise                          --out .../student_v4_noise_n30.json
+    ... --latency-ms 6 | 10 | 20 | 40        --out .../student_v4_lat6|lat10|lat20|lat40_n30.json
+    ... --motor-lag-ms 10                    --out .../student_v4_lag10_n30.json
+    ... --gain-scale 0.8 | 1.2               --out .../student_v4_gain080|gain120_n30.json
+    ... --motor-brake                        --out .../student_v4_brake_n30.json
+    ... --obs-noise --latency-ms 20 --motor-lag-ms 10 --gain-scale 0.8 --motor-brake   --out .../student_v4_all_n30.json
+    ... --obs-noise --latency-ms 10 --motor-lag-ms 10 --gain-scale 0.8 --motor-brake   --out .../student_v4_all10_n30.json
+    (v3: --brain mastermind/export_v3/student.pt --teachers v3, files student_v3_*)
+    python mastermind/compare.py --reached --col "clean=mastermind/results/stress/student_v4_clean_n30.json" --col "20 ms=mastermind/results/stress/student_v4_lat20_n30.json"
+
+The code: `env.py` has `NOISE`, `REAL_OFF` and `Master.real`. Noise goes in `obs()`. The delay queue is in `step()`.
+The lag and the part-step delay are in the shared physics hook. The gains are set in `start()`. All of it is off unless
+`Master.real` is changed (the `test_master.py` flags). The result files carry a `real` block with the settings. In the
+6 and 10 ms files and the v3 files, `delay` is in seconds; in v4 20/40 ms it is in control steps. `latency_ms` is the
+same in all of them.
+
 ## Second simulator: the student in PyBullet (2026-10-28, in simulation)
 
 **Question.** Does MasterMind only work in MuJoCo, or does it still work in a second physics engine on the same body?

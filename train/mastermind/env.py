@@ -60,18 +60,40 @@ from jump_env import JumpPolicy  # noqa: E402
 from skills import CLIPS, GAITS, JUMP, Bolt, closest_moment  # noqa: E402
 from teachers import imitate_brain, imitate_policy, teacher_set  # noqa: E402
 
+# ---- sim-to-real stress test (test_master.py --obs-noise/--latency-ms/--motor-lag-ms/--gain-scale; all off by default) ----
+# Observation noise, uniform in +-level (legged_gym's noise model, Rudin et al. 2021, the setup used to take A1/Go1/Go2
+# policies to hardware: noise_scales dof_pos 0.01 rad, dof_vel 1.5 rad/s, ang_vel 0.2 rad/s, gravity 0.05, lin_vel 0.1 m/s).
+# Base height has no sensor on a real robot (it needs a state estimator); 0.02 m is our assumption, not a spec.
+NOISE = dict(grav=0.05, gyro=0.2, linvel=0.1, height=0.02, qpos=0.01, qvel=1.5)
+REAL_OFF = dict(noise=0.0, delay=0.0, lag=0.0, gain=1.0)
+
 COMMANDS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "stand", "jump"]
 OBS = 84
 
 # ---- one physics call for every expert env, with the executed joint targets forced in ----
 _REAL_PHYSICS = bolt_env.physics
 _FORCE = [None]
+_LAG = [None]   # (tau s, filtered targets): the motor-lag stress test (Master.real["lag"]), only inside Master.step
+_SPLIT = [None]  # (k, older targets): a delay that is not a whole control step; the first k physics steps get the older
 
 
 def _physics(model, data, n):
     if _FORCE[0] is not None:
         data.ctrl[:] = _FORCE[0]
-    _REAL_PHYSICS(model, data, n)
+    if _LAG[0] is None and _SPLIT[0] is None:
+        _REAL_PHYSICS(model, data, n)
+        return
+    target = data.ctrl.copy()
+    k, older = _SPLIT[0] if _SPLIT[0] is not None else (0, target)
+    for i in range(n):   # one physics step (500 Hz) at a time
+        want = older if i < k else target
+        if _LAG[0] is not None:   # first-order lag of the joint targets
+            tau, y = _LAG[0]
+            y += (1.0 - np.exp(-model.opt.timestep / tau)) * (want - y)
+            want = y
+        data.ctrl[:] = want
+        _REAL_PHYSICS(model, data, 1)
+    data.ctrl[:] = target
 
 
 for _mod in (bolt_env, imitate_env, jump_env, getup_env):
@@ -109,6 +131,11 @@ class Master:
         # tucked), never on a timeout, so a state is never labelled "self-right" in one try and "tuck"/"stand" in
         # another (DAgger round 5-6 of the first run: the student never got up, the labels on its back contradicted)
         self.patient = False
+        # the stress test (REAL_OFF: today's numbers): noise = multiple of NOISE, delay = s of action delay (2 ms steps),
+        # lag = s of first-order motor lag, gain = PD gain (kp and kv) scale on top of the +-15% kp randomization
+        self.real = dict(REAL_OFF)
+        m = self.w.model
+        self._kp0, self._kv0 = m.actuator_gainprm[:, 0].copy(), m.actuator_biasprm[:, 2].copy()
 
     # ---------------- episode ----------------
     def start(self, clip="walk", tau=None, seed=None):
@@ -123,6 +150,16 @@ class Master:
         self.fallen = False
         self.land_left = 0
         self.im.limit = 10 ** 9
+        r, m = self.real, self.w.model
+        if r["gain"] != 1.0 or not np.allclose(m.actuator_biasprm[:, 2], self._kv0):
+            kp = m.actuator_gainprm[:, 0].copy() if self.b.randomize else self._kp0.copy()   # reset re-drew kp
+            m.actuator_gainprm[:, 0], m.actuator_biasprm[:, 1] = kp * r["gain"], -kp * r["gain"]
+            m.actuator_biasprm[:, 2] = self._kv0 * r["gain"]
+        d = int(round(r["delay"] / m.opt.timestep))          # delay in physics steps: whole control steps + a part
+        self._back, self._sub = divmod(d, self.w.frame_skip)
+        self._queue = [self.data.ctrl.copy() for _ in range(self._back + 1)]   # the robot holds its first targets
+        self._lag_y = self.data.ctrl.copy()
+        self._nrng = np.random.default_rng(None if seed is None else seed + 7919)
 
     @property
     def data(self):
@@ -263,6 +300,15 @@ class Master:
         x[83] = min(1.0, self.cmd_t * self.dt / 3.0)
         if b.randomize:
             x[:46] += self.rng.normal(0, 0.01, 46)
+        k = self.real["noise"]
+        if k:   # the stress test's sensor noise, in observation units (gyro x0.25, joint speed x0.1)
+            u = lambda n: self._nrng.uniform(-1, 1, n)  # noqa: E731
+            x[0:3] += k * NOISE["grav"] * u(3)
+            x[3:6] += k * NOISE["gyro"] * 0.25 * u(3)
+            x[6:9] += k * NOISE["linvel"] * u(3)
+            x[9] += k * NOISE["height"] * u(1)[0]
+            x[10:22] += k * NOISE["qpos"] * u(12)
+            x[22:34] += k * NOISE["qvel"] * 0.1 * u(12)
         return x.astype(np.float32)
 
     def ctrl_of(self, u):
@@ -276,13 +322,22 @@ class Master:
             a = np.clip(np.asarray(pol.act(obs_fn()), dtype=float), -1, 1)
             ctrl = np.clip(base + scale * a, self.lo, self.hi)
         ctrl = np.clip(np.asarray(ctrl, dtype=float), self.lo, self.hi)
+        sent = ctrl                      # what the brain sent (its "previous action" input)
+        if self.real["delay"]:           # stress test: the motors get the targets sent `delay` s ago
+            self._queue.append(ctrl)
+            self._queue = self._queue[-(self._back + 2):]
+            ctrl = self._queue[-1 - self._back]
+            if self._sub:
+                _SPLIT[0] = (self._sub, self._queue[-2 - self._back])
         a_exec = np.clip((ctrl - base) / scale, -1, 1)
         _FORCE[0] = ctrl
+        if self.real["lag"]:
+            _LAG[0] = (self.real["lag"], self._lag_y)
         try:
             step_fn(a_exec)
         finally:
-            _FORCE[0] = None
-        self.last_u = np.clip((ctrl - DOG) / self.full, -1, 1)
+            _FORCE[0] = _LAG[0] = _SPLIT[0] = None
+        self.last_u = np.clip((sent - DOG) / self.full, -1, 1)
         if self.mode[0] != "clip":
             self.im.t += 1         # the reference keeps playing (jump: the approach gait's clip)
         self.cmd_t += 1

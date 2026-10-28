@@ -2,6 +2,10 @@
 
     cd train && MUJOCO_GL=osmesa OMP_NUM_THREADS=1 python mastermind/test_master.py --brain mastermind/out/student.pt --n 10
     ... --brain teacher      the env's teacher chains (the skill manager inside the unified env, a sanity check)
+Sim-to-real stress test (all off by default, so the numbers are today's): --obs-noise [K] (K x env.NOISE sensor noise),
+--latency-ms 20|40 (action delay, in 2 ms physics steps), --motor-lag-ms T (first-order lag of the joint targets),
+--gain-scale G (PD kp and kv x G), --motor-brake (bolt_env brake, 25 rad/s, 3.5 N·m·s/rad). Mass/friction/kp shifts
+are the randomized physics already on in every test.
 Also --exam: imitate_env.exam per clip (the student driven through the Master env on a clip command, scored by
 the ImitateEnv tracking reward) and jump clean rates from a trot (the trot->jump rows of the switch tests).
 """
@@ -20,8 +24,10 @@ import torch  # noqa: E402
 
 torch.set_num_threads(1)
 
+import bolt_env  # noqa: E402
 from baseline import run, show  # noqa: E402
 from drive import Driver  # noqa: E402
+import env  # noqa: E402
 from env import Master  # noqa: E402
 from student import Student  # noqa: E402
 
@@ -78,12 +84,25 @@ if __name__ == "__main__":
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--exam", action="store_true")
     ap.add_argument("--out")
+    ap.add_argument("--obs-noise", type=float, nargs="?", const=1.0, default=0.0,
+                    help="sensor noise, a multiple of env.NOISE (legged_gym levels); bare flag = 1")
+    ap.add_argument("--latency-ms", type=float, default=0.0, help="action delay in ms (a multiple of the 2 ms physics step; 20 ms = one control step)")
+    ap.add_argument("--motor-lag-ms", type=float, default=0.0, help="first-order lag (time constant, ms) of the joint targets")
+    ap.add_argument("--gain-scale", type=float, default=1.0, help="PD gains kp and kv x this (on top of the kp randomization)")
+    bolt_env.add_brake_args(ap, default=False)
     a = ap.parse_args()
     over = json.loads(a.over)
+    brake = bolt_env.set_motor_brake(a.motor_brake, a.brake_speed, a.brake_gain)
     m = Master(seed=a.seed, imitate=a.imitate, teachers=a.teachers, **over)
+    step_ms = m.w.model.opt.timestep * 1000
+    if abs(round(a.latency_ms / step_ms) * step_ms - a.latency_ms) > 1e-6:
+        ap.error(f"--latency-ms must be a multiple of the {step_ms:g} ms physics step")
+    m.real.update(noise=a.obs_noise, delay=a.latency_ms / 1000, lag=a.motor_lag_ms / 1000, gain=a.gain_scale)
     brain = None if a.brain == "teacher" else Student(a.brain, m)
     t0 = time.time()
     res = dict(brain=a.brain, teachers=a.teachers, over=over, imitate=a.imitate, n=a.n, seed=a.seed)
+    if m.real != env.REAL_OFF or brake[0]:
+        res["real"] = dict(m.real, latency_ms=a.latency_ms, brake=list(brake))
     if a.exam:
         res["exam"] = clip_exam(m, brain)
         print(res["exam"], flush=True)
