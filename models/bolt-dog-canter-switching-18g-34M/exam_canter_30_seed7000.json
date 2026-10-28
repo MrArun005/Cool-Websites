@@ -1,0 +1,212 @@
+{
+ "args": {
+  "clips": [
+   "canter"
+  ],
+  "n": 30,
+  "mode": "plain",
+  "brain": "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/g18_34",
+  "zip": "policy.zip",
+  "stats": "vecnormalize.pkl",
+  "K": 16,
+  "H": 30,
+  "M": 5,
+  "sigma": 0.2,
+  "robust": false,
+  "seed": 7000,
+  "out": "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/g18_34/exam_canter_30_seed7000.json"
+ },
+ "results": [
+  {
+   "clip": "canter",
+   "n": 30,
+   "track_mean": 0.706,
+   "track_sd": 0.026,
+   "track_se": 0.005,
+   "falls": 0,
+   "speed_mean": 0.704,
+   "tries": [
+    {
+     "track": 0.7201584163265388,
+     "fell": false,
+     "seconds": 0.5,
+     "speed": 0.704828064000919
+    },
+    {
+     "track": 0.7360574518515187,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7270248855490087
+    },
+    {
+     "track": 0.7383935115218947,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.699217697873681
+    },
+    {
+     "track": 0.7461011290835589,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7022422436434643
+    },
+    {
+     "track": 0.7432965120070191,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7438436665140259
+    },
+    {
+     "track": 0.7064579648970022,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6893226703502032
+    },
+    {
+     "track": 0.7349980924876346,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7260097302072944
+    },
+    {
+     "track": 0.7051252344880489,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6665663293660398
+    },
+    {
+     "track": 0.7104167452430525,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7345832852798956
+    },
+    {
+     "track": 0.7161219742103633,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7042461909540592
+    },
+    {
+     "track": 0.6856447348718179,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6996156171813321
+    },
+    {
+     "track": 0.7116450800014009,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7566844829120618
+    },
+    {
+     "track": 0.6961538018304145,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7165807449890932
+    },
+    {
+     "track": 0.6751777221504786,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6724679364530853
+    },
+    {
+     "track": 0.6894151783400839,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6883714855756605
+    },
+    {
+     "track": 0.6705709048224365,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6743964164122782
+    },
+    {
+     "track": 0.6926774083407036,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7212127084561263
+    },
+    {
+     "track": 0.6968312189040355,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6835633891872438
+    },
+    {
+     "track": 0.6640087232124446,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6495647475180482
+    },
+    {
+     "track": 0.6651496710967018,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6519316476347261
+    },
+    {
+     "track": 0.6706144132128335,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6777250984328866
+    },
+    {
+     "track": 0.6645947555170575,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6922949615654989
+    },
+    {
+     "track": 0.7143496701314827,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7293934905510737
+    },
+    {
+     "track": 0.67991936982649,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6843045695100278
+    },
+    {
+     "track": 0.7228728266947125,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7525201731413467
+    },
+    {
+     "track": 0.7010811264586044,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7133773710653268
+    },
+    {
+     "track": 0.7091941527497024,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.6929582210118757
+    },
+    {
+     "track": 0.7291730343082716,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7376686250878018
+    },
+    {
+     "track": 0.7329704334886732,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7237212267392581
+    },
+    {
+     "track": 0.7358492426054157,
+     "fell": false,
+     "seconds": 0.4,
+     "speed": 0.7045875906675013
+    }
+   ]
+  }
+ ]
+}
