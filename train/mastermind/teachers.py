@@ -87,7 +87,7 @@ SETS["v4g"] = dict(SETS["v3"], dog="18g35", canter=None)
 # the GPU brain (arrived during the v4 DAgger run), compared in the teacher chain on dev seeds only
 SETS["v4gpu_c"] = dict(SETS["v4"], clips=dict(_G4, canter="gpu360"))
 SETS["v4gpu_s"] = dict(SETS["v4"], clips=dict(_G4, sit="gpu360", lie="gpu360"))
-SETS["v4gpu_all"] = dict(SETS["v4"], clips={c: "gpu360" for c in ("walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie")})
+SETS["v4b"] = SETS["v4gpu_all"] = dict(SETS["v4"], clips={c: "gpu360" for c in ("walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie")})
 
 
 def teacher_set(name="v2", **over):
