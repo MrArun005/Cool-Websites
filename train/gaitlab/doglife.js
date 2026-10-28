@@ -94,7 +94,7 @@ export function setupYard(bolt, bundle, Y = YARD) {
 // ---------------------------------------------------------------- the body: which brain is in charge
 export const TAKEOVER = 1.1;            // m before the bar the run-up jump brain takes over (teachers v3: 1.1 m from a trot)
 const POSTURE = ["stand", "rise", "brake", "sniff", "settle"];
-export let LANDING = "bridge";   // after a jump: "bridge" (a moment of canter, then trot: teachers v3) or "land" (the jump brain stops Bolt)
+export let LANDING = "land";   // after a jump: "land" (the jump brain stops Bolt; 28 Oct with jump-trot 55M: 7 falls in 4x240 s of jumps vs 21 with "bridge", doglife_jumptest.mjs) or "bridge" (a moment of canter, then trot: teachers v3)
 export function setLanding(l) { LANDING = l; }
 export const BRAIN_NAMES = {
   gpu: "GPU dog-motion brain (360M steps)", g18: "canter-switching brain (run 18g)", posture: "posture brain",

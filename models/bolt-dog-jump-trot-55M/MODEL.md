@@ -45,4 +45,9 @@ Load with `jump_env.JumpPolicy(folder, "policy.zip", "vecnormalize.pkl")`.
 | this brain | 29 | 21 | 7 | 21 (9) |
 | 16i-35.5M | 11 | 5 | 4 | 22 (falls mostly running into the jump: 11) |
 
-Per-run lines: `exams/dayout_jumptest.txt`. Next weak spot: the canter->trot bridge after landing.
+| this brain, landing itself (`LAND=land`) | 29 | 23 | 4 | 7 (0) |
+
+Per-run lines: `exams/dayout_jumptest.txt`. Most falls came from the canter->trot bridge after landing; letting this
+brain do the landing itself (it slows Bolt down, then sit and stand) cut falls from 21 to 7, so Bolt's Day Out now
+lands that way (doglife.js LANDING = "land"). 4 of the 7 falls are one fall at the start of every run, the same with
+both brains (not yet traced).
