@@ -1,0 +1,47 @@
+motor brake (on, rad/s, N·m per rad/s): (False, 25.0, 3.5)
+full recovery, tough falls: {'stood_side': 0.9333333333333333, 'tsec_side': 1.49, 'stood_back': 0.8666666666666667, 'tsec_back': 1.27, 'stood_tipped': 0.9, 'tsec_tipped': 1.44, 'stood_shoved': 0.8333333333333334, 'tsec_shoved': 1.84, 'stood_dropped': 0.9666666666666667, 'tsec_dropped': 1.94, 'stood_ice': 0.9, 'tsec_ice': 2.8}
+self-righting alone, tough falls: {'up_side': 1.0, 'secs_side': 0.74, 'up_back': 1.0, 'secs_back': 0.64, 'up_tipped': 1.0, 'secs_tipped': 0.76, 'up_shoved': 1.0, 'secs_shoved': 0.94, 'up_dropped': 1.0, 'secs_dropped': 1.17, 'up_ice': 0.9333333333333333, 'secs_ice': 1.99}
+full recovery, old falls: {'stood_side': 0.9666666666666667, 'tsec_side': 1.62, 'stood_back': 0.8666666666666667, 'tsec_back': 1.48, 'stood_tipped': 0.9333333333333333, 'tsec_tipped': 1.57, 'stood_standing': 0.7, 'tsec_standing': 1.6}
+{
+ "full_stood_side": 0.9333333333333333,
+ "full_tsec_side": 1.49,
+ "full_stood_back": 0.8666666666666667,
+ "full_tsec_back": 1.27,
+ "full_stood_tipped": 0.9,
+ "full_tsec_tipped": 1.44,
+ "full_stood_shoved": 0.8333333333333334,
+ "full_tsec_shoved": 1.84,
+ "full_stood_dropped": 0.9666666666666667,
+ "full_tsec_dropped": 1.94,
+ "full_stood_ice": 0.9,
+ "full_tsec_ice": 2.8,
+ "right_up_side": 1.0,
+ "right_secs_side": 0.74,
+ "right_up_back": 1.0,
+ "right_secs_back": 0.64,
+ "right_up_tipped": 1.0,
+ "right_secs_tipped": 0.76,
+ "right_up_shoved": 1.0,
+ "right_secs_shoved": 0.94,
+ "right_up_dropped": 1.0,
+ "right_secs_dropped": 1.17,
+ "right_up_ice": 0.9333333333333333,
+ "right_secs_ice": 1.99,
+ "old_stood_side": 0.9666666666666667,
+ "old_tsec_side": 1.62,
+ "old_stood_back": 0.8666666666666667,
+ "old_tsec_back": 1.48,
+ "old_stood_tipped": 0.9333333333333333,
+ "old_tsec_tipped": 1.57,
+ "old_stood_standing": 0.7,
+ "old_tsec_standing": 1.6,
+ "full_stood_mean": 0.9,
+ "motor_brake": {
+  "on": false,
+  "speed": 25.0,
+  "gain": 3.5
+ },
+ "episodes": 30,
+ "seed": 11000,
+ "minutes": 8.8
+}
