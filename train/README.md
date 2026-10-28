@@ -61,6 +61,48 @@ test's times), `--pose-weight` (reward per step in the pose once reached in time
 Motor brake: `--motor-brake` / `--no-motor-brake` (default ON for training), `--brake-speed` (default 25 rad/s, the
 drive cutoff), `--brake-gain` (default 3.5 N·m per rad/s), as `bolt_env`; exams keep it off unless `--motor-brake`.
 
+```bash
+# transition term: for 1 s after a mid-try clip switch, -0.3 per rad of roll/pitch beyond 0.3 rad of the reference's
+python mjx_imitate.py train --warm ../models/bolt-dog-imitate-gpu-360M/params.pkl --reward-scaling 0.246 \
+    --steps 20000 --envs 16 --out /tmp/smoke_transition --quick --transition-weight 0.3
+```
+Transition flags: `--transition-weight` (default 0 = off), `--transition-window` (s after the switch, default 1.0: the
+canter -> trot falls come 0.5-0.8 s after it), `--transition-threshold` (rad of roll or pitch, each against the
+reference's own, that is free; default 0.3). The five tracking terms are unchanged.
+
+```bash
+# real-robot gaps (mastermind/REPORT.md: latency is the biggest): 0-40 ms action latency per try, sensor noise, motor lag
+python mjx_imitate.py train --warm ../models/bolt-dog-imitate-gpu-360M/params.pkl --reward-scaling 0.246 \
+    --steps 20000 --envs 16 --out /tmp/smoke_real --quick --latency-max-ms 40 --obs-noise 1.0 --motor-lag-ms 10
+```
+Real-gap flags (all default 0 = off; the models are mastermind/env.py's stress test): `--latency-min-ms`/`--latency-max-ms`
+(action latency drawn per try, at the 500 Hz physics rate), `--obs-noise` (x legged_gym's sensor noise levels,
+`imitate_env.NOISE`), `--motor-lag-ms` (first-order lag time constant). `imitate_env.exam` adds a latency sweep,
+`lat<ms>_track` / `lat<ms>_fall` at 0/10/20/40 ms (the 360M brain: falls 0 / 6% / 42% / 89%).
+
+CPU-vs-GPU parity of all of it (CPU venv dumps, JAX venv checks; needs a 75-input SB3 checkpoint):
+```bash
+python test_mjx_imitate.py dump runs/imitate18d_start/policy_14000000_steps.zip warm.pkl cases.pkl   # CPU stack
+python test_mjx_imitate.py check warm.pkl cases.pkl                                                    # JAX stack
+```
+Known gap (accepted 28 Oct): at joint speeds above ~25 rad/s MJX's `implicitfast` substep differs from MuJoCo's by
+~1 rad/s, brake or not (exactly 0 with the Euler integrator on both sides, where the brake also matches to 6e-6
+rad/s; the `[brake]` lines show both). Below that the one-step physics agrees to ~5e-7 rad (median).
+
+Motor audit of the new starts (every 500 Hz substep; `research/imitate_audit.py`, the jump_audit.py pattern):
+```bash
+python research/imitate_audit.py ../models/bolt-dog-imitate-gpu-360M/params.pkl --motor-brake \
+    --out research/results/audit_imitate_360M_brake.json
+```
+
+Kaggle job with the three fixes (build and smoke-test locally; pushing starts it):
+```bash
+python kaggle/make_kernel.py --user <user> --job imitate --slug bolt-dog-gpu3 --warm-dataset <user>/bolt-imitate-360m \
+    --steps 1000000000 --hours 10.5 --landing-rate 0.2 --moving-rate 0.2 --transition-weight 0.3 --evals 40 \
+    --latency-min-ms 0 --latency-max-ms 40 --obs-noise 1.0 --extra "--reward-scaling 0.246 --switch-rate 0.3 --seed 3" -o /tmp/kg3
+python /tmp/kg3/kernel.py --local /tmp/kg3_run <dir with warm.pkl>    # JAX venv: the same command, 20k steps, 16 envs
+```
+
 Landing flags: `--landing-rate` (share of tries, default 0), `--landing-file` (default
 `research/results/landing_starts.npz`), `--landing-grace` (s without the 15 cm height check while still in the air,
 default 0.5), `--landing-bridge` (s of canter before the switch, default 0.6 = `skills.BRIDGE`), `--landing-then`

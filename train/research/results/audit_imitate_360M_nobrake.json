@@ -1,0 +1,110 @@
+{
+ "brain": "../models/bolt-dog-imitate-gpu-360M/params.pkl",
+ "torque": 33.5,
+ "motor": {
+  "torque": 33.5,
+  "power": 420.0,
+  "speed": 21.0,
+  "cutoff": 25.0,
+  "brake": false,
+  "brake_speed": 25.0,
+  "brake_gain": 3.5
+ },
+ "episodes": 20,
+ "seed": 7000,
+ "kinds": {
+  "landing": {
+   "tries": 20,
+   "fell": 8,
+   "substeps": 32550,
+   "joints": {
+    "abd": {
+     "peak_speed": 19.7,
+     "over_21_pct": 0.0,
+     "over_brake_speed_pct": 0.0,
+     "peak_torque": 33.5,
+     "peak_power_w": 406.5,
+     "peak_brake_torque": 0.0
+    },
+    "hip": {
+     "peak_speed": 27.3,
+     "over_21_pct": 0.29,
+     "over_brake_speed_pct": 0.03,
+     "peak_torque": 33.5,
+     "peak_power_w": 420.0,
+     "peak_brake_torque": 0.0
+    },
+    "knee": {
+     "peak_speed": 29.5,
+     "over_21_pct": 1.02,
+     "over_brake_speed_pct": 0.17,
+     "peak_torque": 33.5,
+     "peak_power_w": 420.0,
+     "peak_brake_torque": 0.0
+    }
+   }
+  },
+  "moving": {
+   "tries": 30,
+   "fell": 15,
+   "substeps": 41260,
+   "joints": {
+    "abd": {
+     "peak_speed": 23.7,
+     "over_21_pct": 0.0,
+     "over_brake_speed_pct": 0.0,
+     "peak_torque": 33.5,
+     "peak_power_w": 377.3,
+     "peak_brake_torque": 0.0
+    },
+    "hip": {
+     "peak_speed": 27.6,
+     "over_21_pct": 0.37,
+     "over_brake_speed_pct": 0.02,
+     "peak_torque": 33.5,
+     "peak_power_w": 420.0,
+     "peak_brake_torque": 0.0
+    },
+    "knee": {
+     "peak_speed": 29.1,
+     "over_21_pct": 1.2,
+     "over_brake_speed_pct": 0.21,
+     "peak_torque": 33.5,
+     "peak_power_w": 420.0,
+     "peak_brake_torque": 0.0
+    }
+   }
+  },
+  "switch": {
+   "tries": 20,
+   "fell": 1,
+   "substeps": 29170,
+   "joints": {
+    "abd": {
+     "peak_speed": 8.3,
+     "over_21_pct": 0.0,
+     "over_brake_speed_pct": 0.0,
+     "peak_torque": 30.89,
+     "peak_power_w": 103.8,
+     "peak_brake_torque": 0.0
+    },
+    "hip": {
+     "peak_speed": 24.9,
+     "over_21_pct": 0.07,
+     "over_brake_speed_pct": 0.0,
+     "peak_torque": 33.5,
+     "peak_power_w": 420.0,
+     "peak_brake_torque": 0.0
+    },
+    "knee": {
+     "peak_speed": 25.8,
+     "over_21_pct": 0.78,
+     "over_brake_speed_pct": 0.01,
+     "peak_torque": 33.5,
+     "peak_power_w": 420.0,
+     "peak_brake_torque": 0.0
+    }
+   }
+  }
+ }
+}

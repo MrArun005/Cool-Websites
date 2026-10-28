@@ -52,7 +52,7 @@ import numpy as np
 from bolt_env import LIE_POSE, BoltEnv
 from evaluate import Policy
 from getup_env import GetUpEnv, GetUpPolicy
-from imitate_env import ImitateEnv, ImitatePolicy
+from imitate_env import ImitateEnv, ImitatePolicy, closest_moment   # noqa: F401  (closest_moment: the one hand-over rule, shared with the training env)
 from jump_env import JumpEnv, JumpPolicy
 
 HERE = Path(__file__).resolve().parent
@@ -93,13 +93,6 @@ def robot_body_geoms(env):
     return [g for g in range(m.ngeom) if m.body_rootid[m.geom_bodyid[g]] == root and env.geom_leg[g] < 0]
 
 
-def closest_moment(clip, q, qd):
-    """Clip time (s) whose joint pose is closest to q (joint speeds weigh a little, to pick the right half of
-    the stride when the pose alone is ambiguous)."""
-    e = np.sum((clip.joints - q) ** 2, axis=1) + 0.002 * np.sum((clip.joint_vel - qd) ** 2, axis=1)
-    return float(np.argmin(e)) / clip.fps
-
-
 def quat(xmat):
     q = np.zeros(4)
     mujoco.mju_mat2Quat(q, np.asarray(xmat, dtype=float))
@@ -113,7 +106,11 @@ class Bolt:
         self.world = JumpEnv(randomize=randomize, real=True, seed=seed)
         self.model, self.data = self.world.model, self.world.data
         self.imitate_from = imitate or newest_imitate()
-        self.dog = ImitatePolicy(*self.imitate_from)
+        if isinstance(self.imitate_from, (str, Path)) and str(self.imitate_from).endswith(".pkl"):   # a GPU (mjx_imitate) brain
+            from mjx_imitate import MjxImitatePolicy
+            self.dog = MjxImitatePolicy(self.imitate_from)
+        else:
+            self.dog = ImitatePolicy(*self.imitate_from)
         self.im = ImitateEnv(randomize=randomize, clips=CLIPS, slots=self.dog.slots)
         self.jumper = JumpPolicy(JUMP)
         self.righter = GetUpPolicy(SELFRIGHT)

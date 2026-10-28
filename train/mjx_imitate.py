@@ -20,8 +20,13 @@ check and a switch to --landing-then after --landing-bridge s. At rate 0 nothing
 is the same computation as before (test_mjx_imitate.py checks both).
 Posture commands while moving (--moving-rate, default 0) as ImitateEnv's: a try starts in walk or trot at a speed drawn
 from --moving-speed and is told at once to sit, lie or get up (--moving-clips), joining that clip at its closest-pose
-moment (skills.closest_moment's rule); reaching the clip's end pose (pose_reached.py, the switch test's definition)
+moment (imitate_env.closest_moment, the skill manager's rule); reaching the clip's end pose (pose_reached.py, the switch test's definition)
 within --pose-time s pays --pose-weight per step held. Rate 0: the same computation as before.
+Transition term (--transition-weight, default 0 = off) as ImitateEnv's: for --transition-window s after a mid-try clip
+switch, -weight x (roll and pitch beyond --transition-threshold rad, each against the reference's own) per step.
+Real-robot gaps (--latency-min-ms/--latency-max-ms, --obs-noise, --motor-lag-ms; all off by default) as ImitateEnv's
+(mastermind/env.py's stress-test models): action latency drawn per try at the 500 Hz physics rate, legged_gym sensor
+noise, first-order motor lag. Off: the same computation as before.
 Motor brake (--motor-brake, on by default for training; MjxImitate(motor_brake=False) by default, as bolt_env's process
 default): back-EMF braking above --brake-speed (25 rad/s, the drive cutoff), --brake-gain N·m per rad/s (3.5), capped
 at the motor's torque, as bolt_env.physics.
@@ -57,6 +62,9 @@ CLIP_DIR = HERE / "dogmotion" / "clips"
 DOG = np.array([0.0, 0.2747, -0.5493, 0.0, 0.2747, -0.5493, 0.0, -0.2747, 0.5493, 0.0, -0.2747, 0.5493])
 ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)
 MOTOR = dict(torque=33.5, power=420.0, speed=21.0, cutoff=25.0)
+TRANSITION = dict(weight=0.0, window=1.0, threshold=0.3)   # as imitate_env.TRANSITION
+NOISE = dict(grav=0.05, gyro=0.2, linvel=0.1, height=0.02, qpos=0.01, qvel=1.5)   # as imitate_env / mastermind.env NOISE
+REAL = dict(latency_ms=(0.0, 0.0), obs_noise=0.0, motor_lag_ms=0.0)              # as imitate_env.REAL: off
 BRAKE = dict(speed=MOTOR["cutoff"], gain=3.5)   # bolt_env: brake_speed default the drive cutoff, BRAKE_GAIN
 ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup"]
 WEIGHTS = dict(pose=0.5, vel=0.05, paw=0.2, root=0.15, root_vel=0.1)
@@ -178,7 +186,9 @@ class MjxImitate:
                  iterations=5, ls_iterations=8, landing_rate=LANDING["rate"], landing_file=LANDING_FILE,
                  landing_grace=LANDING["grace"], landing_bridge=LANDING["bridge"], landing_then=LANDING["then"],
                  moving_rate=MOVING["rate"], moving_speed=MOVING["speed"], moving_gaits=MOVING["gaits"], moving_clips=MOVING["clips"],
-                 pose_time=None, pose_weight=MOVING["weight"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"]):
+                 pose_time=None, pose_weight=MOVING["weight"], transition_weight=TRANSITION["weight"],
+                 transition_window=TRANSITION["window"], transition_threshold=TRANSITION["threshold"],
+                 latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"]):
         from brax.envs.base import State
         self.State = State
         xml = collisions((HERE / "bolt.xml").read_text())
@@ -222,6 +232,14 @@ class MjxImitate:
             self.grace_steps = int(round(landing_grace / self.dt))
             self.land_switch_at = int(round(landing_bridge / self.dt)) if landing_then and landing_bridge else -1
             self.land_then = self.names.index(landing_then) if landing_then and landing_bridge else -1
+        # real-robot gaps (as ImitateEnv): latency (substeps, drawn per try), sensor noise, motor lag; off = not computed
+        self.latency_ms, self.obs_noise, self.motor_lag_ms = tuple(float(x) for x in latency_ms), float(obs_noise), float(motor_lag_ms)
+        self.real_on = self.latency_ms[1] > 0 or self.motor_lag_ms > 0
+        self.sub_dt = float(m.opt.timestep)
+        self.queue_len = int(round(self.latency_ms[1] / 1000.0 / self.sub_dt)) // 10 + 2   # control steps of sent targets kept
+        # transition term (as ImitateEnv): off at weight 0
+        self.transition_weight, self.transition_threshold = float(transition_weight), float(transition_threshold)
+        self.transition_steps = int(round(transition_window / self.dt))
         # moving-start posture commands (as ImitateEnv): None at rate 0
         self.brake = (float(brake_speed), float(brake_gain)) if motor_brake else None
         self.moving_rate, self.moving_speed, self.pose_weight = float(moving_rate), tuple(moving_speed), float(pose_weight)
@@ -283,19 +301,45 @@ class MjxImitate:
                           body_mass=mx.body_mass.at[self.torso].set(self.mass0 * info["mass"]))
 
     def physics(self, mx, d, n=10):
-        def sub(d, _):
-            if self.brake is not None:   # back-EMF braking above brake speed, against the motion (bolt_env.brake_torque)
-                speed, gain = self.brake
-                v = d.qvel[6:18]
-                d = d.replace(qfrc_applied=d.qfrc_applied.at[6:18].set(
-                    -jp.sign(v) * jp.minimum(gain * jp.maximum(jp.abs(v) - speed, 0.0), MOTOR["torque"])))
-            w = jp.abs(d.qvel[6:18])
-            drive = jp.minimum(MOTOR["torque"], MOTOR["power"] / jp.maximum(w, 1e-6))
-            drive = drive * jp.clip((MOTOR["cutoff"] - w) / (MOTOR["cutoff"] - MOTOR["speed"]), 0.0, 1.0)
-            lo = jp.where(d.qvel[6:18] < 0, -drive, -MOTOR["torque"])
-            hi = jp.where(d.qvel[6:18] >= 0, drive, MOTOR["torque"])
-            return mjx.step(mx.replace(actuator_forcerange=jp.stack([lo, hi], -1)), d), None
-        return jax.lax.scan(sub, d, None, length=n)[0]
+        return jax.lax.scan(lambda d, _: (self.substep(mx, d), None), d, None, length=n)[0]
+
+    def physics_real(self, mx, d, info):
+        """One control step with the latency and motor lag (ImitateEnv._delayed_physics): substep i gets the target sent
+        back (+1 for the first `sub` substeps) control steps ago, through the first-order lag. Returns (d, info)."""
+        sent = d.ctrl
+        hist = jp.concatenate([info["qhist"][1:], sent[None]])   # newest last
+        back, sub = info["dsub"] // 10, info["dsub"] % 10
+        target, older = hist[self.queue_len - 1 - back], hist[self.queue_len - 2 - back]
+        g = 1.0 - np.exp(-self.sub_dt / (self.motor_lag_ms / 1000.0)) if self.motor_lag_ms else 1.0
+
+        def one(carry, i):
+            d, y = carry
+            want = jp.where(i < sub, older, target)
+            if self.motor_lag_ms:
+                y = y + g * (want - y)
+                want = y
+            return (self.substep(mx, d.replace(ctrl=want)), y), None
+
+        (d, y), _ = jax.lax.scan(one, (d, info["lagy"]), jp.arange(10))
+        return d.replace(ctrl=sent), dict(info, qhist=hist, lagy=y)
+
+    def real_init(self, info, d):
+        """The latency queue and lag state of a fresh try: the robot holds its first targets."""
+        return dict(info, qhist=jp.tile(d.ctrl[None], (self.queue_len, 1)), lagy=d.ctrl)
+
+    def substep(self, mx, d):
+        """One physics substep (2 ms) with the A1 motor model and, if on, the brake."""
+        if self.brake is not None:   # back-EMF braking above brake speed, against the motion (bolt_env.brake_torque)
+            speed, gain = self.brake
+            v = d.qvel[6:18]
+            d = d.replace(qfrc_applied=d.qfrc_applied.at[6:18].set(
+                -jp.sign(v) * jp.minimum(gain * jp.maximum(jp.abs(v) - speed, 0.0), MOTOR["torque"])))
+        w = jp.abs(d.qvel[6:18])
+        drive = jp.minimum(MOTOR["torque"], MOTOR["power"] / jp.maximum(w, 1e-6))
+        drive = drive * jp.clip((MOTOR["cutoff"] - w) / (MOTOR["cutoff"] - MOTOR["speed"]), 0.0, 1.0)
+        lo = jp.where(d.qvel[6:18] < 0, -drive, -MOTOR["torque"])
+        hi = jp.where(d.qvel[6:18] >= 0, drive, MOTOR["torque"])
+        return mjx.step(mx.replace(actuator_forcerange=jp.stack([lo, hi], -1)), d)
 
     # ---------- senses and scores ----------
     def obs(self, d, info, key=None):
@@ -306,6 +350,12 @@ class MjxImitate:
                             d.qpos[7:19] - self.dog, d.qvel[6:18] * 0.1, info["last_action"], jp.stack([jp.sin(ph), jp.cos(ph)]), onehot,
                             self.ref(info, "joints", 1) - self.dog, self.ref(info, "height", 1)[None], self.ref(info, "v_body", 1),
                             self.ref(info, "w_body", 1)[2:3], self.finished(info)[None]])
+        if self.obs_noise and key is not None:   # sensor noise (imitate_env.ImitateEnv._obs): its own key
+            key, kn = jax.random.split(key)
+            k, u = self.obs_noise, jax.random.uniform(kn, (34,), minval=-1.0, maxval=1.0)
+            scale = jp.concatenate([jp.full(3, NOISE["grav"]), jp.full(3, NOISE["gyro"] * 0.25), jp.full(3, NOISE["linvel"]),
+                                    jp.full(1, NOISE["height"]), jp.full(12, NOISE["qpos"]), jp.full(12, NOISE["qvel"] * 0.1)])
+            o = o.at[:34].add(k * scale * u)
         if self.randomize and key is not None:
             o = o + 0.01 * jax.random.normal(key, o.shape)
         return o
@@ -366,6 +416,8 @@ class MjxImitate:
         return jp.where(self.loop[c], self.max_steps, jp.maximum(25, jp.minimum(self.max_steps, left)).astype(jp.int32)) + t
 
     def start_info(self, rng):
+        if self.real_on:   # real-robot gaps on: the latency's own key
+            rng, k_lat = jax.random.split(rng)
         if self.L is not None:   # landing starts on: their own keys, the rest drawn as always
             rng, k_land = jax.random.split(rng)
         if self.M is not None:   # moving starts on: the same
@@ -377,6 +429,11 @@ class MjxImitate:
                     fric=jax.random.uniform(k[2], minval=0.6, maxval=1.3) if self.randomize else one,
                     clip=jax.random.categorical(k[3], self.clip_logits).astype(jp.int32), t=jp.int32(0),
                     last_action=jp.zeros(12), trunc=jp.float32(0.0))
+        if self.transition_weight:
+            info["swt"] = jp.int32(-10 ** 6)   # step of the last mid-try switch (none yet)
+        if self.real_on:   # latency in physics substeps, drawn per try
+            ms = jax.random.uniform(k_lat, minval=self.latency_ms[0], maxval=self.latency_ms[1]) if self.latency_ms[1] > 0 else jp.float32(0.0)
+            info["dsub"] = jp.round(ms / 1000.0 / self.sub_dt).astype(jp.int32)
         c = info["clip"]
         info["tau0"] = jax.random.uniform(k[4]) * jp.where(self.loop[c], self.length[c], self.length[c] + 0.3 * HOLD)
         info["limit"] = self.limit_for(c, info["tau0"], 0)
@@ -400,7 +457,7 @@ class MjxImitate:
 
     def moving_info(self, info, on, post, g, tau_g, vscale):
         """info for a moving start (on): Bolt in gait g at tau_g, body speed times vscale, told to do posture clip post
-        (joined at its closest-pose moment, skills.closest_moment's rule); off: info unchanged but for the keys."""
+        (joined at its closest-pose moment, imitate_env.closest_moment's rule); off: info unchanged but for the keys."""
         gi = dict(info, clip=g, tau0=tau_g, t=jp.int32(0))
         q, qd = jp.clip(self.ref(gi, "joints"), self.lo, self.hi), self.ref(gi, "joint_vel")
         e = jp.sum((self.T["joints"][post] - q) ** 2, axis=1) + 0.002 * jp.sum((self.T["joint_vel"][post] - qd) ** 2, axis=1)
@@ -469,6 +526,8 @@ class MjxImitate:
         k1, k2, k3 = jax.random.split(rng, 3)
         info, yaw = self.start_info(k1)
         d = self.start_data(info, yaw)
+        if self.real_on:
+            info = self.real_init(info, d)
         info["rng"] = k2
         z = jp.float32(0.0)
         metrics = {**{f"r_{k}": z for k in WEIGHTS}, "fell": z, "canter": z, "canter_steps": z}
@@ -483,6 +542,14 @@ class MjxImitate:
         pose = (pc >= 0) & (info["clip"] == pc) & oks[jp.maximum(self.M["pose"][jp.maximum(pc, 0)], 0)]
         hit = (info["phit"] > 0) | (pose & (info["t"] <= info["puntil"]))
         return self.pose_weight * (hit & pose).astype(jp.float32), hit, pose
+
+    def transition_excess(self, d, info):
+        """Roll and pitch (rad) beyond the threshold, each against the reference's own, summed (imitate_env.roll_pitch)."""
+        R, Rr = d.xmat[self.torso], self.ref(info, "tilt")
+        rp = lambda M: (jp.arcsin(jp.clip(M[2, 1], -1.0, 1.0)), jp.arcsin(jp.clip(M[2, 0], -1.0, 1.0)))
+        (r, p), (r0, p0) = rp(R), rp(Rr)
+        th = self.transition_threshold
+        return jp.maximum(jp.abs(r - r0) - th, 0.0) + jp.maximum(jp.abs(p - p0) - th, 0.0)
 
     def switch_to(self, info, q, c):
         """Hand over to clip c at step info['t']: a gait joins at the frame whose pose is closest to the current one."""
@@ -500,7 +567,10 @@ class MjxImitate:
         mx = self.model_for(info)
         a = jp.clip(action, -1.0, 1.0)
         d = d.replace(ctrl=jp.clip(self.ref(info, "joints", 1) + self.scale * a, self.lo, self.hi))
-        d = self.physics(mx, d)
+        if self.real_on:
+            d, info = self.physics_real(mx, d, info)
+        else:
+            d = self.physics(mx, d)
         info["t"] = info["t"] + 1
         if self.switch_rate:   # now and then hand over to a clip that may follow this one (NEXT)
             c = info["clip"]
@@ -510,11 +580,15 @@ class MjxImitate:
             nc = jax.random.categorical(k_pick, jp.where(allowed, 0.0, -1e9)).astype(jp.int32)
             tau0, limit = self.switch_to(info, d.qpos[7:19], nc)
             info.update(clip=jp.where(go, nc, c), tau0=jp.where(go, tau0, info["tau0"]), limit=jp.where(go, limit, info["limit"]))
+            if self.transition_weight:
+                info["swt"] = jp.where(go, info["t"], info["swt"])
         if self.L is not None and self.land_then >= 0:   # a landing start's bridge is over: on in landing_then
             go = (info["t"] == info["lswitch"]) & (info["clip"] != self.land_then)
             tau0, limit = self.switch_to(info, d.qpos[7:19], jp.int32(self.land_then))
             info.update(clip=jp.where(go, self.land_then, info["clip"]).astype(jp.int32), tau0=jp.where(go, tau0, info["tau0"]),
                         limit=jp.where(go, limit, info["limit"]))
+            if self.transition_weight:
+                info["swt"] = jp.where(go, info["t"], info["swt"])
         terms, err = self.tracking(d, info)
         reward = sum(self.weights[k] * v for k, v in terms.items())
         floor_ok = self.ref(info, "height") < 0.3     # sitting and lying: the body may rest on the floor
@@ -525,6 +599,9 @@ class MjxImitate:
             bonus, hit, _ = self.pose_term(d, info)
             reward = reward + bonus
             info["phit"] = hit.astype(jp.int32)
+        if self.transition_weight:   # after a mid-try switch: roll and pitch beyond the threshold cost
+            on = info["t"] - info["swt"] < self.transition_steps
+            reward = reward - self.transition_weight * jp.where(on, self.transition_excess(d, info), 0.0)
         lost = high | (err["tilt"] > 0.8)
         fell = lost | (self.body_on_floor(d) & ~floor_ok)
         trunc = (info["t"] >= info["limit"]) & ~fell
@@ -535,6 +612,8 @@ class MjxImitate:
         # a finished try starts afresh: a new clip, moment, heading and physics (as ImitateEnv.reset)
         new_info, yaw = self.start_info(k_new)
         new_d = self.start_data(new_info, yaw)
+        if self.real_on:
+            new_info = self.real_init(new_info, new_d)
         new_info.update(rng=rng, trunc=info["trunc"])
         new_obs = self.obs(new_d, new_info, k_obs2)
         sel = lambda x, y: jp.where(done, x, y)
@@ -612,7 +691,9 @@ def train(args):
                      landing_grace=args.landing_grace, landing_bridge=args.landing_bridge, landing_then=args.landing_then,
                      moving_rate=args.moving_rate, moving_speed=args.moving_speed, moving_gaits=args.moving_gaits, moving_clips=args.moving_clips,
                      pose_time={k: float(v) for k, v in (kv.split("=") for kv in args.pose_time)},
-                     pose_weight=args.pose_weight, motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain)
+                     pose_weight=args.pose_weight, transition_weight=args.transition_weight, transition_window=args.transition_window,
+                     transition_threshold=args.transition_threshold, latency_ms=(args.latency_min_ms, args.latency_max_ms),
+                     obs_noise=args.obs_noise, motor_lag_ms=args.motor_lag_ms, motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain)
     print(f"motor brake: {'on' if env.brake else 'off'}" + (f" above {env.brake[0]:g} rad/s, {env.brake[1]:g} N·m per rad/s" if env.brake else ""), flush=True)
     hidden = W["hidden"] if W else (512, 256)
     restore = to_brax(W) if W else None
@@ -693,6 +774,16 @@ def main():
     t.add_argument("--pose-time", nargs="+", default=[f"{k}={v:g}" for k, v in MOVING["pose_time"].items()], metavar="CLIP=S",
                    help="s from the command to reach the pose, per clip (default %(default)s: the switch test's times)")
     t.add_argument("--pose-weight", type=float, default=MOVING["weight"], help="reward per step in the pose once reached in time")
+    t.add_argument("--transition-weight", type=float, default=TRANSITION["weight"],
+                   help="cost per rad of roll/pitch beyond --transition-threshold in the window after a clip switch; 0: off, as before")
+    t.add_argument("--transition-window", type=float, default=TRANSITION["window"], help="s after a clip switch the term is on (default %(default)s)")
+    t.add_argument("--transition-threshold", type=float, default=TRANSITION["threshold"],
+                   help="rad of roll or pitch away from the reference's that is free (default %(default)s)")
+    t.add_argument("--latency-min-ms", type=float, default=REAL["latency_ms"][0], help="action latency per try, uniform from this (ms)")
+    t.add_argument("--latency-max-ms", type=float, default=REAL["latency_ms"][1],
+                   help="... to this (ms); 0: no latency, as before (mastermind's stress test: 10/20/40 ms)")
+    t.add_argument("--obs-noise", type=float, default=REAL["obs_noise"], help="sensor noise, x legged_gym's levels (NOISE); 0: none")
+    t.add_argument("--motor-lag-ms", type=float, default=REAL["motor_lag_ms"], help="first-order motor lag time constant (ms); 0: none")
     t.add_argument("--motor-brake", action=argparse.BooleanOptionalAction, default=True,
                    help="motor braking above --brake-speed (bolt_env back-EMF model); default on for training")
     t.add_argument("--brake-speed", type=float, default=BRAKE["speed"], help="rad/s where braking starts (default %(default)s, the drive cutoff)")

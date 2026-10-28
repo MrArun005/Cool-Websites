@@ -68,6 +68,26 @@ The try runs at least to the time limit. moving_rate 0 (the default) draws nothi
 exam() reports pose reached for sit and lie from standing still (the clip's start) and from a moving start in each
 of moving_gaits at that gait's own pace.
 
+Transition term (transition_weight > 0, step 3): for transition_window s after the clip switches mid-try (a switch
+drawn by switch_rate, or a landing start's bridge ending), every step pays -transition_weight x (how far the body's
+roll beyond transition_threshold + how far its pitch beyond it), roll and pitch measured against the reference's own
+(rad; the gaits' are near 0, the sit clip's pitch is +0.6, so a dog sitting is not charged for sitting). The canter ->
+trot falls of skills_report.json go over sideways (roll ~1 rad) 0.5-0.8 s after the switch. The five tracking terms
+are unchanged. While 0.8 rad of tilt ends the try, each excess stays under 0.5 rad, so with a weight up to ~0.8 a step
+still pays more than falling. transition_weight 0 (the default) computes nothing.
+
+Real-robot gaps (step 3b; mastermind/REPORT.md "Sim-to-real stress test": control latency is the biggest one, its
+clean switches 83% -> 67% at 10 ms -> 50% at 20 ms -> 18% at 40 ms), all off by default, the same models as
+mastermind/env.py's stress test:
+    latency_ms=(lo, hi)  the motors get the targets the brain sent that long ago, drawn per try uniform in [lo, hi] ms,
+                         at the 500 Hz physics rate (whole control steps from a queue, the rest of the delay as the
+                         first substeps of a step still on the older target; the robot holds its first targets)
+    obs_noise=k          sensor noise, uniform in +-k x NOISE (legged_gym's levels, as mastermind.env.NOISE) on gravity,
+                         gyro, body velocity, height, joint angles and speeds, on top of the 0.01 noise of randomize
+    motor_lag_ms=tau     first-order lag of the joint targets, time constant tau ms, every physics substep
+The "previous action" input stays what the brain sent (as on a robot). exam() adds a latency sweep: lat<ms>_score
+and lat<ms>_fall at 0/10/20/40 ms (LATENCY_SWEEP).
+
 motor_brake: None = bolt_env's process default (off unless set; train_imitate.py turns it on), True/False for this
 env (bolt_env: back-EMF braking above the drive cutoff).
 """
@@ -102,11 +122,25 @@ LANDING = dict(rate=0.0, grace=0.5, bridge=0.6, then="trot")   # defaults of the
 # as lie, the clip is lie reversed); weight: paid per step in the pose (the tracking terms pay up to 1 per step)
 MOVING = dict(rate=0.0, speed=(0.5, 2.0), gaits=("walk", "trot"), clips=("sit", "lie", "getup"),
               pose_time={"sit": 4.0, "lie": 5.5, "getup": 5.5}, weight=0.2)
+# defaults of the transition-term arguments (see above): weight 0 = off; window s after a switch (the falls come 0.5-0.8 s
+# after it); threshold rad of roll or pitch away from the reference's before it costs
+TRANSITION = dict(weight=0.0, window=1.0, threshold=0.3)
+# real-robot gaps (see above): sensor noise levels, legged_gym's (Rudin et al. 2021), copied from mastermind/env.py NOISE
+# (base height has no sensor on a real robot; 0.02 m is mastermind's assumption, not a spec)
+NOISE = dict(grav=0.05, gyro=0.2, linvel=0.1, height=0.02, qpos=0.01, qvel=1.5)
+REAL = dict(latency_ms=(0.0, 0.0), obs_noise=0.0, motor_lag_ms=0.0)   # defaults: off
+LATENCY_SWEEP = (0, 10, 20, 40)   # ms, exam(): mastermind's stress-test points
+
+
+def roll_pitch(R):
+    """(roll, nose-up pitch) of a body rotation matrix (yaw-free or not), as BoltEnv.posture() and skills' trace."""
+    return np.arcsin(np.clip(R[2, 1], -1, 1)), np.arcsin(np.clip(R[2, 0], -1, 1))
 
 
 def closest_moment(clip, q, qd):
-    """Clip time (s) whose joint pose is closest to q, joint speeds weighing a little: skills.closest_moment's rule
-    (the skill manager's hand-over), so a moving-start command joins the clip where the switch test's does."""
+    """Clip time (s) whose joint pose is closest to q (joint speeds weigh a little, to pick the right half of the stride
+    when the pose alone is ambiguous). The one hand-over rule: the skill manager (skills.py imports it from here) and
+    the moving-start commands both use it, so training joins a clip where the switch test does."""
     e = np.sum((clip.joints - q) ** 2, axis=1) + 0.002 * np.sum((clip.joint_vel - qd) ** 2, axis=1)
     return float(np.argmin(e)) / clip.fps
 
@@ -177,7 +211,9 @@ class ImitateEnv(BoltEnv):
                  landing_rate=LANDING["rate"], landing_file=LANDING_FILE, landing_grace=LANDING["grace"],
                  landing_bridge=LANDING["bridge"], landing_then=LANDING["then"], moving_rate=MOVING["rate"],
                  moving_speed=MOVING["speed"], moving_gaits=MOVING["gaits"], moving_clips=MOVING["clips"],
-                 pose_time=None, pose_weight=MOVING["weight"], motor_brake=None):
+                 pose_time=None, pose_weight=MOVING["weight"], transition_weight=TRANSITION["weight"],
+                 transition_window=TRANSITION["window"], transition_threshold=TRANSITION["threshold"],
+                 latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"], motor_brake=None):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
                          skills=["stand"], motor_brake=motor_brake)
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
@@ -209,6 +245,14 @@ class ImitateEnv(BoltEnv):
             assert self.moving_gaits and self.moving_clips, f"moving starts need gaits {moving_gaits} and clips {moving_clips}"
         self.exam_moving = None       # (posture clip, gait, gait moment s, speed m/s) for tests and exams
         self.pose_clip, self.pose_until, self.pose_hit = None, 0, False
+        # transition term (module docstring): -weight x excess roll/pitch for window steps after a mid-try switch
+        self.transition_weight, self.transition_threshold = transition_weight, transition_threshold
+        self.transition_steps = int(round(transition_window / self.dt))
+        self.switch_t = None          # step of the last mid-try clip switch (None: none this try)
+        # real-robot gaps (module docstring)
+        self.latency_ms, self.obs_noise, self.motor_lag_ms = tuple(latency_ms), obs_noise, motor_lag_ms
+        self.exam_latency_ms = None   # a fixed latency for exams (the sweep)
+        self.delay_sub, self._queue, self._lag_y = 0, None, None
 
     def gait_speed(self, name):
         """The clip's own pace: mean forward body speed (m/s)."""
@@ -256,6 +300,14 @@ class ImitateEnv(BoltEnv):
         ])
         if self.randomize:
             obs += self.rng.normal(0, 0.01, obs.shape)
+        if self.obs_noise:   # the stress test's sensor noise, in observation units (gyro x0.25, joint speed x0.1)
+            k, u = self.obs_noise, lambda n: self.rng.uniform(-1, 1, n)
+            obs[0:3] += k * NOISE["grav"] * u(3)
+            obs[3:6] += k * NOISE["gyro"] * 0.25 * u(3)
+            obs[6:9] += k * NOISE["linvel"] * u(3)
+            obs[9] += k * NOISE["height"] * u(1)[0]
+            obs[10:22] += k * NOISE["qpos"] * u(12)
+            obs[22:34] += k * NOISE["qvel"] * 0.1 * u(12)
         return obs.astype(np.float32)
 
     def reset(self, seed=None, options=None):
@@ -271,6 +323,7 @@ class ImitateEnv(BoltEnv):
             m.body_mass[self.torso] = self.nominal_mass[self.torso] * self.rng.uniform(0.85, 1.15)
             m.geom_friction[:, 0] = self.nominal_friction * self.rng.uniform(0.6, 1.3)
         self.pose_clip, self.pose_until, self.pose_hit = None, 0, False
+        self.switch_t = None
         land = self.exam_landing
         if land is None and self.landing_rate and not self.exam_start and self.rng.random() < self.landing_rate:
             land = int(self.rng.integers(len(self.landing["tau0"])))
@@ -340,6 +393,15 @@ class ImitateEnv(BoltEnv):
             d.qpos[2] += pen + 0.002
             mujoco.mj_forward(m, d)
         self.last_action = np.zeros(12)
+        lat = self.exam_latency_ms
+        if lat is None and self.latency_ms[1] > 0:
+            lat = self.rng.uniform(*self.latency_ms)
+        # latency in physics substeps; the queue holds the targets sent (newest last), the robot holding its first
+        self.delay_sub = int(round((lat or 0.0) / 1000.0 / m.opt.timestep))
+        if self.delay_sub or self.motor_lag_ms:
+            longest = max(self.delay_sub, int(round(self.latency_ms[1] / 1000.0 / m.opt.timestep)))   # as MjxImitate.queue_len
+            self._queue = [d.ctrl.copy() for _ in range(longest // self.frame_skip + 2)]
+            self._lag_y = d.ctrl.copy()
         steps_left = (self.clip.length + HOLD - self.tau0) / self.dt if not self.clip.loop else self.max_steps
         self.limit = int(max(25, min(self.max_steps, steps_left)))
         return self._obs(), {}
@@ -385,7 +447,10 @@ class ImitateEnv(BoltEnv):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
         base = self.ref("joints", 1) if self.residual else DOG
         self.data.ctrl[:] = np.clip(base + ACTION_SCALE * a, self.lo, self.hi)
-        physics(self.model, self.data, self.frame_skip)
+        if self.delay_sub or self.motor_lag_ms:
+            self._delayed_physics()
+        else:
+            physics(self.model, self.data, self.frame_skip)
         self.t += 1
         self.env_steps += 1
         if self.switch_rate and not self.exam_start:
@@ -400,6 +465,10 @@ class ImitateEnv(BoltEnv):
             self.pose_hit = self.pose_hit or (pose and self.t <= self.pose_until)
             if self.pose_hit and pose:
                 reward += self.pose_weight
+        trans = None
+        if self.transition_weight and self.switch_t is not None and self.t - self.switch_t < self.transition_steps:
+            trans = self.transition_excess()
+            reward -= self.transition_weight * trans
         self.last_action = a
         floor_ok = self.ref("height") < 0.3     # sitting and lying: the body may rest on the floor
         lost = (abs(err["height_err"]) > 0.15 and self.t > self.grace_steps) or err["tilt"] > 0.8   # grace: landing starts
@@ -408,6 +477,8 @@ class ImitateEnv(BoltEnv):
         info = dict(err, clip=self.clip.name, tau=self.tau(), fell=fell, **{f"r_{k}": float(v) for k, v in terms.items()})
         if pose is not None:
             info.update(pose_ok=bool(pose), pose_hit=bool(self.pose_hit))
+        if self.transition_weight:
+            info.update(transition=float(trans or 0.0), since_switch=None if self.switch_t is None else self.t - self.switch_t)
         return self._obs(), float(reward), bool(fell), bool(done and not fell), info
 
 
@@ -419,8 +490,33 @@ class ImitateEnv(BoltEnv):
             return
         self._switch_to(self.clips[self.rng.choice(nxt)])
 
+    def _delayed_physics(self):
+        """One control step with the latency and motor lag (mastermind/env.py's _physics): substep i gets the target sent
+        back (+1 for the first `sub` substeps) control steps ago, through the first-order lag; ctrl keeps what was sent."""
+        m, d = self.model, self.data
+        sent = d.ctrl.copy()
+        self._queue = self._queue[1:] + [sent]
+        back, sub = divmod(self.delay_sub, self.frame_skip)
+        target, older = self._queue[-1 - back], self._queue[-2 - back]
+        g = 1.0 - np.exp(-m.opt.timestep / (self.motor_lag_ms / 1000.0)) if self.motor_lag_ms else 1.0
+        for i in range(self.frame_skip):
+            want = older if i < sub else target
+            if self.motor_lag_ms:
+                self._lag_y = self._lag_y + g * (want - self._lag_y)
+                want = self._lag_y
+            d.ctrl[:] = want
+            physics(m, d, 1)
+        d.ctrl[:] = sent
+
+    def transition_excess(self):
+        """Roll and pitch (rad) beyond transition_threshold, each against the reference's own, summed."""
+        r, p = roll_pitch(self._rotation())
+        r_ref, p_ref = roll_pitch(self.ref("tilt"))
+        return float(max(abs(r - r_ref) - self.transition_threshold, 0.0) + max(abs(p - p_ref) - self.transition_threshold, 0.0))
+
     def _switch_to(self, c):
         """Hand over to clip c now."""
+        self.switch_t = self.t
         if c.loop:   # join the new gait at the frame whose pose is closest to the current one
             k = int(np.argmin(np.sum((c.joints - self.data.qpos[7:19]) ** 2, 1)))
             start = k / c.fps
@@ -445,7 +541,7 @@ class ImitatePolicy:
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
-def exam(policy, clips=None, episodes=4, seed=9000):
+def exam(policy, clips=None, episodes=4, seed=9000, latency_sweep=LATENCY_SWEEP):
     """Per clip: the mean tracking reward per step over the whole try (0 counted for every step lost after a
     fall), the fall rate, and for gaits how much of the dog's pace Bolt keeps (speed_: forward distance
     over the dog's; for turns, the angle turned over the dog's). Loops run 4 s from evenly spaced points in
@@ -455,7 +551,9 @@ def exam(policy, clips=None, episodes=4, seed=9000):
     Posture clips (sit, lie): pose_still_<clip> is the share of tries from standing still (the clip's start) that
     reached the clip's end pose (pose_reached.py, the switch test's definition) within the time limit (pose_time) and
     did not fall; pose_moving_<gait>_<clip> (and fall_moving_<gait>_<clip>) the same from a moving start: Bolt in that
-    gait at its own pace, told to sit or lie at once (env.exam_moving). Neither enters score()."""
+    gait at its own pace, told to sit or lie at once (env.exam_moving). Neither enters score().
+    Latency sweep (latency_sweep ms, () for none): lat<ms>_track (mean tracking reward per step over every clip's tries,
+    as track_) and lat<ms>_fall (share of tries that fell) with the motors that many ms behind the brain."""
     env = ImitateEnv(randomize=True, clips=clips)
     out = {}
     for name in env.clip_names:
@@ -514,6 +612,28 @@ def exam(policy, clips=None, episodes=4, seed=9000):
             if gait is not None:
                 out[f"fall_moving_{key}"] = falls / episodes
     env.exam_start = env.exam_moving = None
+    # latency sweep (real-robot gap): the loops' and posture clips' tracking exam again at each fixed latency
+    for ms in latency_sweep:
+        env.exam_latency_ms = float(ms)
+        scores, falls = [], []
+        for name in env.clip_names:
+            c = env.clips[name]
+            for k in range(episodes):
+                env.exam_start = (name, (k / episodes) * c.length if c.loop else 0.0)
+                obs, _ = env.reset(seed=seed + k)
+                if c.loop:
+                    env.limit = 200
+                total, fell = 0.0, False
+                for _ in range(env.limit):
+                    obs, r, fell, done, info = env.step(policy.act(obs))
+                    total += r
+                    if fell or done:
+                        break
+                scores.append(total / env.limit)
+                falls.append(fell)
+        out[f"lat{ms}_track"] = round(float(np.mean(scores)), 3)
+        out[f"lat{ms}_fall"] = round(float(np.mean(falls)), 3)
+    env.exam_latency_ms = env.exam_start = None
     return out
 
 

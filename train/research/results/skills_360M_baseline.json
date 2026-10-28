@@ -1,0 +1,363 @@
+{
+ "updated": "2026-10-28T09:46:02+00:00",
+ "n": 10,
+ "seed": 1000,
+ "seconds": 93,
+ "window_s": 2.0,
+ "brains": {
+  "imitate": "models/bolt-dog-imitate-gpu-360M/params.pkl",
+  "jump": "models/bolt-dog-jump-a1-16g-27M",
+  "selfright": "models/bolt-dog-selfright-17e-16.5M",
+  "posture": "models/bolt-dog-posture-getup-3M"
+ },
+ "switches": [
+  {
+   "switch": "walk->trot",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->canter",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "canter->trot",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->walk",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "walk->sit",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "walk->sit [pose reached]",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "sit->lie",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "sit->lie [pose reached]",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "lie->stand (posture)",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "still: still->sit",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "still: still->sit [pose reached]",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "still: sit->lie",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "still: sit->lie [pose reached]",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "still: lie->stand (posture)",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->jump 20 cm",
+   "status": "tested",
+   "ok": 8,
+   "tries": 10,
+   "rate": 0.8,
+   "not_reached": 0,
+   "failures": [
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": true,
+     "fell": false
+    },
+    {
+     "cleared": true,
+     "touched": false,
+     "dropped": false,
+     "landed": false,
+     "fell": true
+    }
+   ]
+  },
+  {
+   "switch": "jump 20 cm->(canter)->trot",
+   "status": "tested",
+   "ok": 6,
+   "tries": 9,
+   "rate": 0.67,
+   "not_reached": 1,
+   "failures": [
+    {
+     "speed_at_switch": 3.49,
+     "min_height": 0.288,
+     "min_up": 0.44,
+     "fell_after": 0.98,
+     "in_skill": "trot",
+     "height": 0.301,
+     "speed": -0.73,
+     "roll": -0.76,
+     "pitch": -0.61
+    },
+    {
+     "speed_at_switch": 2.87,
+     "min_height": 0.342,
+     "min_up": 0.5,
+     "fell_after": 1.06,
+     "in_skill": "trot",
+     "height": 0.383,
+     "speed": -0.02,
+     "roll": 0.37,
+     "pitch": -0.91
+    },
+    {
+     "speed_at_switch": 3.54,
+     "min_height": 0.351,
+     "min_up": 0.46,
+     "fell_after": 0.96,
+     "in_skill": "trot",
+     "height": 0.395,
+     "speed": -0.38,
+     "roll": 0.55,
+     "pitch": -0.8
+    }
+   ]
+  },
+  {
+   "switch": "trot->jump 30 cm",
+   "status": "tested",
+   "ok": 9,
+   "tries": 10,
+   "rate": 0.9,
+   "not_reached": 0,
+   "failures": [
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": true,
+     "fell": false
+    }
+   ]
+  },
+  {
+   "switch": "jump 30 cm->(canter)->trot",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->jump 40 cm",
+   "status": "tested",
+   "ok": 5,
+   "tries": 10,
+   "rate": 0.5,
+   "not_reached": 0,
+   "failures": [
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": true,
+     "fell": false
+    },
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": true,
+     "fell": false
+    },
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": true,
+     "fell": false
+    },
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": true,
+     "fell": false
+    },
+    {
+     "cleared": true,
+     "touched": true,
+     "dropped": true,
+     "landed": true,
+     "fell": false
+    }
+   ]
+  },
+  {
+   "switch": "jump 40 cm->(canter)->trot",
+   "status": "tested",
+   "ok": 7,
+   "tries": 10,
+   "rate": 0.7,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 3.06,
+     "min_height": 0.302,
+     "min_up": 0.47,
+     "fell_after": 0.7,
+     "in_skill": "trot",
+     "height": 0.302,
+     "speed": 1.13,
+     "roll": 0.97,
+     "pitch": -0.33
+    },
+    {
+     "speed_at_switch": 2.44,
+     "min_height": 0.341,
+     "min_up": 0.44,
+     "fell_after": 0.34,
+     "in_skill": "canter",
+     "height": 0.468,
+     "speed": 1.7,
+     "roll": -0.03,
+     "pitch": -1.11
+    },
+    {
+     "speed_at_switch": 3.52,
+     "min_height": 0.355,
+     "min_up": 0.49,
+     "fell_after": 0.9,
+     "in_skill": "trot",
+     "height": 0.407,
+     "speed": 0.38,
+     "roll": -0.37,
+     "pitch": -0.92
+    }
+   ]
+  },
+  {
+   "switch": "shove -> fall",
+   "status": "tested",
+   "ok": 10,
+   "tries": 10,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "fall -> recover (stood up)",
+   "status": "tested",
+   "ok": 8,
+   "tries": 10,
+   "rate": 0.8,
+   "not_reached": 0,
+   "failures": [
+    {
+     "end_height": 0.446
+    },
+    {
+     "end_height": 0.35
+    }
+   ]
+  },
+  {
+   "switch": "recover -> walk",
+   "status": "tested",
+   "ok": 8,
+   "tries": 8,
+   "rate": 1.0,
+   "not_reached": 2,
+   "failures": []
+  }
+ ],
+ "findings": [
+  "Gait switches mostly work (walk->trot 10/10, trot->canter 9/10, canter->trot 7/9, trot->walk 7/7). The falls are sideways (roll ~1 rad when the uprightness drops below 0.5) 0.5-0.8 s after the switch, at 1.7-2 m/s. The 'canter' is not a real canter: Bolt makes ~1.2 m/s of the dog's 3.3 m/s, so the canter clip is mostly a different trot.",
+  "walk->sit never falls but only 1 in 10 is a sit: at 1 m/s the sit clip (a dog standing still, then sitting) makes Bolt brake by folding the front legs, and it ends nose DOWN (pitch -0.5 rad, the clip has +0.6) at 20 cm. From that pose the lie clip tips it over (9/10 falls, 1.35 s in, nose down and rolled 0.6 rad). From standing still the same chain works every time (sit 10/10 in pose, lie 10/10, posture stand 10/10). Starting the sit clip at its start instead of the closest pose (8/8 fell), or braking first with the posture brain's stand (6-8 of 8 fell), did not help.",
+  "Jumps from a trot: the jump brain learned from a standstill 45-65 cm away; handed over at 1.1 m from a 1.5-1.9 m/s trot it clears 20 cm 8/10 and 30 cm 7/10 cleanly, but 40 cm only 3/10 (every failure knocked the bar: the trailing legs clip it; 1 in 10 also crashes). The bigger problem is after the landing: Bolt lands at 3-4 m/s, faster than any clip the dog-motion brain can hold, and falls sideways within 0.5-2 s in 17 of 26 landings, at every height (a 0.6 s canter bridge did not measurably help).",
+  "Recovery works: every shove topples Bolt, self-righting + tuck + stand stands it up 9/10 (the 10th ends at 38 cm, just under the bar), and walking off after it works 9/9.",
+  "What would fix them: train the transitions instead of only the skills. (1) Imitation training that switches clips mid-try at the closest pose (exactly what skills.py does) and starts sit/lie from moving walk/trot states, or a 'stop' clip, so it learns to brake before sitting. (2) The jump brain trained from a running approach (tries that start from recorded trot states 1-2 m before the bar) and continuing 2 s into the trot reward after landing, or the dog-motion brain given starts from the jump brain's landings (3-4 m/s). (3) A real canter (run 18c/22) so fast landings have a gait to go to."
+ ]
+}

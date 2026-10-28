@@ -14,6 +14,12 @@ Moving-start posture commands (moving_rate > 0): the same start state, clip mome
 same draw, and the same pose decisions and pose pay along tries. Motor brake on: one control step against ImitateEnv
 with motor_brake=True (and how far the brake-off MJX step is from it, to show the brake acts).
 
+Transition term (transition_weight > 0): the same roll/pitch excess on identical states, and the same window after a
+forced canter -> trot switch.
+
+Real-robot gaps (latency, motor lag, sensor noise): one control step with a 26 ms latency and a 20 ms motor lag from
+identical states and queues, and the noise's bounds.
+
 Unit tests (CPU stack; landing and moving starts keep the 75-input layout, rate 0 leaves the env as it was):
     <cpu python> -m unittest test_mjx_imitate
 """
@@ -136,6 +142,159 @@ class MovingStartTest(unittest.TestCase):
         self.assertTrue(posture_ok("sit", dict(height=0.23, pitch=0.6, up=0.8)))
         self.assertFalse(posture_ok("sit", dict(height=0.23, pitch=-0.5, up=0.8)))   # nose down: the walk->sit failure
         self.assertTrue(posture_ok("lie", dict(height=0.17, pitch=0.0, up=0.99)))
+
+
+class TransitionTermTest(unittest.TestCase):
+    """The transition term charges roll/pitch beyond the threshold only in the window after a mid-try switch."""
+
+    def test_window_and_charge(self):
+        from imitate_env import ALL_CLIPS, ImitateEnv
+        from mjx_imitate import MjxImitatePolicy
+        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, transition_weight=0.5, transition_window=0.4, transition_threshold=0.05)
+        env.exam_start = ("canter", 0.1)
+        obs, _ = env.reset(seed=2)
+        pol = MjxImitatePolicy(BRAIN_360M)
+        charged, outside = 0, 0
+        for t in range(60):
+            if t == 10:
+                env._switch_to(env.clips["trot"])   # what a drawn switch does (canter -> trot)
+            obs, r, fell, done, info = env.step(pol.act(obs))
+            self.assertEqual(obs.shape, (75,))
+            track = sum(env.weights[k] * info[f"r_{k}"] for k in env.weights)
+            in_window = info["since_switch"] is not None and info["since_switch"] < 20   # 0.4 s
+            self.assertAlmostEqual(r, track - (0.5 * env.transition_excess() if in_window else 0.0), places=6)
+            charged += in_window and info["transition"] > 0
+            outside += (not in_window) and info["transition"] != 0
+            if fell or done:
+                break
+        self.assertEqual(outside, 0)
+        self.assertGreater(charged, 0)   # a 0.05 rad threshold is crossed by an ordinary trot
+
+
+class RealGapTest(unittest.TestCase):
+    """Latency, motor lag and sensor noise (imitate_env REAL), as mastermind/env.py's stress test."""
+
+    def _record(self, env, actions):
+        import imitate_env
+        seen, real = [], imitate_env.physics
+
+        def physics(model, data, n):
+            for _ in range(n):
+                seen.append(data.ctrl.copy())
+                real(model, data, 1)
+        imitate_env.physics = physics
+        try:
+            for a in actions:
+                env.step(a)
+        finally:
+            imitate_env.physics = real
+        return seen
+
+    def test_latency_queue(self):
+        from imitate_env import ALL_CLIPS, ImitateEnv
+        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, latency_ms=(0, 40))
+        env.exam_latency_ms, env.exam_start = 26.0, ("trot", 0.1)   # 13 substeps: 1 control step + 3 substeps
+        env.reset(seed=0)
+        self.assertEqual(env.delay_sub, 13)
+        c0 = env.data.ctrl.copy()
+        rng = np.random.default_rng(0)
+        acts = rng.uniform(-1, 1, (3, 12))
+        sent = []
+        import imitate_env
+        real = imitate_env.physics
+        seen = []
+
+        def physics(model, data, n):
+            for _ in range(n):
+                seen.append(data.ctrl.copy())
+                real(model, data, 1)
+        imitate_env.physics = physics
+        try:
+            for a in acts:
+                base = env.ref("joints", 1)
+                sent.append(np.clip(base + imitate_env.ACTION_SCALE * a, env.lo, env.hi))
+                obs, *_ = env.step(a)
+                np.testing.assert_allclose(obs[34:46], a, atol=1e-6)   # the brain sees what it sent
+        finally:
+            imitate_env.physics = real
+        want = [c0] * 10 + [c0] * 3 + [sent[0]] * 7 + [sent[0]] * 3 + [sent[1]] * 7
+        for i, (s_, w) in enumerate(zip(seen, want)):
+            np.testing.assert_allclose(s_, w, atol=1e-12, err_msg=f"substep {i}")
+
+    def test_motor_lag(self):
+        from imitate_env import ALL_CLIPS, ImitateEnv
+        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, motor_lag_ms=20.0)
+        env.exam_start = ("trot", 0.1)
+        env.reset(seed=0)
+        y = env.data.ctrl.copy()
+        a = np.full(12, 0.5)
+        import imitate_env
+        target = np.clip(env.ref("joints", 1) + imitate_env.ACTION_SCALE * a, env.lo, env.hi)
+        seen = self._record(env, [a])
+        g = 1 - np.exp(-0.002 / 0.020)
+        for s_ in seen:
+            y = y + g * (target - y)
+            np.testing.assert_allclose(s_, y, atol=1e-12)
+
+    def test_obs_noise_bounds(self):
+        from imitate_env import ALL_CLIPS, NOISE, ImitateEnv
+        a, b = ImitateEnv(randomize=False, clips=ALL_CLIPS), ImitateEnv(randomize=False, clips=ALL_CLIPS, obs_noise=1.0)
+        for e in (a, b):
+            e.exam_start = ("walk", 0.2)
+        oa, _ = a.reset(seed=0)
+        ob, _ = b.reset(seed=0)
+        lim = np.concatenate([np.full(3, NOISE["grav"]), np.full(3, NOISE["gyro"] * 0.25), np.full(3, NOISE["linvel"]), [NOISE["height"]],
+                              np.full(12, NOISE["qpos"]), np.full(12, NOISE["qvel"] * 0.1)])
+        diff = np.abs(ob - oa)
+        self.assertTrue(np.all(diff[:34] <= lim + 1e-6) and np.any(diff[:34] > 0))
+        np.testing.assert_array_equal(ob[34:], oa[34:])
+
+
+def dump_real(pol, rng):
+    """One control step each with a 26 ms latency and a 20 ms motor lag, from 60 states (check_real)."""
+    from imitate_env import ALL_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, latency_ms=(0, 40), motor_lag_ms=20.0)
+    steps = []
+    for k in range(12):
+        env.exam_latency_ms, env.exam_start = 26.0, (ALL_CLIPS[k % 6], float(rng.uniform(0, 0.4)))
+        obs, _ = env.reset(seed=1700 + k)
+        for t in range(5):
+            a = np.clip(pol.act(obs) + rng.normal(0, 0.1, 12), -1, 1)
+            pre = dict(clip=ALL_CLIPS.index(env.clip.name), tau0=env.tau0, t=env.t, qpos=env.data.qpos.copy(), qvel=env.data.qvel.copy(),
+                       queue=np.array(env._queue), lagy=env._lag_y.copy(), dsub=env.delay_sub)
+            obs, r, fell, done, info = env.step(a)
+            steps.append(dict(pre=pre, action=a, qpos=env.data.qpos.copy(), qvel=env.data.qvel.copy(), queue=np.array(env._queue), lagy=env._lag_y.copy()))
+            if fell or done:
+                break
+    return dict(steps=steps, latency=(0, 40), lag=20.0)
+
+
+def dump_transition(pol, rng):
+    """Canter tries with a forced switch to trot at step 15, transition term on (check_transition)."""
+    import mujoco
+    from imitate_env import ALL_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, transition_weight=0.5, transition_window=1.0, transition_threshold=0.1)
+    steps = []
+    for k in range(6):
+        env.exam_start = ("canter", float(rng.uniform(0, env.clips["canter"].length)))
+        obs, _ = env.reset(seed=1500 + k)
+        for t in range(70):
+            if t == 15:
+                env._switch_to(env.clips["trot"])
+            a = np.clip(pol.act(obs) + rng.normal(0, 0.1, 12), -1, 1)
+            obs, r, fell, done, info = env.step(a)
+            d2 = mujoco.MjData(env.model)
+            d2.qpos[:], d2.qvel[:], d2.ctrl[:] = env.data.qpos, env.data.qvel, env.data.ctrl
+            mujoco.mj_forward(env.model, d2)
+            d, env.data = env.data, d2
+            f_ex = env.transition_excess()
+            env.data = d
+            steps.append(dict(clip=ALL_CLIPS.index(env.clip.name), tau0=env.tau0, t=env.t, swt=env.switch_t if env.switch_t is not None else -10 ** 6,
+                              qpos=env.data.qpos.copy(), qvel=env.data.qvel.copy(), f_ex=f_ex,
+                              f_on=env.switch_t is not None and env.t - env.switch_t < env.transition_steps))
+            if fell or done:
+                break
+    return dict(steps=steps, weight=0.5, window=1.0, threshold=0.1)
 
 
 def dump_moving(pol, rng):
@@ -306,6 +465,77 @@ def check_moving(M, C):
     assert env0.M is None and env0.brake is None and "mg" not in env0.reset(jax.random.PRNGKey(0)).info
 
 
+def check_transition(M, C):
+    """The transition term on identical states: MjxImitate.transition_excess and its window against ImitateEnv's."""
+    import jax
+    import jax.numpy as jp
+    from mujoco import mjx
+    env = M.MjxImitate(randomize=False, switch_rate=0.0, transition_weight=C["weight"], transition_window=C["window"],
+                       transition_threshold=C["threshold"])
+
+    @jax.jit
+    def ex(qpos, qvel, info):
+        d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel))
+        return env.transition_excess(d, info), info["t"] - info["swt"] < env.transition_steps
+
+    de, dw, n_on, n_pay = [], 0, 0, 0
+    for s in C["steps"]:
+        info = dict(clip=jp.int32(env.names.index(M.ALL_CLIPS[s["clip"]])), tau0=jp.float32(s["tau0"]), t=jp.int32(s["t"]), swt=jp.int32(s["swt"]))
+        e, on = ex(jp.array(s["qpos"], jp.float32), jp.array(s["qvel"], jp.float32), info)
+        de.append(abs(float(e) - s["f_ex"]))
+        dw += bool(on) != s["f_on"]
+        n_on += s["f_on"]
+        n_pay += s["f_on"] and s["f_ex"] > 0
+    print(f"[transition] {len(de)} steps ({n_on} in the window after a canter -> trot switch, {n_pay} charged): excess |diff| max {max(de):.1e} rad; "
+          f"window differs in {dw}")
+    st = jax.jit(env.reset)(jax.random.PRNGKey(4))
+    st2 = jax.jit(env.step)(st, jp.zeros(12))
+    print(f"[transition reset+step] obs {st.obs.shape} -> {st2.obs.shape}, finite {bool(jp.all(jp.isfinite(st2.obs)))}, last switch {int(st2.info['swt'])}")
+
+
+def check_real(M, C):
+    """Latency + motor lag: one control step of MjxImitate.physics_real against ImitateEnv._delayed_physics from identical
+    states, queues and lag states; and MJX's sensor noise within its bounds."""
+    import jax
+    import jax.numpy as jp
+    from mujoco import mjx
+    env = M.MjxImitate(randomize=False, switch_rate=0.0, latency_ms=C["latency"], motor_lag_ms=C["lag"])
+
+    @jax.jit
+    def one(qpos, qvel, info, a):
+        d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel))
+        d = d.replace(ctrl=jp.clip(env.ref(info, "joints", 1) + env.scale * a, env.lo, env.hi))
+        d, info = env.physics_real(env.mx, d, info)
+        return d.qpos, info["qhist"], info["lagy"]
+
+    dq, dqueue, dlag = [], [], []
+    for s in C["steps"]:
+        p = s["pre"]
+        assert p["queue"].shape[0] == env.queue_len, (p["queue"].shape, env.queue_len)
+        info = dict(clip=jp.int32(env.names.index(M.ALL_CLIPS[p["clip"]])), tau0=jp.float32(p["tau0"]), t=jp.int32(p["t"]),
+                    qhist=jp.array(p["queue"], jp.float32), lagy=jp.array(p["lagy"], jp.float32), dsub=jp.int32(p["dsub"]))
+        q, hist, y = one(jp.array(p["qpos"], jp.float32), jp.array(p["qvel"], jp.float32), info, jp.array(s["action"], jp.float32))
+        dq.append(np.abs(np.asarray(q)[7:19] - s["qpos"][7:19]).max())
+        dqueue.append(np.abs(np.asarray(hist) - s["queue"]).max())
+        dlag.append(np.abs(np.asarray(y) - s["lagy"]).max())
+    pc = lambda x: ", ".join(f"p{k} {np.percentile(x, k):.1e}" for k in (50, 90)) + f", max {max(x):.1e}"
+    print(f"[latency+lag] {len(dq)} control steps at 26 ms latency, 20 ms motor lag: joint angles |diff| {pc(dq)} rad; "
+          f"target queue |diff| max {max(dqueue):.1e}, lag state |diff| max {max(dlag):.1e} rad")
+    envn = M.MjxImitate(randomize=False, switch_rate=0.0, obs_noise=1.0)
+    st = jax.jit(envn.reset)(jax.random.PRNGKey(1))
+    o_noisy = np.asarray(envn.obs(st.pipeline_state, st.info, jax.random.PRNGKey(2)))
+    o_clean = np.asarray(envn.obs(st.pipeline_state, st.info))
+    lim = np.concatenate([np.full(3, M.NOISE["grav"]), np.full(3, M.NOISE["gyro"] * 0.25), np.full(3, M.NOISE["linvel"]), [M.NOISE["height"]],
+                          np.full(12, M.NOISE["qpos"]), np.full(12, M.NOISE["qvel"] * 0.1)])
+    diff = np.abs(o_noisy - o_clean)
+    print(f"[obs noise] x1: inputs 0-33 within the levels {bool(np.all(diff[:34] <= lim + 1e-6))} (largest share of its level "
+          f"{(diff[:34] / lim).max():.2f}), inputs 34-74 untouched {bool(np.all(diff[34:] == 0))}")
+    envl = M.MjxImitate(randomize=True, latency_ms=(0, 40), obs_noise=1.0, motor_lag_ms=20.0)
+    st = jax.jit(envl.reset)(jax.random.PRNGKey(6))
+    st2 = jax.jit(envl.step)(st, jp.zeros(12))
+    print(f"[real reset+step] obs {st.obs.shape} -> {st2.obs.shape}, latency {int(st.info['dsub']) * 2} ms, finite {bool(jp.all(jp.isfinite(st2.obs)))}")
+
+
 def check_brake(M, C):
     """One physics substep with the motor brake on, MJX against bolt_env.physics with ImitateEnv(motor_brake=True): what
     the brake does to the joints' speed (brake-on minus brake-off substep, each side against its own), and the joint
@@ -471,7 +701,8 @@ def dump(zip_path, warm_path, out):
     nacts = np.array([npol.act(o) for o in obs_set])
     print(f"numpy brain vs ImitatePolicy.act: max |diff| {np.abs(acts - nacts).max():.2e}")
     Path(out).write_bytes(pickle.dumps(dict(starts=starts, steps=steps, switches=switches, obs=obs_set, acts=acts, landing=dump_landing(pol, rng),
-                                            moving=dump_moving(pol, rng), brake=dump_brake(pol, rng))))
+                                            moving=dump_moving(pol, rng), brake=dump_brake(pol, rng),
+                                            transition=dump_transition(pol, rng), real=dump_real(pol, rng))))
     print(f"{len(starts)} starts, {len(steps)} steps, {len(switches)} switches -> {out}")
 
 
@@ -559,6 +790,10 @@ def check(warm_path, cases):
         check_moving(M, C["moving"])
     if "brake" in C:
         check_brake(M, C["brake"])
+    if "transition" in C:
+        check_transition(M, C["transition"])
+    if "real" in C:
+        check_real(M, C["real"])
     # 5. warm-started Brax policy vs ImitatePolicy.act
     W = pickle.loads(Path(warm_path).read_bytes())
     nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(75, 12)

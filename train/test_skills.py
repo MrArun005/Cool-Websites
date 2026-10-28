@@ -214,13 +214,15 @@ def main():
     ap.add_argument("--seed", type=int, default=1000)
     ap.add_argument("--only", nargs="*", help="sequence names (default: all)")
     ap.add_argument("--imitate-steps", type=int, help="dog-motion checkpoint (default: run 18b's newest)")
+    ap.add_argument("--imitate-brain", help="dog-motion brain: a GPU params.pkl (mjx_imitate) instead of run 18b's checkpoint")
     ap.add_argument("--report", default=str(HERE / "skills_report.json"))
     ap.add_argument("--replays", default=str(HERE / "skills_replays.json"))
     add_brake_args(ap, default=False)
     args = ap.parse_args()
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     n = args.imitate_steps
-    bolt = Bolt(seed=args.seed, imitate=(IMITATE_RUN, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl") if n else None)
+    bolt = Bolt(seed=args.seed, imitate=Path(args.imitate_brain) if args.imitate_brain else
+                (IMITATE_RUN, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl") if n else None)
     tally, replays, progress, started = Tally(), {}, {}, time.time()
     for name in args.only or SEQUENCES:
         before = {k: tally.tries[k] - tally.ok[k] for k in tally.order}
@@ -245,12 +247,13 @@ def main():
     imitate = bolt.imitate_from
     report = dict(updated=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), n=args.n, seed=args.seed,
                   seconds=round(time.time() - started), window_s=WINDOW,
-                  brains=dict(imitate=str(Path(imitate[0]).relative_to(HERE.parent) / imitate[1]),
+                  brains=dict(imitate=str(Path(imitate).resolve().relative_to(HERE.parent.resolve())) if args.imitate_brain else
+                              str(Path(imitate[0]).relative_to(HERE.parent) / imitate[1]),
                               jump="models/bolt-dog-jump-a1-16g-27M", selfright="models/bolt-dog-selfright-17e-16.5M",
                               posture="models/bolt-dog-posture-getup-3M"),
                   switches=table, findings=FINDINGS)
     Path(args.report).write_text(json.dumps(report, indent=1))
-    steps = int(imitate[1].split("_")[1])
+    steps = int(bolt.dog.P.get("steps", 0)) if args.imitate_brain else int(imitate[1].split("_")[1])
     kinds = [[k, LABELS.get(k, LABELS.get(k.replace("_fail", ""), k) + " (a failing try)")] for k in progress]
     page = dict(updated=report["updated"], runs={"skills": dict(
         label="Bolt switching skills like a dog (skills.py)", where="this machine", goal="cloud", kinds=kinds,
