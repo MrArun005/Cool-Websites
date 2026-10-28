@@ -1,5 +1,7 @@
 # bolt-dog-jump-10M
 
+> **Motor torque (note 28 Oct; the body is now 33.5 N·m):** trained and examined with 17 N·m cap, no power or speed limit (the motor model of 24-25 Oct). How determined: packaged 25 Oct 05:03 UTC, before commit df69a28 (27 Oct 10:08, first power/speed limits) and fd5199b (27 Oct 11:17, 33.5 N·m); its robot.xml snapshot has forcerange="-17 17". Today's code runs 33.5 N·m with limits: examine with BOLT_MOTOR_TORQUE=17 to compare with the numbers here (the power/speed limits cannot be switched off).
+
 Bolt's jump brain: a real jump over a bar from standing, trained from scratch with PPO in
 `train/jump_env.py` (10,000,000 steps, adaptive bar heights). It is separate from the walk and posture
 brains: a game walks Bolt up to the bar, stops it, and hands the motors to this brain for 2 s.

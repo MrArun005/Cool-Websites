@@ -1,5 +1,7 @@
 # Bolt dog motion brain trained on a Kaggle GPU (MJX + Brax PPO), 360M steps — best all-round dog brain
 
+> **Motor torque (note 28 Oct; the body is now 33.5 N·m):** trained and examined with 33.5 N·m, 420 W, 21 rad/s (today's body). How determined: mjx_imitate.py's MOTOR is torque=33.5 (file added 27 Oct 17:31, after fd5199b); warm-started from run 18b (see the 18b cards' note); CPU exams after fd5199b.
+
 Warm-started from run 18b at 16.5M (widened to 9 slots), then 344M steps on 2x T4 (4096 parallel Bolts, ~16.5k steps/s, 6.3 h).
 All 9 clips; real A1 motor limits. Load with `mjx_imitate.MjxImitatePolicy("params.pkl")` (numpy, no GPU needed).
 

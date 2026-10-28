@@ -63,7 +63,7 @@ A random brain scores 0.02 and falls every time. **It does not keep the dog's pa
 
 ## 6. Risks
 - License: CC BY-NC 4.0, so clips and brains trained on them are non-commercial, with credit.
-- The dog trots at 1.9 m/s; Bolt's best trot is 1.2 m/s on 17 N·m motors. Canter is left out.
+- The dog trots at 1.9 m/s; Bolt's best trot was 1.2 m/s on 17 N·m motors (when this was written; the body has been 33.5 N·m since commit fd5199b, 27 Oct). Canter is left out.
 - One multi-clip brain may trade clips against each other; train subsets if a clip stays at 0.
 
 ## 7. Porting to the browser later

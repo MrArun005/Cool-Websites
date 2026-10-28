@@ -10,8 +10,11 @@
   browser sim so the thighs clear the body (self-collision is on here).
   Each leg has 3 motors: abd (swing the leg sideways), hip and knee.
   Front knees point backward (like a dog's elbow), rear knees point forward.
-  Motors are position servos with a 17 N·m torque limit, about what a
-  quasi-direct-drive brushless leg motor gives (MIT Mini Cheetah class).
+  Motors are position servos with a 33.5 N·m torque limit, the Unitree A1's
+  joint motor (12 kg class; owner decision 28 Oct: the body is 33.5 N·m).
+  bolt_env.py's MOTOR model also limits power (420 W) and speed (21 rad/s) and
+  rewrites forcerange every physics step; BOLT_MOTOR_TORQUE=17 gives the old
+  17 N·m body that brains before commit fd5199b (27 Oct) were trained in.
 -->
 <mujoco model="bolt">
   <compiler angle="radian" autolimits="true"/>

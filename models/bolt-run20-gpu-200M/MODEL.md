@@ -1,5 +1,7 @@
 # Bolt fast-running brain, run 20 on a Kaggle GPU (200M steps, MJX + Brax PPO) — speed reference only
 
+> **Motor torque (note 28 Oct; the body is now 33.5 N·m):** trained and examined with 33.5 N·m, 420 W, 21 rad/s (today's body). How determined: mjx_run.py's MOTOR is torque=33.5 (file added 27 Oct 11:43, after fd5199b).
+
 Retired gait: it runs fast but not like a dog (style score 0.11), so the product uses the dog-imitation brains instead.
 
 Exam (`run_env.exam`, randomized physics, `mjx_run.MjxPolicy("params.pkl")`):

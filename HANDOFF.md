@@ -69,15 +69,16 @@ node --test ../pet/test/*.test.js
 
 ## Standing rule: real body, real motors
 Everything Bolt does must be something a real body with real motors could do (the user's rule). The
-physics carries a real-motor model (train/bolt_env.py MOTOR: 17 N·m cap, 420 W, 21 rad/s, the Unitree A1's
-class for a 12 kg dog) and real joint ranges (sideways hips ±48°, Go2). Check every new skill's peak joint
+physics carries a real-motor model (train/bolt_env.py MOTOR: 33.5 N·m per joint, 420 W, 21 rad/s, the Unitree A1's
+motor for a 12 kg dog; owner decision 28 Oct: the body is 33.5 N·m. Brains trained before commit fd5199b, 27 Oct,
+used a 17 N·m cap: each models/*/MODEL.md says which; BOLT_MOTOR_TORQUE=17 examines them in their old body) and real joint ranges (sideways hips ±48°, Go2). Check every new skill's peak joint
 speed, torque and power against it (scratchpad audit.py pattern) before trusting any result, and remove
 shortcuts no real robot has (teleports, kinematic carrying) or say plainly where one remains.
 
 ## Finish line: the best robot software when training ends
 Training is not the goal; one working robot brain stack is. When runs 16e, 17d, 18 and 19 end:
 1. **Pick by exam, not by last step.** Each run keeps its best checkpoint (best/). Re-run the exam on the best and last 2 checkpoints with 3 seeds; keep the winner. Never ship a brain that scores below the one it replaces.
-2. **Prove it in the real-body physics.** Everything under the motor model (17 N·m, 420 W, 21 rad/s) and the ±0.84 rad hip range; no teleports, no kinematic shortcuts. A skill counts only if it passes in the browser physics too (live_check, getup_test, game tests).
+2. **Prove it in the real-body physics.** Everything under the motor model (33.5 N·m, 420 W, 21 rad/s) and the ±0.84 rad hip range; no teleports, no kinematic shortcuts. A skill counts only if it passes in the browser physics too (live_check, getup_test, game tests).
 3. **One stack, one controller.** Walk (19) and dog-like gaits (18), jump (16e), self-right then posture stand (17d), all switching through the same hand-over rules the games use. Test the switches: walk→jump→land→walk, fall→self-right→tuck→stand→walk, 60 simulated minutes on the pet page with zero stuck states.
 4. **Package.** models/<name>/ with ONNX, exam.json, MODEL.md for each brain; one README table of skills, success rates and limits (licence: dog-motion brains are CC BY-NC 4.0).
 5. **Ship.** Re-export the Gait Lab, castle, agility and pet pages with the new brains; remove the teleport fallback and the kinematic ball carry; republish; final news item on Bolt Learning Live.

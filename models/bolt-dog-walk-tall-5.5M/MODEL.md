@@ -1,5 +1,7 @@
 # bolt-dog-walk-tall-5.5M
 
+> **Motor torque (note 28 Oct; the body is now 33.5 N·m):** trained and examined with 17 N·m cap, no power or speed limit (the motor model of 24-25 Oct). How determined: packaged 24 Oct 12:15 UTC, before commit df69a28 (27 Oct 10:08, first power/speed limits) and fd5199b (27 Oct 11:17, 33.5 N·m); its robot.xml snapshot has forcerange="-17 17". Today's code runs 33.5 N·m with limits: examine with BOLT_MOTOR_TORQUE=17 to compare with the numbers here (the power/speed limits cannot be switched off).
+
 Bolt's movement brain, trained with reinforcement learning (PPO) in MuJoCo.
 Packaged 2026-10-24 from `runs/bolt7/checkpoints/policy_5500000_steps.zip` after **5,500,000 practice steps**
 (about 30.6 hours of simulated dog time).

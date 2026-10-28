@@ -24,7 +24,7 @@ class ModelTest(unittest.TestCase):
         d.qpos[7:] = d.ctrl[:] = STAND_POSE
         mujoco.mj_step(m, d, nstep=1500)  # 3 seconds
         self.assertGreater(d.qpos[2], 0.29)
-        self.assertLess(np.abs(d.actuator_force).max(), 10)  # well under the 17 N·m limit
+        self.assertLess(np.abs(d.actuator_force).max(), 10)  # well under the 33.5 N·m limit (bolt_env.MOTOR)
         touching = {m.geom(c.geom2).name for c in d.contact[:d.ncon]} | {m.geom(c.geom1).name for c in d.contact[:d.ncon]}
         self.assertEqual(touching, {"floor", "FL_foot", "FR_foot", "RL_foot", "RR_foot"})
 
