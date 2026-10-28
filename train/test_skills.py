@@ -25,6 +25,7 @@ torch.set_num_threads(1)
 
 from skills import IMITATE_RUN, Bolt   # noqa: E402
 from bolt_env import add_brake_args, set_motor_brake   # noqa: E402
+from pose_reached import posture_ok   # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 WINDOW = 2.0   # s without a fall after a switch
@@ -125,9 +126,9 @@ def seq_gaits(bolt, seed, tally):
         prev = g
 
 
-POSE_OK = {   # the pose the clip ends in, reached (clip: sit 23 cm, nose up 0.6 rad; lie 16-17 cm, level)
-    "sit": lambda p: p["height"] < 0.27 and p["pitch"] > 0.3,
-    "lie": lambda p: p["height"] < 0.19 and p["up"] > 0.9,
+POSE_OK = {   # the pose the clip ends in, reached (pose_reached.py: the one definition, shared with the training envs)
+    "sit": lambda p: posture_ok("sit", p),
+    "lie": lambda p: posture_ok("lie", p),
 }
 
 
@@ -150,7 +151,7 @@ def seq_rest(start):
             why = dict(why, end_height=round(float(p["height"]), 3), end_up=round(float(p["up"]), 2),
                        end_pitch=round(float(p["pitch"]), 2))
             if skill == "stand":   # really up: upright, body above 38 cm
-                ok = ok and p["up"] > 0.9 and p["height"] > 0.38
+                ok = ok and posture_ok("stand", p)
             name = f"{tag}{prev}->{skill}" + (" (posture)" if skill == "stand" else "")
             tally.add(name, ok if reached else None, why)
             if skill in POSE_OK:

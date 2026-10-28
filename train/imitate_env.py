@@ -57,6 +57,19 @@ reference height (Bolt is still in the air, up to ~35 cm above the canter's body
 the body-on-floor check stay on), and after landing_bridge s the clip switches to landing_then (the jump ->
 (canter) -> trot hand-over of test_skills.py). landing_rate 0 (the default) draws nothing extra: tries are exactly
 as before.
+
+Posture commands while moving (moving_rate > 0, step 2): that share of the tries starts in a gait (Bolt in the dog's
+walk or trot at a random moment, its body moving at a speed drawn from moving_speed, from the gait in moving_gaits whose
+clip pace is closest) and at once is told to sit, lie down or get up (moving_clips): the clip switches to the posture
+clip at its closest-pose moment, as the skill manager does (closest_moment, the same rule as skills.closest_moment).
+Reaching the clip's end pose (pose_reached.py: the one definition the switch test uses) within pose_time s of the
+command pays pose_weight every step the pose is held from then on (while that clip is still the one being tracked).
+The try runs at least to the time limit. moving_rate 0 (the default) draws nothing extra.
+exam() reports pose reached for sit and lie from standing still (the clip's start) and from a moving start in each
+of moving_gaits at that gait's own pace.
+
+motor_brake: None = bolt_env's process default (off unless set; train_imitate.py turns it on), True/False for this
+env (bolt_env: back-EMF braking above the drive cutoff).
 """
 from pathlib import Path
 
@@ -68,6 +81,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from bolt_env import ACTION_SCALE, STANCES, BoltEnv, physics
+from pose_reached import CLIP_POSE, pose_ok
 
 DOG = STANCES["dog"]
 CLIP_DIR = Path(__file__).with_name("dogmotion") / "clips"
@@ -83,6 +97,18 @@ NEXT = {**{g: GAITS + ("sit",) for g in GAITS}, "sit": ("lie",), "lie": ("getup"
 LOOP_SECONDS = 5.0  # s: longest try on a looping gait
 LANDING_FILE = Path(__file__).with_name("research") / "results" / "landing_starts.npz"   # gen_landing_starts.py
 LANDING = dict(rate=0.0, grace=0.5, bridge=0.6, then="trot")   # defaults of the landing-start arguments (see above)
+# defaults of the moving-start posture arguments (see above). speed: m/s range (walk clip 1.1, trot 1.9); pose_time: s
+# from the command to reach the pose, the switch test's time for each (test_skills.seq_rest: sit 4 s, lie 5.5 s; getup
+# as lie, the clip is lie reversed); weight: paid per step in the pose (the tracking terms pay up to 1 per step)
+MOVING = dict(rate=0.0, speed=(0.5, 2.0), gaits=("walk", "trot"), clips=("sit", "lie", "getup"),
+              pose_time={"sit": 4.0, "lie": 5.5, "getup": 5.5}, weight=0.2)
+
+
+def closest_moment(clip, q, qd):
+    """Clip time (s) whose joint pose is closest to q, joint speeds weighing a little: skills.closest_moment's rule
+    (the skill manager's hand-over), so a moving-start command joins the clip where the switch test's does."""
+    e = np.sum((clip.joints - q) ** 2, axis=1) + 0.002 * np.sum((clip.joint_vel - qd) ** 2, axis=1)
+    return float(np.argmin(e)) / clip.fps
 
 
 def load_landing(path=LANDING_FILE):
@@ -149,9 +175,11 @@ class ImitateEnv(BoltEnv):
 
     def __init__(self, randomize=True, seed=None, clips=None, residual=True, weights=None, slots=len(ALL_CLIPS), switch_rate=0.0,
                  landing_rate=LANDING["rate"], landing_file=LANDING_FILE, landing_grace=LANDING["grace"],
-                 landing_bridge=LANDING["bridge"], landing_then=LANDING["then"]):
+                 landing_bridge=LANDING["bridge"], landing_then=LANDING["then"], moving_rate=MOVING["rate"],
+                 moving_speed=MOVING["speed"], moving_gaits=MOVING["gaits"], moving_clips=MOVING["clips"],
+                 pose_time=None, pose_weight=MOVING["weight"], motor_brake=None):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
-                         skills=["stand"])
+                         skills=["stand"], motor_brake=motor_brake)
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
         self.switch_rate = switch_rate   # chance per second of switching to a following clip mid-try (training only)
         self.OBS = 66 + slots
@@ -172,6 +200,24 @@ class ImitateEnv(BoltEnv):
             assert need <= set(self.clip_names), f"landing starts need the clips {sorted(need)} (env has {self.clip_names})"
         self.exam_landing = None      # index of a landing state to start from (tests, exams); training draws it
         self.grace_steps, self.land_switch_at = 0, -1
+        # moving-start posture commands (module docstring); the gaits and posture clips this env has
+        self.moving_rate, self.moving_speed, self.pose_weight = moving_rate, tuple(moving_speed), pose_weight
+        self.pose_time = dict(MOVING["pose_time"], **(pose_time or {}))
+        self.moving_gaits = [g for g in moving_gaits if g in self.clips and self.clips[g].loop]
+        self.moving_clips = [c for c in moving_clips if c in self.clips and c in CLIP_POSE]
+        if moving_rate > 0:
+            assert self.moving_gaits and self.moving_clips, f"moving starts need gaits {moving_gaits} and clips {moving_clips}"
+        self.exam_moving = None       # (posture clip, gait, gait moment s, speed m/s) for tests and exams
+        self.pose_clip, self.pose_until, self.pose_hit = None, 0, False
+
+    def gait_speed(self, name):
+        """The clip's own pace: mean forward body speed (m/s)."""
+        return float(self.clips[name].v_body[:, 0].mean())
+
+    def pose_now(self, name):
+        """Is the body in pose `name` (pose_reached.POSE_OK) right now?"""
+        R = self._rotation()
+        return bool(pose_ok(name, self.data.qpos[2], np.arcsin(np.clip(R[2, 0], -1, 1)), R[2, 2]))
 
     # ---------- reference ----------
     def tau(self, ahead=0):
@@ -224,12 +270,21 @@ class ImitateEnv(BoltEnv):
             m.body_mass[:] = self.nominal_mass
             m.body_mass[self.torso] = self.nominal_mass[self.torso] * self.rng.uniform(0.85, 1.15)
             m.geom_friction[:, 0] = self.nominal_friction * self.rng.uniform(0.6, 1.3)
+        self.pose_clip, self.pose_until, self.pose_hit = None, 0, False
         land = self.exam_landing
         if land is None and self.landing_rate and not self.exam_start and self.rng.random() < self.landing_rate:
             land = int(self.rng.integers(len(self.landing["tau0"])))
         if land is not None:
             return self._landing_start(land)
         self.grace_steps, self.land_switch_at = 0, -1
+        mv = self.exam_moving
+        if mv is None and self.moving_rate and not self.exam_start and self.rng.random() < self.moving_rate:
+            post = self.moving_clips[self.rng.integers(len(self.moving_clips))]
+            v = float(self.rng.uniform(*self.moving_speed))
+            gait = min(self.moving_gaits, key=lambda g: abs(self.gait_speed(g) - v))   # the gait at about that pace
+            mv = (post, gait, float(self.rng.uniform(0, self.clips[gait].length)), v)
+        if mv is not None:
+            return self._moving_start(*mv)
         if self.exam_start:
             name, self.tau0 = self.exam_start
         else:
@@ -239,7 +294,13 @@ class ImitateEnv(BoltEnv):
             self.tau0 = float(self.rng.uniform(0, c.length if c.loop else c.length + 0.3 * HOLD))
         self.clip = self.clips[name]
         self.t = 0
-        # reference state initialization: Bolt starts in the dog's pose at that moment, moving as it was
+        self._rsi()
+        return self._settle()
+
+    def _rsi(self, vscale=1.0):
+        """Reference state initialization: Bolt starts in the dog's pose at that moment, moving as it was (the body's
+        linear velocity times vscale: moving starts)."""
+        m, d = self.model, self.data
         yaw = self.rng.uniform(-np.pi, np.pi)
         tilt = self.ref("tilt")
         u, s, vt = np.linalg.svd(tilt)          # re-orthonormalize the blended rotation
@@ -253,9 +314,22 @@ class ImitateEnv(BoltEnv):
         d.qvel[0:3] = Rw @ self.ref("v_body") * moving
         d.qvel[3:6] = self.ref("w_body") * moving
         d.qvel[6:18] = self.ref("joint_vel") * moving
+        if vscale != 1.0:
+            d.qvel[0:3] *= vscale
         d.ctrl[:] = d.qpos[7:19]
         mujoco.mj_forward(m, d)
-        return self._settle()
+
+    def _moving_start(self, post, gait, tau_g, v):
+        """Bolt in `gait` at moment tau_g, its body at v m/s, told now to do posture clip `post`: that clip from its
+        closest-pose moment, the pose to reach within pose_time s."""
+        self.clip, self.tau0, self.t = self.clips[gait], float(tau_g), 0
+        self._rsi(vscale=v / self.gait_speed(gait))
+        c = self.clips[post]
+        self.clip, self.tau0 = c, closest_moment(c, self.data.qpos[7:19], self.data.qvel[6:18])
+        self.pose_clip, self.pose_until, self.pose_hit = post, int(round(self.pose_time[post] / self.dt)), False
+        obs, info = self._settle()
+        self.limit = max(self.limit, self.pose_until + 1)   # the try lasts at least to the time limit
+        return obs, info
 
     def _settle(self, floor_only=False):
         m, d = self.model, self.data
@@ -320,12 +394,20 @@ class ImitateEnv(BoltEnv):
             self._switch_to(self.clips[self.landing_then])                         # on in landing_then (test_skills' trot)
         terms, err = self.tracking()
         reward = sum(self.weights[k] * v for k, v in terms.items())
+        pose = None
+        if self.pose_clip is not None:   # a moving-start command: paid per step in the pose once reached in time
+            pose = self.clip.name == self.pose_clip and self.pose_now(CLIP_POSE[self.pose_clip])
+            self.pose_hit = self.pose_hit or (pose and self.t <= self.pose_until)
+            if self.pose_hit and pose:
+                reward += self.pose_weight
         self.last_action = a
         floor_ok = self.ref("height") < 0.3     # sitting and lying: the body may rest on the floor
         lost = (abs(err["height_err"]) > 0.15 and self.t > self.grace_steps) or err["tilt"] > 0.8   # grace: landing starts
         fell = lost or (self.body_on_floor() and not floor_ok)
         done = self.t >= self.limit
         info = dict(err, clip=self.clip.name, tau=self.tau(), fell=fell, **{f"r_{k}": float(v) for k, v in terms.items()})
+        if pose is not None:
+            info.update(pose_ok=bool(pose), pose_hit=bool(self.pose_hit))
         return self._obs(), float(reward), bool(fell), bool(done and not fell), info
 
 
@@ -369,7 +451,11 @@ def exam(policy, clips=None, episodes=4, seed=9000):
     over the dog's; for turns, the angle turned over the dog's). Loops run 4 s from evenly spaced points in
     the stride; sit and lie play from the start through their 1 s hold. Physics is randomized as in training.
     A brain can hold the poses while barely moving (the smoke test at 300k: 1/4 of the walk's speed), so the
-    pace is part of the score (score())."""
+    pace is part of the score (score()).
+    Posture clips (sit, lie): pose_still_<clip> is the share of tries from standing still (the clip's start) that
+    reached the clip's end pose (pose_reached.py, the switch test's definition) within the time limit (pose_time) and
+    did not fall; pose_moving_<gait>_<clip> (and fall_moving_<gait>_<clip>) the same from a moving start: Bolt in that
+    gait at its own pace, told to sit or lie at once (env.exam_moving). Neither enters score()."""
     env = ImitateEnv(randomize=True, clips=clips)
     out = {}
     for name in env.clip_names:
@@ -401,6 +487,33 @@ def exam(policy, clips=None, episodes=4, seed=9000):
         out[f"fall_{name}"] = falls / episodes
         if c.loop:
             out[f"speed_{name}"] = round(float(np.mean(pace)), 2)
+    env.exam_start = None
+    for name in [n for n in env.clip_names if CLIP_POSE.get(n) in ("sit", "lie")]:
+        c = env.clips[name]
+        starts = [("still", None)] + [(g, g) for g in env.moving_gaits]
+        for tag, gait in starts:
+            hits, falls = 0, 0
+            for k in range(episodes):
+                if gait is None:
+                    env.exam_start, env.exam_moving = (name, 0.0), None
+                else:
+                    env.exam_start, env.exam_moving = None, (name, gait, (k / episodes) * env.clips[gait].length, env.gait_speed(gait))
+                obs, _ = env.reset(seed=seed + k)
+                until = int(round(env.pose_time[name] / env.dt))
+                env.limit = max(env.limit, until + 1)
+                hit, fell = False, False
+                for _ in range(env.limit):
+                    obs, r, fell, done, info = env.step(policy.act(obs))
+                    hit = hit or (env.t <= until and env.clip is c and env.pose_now(CLIP_POSE[name]))
+                    if fell or done:
+                        break
+                hits += hit and not fell
+                falls += fell
+            key = name if gait is None else f"{gait}_{name}"
+            out[f"pose_{'still' if gait is None else 'moving'}_{key}"] = hits / episodes
+            if gait is not None:
+                out[f"fall_moving_{key}"] = falls / episodes
+    env.exam_start = env.exam_moving = None
     return out
 
 

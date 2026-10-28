@@ -18,6 +18,13 @@ Landing starts (--landing-rate, default 0) as ImitateEnv's: that share of the tr
 run-up jump brain (research/results/landing_starts.npz), tracking canter, with --landing-grace s free of the height
 check and a switch to --landing-then after --landing-bridge s. At rate 0 nothing extra is drawn or computed: the env
 is the same computation as before (test_mjx_imitate.py checks both).
+Posture commands while moving (--moving-rate, default 0) as ImitateEnv's: a try starts in walk or trot at a speed drawn
+from --moving-speed and is told at once to sit, lie or get up (--moving-clips), joining that clip at its closest-pose
+moment (skills.closest_moment's rule); reaching the clip's end pose (pose_reached.py, the switch test's definition)
+within --pose-time s pays --pose-weight per step held. Rate 0: the same computation as before.
+Motor brake (--motor-brake, on by default for training; MjxImitate(motor_brake=False) by default, as bolt_env's process
+default): back-EMF braking above --brake-speed (25 rad/s, the drive cutoff), --brake-gain N·m per rad/s (3.5), capped
+at the motor's torque, as bolt_env.physics.
 
 The brain: Brax PPO with SB3's network (ELU MLP, plain Gaussian with a learned log std, inputs normalized and clipped
 to +-10), so the CPU brain's weights load unchanged (warm), and a trained brain exports back to numpy
@@ -50,6 +57,7 @@ CLIP_DIR = HERE / "dogmotion" / "clips"
 DOG = np.array([0.0, 0.2747, -0.5493, 0.0, 0.2747, -0.5493, 0.0, -0.2747, 0.5493, 0.0, -0.2747, 0.5493])
 ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)
 MOTOR = dict(torque=33.5, power=420.0, speed=21.0, cutoff=25.0)
+BRAKE = dict(speed=MOTOR["cutoff"], gain=3.5)   # bolt_env: brake_speed default the drive cutoff, BRAKE_GAIN
 ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup"]
 WEIGHTS = dict(pose=0.5, vel=0.05, paw=0.2, root=0.15, root_vel=0.1)
 HOLD, LOOP_SECONDS = 1.0, 5.0
@@ -58,6 +66,8 @@ NEXT = {**{g: GAITS + ("sit",) for g in GAITS}, "sit": ("lie",), "lie": ("getup"
 CLIP_WEIGHTS = {"canter": 3.0}   # how often each clip is drawn (1 for the rest): the canter matters most
 LANDING_FILE = HERE / "research" / "results" / "landing_starts.npz"   # research/gen_landing_starts.py
 LANDING = dict(rate=0.0, grace=0.5, bridge=0.6, then="trot")         # as imitate_env.LANDING
+MOVING = dict(rate=0.0, speed=(0.5, 2.0), gaits=("walk", "trot"), clips=("sit", "lie", "getup"),
+              pose_time={"sit": 4.0, "lie": 5.5, "getup": 5.5}, weight=0.2)   # as imitate_env.MOVING
 KEYS = ("joints", "joint_vel", "height", "gravity", "v_body", "w_body", "paws", "tilt")
 
 
@@ -166,7 +176,9 @@ class MjxImitate:
 
     def __init__(self, randomize=True, clips=None, switch_rate=0.3, weights=None, clip_weights=None, clip_dir=CLIP_DIR,
                  iterations=5, ls_iterations=8, landing_rate=LANDING["rate"], landing_file=LANDING_FILE,
-                 landing_grace=LANDING["grace"], landing_bridge=LANDING["bridge"], landing_then=LANDING["then"]):
+                 landing_grace=LANDING["grace"], landing_bridge=LANDING["bridge"], landing_then=LANDING["then"],
+                 moving_rate=MOVING["rate"], moving_speed=MOVING["speed"], moving_gaits=MOVING["gaits"], moving_clips=MOVING["clips"],
+                 pose_time=None, pose_weight=MOVING["weight"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"]):
         from brax.envs.base import State
         self.State = State
         xml = collisions((HERE / "bolt.xml").read_text())
@@ -210,6 +222,23 @@ class MjxImitate:
             self.grace_steps = int(round(landing_grace / self.dt))
             self.land_switch_at = int(round(landing_bridge / self.dt)) if landing_then and landing_bridge else -1
             self.land_then = self.names.index(landing_then) if landing_then and landing_bridge else -1
+        # moving-start posture commands (as ImitateEnv): None at rate 0
+        self.brake = (float(brake_speed), float(brake_gain)) if motor_brake else None
+        self.moving_rate, self.moving_speed, self.pose_weight = float(moving_rate), tuple(moving_speed), float(pose_weight)
+        self.M = None
+        if self.moving_rate > 0:
+            from pose_reached import CLIP_POSE, POSE_OK, pose_ok   # (only with moving starts: older kernels lack the file)
+            self.pose_ok = pose_ok
+            gaits = [g for g in moving_gaits if g in self.names and bool(T["loop"][self.names.index(g)])]
+            posts = [c for c in moving_clips if c in self.names and c in CLIP_POSE]
+            assert gaits and posts, f"moving starts need gaits {moving_gaits} and clips {moving_clips}"
+            pt = dict(MOVING["pose_time"], **(pose_time or {}))
+            gi = [self.names.index(g) for g in gaits]
+            self.pose_names = list(POSE_OK)
+            self.M = dict(gaits=jp.array(gi, jp.int32), posts=jp.array([self.names.index(c) for c in posts], jp.int32),
+                          speed=jp.array([float(T["v_body"][i, :T["n"][i], 0].mean()) for i in gi], jp.float32),
+                          pose=jp.array([self.pose_names.index(CLIP_POSE[n]) if n in CLIP_POSE else -1 for n in self.names], jp.int32),
+                          until=jp.array([int(round(pt[n] / self.dt)) if n in pt else 0 for n in self.names], jp.int32))
 
     @property
     def unwrapped(self):
@@ -253,15 +282,20 @@ class MjxImitate:
                           geom_friction=mx.geom_friction.at[:, 0].set(self.fric0 * info["fric"]),
                           body_mass=mx.body_mass.at[self.torso].set(self.mass0 * info["mass"]))
 
-    def physics(self, mx, d):
+    def physics(self, mx, d, n=10):
         def sub(d, _):
+            if self.brake is not None:   # back-EMF braking above brake speed, against the motion (bolt_env.brake_torque)
+                speed, gain = self.brake
+                v = d.qvel[6:18]
+                d = d.replace(qfrc_applied=d.qfrc_applied.at[6:18].set(
+                    -jp.sign(v) * jp.minimum(gain * jp.maximum(jp.abs(v) - speed, 0.0), MOTOR["torque"])))
             w = jp.abs(d.qvel[6:18])
             drive = jp.minimum(MOTOR["torque"], MOTOR["power"] / jp.maximum(w, 1e-6))
             drive = drive * jp.clip((MOTOR["cutoff"] - w) / (MOTOR["cutoff"] - MOTOR["speed"]), 0.0, 1.0)
             lo = jp.where(d.qvel[6:18] < 0, -drive, -MOTOR["torque"])
             hi = jp.where(d.qvel[6:18] >= 0, drive, MOTOR["torque"])
             return mjx.step(mx.replace(actuator_forcerange=jp.stack([lo, hi], -1)), d), None
-        return jax.lax.scan(sub, d, None, length=10)[0]
+        return jax.lax.scan(sub, d, None, length=n)[0]
 
     # ---------- senses and scores ----------
     def obs(self, d, info, key=None):
@@ -334,6 +368,8 @@ class MjxImitate:
     def start_info(self, rng):
         if self.L is not None:   # landing starts on: their own keys, the rest drawn as always
             rng, k_land = jax.random.split(rng)
+        if self.M is not None:   # moving starts on: the same
+            rng, k_move = jax.random.split(rng)
         k = jax.random.split(rng, 6)
         one = jp.float32(1.0)
         info = dict(kp=jax.random.uniform(k[0], minval=0.85, maxval=1.15) if self.randomize else one,
@@ -350,7 +386,33 @@ class MjxImitate:
             land = jax.random.uniform(kl[0]) < self.landing_rate
             idx = jax.random.randint(kl[1], (), 0, self.L["tau0"].shape[0])
             info = self.landing_info(info, jp.where(land, idx, -1))
+        if self.M is not None:
+            km = jax.random.split(k_move, 4)
+            on = jax.random.uniform(km[0]) < self.moving_rate
+            if self.L is not None:
+                on = on & (info["land"] < 0)
+            post = self.M["posts"][jax.random.randint(km[1], (), 0, self.M["posts"].shape[0])]
+            v = jax.random.uniform(km[2], minval=self.moving_speed[0], maxval=self.moving_speed[1])
+            gi = jp.argmin(jp.abs(self.M["speed"] - v))   # the gait at about that pace
+            g = self.M["gaits"][gi]
+            info = self.moving_info(info, on, post, g, jax.random.uniform(km[3]) * self.length[g], v / self.M["speed"][gi])
         return info, yaw
+
+    def moving_info(self, info, on, post, g, tau_g, vscale):
+        """info for a moving start (on): Bolt in gait g at tau_g, body speed times vscale, told to do posture clip post
+        (joined at its closest-pose moment, skills.closest_moment's rule); off: info unchanged but for the keys."""
+        gi = dict(info, clip=g, tau0=tau_g, t=jp.int32(0))
+        q, qd = jp.clip(self.ref(gi, "joints"), self.lo, self.hi), self.ref(gi, "joint_vel")
+        e = jp.sum((self.T["joints"][post] - q) ** 2, axis=1) + 0.002 * jp.sum((self.T["joint_vel"][post] - qd) ** 2, axis=1)
+        e = jp.where(jp.arange(e.shape[0]) < self.n[post], e, jp.inf)
+        tau0 = jp.argmin(e).astype(jp.float32) / self.fps[post]
+        c = jp.where(on, post, info["clip"]).astype(jp.int32)
+        tau0 = jp.where(on, tau0, info["tau0"])
+        until = self.M["until"][post]
+        limit = jp.where(on, jp.maximum(self.limit_for(c, tau0, 0), until + 1), info["limit"])
+        return dict(info, clip=c, tau0=tau0, limit=limit, mg=jp.where(on, g, -1).astype(jp.int32), mtau=jp.float32(tau_g),
+                    mscale=jp.float32(vscale), pclip=jp.where(on, post, -1).astype(jp.int32), puntil=jp.where(on, until, 0).astype(jp.int32),
+                    phit=jp.int32(0))
 
     def landing_info(self, info, idx):
         """info for landing state idx (-1: not a landing start; info unchanged but for the landing keys)."""
@@ -361,9 +423,8 @@ class MjxImitate:
         return dict(info, clip=c, tau0=tau0, limit=jp.where(land, self.limit_for(c, tau0, 0), info["limit"]), land=idx.astype(jp.int32),
                     grace=jp.where(land, self.grace_steps, 0).astype(jp.int32), lswitch=jp.where(land, self.land_switch_at, -1).astype(jp.int32))
 
-    def start_data(self, info, yaw):
-        """Reference state initialization: the dog's pose at that moment (any heading), moving as it was."""
-        mx = self.model_for(info)
+    def rsi(self, info, yaw):
+        """Reference state initialization: (qpos, qvel, joints) of the dog's pose at that moment (any heading), moving as it was."""
         u, _, vt = jp.linalg.svd(self.ref(info, "tilt"))    # re-orthonormalize the blended rotation
         c, s = jp.cos(yaw), jp.sin(yaw)
         Rw = jp.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]]) @ (u @ vt)
@@ -371,6 +432,18 @@ class MjxImitate:
         qpos = self.qpos0.at[0:3].set(jp.stack([0.0, 0.0, self.ref(info, "height") + 0.005])).at[3:7].set(self.mat2quat(Rw)).at[7:19].set(joints)
         moving = jp.where(self.finished(info) > 0, 0.0, 1.0)
         qvel = jp.concatenate([Rw @ self.ref(info, "v_body") * moving, self.ref(info, "w_body") * moving, self.ref(info, "joint_vel") * moving])
+        return qpos, qvel, joints
+
+    def start_data(self, info, yaw):
+        """The start state: reference state initialization, or a landing or moving start's state."""
+        mx = self.model_for(info)
+        qpos, qvel, joints = self.rsi(info, yaw)
+        c, s = jp.cos(yaw), jp.sin(yaw)
+        if self.M is not None:   # a moving start: the gait's reference state, its body speed scaled
+            mv = info["mg"] >= 0
+            mq, mvel, mj = self.rsi(dict(info, clip=jp.maximum(info["mg"], 0), tau0=info["mtau"], t=jp.int32(0)), yaw)
+            mvel = mvel.at[0:3].multiply(info["mscale"])
+            qpos, qvel, joints = jp.where(mv, mq, qpos), jp.where(mv, mvel, qvel), jp.where(mv, mj, joints)
         if self.L is not None:   # a landing start: the stored state, turned to this heading
             land, i = info["land"] >= 0, jp.maximum(info["land"], 0)
             lq, lv = self.L["qpos"][i], self.L["qvel"][i]
@@ -400,6 +473,16 @@ class MjxImitate:
         z = jp.float32(0.0)
         metrics = {**{f"r_{k}": z for k in WEIGHTS}, "fell": z, "canter": z, "canter_steps": z}
         return self.State(pipeline_state=d, obs=self.obs(d, info, k3), reward=z, done=z, metrics=metrics, info=info)
+
+    def pose_term(self, d, info):
+        """(bonus, reached in time so far, in the pose now) of a moving-start command (pose_reached.pose_ok)."""
+        R = d.xmat[self.torso]
+        h, pitch, up = d.qpos[2], jp.arcsin(jp.clip(R[2, 0], -1.0, 1.0)), R[2, 2]
+        oks = jp.stack([self.pose_ok(n, h, pitch, up) for n in self.pose_names])
+        pc = info["pclip"]
+        pose = (pc >= 0) & (info["clip"] == pc) & oks[jp.maximum(self.M["pose"][jp.maximum(pc, 0)], 0)]
+        hit = (info["phit"] > 0) | (pose & (info["t"] <= info["puntil"]))
+        return self.pose_weight * (hit & pose).astype(jp.float32), hit, pose
 
     def switch_to(self, info, q, c):
         """Hand over to clip c at step info['t']: a gait joins at the frame whose pose is closest to the current one."""
@@ -438,6 +521,10 @@ class MjxImitate:
         high = jp.abs(err["height_err"]) > 0.15
         if self.L is not None:   # landing starts: no height check for the first landing_grace s (still in the air)
             high = high & (info["t"] > info["grace"])
+        if self.M is not None:   # a moving-start command: paid per step in the pose once reached in time
+            bonus, hit, _ = self.pose_term(d, info)
+            reward = reward + bonus
+            info["phit"] = hit.astype(jp.int32)
         lost = high | (err["tilt"] > 0.8)
         fell = lost | (self.body_on_floor(d) & ~floor_ok)
         trunc = (info["t"] >= info["limit"]) & ~fell
@@ -522,7 +609,11 @@ def train(args):
     (out / "checkpoints").mkdir(parents=True, exist_ok=True)
     W = pickle.loads(Path(args.warm).read_bytes()) if args.warm else None
     env = MjxImitate(switch_rate=args.switch_rate, landing_rate=args.landing_rate, landing_file=args.landing_file,
-                     landing_grace=args.landing_grace, landing_bridge=args.landing_bridge, landing_then=args.landing_then)
+                     landing_grace=args.landing_grace, landing_bridge=args.landing_bridge, landing_then=args.landing_then,
+                     moving_rate=args.moving_rate, moving_speed=args.moving_speed, moving_gaits=args.moving_gaits, moving_clips=args.moving_clips,
+                     pose_time={k: float(v) for k, v in (kv.split("=") for kv in args.pose_time)},
+                     pose_weight=args.pose_weight, motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain)
+    print(f"motor brake: {'on' if env.brake else 'off'}" + (f" above {env.brake[0]:g} rad/s, {env.brake[1]:g} N·m per rad/s" if env.brake else ""), flush=True)
     hidden = W["hidden"] if W else (512, 256)
     restore = to_brax(W) if W else None
     reward_scale = args.reward_scaling or (W["reward_scale"] if W else 1.0)
@@ -593,6 +684,19 @@ def main():
     t.add_argument("--landing-bridge", type=float, default=LANDING["bridge"],
                    help="s of the landing state's clip (canter) before switching to --landing-then (skills.BRIDGE); 0: no switch")
     t.add_argument("--landing-then", default=LANDING["then"], help="clip after the bridge (test_skills: trot)")
+    t.add_argument("--moving-rate", type=float, default=MOVING["rate"],
+                   help="share of tries that start moving and are told at once to sit, lie or get up; 0: none, as before")
+    t.add_argument("--moving-speed", type=float, nargs=2, default=list(MOVING["speed"]), metavar=("LO", "HI"),
+                   help="body speed range (m/s) of a moving start (default %(default)s; walk clip 1.1, trot 1.9)")
+    t.add_argument("--moving-gaits", nargs="+", default=list(MOVING["gaits"]), help="gaits a moving start is taken from (the one nearest the speed)")
+    t.add_argument("--moving-clips", nargs="+", default=list(MOVING["clips"]), help="posture clips commanded on a moving start")
+    t.add_argument("--pose-time", nargs="+", default=[f"{k}={v:g}" for k, v in MOVING["pose_time"].items()], metavar="CLIP=S",
+                   help="s from the command to reach the pose, per clip (default %(default)s: the switch test's times)")
+    t.add_argument("--pose-weight", type=float, default=MOVING["weight"], help="reward per step in the pose once reached in time")
+    t.add_argument("--motor-brake", action=argparse.BooleanOptionalAction, default=True,
+                   help="motor braking above --brake-speed (bolt_env back-EMF model); default on for training")
+    t.add_argument("--brake-speed", type=float, default=BRAKE["speed"], help="rad/s where braking starts (default %(default)s, the drive cutoff)")
+    t.add_argument("--brake-gain", type=float, default=BRAKE["gain"], help="braking N·m per rad/s above --brake-speed (default %(default)s)")
     args = ap.parse_args()
     if args.cmd == "warm":
         z = Path(args.zip)

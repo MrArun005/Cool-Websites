@@ -10,7 +10,11 @@ physics, and the deterministic action of the warm-started Brax policy against Im
 Landing starts (landing_rate > 0): the same start state from the same landing state and heading, then 40 steps
 from identical states (forced switch to trot after the bridge, the height-check grace) in both envs.
 
-Unit tests (CPU stack; landing starts keep the 75-input layout, rate 0 leaves the env as it was):
+Moving-start posture commands (moving_rate > 0): the same start state, clip moment, try length and time limit from the
+same draw, and the same pose decisions and pose pay along tries. Motor brake on: one control step against ImitateEnv
+with motor_brake=True (and how far the brake-off MJX step is from it, to show the brake acts).
+
+Unit tests (CPU stack; landing and moving starts keep the 75-input layout, rate 0 leaves the env as it was):
     <cpu python> -m unittest test_mjx_imitate
 """
 import pickle
@@ -91,6 +95,132 @@ class LandingStartTest(unittest.TestCase):
                     break
 
 
+class MovingStartTest(unittest.TestCase):
+    """A moving-start posture command (imitate_env moving_rate): an ordinary try for the brain, paid by the shared pose test."""
+
+    def test_moving_start_obs_layout_and_pay(self):
+        from imitate_env import ALL_CLIPS, DOG, ImitateEnv, closest_moment
+        from mjx_imitate import MjxImitatePolicy
+        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, moving_rate=1.0)
+        env.exam_moving = ("sit", "walk", 0.2, 1.2)
+        obs, _ = env.reset(seed=0)
+        d = env.data
+        self.assertEqual(obs.shape, (75,))
+        self.assertEqual(env.clip.name, "sit")
+        # the walk's body velocity at that moment, scaled so the clip's pace becomes 1.2 m/s
+        self.assertAlmostEqual(np.linalg.norm(d.qvel[0:3]), 1.2 * np.linalg.norm(env.clips["walk"].at(0.2, "v_body")) / env.gait_speed("walk"), places=6)
+        self.assertEqual(env.tau0, closest_moment(env.clips["sit"], d.qpos[7:19], d.qvel[6:18]))
+        self.assertGreaterEqual(env.limit, env.pose_until + 1)
+        self.assertEqual(env.pose_until, 200)   # 4 s at 50 Hz (the switch test's sit time)
+        onehot = np.zeros(len(ALL_CLIPS))
+        onehot[ALL_CLIPS.index("sit")] = 1
+        np.testing.assert_array_equal(obs[48:57], onehot)
+        np.testing.assert_allclose(obs[57:69], env.ref("joints", 1) - DOG, atol=1e-6)
+        pol = MjxImitatePolicy(BRAIN_360M)
+        hits = 0
+        for _ in range(env.limit):
+            obs, r, fell, done, info = env.step(pol.act(obs))
+            self.assertEqual(obs.shape, (75,))
+            track = sum(env.weights[k] * info[f"r_{k}"] for k in env.weights)
+            self.assertAlmostEqual(r, track + env.pose_weight * (info["pose_hit"] and info["pose_ok"]), places=6)
+            self.assertEqual(info["pose_ok"], env.pose_now("sit"))
+            hits += info["pose_hit"]
+            if fell or done:
+                break
+        self.assertGreater(hits, 0)   # the 360M brain sits from this 1.2 m/s walk start (168 paid steps, 28 Oct)
+
+    def test_same_pose_definition_as_switch_test(self):
+        from pose_reached import POSE_OK, posture_ok
+        self.assertEqual(POSE_OK["sit"], dict(height_max=0.27, pitch_min=0.3))   # test_skills' numbers before the move
+        self.assertEqual(POSE_OK["lie"], dict(height_max=0.19, up_min=0.9))
+        self.assertTrue(posture_ok("sit", dict(height=0.23, pitch=0.6, up=0.8)))
+        self.assertFalse(posture_ok("sit", dict(height=0.23, pitch=-0.5, up=0.8)))   # nose down: the walk->sit failure
+        self.assertTrue(posture_ok("lie", dict(height=0.17, pitch=0.0, up=0.99)))
+
+
+def dump_moving(pol, rng):
+    """Moving starts through ImitateEnv: start states and up to 60 steps each, with the pose decisions (check_moving)."""
+    import mujoco
+    from imitate_env import ALL_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, moving_rate=1.0)
+    starts, steps = [], []
+    k = 0
+    for post in ("sit", "lie", "getup"):
+        for gait in ("walk", "trot"):
+            for v in (0.6, 1.9):
+                tau_g = float(rng.uniform(0, env.clips[gait].length))
+                env.exam_moving = (post, gait, tau_g, v)
+                obs, _ = env.reset(seed=900 + k)
+                k += 1
+                R = env._rotation()
+                st = dict(post=ALL_CLIPS.index(post), gait=ALL_CLIPS.index(gait), tau_g=tau_g, vscale=v / env.gait_speed(gait),
+                          yaw=None, qpos=env.data.qpos.copy(), qvel=env.data.qvel.copy(), obs=obs, tau0=env.tau0, limit=env.limit,
+                          until=env.pose_until)
+                # the heading _rsi drew: the body's yaw minus the clip frame's own (the gait reference has yaw 0)
+                Rt = env.clips[gait].at(tau_g, "tilt")
+                u, _, vt = np.linalg.svd(Rt)
+                M = R @ (u @ vt).T
+                st["yaw"] = float(np.arctan2(M[1, 0], M[0, 0]))
+                starts.append(st)
+                for t in range(60):
+                    pre = dict(clip=ALL_CLIPS.index(env.clip.name), tau0=env.tau0, t=env.t, hit=env.pose_hit)
+                    a = np.clip(pol.act(obs) + rng.normal(0, 0.1, 12), -1, 1)
+                    obs, r, fell, done, info = env.step(a)
+                    d2 = mujoco.MjData(env.model)   # the pose decision on up-to-date kinematics, both sides
+                    d2.qpos[:], d2.qvel[:], d2.ctrl[:] = env.data.qpos, env.data.qvel, env.data.ctrl
+                    mujoco.mj_forward(env.model, d2)
+                    d, env.data = env.data, d2
+                    f_pose = env.clip.name == env.pose_clip and env.pose_now({"sit": "sit", "lie": "lie", "getup": "stand"}[post])
+                    env.data = d
+                    steps.append(dict(pre=pre, start=len(starts) - 1, qpos=env.data.qpos.copy(), qvel=env.data.qvel.copy(),
+                                      f_pose=bool(f_pose), f_hit=bool(pre["hit"] or (f_pose and env.t <= env.pose_until)), t=env.t))
+                    if fell or done:
+                        break
+    return dict(starts=starts, steps=steps)
+
+
+def dump_brake(pol, rng):
+    """One control step each from 120 states with the motor brake on (ImitateEnv motor_brake=True): Bolt held 1 m up
+    (no contacts, so float32 and float64 physics stay together and the brake is what is measured), its joints spinning
+    at 0-40 rad/s, a random action (check_brake)."""
+    import mujoco
+    from bolt_env import ACTION_SCALE, physics
+    from imitate_env import ALL_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, motor_brake=True)
+    off = ImitateEnv(randomize=False, clips=ALL_CLIPS, motor_brake=False)
+    assert env.motor_brake[0] and not off.motor_brake[0], (env.motor_brake, off.motor_brake)
+    steps = []
+    for k in range(120):
+        env.reset(seed=1200 + k)
+        d = env.data
+        d.qpos[2] += 1.0
+        d.qvel[:] = 0.0
+        d.qvel[6:18] = rng.choice([-1, 1], 12) * rng.uniform(0, 40, 12)
+        mujoco.mj_forward(env.model, d)
+        pre = dict(clip=ALL_CLIPS.index(env.clip.name), tau0=env.tau0, t=env.t, qpos=d.qpos.copy(), qvel=d.qvel.copy(), ctrl=d.ctrl.copy())
+        a = rng.uniform(-1, 1, 12)
+        d.ctrl[:] = np.clip(env.ref("joints", 1) + ACTION_SCALE * a, env.lo, env.hi)
+        d1 = mujoco.MjData(env.model)   # one physics substep (2 ms), as bolt_env.physics does it, brake included
+        d1.qpos[:], d1.qvel[:], d1.ctrl[:] = d.qpos, d.qvel, d.ctrl
+        physics(env.model, d1, 1)
+        d0 = mujoco.MjData(off.model)   # the same substep without the brake
+        d0.qpos[:], d0.qvel[:], d0.ctrl[:] = d.qpos, d.qvel, d.ctrl
+        physics(off.model, d0, 1)
+        euler = {}
+        for e, model in (("on", env.model), ("off", off.model)):   # and both with the explicit Euler integrator
+            integ = model.opt.integrator
+            model.opt.integrator = mujoco.mjtIntegrator.mjINT_EULER
+            de = mujoco.MjData(model)
+            de.qpos[:], de.qvel[:], de.ctrl[:] = d.qpos, d.qvel, d.ctrl
+            physics(model, de, 1)
+            model.opt.integrator = integ
+            euler[e] = de.qvel.copy()
+        steps.append(dict(pre=dict(pre, ctrl=d.ctrl.copy()), action=a, qvel1=d1.qvel.copy(), qvel0=d0.qvel.copy(), brake1=d1.qfrc_applied[6:18].copy(),
+                          qvel1e=euler["on"], qvel0e=euler["off"],
+                          fast=float(np.abs(pre["qvel"][6:18]).max())))
+    return dict(steps=steps, settings=env.motor_brake)
+
+
 def dump_landing(pol, rng):
     """Landing starts through ImitateEnv: start states and 40 steps each (for check_landing)."""
     import mujoco
@@ -122,6 +252,94 @@ def dump_landing(pol, rng):
             if fell or done:
                 break
     return dict(starts=starts, steps=steps)
+
+
+def check_moving(M, C):
+    """The moving-start parts of check(): MjxImitate(moving_rate=1) against dump_moving's ImitateEnv tries."""
+    import jax
+    import jax.numpy as jp
+    from mujoco import mjx
+    env = M.MjxImitate(randomize=False, switch_rate=0.0, moving_rate=1.0)
+    names = env.names
+    base = dict(kp=jp.float32(1), mass=jp.float32(1), fric=jp.float32(1), clip=jp.int32(0), tau0=jp.float32(0), t=jp.int32(0),
+                last_action=jp.zeros(12), trunc=jp.float32(0), limit=jp.int32(0))
+    idx = lambda c: jp.int32(names.index(M.ALL_CLIPS[c]))
+    info_of = jax.jit(lambda s: env.moving_info(base, jp.bool_(True), s["post"], s["gait"], s["tau_g"], s["vscale"]))
+    start_data = jax.jit(env.start_data)
+    dq, bad, infos = [], 0, []
+    for s in C["starts"]:
+        info = info_of(dict(post=idx(s["post"]), gait=idx(s["gait"]), tau_g=jp.float32(s["tau_g"]), vscale=jp.float32(s["vscale"])))
+        infos.append(info)
+        bad += abs(float(info["tau0"]) - s["tau0"]) > 1e-5 or int(info["limit"]) != s["limit"] or int(info["puntil"]) != s["until"]
+        d = start_data(info, jp.float32(s["yaw"]))
+        q = np.array(d.qpos)
+        if np.dot(q[3:7], s["qpos"][3:7]) < 0:
+            q[3:7] *= -1
+        o = np.asarray(env.obs(d, info))
+        dq.append(max(np.abs(q - s["qpos"]).max(), np.abs(np.asarray(d.qvel) - s["qvel"]).max(), np.abs(o - s["obs"]).max()))
+    print(f"[moving start] {len(dq)} moving starts (sit/lie/getup from walk/trot at 0.6 and 1.9 m/s): max |diff| qpos/qvel/obs "
+          f"{max(dq):.2e} (median {np.median(dq):.1e}); clip moment/try length/time limit differ in {bad}")
+
+    @jax.jit
+    def pose(qpos, qvel, info):
+        d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel))
+        return env.pose_term(d, info)
+
+    dp, dh, n_pose, n_pay = 0, 0, 0, 0
+    for s in C["steps"]:
+        p = s["pre"]
+        info = dict(infos[s["start"]], clip=jp.int32(names.index(M.ALL_CLIPS[p["clip"]])), tau0=jp.float32(p["tau0"]),
+                    t=jp.int32(s["t"]), phit=jp.int32(p["hit"]))
+        bonus, hit, ok = pose(jp.array(s["qpos"], jp.float32), jp.array(s["qvel"], jp.float32), info)
+        dp += bool(ok) != s["f_pose"]
+        dh += bool(hit) != s["f_hit"]
+        n_pose += s["f_pose"]
+        n_pay += s["f_pose"] and s["f_hit"]
+        assert abs(float(bonus) - env.pose_weight * (bool(hit) and bool(ok))) < 1e-6
+    print(f"[moving steps] {len(C['steps'])} steps (CPU: in the pose in {n_pose}, paid in {n_pay}): pose decision differs in {dp}, "
+          f"reached-in-time differs in {dh}")
+    st = jax.jit(env.reset)(jax.random.PRNGKey(5))
+    st2 = jax.jit(env.step)(st, jp.zeros(12))
+    print(f"[moving reset+step] obs {st.obs.shape} -> {st2.obs.shape}, clip {names[int(st.info['clip'])]} from {names[int(st.info['mg'])]}, "
+          f"finite {bool(jp.all(jp.isfinite(st2.obs)))}")
+    env0 = M.MjxImitate(randomize=True)
+    assert env0.M is None and env0.brake is None and "mg" not in env0.reset(jax.random.PRNGKey(0)).info
+
+
+def check_brake(M, C):
+    """One physics substep with the motor brake on, MJX against bolt_env.physics with ImitateEnv(motor_brake=True): what
+    the brake does to the joints' speed (brake-on minus brake-off substep, each side against its own), and the joint
+    speeds themselves (MJX's float32 implicit-damping substep is ~1 rad/s off MuJoCo's at 25-40 rad/s, brake or not).
+    Then the same with the explicit Euler integrator on both sides, where the brake's effect must match exactly."""
+    import jax
+    import jax.numpy as jp
+    from mujoco import mjx
+    on, speed, gain = C["settings"]
+    import mujoco
+    out = {}
+    for brake in (True, False):
+        env = M.MjxImitate(randomize=False, switch_rate=0.0, motor_brake=brake, brake_speed=speed, brake_gain=gain)
+        me = mujoco.MjModel.from_xml_string(M.collisions((M.HERE / "bolt.xml").read_text()))
+        me.opt.iterations, me.opt.ls_iterations, me.opt.integrator = env.m.opt.iterations, env.m.opt.ls_iterations, mujoco.mjtIntegrator.mjINT_EULER
+        for tag, mx in (("", env.mx), ("e", mjx.put_model(me))):
+            sub = jax.jit(lambda qpos, qvel, ctrl: env.physics(mx, mjx.forward(mx, mjx.make_data(mx).replace(qpos=qpos, qvel=qvel, ctrl=ctrl)), 1))
+            out[(brake, tag)] = np.array([np.asarray(sub(jp.array(s["pre"]["qpos"], jp.float32), jp.array(s["pre"]["qvel"], jp.float32),
+                                                         jp.array(s["pre"]["ctrl"], jp.float32)).qvel)[6:18] for s in C["steps"]])
+    out[True], out[False] = out[(True, "")], out[(False, "")]
+    cpu_on, cpu_off = np.array([s["qvel1"][6:18] for s in C["steps"]]), np.array([s["qvel0"][6:18] for s in C["steps"]])
+    effect_cpu, effect_mjx = cpu_on - cpu_off, out[True] - out[False]
+    braking = np.array([np.abs(s["brake1"]).max() for s in C["steps"]])
+    rel = np.abs(effect_mjx - effect_cpu).max(1) / np.maximum(np.abs(effect_cpu).max(1), 1e-9)
+    pc = lambda x: f"p50 {np.percentile(x, 50):.1e}, p90 {np.percentile(x, 90):.1e}, max {x.max():.1e}"
+    print(f"[brake] on above {speed:g} rad/s, {gain:g} N·m per rad/s: {len(braking)} substeps from joints at 0-40 rad/s, 1 m up (CPU brake "
+          f"torque up to {braking.max():.1f} N·m). The brake's effect on joint speed in one substep: CPU up to {np.abs(effect_cpu).max():.2f} rad/s "
+          f"(median of the largest {np.median(np.abs(effect_cpu).max(1)):.2f}); MJX minus CPU effect |diff| {pc(np.abs(effect_mjx - effect_cpu).max(1))} rad/s, "
+          f"relative {pc(rel)}. Joint speeds themselves, MJX vs CPU: brake on {pc(np.abs(out[True] - cpu_on).max(1))}, brake off "
+          f"{pc(np.abs(out[False] - cpu_off).max(1))} rad/s")
+    e_cpu = np.array([s["qvel1e"][6:18] - s["qvel0e"][6:18] for s in C["steps"]])
+    e_mjx = out[(True, "e")] - out[(False, "e")]
+    print(f"[brake, Euler both sides] the brake's effect: CPU up to {np.abs(e_cpu).max():.2f} rad/s; MJX minus CPU |diff| "
+          f"{pc(np.abs(e_mjx - e_cpu).max(1))} rad/s; joint speeds MJX vs CPU, brake on: {pc(np.abs(out[(True, 'e')] - np.array([s['qvel1e'][6:18] for s in C['steps']])).max(1))}")
 
 
 def check_landing(M, C):
@@ -252,7 +470,8 @@ def dump(zip_path, warm_path, out):
     acts = np.array([pol.act(o) for o in obs_set])
     nacts = np.array([npol.act(o) for o in obs_set])
     print(f"numpy brain vs ImitatePolicy.act: max |diff| {np.abs(acts - nacts).max():.2e}")
-    Path(out).write_bytes(pickle.dumps(dict(starts=starts, steps=steps, switches=switches, obs=obs_set, acts=acts, landing=dump_landing(pol, rng))))
+    Path(out).write_bytes(pickle.dumps(dict(starts=starts, steps=steps, switches=switches, obs=obs_set, acts=acts, landing=dump_landing(pol, rng),
+                                            moving=dump_moving(pol, rng), brake=dump_brake(pol, rng))))
     print(f"{len(starts)} starts, {len(steps)} steps, {len(switches)} switches -> {out}")
 
 
@@ -336,6 +555,10 @@ def check(warm_path, cases):
           f"CPU self-contacts (thigh-torso) in {sum(s['legleg'] > 0 for s in C['steps'])} of {len(C['steps'])} states")
     if "landing" in C:
         check_landing(M, C["landing"])
+    if "moving" in C:
+        check_moving(M, C["moving"])
+    if "brake" in C:
+        check_brake(M, C["brake"])
     # 5. warm-started Brax policy vs ImitatePolicy.act
     W = pickle.loads(Path(warm_path).read_bytes())
     nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(75, 12)

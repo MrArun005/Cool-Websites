@@ -36,7 +36,8 @@ On Linux without a display, set `MUJOCO_GL=osmesa` (install `libosmesa6`) for th
 
 ### Dog-motion brain on a GPU: skill-switch training flags (`mjx_imitate.py`)
 
-Each flag defaults to off, so a run without it trains exactly as before. CPU smoke test for each (the `--quick` path,
+Each new flag defaults to off (the motor brake excepted: on for training, owner decision 28 Oct), so a run without them
+trains as before. CPU smoke test for each (the `--quick` path,
 16 envs, 20k steps, JAX venv; the 360M brain's `params.pkl` has no reward scale, so pass the one the GPU runs use):
 
 ```bash
@@ -47,6 +48,19 @@ python mjx_imitate.py train --warm ../models/bolt-dog-imitate-gpu-360M/params.pk
 python -m unittest test_mjx_imitate                       # CPU stack: landing start keeps the 75-input layout
 # (the smoke run takes ~18 min on 4 CPU cores, mostly compiling and the eval rollouts)
 ```
+```bash
+# posture commands while moving: 30% of tries start in walk/trot at 0.5-2 m/s and are told at once to sit, lie or get up
+python mjx_imitate.py train --warm ../models/bolt-dog-imitate-gpu-360M/params.pkl --reward-scaling 0.246 \
+    --steps 20000 --envs 16 --out /tmp/smoke_moving --quick --moving-rate 0.3
+```
+Moving-start flags: `--moving-rate` (share of tries, default 0), `--moving-speed LO HI` (m/s, default 0.5 2.0),
+`--moving-gaits` (default walk trot: the one whose clip pace is nearest the drawn speed), `--moving-clips` (default
+sit lie getup), `--pose-time CLIP=S ...` (time limit to reach the pose, default sit=4 lie=5.5 getup=5.5: the switch
+test's times), `--pose-weight` (reward per step in the pose once reached in time, default 0.2). "Reached" is
+`pose_reached.py`, the same function `test_skills.py` (and so `research/run_switches.py`) uses.
+Motor brake: `--motor-brake` / `--no-motor-brake` (default ON for training), `--brake-speed` (default 25 rad/s, the
+drive cutoff), `--brake-gain` (default 3.5 N·m per rad/s), as `bolt_env`; exams keep it off unless `--motor-brake`.
+
 Landing flags: `--landing-rate` (share of tries, default 0), `--landing-file` (default
 `research/results/landing_starts.npz`), `--landing-grace` (s without the 15 cm height check while still in the air,
 default 0.5), `--landing-bridge` (s of canter before the switch, default 0.6 = `skills.BRIDGE`), `--landing-then`
