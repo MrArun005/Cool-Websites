@@ -92,6 +92,11 @@ class Master:
         self.w.max_steps = ts["jump_steps"]   # the jump brain's clock input is t / its try length
         self.canter = ImitatePolicy(*imitate_brain(ts["canter"])) if ts["canter"] else None
         self.land = ImitatePolicy(*imitate_brain(ts["land"])) if ts["land"] else None
+        loaded, self.clip_pol = {}, {}   # clips: {clip: brain name}, one ImitatePolicy per brain
+        for c, n in (ts.get("clips") or {}).items():
+            if n not in loaded:
+                loaded[n] = ImitatePolicy(*imitate_brain(n))
+            self.clip_pol[c] = loaded[n]
         self.land_left = 0
         self.jump_from, self.bridge = ts["jump_from"], ts["bridge"]
         self.lo, self.hi = self.w.lo.copy(), self.w.hi.copy()
@@ -201,6 +206,8 @@ class Master:
             pol = b.dog
             if self.land is not None and self.land_left > 0:
                 pol = self.land
+            elif mode[1] in self.clip_pol:
+                pol = self.clip_pol[mode[1]]
             elif self.canter is not None and mode[1] == "canter":
                 pol = self.canter
             return im._obs, pol, im.ref("joints", 1), ACTION_SCALE, im.step
@@ -353,7 +360,7 @@ class Master:
         if r["phase"] == "selfright":
             standing = env._rotation()[2, 2] > 0.9 and np.linalg.norm(d.qvel[0:3]) < 0.2
             r["calm"] = r["calm"] + 1 if standing else 0
-            if r["calm"] >= 15 or (r["n"] >= 200 and not self.patient):
+            if r["calm"] >= 15 or (r["n"] >= self.ts.get("sr_limit", 200) and not self.patient):
                 if self.ts.get("tuck", True):
                     r["phase"], r["n"] = "tuck", 0
                     self._to_posture("lie")

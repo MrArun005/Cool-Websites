@@ -32,6 +32,10 @@ def imitate_brain(which="18e"):
         return MODELS / "bolt-dog-running-18c-24.5M", "policy.zip", "vecnormalize.pkl"
     if which == "18f31":
         return MODELS / "bolt-dog-running-18f-31M", "policy.zip", "vecnormalize.pkl"
+    if which == "18g35":   # run 18g at 35.5M: walk/trot/canter/turns trained with mid-try gait switches (8-slot)
+        return MODELS / "bolt-dog-canter-switching-18g-35.5M", "policy.zip", "vecnormalize.pkl"
+    if which == "18d":   # run 18d's best (24.5M): all 9 clips, no switch training; sit 95%, lie 94%, getup 92%
+        return MODELS / "bolt-dog-getup-18d-24.5M", "policy.zip", "vecnormalize.pkl"
     if which == "18g":   # run 18g's newest best (canter switching), fetched into $IMITATE18G
         return Path(os.environ.get("IMITATE18G", MODELS / "bolt-dog-canter-switching-18g")), "policy.zip", "vecnormalize.pkl"
     if which == "r4":
@@ -44,7 +48,8 @@ def imitate_brain(which="18e"):
 # dog: the dog-motion brain for every clip; canter: a brain for the canter clip only (None: dog); land: a brain for
 # the clips played in the first `land_s` seconds after a jump's landing (None: as usual); jump: jump brain folder,
 # handed over `jump_from` m before the bar, `jump_steps` its try length (its clock input is t / jump_steps), at most
-# `jump_limit` steps in charge; bridge: seconds of canter after landing before the gait comes back.
+# `jump_limit` steps in charge; bridge: seconds of canter after landing before the gait comes back; clips: {clip: brain}
+# for single clips (wins over canter and dog; the landing brain still wins during its land_s).
 SETS = {
     "v2": dict(dog="18e", canter=None, land=None, land_s=0.0, jump=MODELS / "bolt-dog-jump-a1-16g-27M", jump_from=1.1,
                jump_steps=100, jump_limit=150, bridge=0.6),
@@ -60,6 +65,12 @@ SETS = {
     "v3": dict(dog="18e36", canter="18c", land="r4", land_s=2.6, jump=MODELS / "bolt-dog-jump-runup-16i-35.5M",
                jump_from=1.1, jump_steps=200, jump_limit=200, bridge=0.6, rec_cmd=True),
 }
+# v4: run 18g at 35.5M (gait switches practised: canter->trot 93% in the v3 world) for walk/trot/canter/turns; the
+# rest of v3 unchanged (pace/sit/lie: `dog`). v4d/v4g: other choices for sit/lie/pace, compared on dev seeds.
+_G4 = {c: "18g35" for c in ("walk", "trot", "canter", "turn_left", "turn_right")}
+SETS["v4"] = dict(SETS["v3"], canter=None, clips=_G4)
+SETS["v4d"] = dict(SETS["v4"], dog="18d")
+SETS["v4g"] = dict(SETS["v3"], dog="18g35", canter=None)
 
 
 def teacher_set(name="v2", **over):

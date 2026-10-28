@@ -44,6 +44,11 @@ class Manager(Bolt):
         self.canter = ImitatePolicy(*imitate_brain(ts["canter"])) if ts["canter"] else None
         self.land = ImitatePolicy(*imitate_brain(ts["land"])) if ts["land"] else None
         self.land_until = -1
+        loaded, self.clip_pol = {}, {}
+        for c, n in (ts.get("clips") or {}).items():
+            if n not in loaded:
+                loaded[n] = ImitatePolicy(*imitate_brain(n))
+            self.clip_pol[c] = loaded[n]
 
     def start(self, *a, **k):
         super().start(*a, **k)
@@ -62,6 +67,7 @@ class Manager(Bolt):
             self.gait = name
         im.limit = 10 ** 9
         pol = self.canter if (self.canter is not None and name == "canter") else self.dog
+        pol = self.clip_pol.get(name, pol)
         for _ in range(int(round(seconds / self.dt))):
             p = self.land if (self.land is not None and self.t < self.land_until) else pol
             im.step(p.act(im._obs()))

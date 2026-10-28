@@ -190,6 +190,8 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--init-data", help="start from this data.npz (its first --init-rows rows) instead of teacher rollouts")
     ap.add_argument("--init-rows", type=int, default=0)
+    ap.add_argument("--init-student", help="start the network from this student.pt (weights and input normalizer) "
+                    "instead of a fresh one (v4: the v3 student)")
     ap.add_argument("--beta-floor", type=float, default=0.0, help="teacher share of the executed actions never below this")
     a = ap.parse_args()
     import torch
@@ -259,6 +261,11 @@ def main():
         Xa, Ya = np.concatenate(X), np.concatenate(Y)
         X, Y = [Xa], [Ya]
         log(f"round {rnd}: beta {beta:.2f}, collected {steps} in {time.time() - t0:.0f} s, {st}; data {len(Xa)}")
+        if net is None and a.init_student:
+            ck = torch.load(a.init_student, weights_only=False)
+            net = Net(hidden=ck["hidden"])
+            net.load_state_dict(ck["state"])
+            log(f"network from {a.init_student}")
         if net is None:
             net = fresh_net(Xa)
         t1 = time.time()
