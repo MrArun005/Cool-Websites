@@ -197,11 +197,15 @@ class JumpEnv(BoltEnv):
             R = self._rotation()
             d.qvel[0:2] = v0 * R[:2, 0] / np.linalg.norm(R[:2, 0])
         self.t, self.last_action = 0, np.zeros(12)
+        self.start_try()
+        return self._obs(), {}
+
+    def start_try(self):
+        """The per-try bookkeeping, for reset and for brains handed the jump mid-run (skills.Bolt, MasterMind)."""
         self.touched = self.cleared = self.landed = self.dropped = self.under = False
         self.clear_t = self.cross_z = None
         self.prev_ahead = self.hurdle_ahead()
         self.best_past = self.paws_past().min()
-        return self._obs(), {}
 
     def _gait_pose(self, v0):
         """Mid-stride: the legs (and joint speeds) and the body's tilt and height at a random moment of the

@@ -206,7 +206,7 @@ class Master:
             self.b.place_hurdle(ahead, height)
             self.hurdle_on = True
             w = self.w   # no flags left over from an earlier jump (a fall in the approach reads them)
-            w.touched = w.cleared = w.landed = w.dropped = False
+            w.touched = w.cleared = w.landed = w.dropped = w.under = False
             self.jump = dict(phase="approach", height=height, after=after or gait, steps=0, out=dict(
                 height=height, cleared=False, clean=False, landed=False, fell=False, fell_after=False, dropped=False,
                 touched=False))
@@ -220,8 +220,7 @@ class Master:
         self.b.events.append(dict(t=self.t, kind="switch", skill="jump", prev=self.b.skill))
         w.t = 0
         w.last_action = np.clip((self.data.ctrl - DOG) / ACTION_SCALE, -1, 1)
-        w.touched = w.cleared = w.landed = w.dropped = False
-        w.clear_t, w.best_past = None, w.paws_past().min()
+        w.start_try()
         self.jump["phase"] = "jump"
         self.jump["out"]["v_handover"] = round(float((w._rotation().T @ self.data.qvel[0:3])[0]), 2)
         self.mode = ("jump",)

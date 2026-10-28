@@ -93,8 +93,7 @@ class Manager(Bolt):
                 break
         self.events.append(dict(t=self.t, kind="switch", skill="jump", prev=self.skill))
         w.t, w.last_action = 0, np.zeros(12)
-        w.touched = w.cleared = w.landed = w.dropped = False
-        w.clear_t, w.best_past = None, w.paws_past().min()
+        w.start_try()
         self.skill = "jump"
         for _ in range(ts["jump_limit"]):
             w.step(self.jumper.act(w._obs()))

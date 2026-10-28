@@ -251,8 +251,7 @@ class Bolt:
         # the jump brain takes over: its own clock and bookkeeping, as at JumpEnv.reset
         self.events.append(dict(t=self.t, kind="switch", skill="jump", prev=self.skill))
         w.t, w.last_action = 0, np.zeros(12)
-        w.touched = w.cleared = w.landed = w.dropped = False
-        w.clear_t, w.best_past = None, w.paws_past().min()
+        w.start_try()
         self.skill = "jump"
         info = {}
         for _ in range(150):
