@@ -6,7 +6,8 @@ envs randomize).
 
 A switch works when Bolt does not fall in the 2 s after it (jumps: and cleared the bar cleanly: over without
 touching it, landed on its feet). A switch is only counted when Bolt reached it without falling earlier in
-the same try (a fall starts "recover", and what comes after a recovery is a different test). Writes
+the same try (a fall starts "recover", and what comes after a recovery is a different test); a switch not
+reached in more than half of its tries is reported as "untested" (no rate), not as a pass rate. Writes
 skills_report.json (rates and, for every failure, what the body was doing) and skills_replays.json (the
 first try of each sequence and its first failing try, as 25 Hz body poses in cloudwatch.py's replay shape).
 """
@@ -68,6 +69,23 @@ class Tally:
         self.ok[name] += bool(ok)
         if not ok and why:
             self.fails[name].append(why)
+
+
+def rows(tally):
+    """One row per switch. A switch that was not reached (an earlier fall in the same try) in more than half of
+    its tries is "untested": its few tries say nothing about the switch (lie -> stand passed 1/1 with 9 of 10
+    tries never reaching lie), so it gets status "untested" and no rate instead of a pass rate."""
+    out = []
+    for s in tally.order:
+        n, ok, skipped = tally.tries[s], tally.ok[s], tally.skipped[s]
+        untested = skipped > (n + skipped) / 2 or n == 0
+        out.append(dict(switch=s, status="untested" if untested else "tested", ok=ok, tries=n,
+                        rate=None if untested else round(ok / n, 2), not_reached=skipped, failures=tally.fails[s]))
+    return out
+
+
+def rate_text(r):
+    return "untested" if r["status"] == "untested" else f"{r['rate']:.0%}"
 
 
 def window(bolt, t0, seconds=WINDOW):
@@ -216,22 +234,17 @@ def main():
                 progress[name + "_fail"] = dict(best=0.0, stood=False, text=f"a failing try (seed {args.seed + 37 * k})")
                 failed_kept = True
         print(f"{name}: done ({time.time() - started:.0f} s)", flush=True)
-    rows = []
-    for s in tally.order:
-        n, ok = tally.tries[s], tally.ok[s]
-        rows.append(dict(switch=s, ok=ok, tries=n, rate=round(ok / n, 2) if n else None, not_reached=tally.skipped[s],
-                         failures=tally.fails[s]))
-    print(f"\n{'switch':34s} {'works':>7s} {'rate':>6s} {'not reached':>12s}")
-    for r in rows:
-        rate = "-" if r["rate"] is None else f"{r['rate']:.0%}"
-        print(f"{r['switch']:34s} {r['ok']:>3d}/{r['tries']:<3d} {rate:>6s} {r['not_reached']:>12d}")
+    table = rows(tally)
+    print(f"\n{'switch':34s} {'works':>7s} {'rate':>8s} {'not reached':>12s}")
+    for r in table:
+        print(f"{r['switch']:34s} {r['ok']:>3d}/{r['tries']:<3d} {rate_text(r):>8s} {r['not_reached']:>12d}")
     imitate = bolt.imitate_from
     report = dict(updated=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), n=args.n, seed=args.seed,
                   seconds=round(time.time() - started), window_s=WINDOW,
                   brains=dict(imitate=str(Path(imitate[0]).relative_to(HERE.parent) / imitate[1]),
                               jump="models/bolt-dog-jump-a1-16g-27M", selfright="models/bolt-dog-selfright-17e-16.5M",
                               posture="models/bolt-dog-posture-getup-3M"),
-                  switches=rows, findings=FINDINGS)
+                  switches=table, findings=FINDINGS)
     Path(args.report).write_text(json.dumps(report, indent=1))
     steps = int(imitate[1].split("_")[1])
     kinds = [[k, LABELS.get(k, LABELS.get(k.replace("_fail", ""), k) + " (a failing try)")] for k in progress]
@@ -239,7 +252,7 @@ def main():
         label="Bolt switching skills like a dog (skills.py)", where="this machine", goal="cloud", kinds=kinds,
         measure=dict(label="Switches that worked in this try", lo=0, hi=1, unit="%", lowText="none", highText="all"),
         words=["all switches worked", "a switch failed"], finished=True,
-        checkpoints={str(steps): dict(steps=steps, exam={r["switch"]: r["rate"] for r in rows}, progress=progress, replays=replays)})})
+        checkpoints={str(steps): dict(steps=steps, exam={r["switch"]: r["rate"] for r in table}, progress=progress, replays=replays)})})
     Path(args.replays).write_text(json.dumps(page, separators=(",", ":")))
     print(f"\nwrote {args.report} and {args.replays}")
 

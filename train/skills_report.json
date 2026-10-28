@@ -1,8 +1,8 @@
 {
- "updated": "2026-10-27T17:04:25+00:00",
+ "updated": "2026-10-28T06:52:55+00:00",
  "n": 10,
  "seed": 1000,
- "seconds": 69,
+ "seconds": 131,
  "window_s": 2.0,
  "brains": {
   "imitate": "train/runs/imitate18b/checkpoints/policy_15000000_steps.zip",
@@ -13,6 +13,7 @@
  "switches": [
   {
    "switch": "walk->trot",
+   "status": "tested",
    "ok": 10,
    "tries": 10,
    "rate": 1.0,
@@ -21,6 +22,7 @@
   },
   {
    "switch": "trot->canter",
+   "status": "tested",
    "ok": 9,
    "tries": 10,
    "rate": 0.9,
@@ -41,6 +43,7 @@
   },
   {
    "switch": "canter->trot",
+   "status": "tested",
    "ok": 7,
    "tries": 9,
    "rate": 0.78,
@@ -72,6 +75,7 @@
   },
   {
    "switch": "trot->walk",
+   "status": "tested",
    "ok": 7,
    "tries": 7,
    "rate": 1.0,
@@ -80,6 +84,7 @@
   },
   {
    "switch": "walk->sit",
+   "status": "tested",
    "ok": 10,
    "tries": 10,
    "rate": 1.0,
@@ -88,6 +93,7 @@
   },
   {
    "switch": "walk->sit [pose reached]",
+   "status": "tested",
    "ok": 1,
    "tries": 10,
    "rate": 0.1,
@@ -169,6 +175,7 @@
   },
   {
    "switch": "sit->lie",
+   "status": "tested",
    "ok": 1,
    "tries": 10,
    "rate": 0.1,
@@ -304,6 +311,7 @@
   },
   {
    "switch": "sit->lie [pose reached]",
+   "status": "tested",
    "ok": 1,
    "tries": 10,
    "rate": 0.1,
@@ -439,14 +447,16 @@
   },
   {
    "switch": "lie->stand (posture)",
+   "status": "untested",
    "ok": 1,
    "tries": 1,
-   "rate": 1.0,
+   "rate": null,
    "not_reached": 9,
    "failures": []
   },
   {
    "switch": "still: still->sit",
+   "status": "tested",
    "ok": 10,
    "tries": 10,
    "rate": 1.0,
@@ -455,6 +465,7 @@
   },
   {
    "switch": "still: still->sit [pose reached]",
+   "status": "tested",
    "ok": 10,
    "tries": 10,
    "rate": 1.0,
@@ -463,6 +474,7 @@
   },
   {
    "switch": "still: sit->lie",
+   "status": "tested",
    "ok": 10,
    "tries": 10,
    "rate": 1.0,
@@ -471,6 +483,7 @@
   },
   {
    "switch": "still: sit->lie [pose reached]",
+   "status": "tested",
    "ok": 10,
    "tries": 10,
    "rate": 1.0,
@@ -479,6 +492,7 @@
   },
   {
    "switch": "still: lie->stand (posture)",
+   "status": "tested",
    "ok": 10,
    "tries": 10,
    "rate": 1.0,
@@ -487,6 +501,7 @@
   },
   {
    "switch": "trot->jump 20 cm",
+   "status": "tested",
    "ok": 8,
    "tries": 10,
    "rate": 0.8,
@@ -510,6 +525,7 @@
   },
   {
    "switch": "jump 20 cm->(canter)->trot",
+   "status": "tested",
    "ok": 3,
    "tries": 9,
    "rate": 0.33,
@@ -585,6 +601,7 @@
   },
   {
    "switch": "trot->jump 30 cm",
+   "status": "tested",
    "ok": 7,
    "tries": 10,
    "rate": 0.7,
@@ -615,6 +632,7 @@
   },
   {
    "switch": "jump 30 cm->(canter)->trot",
+   "status": "tested",
    "ok": 3,
    "tries": 8,
    "rate": 0.38,
@@ -679,6 +697,7 @@
   },
   {
    "switch": "trot->jump 40 cm",
+   "status": "tested",
    "ok": 3,
    "tries": 10,
    "rate": 0.3,
@@ -737,6 +756,7 @@
   },
   {
    "switch": "jump 40 cm->(canter)->trot",
+   "status": "tested",
    "ok": 3,
    "tries": 9,
    "rate": 0.33,
@@ -812,6 +832,7 @@
   },
   {
    "switch": "shove -> fall",
+   "status": "tested",
    "ok": 10,
    "tries": 10,
    "rate": 1.0,
@@ -820,6 +841,7 @@
   },
   {
    "switch": "fall -> recover (stood up)",
+   "status": "tested",
    "ok": 9,
    "tries": 10,
    "rate": 0.9,
@@ -832,6 +854,7 @@
   },
   {
    "switch": "recover -> walk",
+   "status": "tested",
    "ok": 9,
    "tries": 9,
    "rate": 1.0,

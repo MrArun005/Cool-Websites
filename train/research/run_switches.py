@@ -93,12 +93,9 @@ def main():
         for k in range(args.n):
             ts.SEQUENCES[name](bolt, args.seed + 37 * k, tally)
         print(f"{name}: done ({time.time() - started:.0f} s)", flush=True)
-    rows = []
-    for s in tally.order:
-        n, ok = tally.tries[s], tally.ok[s]
-        rows.append(dict(switch=s, ok=ok, tries=n, rate=round(ok / n, 2) if n else None, not_reached=tally.skipped[s],
-                         failures=tally.fails[s]))
-        print(f"{s:34s} {ok:>3d}/{n:<3d} not reached {tally.skipped[s]}")
+    rows = ts.rows(tally)   # not reached in more than half the tries: status "untested", rate None
+    for r in rows:
+        print(f"{r['switch']:34s} {r['ok']:>3d}/{r['tries']:<3d} {ts.rate_text(r):>8s} not reached {r['not_reached']}")
     out = dict(args=vars(args), seconds=round(time.time() - started), switches=rows)
     if args.mode == "pps":
         out["planner"] = bolt.planner.stats
