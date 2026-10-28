@@ -29,6 +29,7 @@ OUT = HERE.parent / "runs" / "mastermind" / "out"   # big files (data set, check
 GAIT_W = {"walk": 3, "trot": 3, "pace": 1, "canter": 2, "turn_left": 1, "turn_right": 1}
 HANDLER = {"v3": dict(jump_h=(0.15, 0.55), jump_ahead=(1.5, 2.2),
                       gait_w={"walk": 3, "trot": 3, "pace": 1, "canter": 3, "turn_left": 1, "turn_right": 1})}
+HANDLER["v4"] = HANDLER["v3"]
 
 
 def pick(rng, weights):
@@ -87,7 +88,7 @@ def collect(args):
     from student import Student
     rng = np.random.default_rng(seed)
     m = Master(seed=seed, imitate=imitate, teachers=teachers, **over)
-    hkw = HANDLER.get(teachers, {})
+    hkw = HANDLER.get(teachers) or HANDLER.get(teachers[:2], {})   # v4, v4a, ...: v4's handler
     m.patient = True
     brain = Student(student_path, m) if student_path else None
     X, Y = [], []

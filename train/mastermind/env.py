@@ -97,6 +97,8 @@ class Master:
             if n not in loaded:
                 loaded[n] = ImitatePolicy(*imitate_brain(n))
             self.clip_pol[c] = loaded[n]
+        # approach: the brain for the gait clip of a jump's run-up (v4: 18e-36M, whose trot 16i's hand-over was tuned on)
+        self.approach = ImitatePolicy(*imitate_brain(ts["approach"])) if ts.get("approach") else None
         self.land_left = 0
         self.jump_from, self.bridge = ts["jump_from"], ts["bridge"]
         self.lo, self.hi = self.w.lo.copy(), self.w.hi.copy()
@@ -206,6 +208,8 @@ class Master:
             pol = b.dog
             if self.land is not None and self.land_left > 0:
                 pol = self.land
+            elif self.approach is not None and self.jump is not None and self.jump["phase"] == "approach":
+                pol = self.approach
             elif mode[1] in self.clip_pol:
                 pol = self.clip_pol[mode[1]]
             elif self.canter is not None and mode[1] == "canter":

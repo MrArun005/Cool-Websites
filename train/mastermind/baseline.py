@@ -44,6 +44,7 @@ class Manager(Bolt):
         self.canter = ImitatePolicy(*imitate_brain(ts["canter"])) if ts["canter"] else None
         self.land = ImitatePolicy(*imitate_brain(ts["land"])) if ts["land"] else None
         self.land_until = -1
+        self.approach = ImitatePolicy(*imitate_brain(ts["approach"])) if ts.get("approach") else None
         loaded, self.clip_pol = {}, {}
         for c, n in (ts.get("clips") or {}).items():
             if n not in loaded:
@@ -54,7 +55,7 @@ class Manager(Bolt):
         super().start(*a, **k)
         self.land_until = -1
 
-    def _clip(self, name, seconds):
+    def _clip(self, name, seconds, brain=None):
         im, d = self.im, self.data
         clip = im.clips[name]
         same_brain = self.skill in CLIPS
@@ -67,7 +68,7 @@ class Manager(Bolt):
             self.gait = name
         im.limit = 10 ** 9
         pol = self.canter if (self.canter is not None and name == "canter") else self.dog
-        pol = self.clip_pol.get(name, pol)
+        pol = brain or self.clip_pol.get(name, pol)
         for _ in range(int(round(seconds / self.dt))):
             p = self.land if (self.land is not None and self.t < self.land_until) else pol
             im.step(p.act(im._obs()))
@@ -84,7 +85,7 @@ class Manager(Bolt):
         approach = gait if self.skill in GAITS else "walk"
         steps = 0
         while w.hurdle_ahead() > ts["jump_from"] and steps < int(max_seconds / self.dt):
-            if not self._clip(approach, self.dt):
+            if not self._clip(approach, self.dt, brain=self.approach):
                 out["fell"] = True
                 return out
             steps += 1

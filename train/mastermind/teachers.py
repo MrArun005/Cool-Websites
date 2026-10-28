@@ -69,6 +69,7 @@ SETS = {
 # rest of v3 unchanged (pace/sit/lie: `dog`). v4d/v4g: other choices for sit/lie/pace, compared on dev seeds.
 _G4 = {c: "18g35" for c in ("walk", "trot", "canter", "turn_left", "turn_right")}
 SETS["v4"] = dict(SETS["v3"], canter=None, clips=_G4)
+SETS["v4a"] = dict(SETS["v4"], approach="18e36")
 SETS["v4d"] = dict(SETS["v4"], dog="18d")
 SETS["v4g"] = dict(SETS["v3"], dog="18g35", canter=None)
 
