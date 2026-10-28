@@ -20,6 +20,9 @@ forced canter -> trot switch.
 Real-robot gaps (latency, motor lag, sensor noise): one control step with a 26 ms latency and a 20 ms motor lag from
 identical states and queues, and the noise's bounds.
 
+Rough terrain and pushes: the same field, xml and ground heights; the same start on the field, inputs and one control
+step on it (paws and shins on the bumps); the same shove.
+
 Unit tests (CPU stack; landing and moving starts keep the 75-input layout, rate 0 leaves the env as it was):
     <cpu python> -m unittest test_mjx_imitate
 """
@@ -248,6 +251,181 @@ class RealGapTest(unittest.TestCase):
         diff = np.abs(ob - oa)
         self.assertTrue(np.all(diff[:34] <= lim + 1e-6) and np.any(diff[:34] > 0))
         np.testing.assert_array_equal(ob[34:], oa[34:])
+
+
+class TerrainPushTest(unittest.TestCase):
+    """Rough terrain (bolt_env TERRAIN) and pushes (bolt_env.apply_shove) in ImitateEnv."""
+
+    def test_terrain_start_and_inputs(self):
+        from bolt_env import TERRAIN
+        from imitate_env import ALL_CLIPS, DOG, ImitateEnv
+        from mjx_imitate import MjxImitatePolicy
+        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, terrain_cm=5.0)
+        env.exam_start = ("trot", 0.2)
+        obs, _ = env.reset(seed=0)
+        d = env.data
+        self.assertEqual(obs.shape, (75,))
+        self.assertLess(np.abs(d.qpos[:2] - TERRAIN["at"]).max(), env.terrain_spread + 1e-9)   # on the field
+        gz = env.ground_z()
+        self.assertGreater(gz, 0.0)
+        np.testing.assert_allclose(obs[9], d.qpos[2] - gz, atol=1e-6)        # height from the ground under the body
+        np.testing.assert_allclose(obs[10:22], d.qpos[7:19] - DOG, atol=1e-6)
+        pol = MjxImitatePolicy(BRAIN_360M)
+        touched = set()
+        for _ in range(50):
+            obs, r, fell, done, info = env.step(pol.act(obs))
+            self.assertEqual(obs.shape, (75,))
+            touched |= {env.model.geom(c.geom1 if c.geom2 == env.terrain["geom"] else c.geom2).name
+                        for c in d.contact[:d.ncon] if env.terrain["geom"] in (c.geom1, c.geom2)}
+        self.assertTrue(touched and all(n.endswith("_foot") or n == "" for n in touched), touched)   # paws (shins unnamed)
+        env.exam_start = ("sit", 0.0)
+        env.reset(seed=0)
+        self.assertEqual(float(d.qpos[0]), 0.0)   # other clips start on the flat floor
+
+    def test_push(self):
+        from bolt_env import apply_shove
+        from imitate_env import ALL_CLIPS, ImitateEnv
+        a = ImitateEnv(randomize=False, clips=ALL_CLIPS)
+        b = ImitateEnv(randomize=False, clips=ALL_CLIPS, push_interval=0.1, push_prob=1.0, push_speed=1.0, push_spin=2.0)
+        for e in (a, b):
+            e.exam_start = ("trot", 0.1)
+            e.reset(seed=0)
+        for t in range(5):   # no push before step 5 (0.1 s)
+            ra, rb = a.step(np.zeros(12)), b.step(np.zeros(12))
+            np.testing.assert_array_equal(ra[0], rb[0])
+        qv, R = b.data.qvel.copy(), b._rotation().copy()
+        seen = []
+        import imitate_env
+        real = imitate_env.physics
+        imitate_env.physics = lambda m, d, n: (seen.append(d.qvel.copy()), real(m, d, n))
+        try:
+            b.step(np.zeros(12))
+        finally:
+            imitate_env.physics = real
+        pushed = seen[0]
+        ok = [np.allclose(pushed, apply_shove(qv, R, 1.0, 2.0, s)) for s in (1.0, -1.0)]
+        self.assertTrue(any(ok), "the push is the switch test's shove")
+
+
+def dump_terrain(pol, rng):
+    """Terrain tries through ImitateEnv (5 cm): start states and 30 steps each, the ground under the body (check_terrain)."""
+    import mujoco
+    from bolt_env import terrain_field, terrain_xml, MODEL
+    from imitate_env import ALL_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, terrain_cm=5.0)
+    starts, steps = [], []
+    for k in range(8):
+        name = ("walk", "trot")[k % 2]
+        env.exam_start = (name, float(rng.uniform(0, env.clips[name].length)))
+        obs, _ = env.reset(seed=1900 + k)
+        R = env._rotation()
+        u, _, vt = np.linalg.svd(env.ref("tilt"))
+        M_ = R @ (u @ vt).T
+        starts.append(dict(clip=ALL_CLIPS.index(name), tau0=env.tau0, yaw=float(np.arctan2(M_[1, 0], M_[0, 0])), qpos=env.data.qpos.copy(),
+                           qvel=env.data.qvel.copy(), obs=obs, limit=env.limit))
+        for t in range(30):
+            pre = dict(clip=ALL_CLIPS.index(env.clip.name), tau0=env.tau0, t=env.t, last_action=env.last_action.copy(), qpos=env.data.qpos.copy(),
+                       qvel=env.data.qvel.copy(), ctrl=env.data.ctrl.copy())
+            a = np.clip(pol.act(obs) + rng.normal(0, 0.1, 12), -1, 1)
+            obs, r, fell, done, info = env.step(a)
+            d2 = mujoco.MjData(env.model)
+            d2.qpos[:], d2.qvel[:], d2.ctrl[:] = env.data.qpos, env.data.qvel, env.data.ctrl
+            mujoco.mj_forward(env.model, d2)
+            d, env.data = env.data, d2
+            f_obs, (f_terms, f_err), f_bof = env._obs(), env.tracking(), env.body_on_floor()
+            n_ter = sum(1 for c in d2.contact[:d2.ncon] if env.terrain["geom"] in (c.geom1, c.geom2))
+            env.data = d
+            steps.append(dict(pre=pre, action=a, qpos=env.data.qpos.copy(), qvel=env.data.qvel.copy(), f_obs=f_obs, f_terms=f_terms,
+                              f_bof=f_bof, n_ter=n_ter, gz=env.ground_z()))
+            if fell or done:
+                break
+    xs = rng.uniform(15, 65, 500), rng.uniform(-25, 25, 500)
+    from bolt_env import terrain_height
+    return dict(starts=starts, steps=steps, field=terrain_field(), xml=terrain_xml(MODEL.read_text(), 5.0), probe=xs,
+                heights=terrain_height(terrain_field(), 5.0, *xs))
+
+
+def check_terrain(M, C):
+    """Terrain: the copies in mjx_imitate against bolt_env's, then starts, inputs, rewards and one step on the field."""
+    import jax
+    import jax.numpy as jp
+    from mujoco import mjx
+    same_field = np.array_equal(M.terrain_field(), C["field"])
+    same_xml = M.terrain_xml((M.HERE / "bolt.xml").read_text(), 5.0) == C["xml"]
+    env = M.MjxImitate(randomize=False, switch_rate=0.0, terrain_cm=5.0)
+    hz = np.asarray(jax.vmap(lambda x, y: M.terrain_height(env.terrain["field"], 5.0, x, y))(jp.array(C["probe"][0], jp.float32), jp.array(C["probe"][1], jp.float32)))
+    print(f"[terrain copies] field identical {same_field}, xml identical {same_xml}, ground height at 500 points |diff| max {np.abs(hz - C['heights']).max():.1e} m")
+    names = env.names
+
+    def info_of(s, t=0, la=None):
+        i = dict(kp=jp.float32(1), mass=jp.float32(1), fric=jp.float32(1), clip=jp.int32(names.index(M.ALL_CLIPS[s["clip"]])), tau0=jp.float32(s["tau0"]),
+                 t=jp.int32(t), last_action=jp.array(np.zeros(12) if la is None else la, jp.float32), trunc=jp.float32(0), limit=jp.int32(s.get("limit", 0)))
+        return i
+
+    start_data = jax.jit(env.start_data)
+    dq = []
+    for s in C["starts"]:
+        info = env.terrain_info(info_of(s), jp.bool_(True), jp.array(s["qpos"][:2], jp.float32))
+        d = start_data(info, jp.float32(s["yaw"]))
+        q = np.array(d.qpos)
+        if np.dot(q[3:7], s["qpos"][3:7]) < 0:
+            q[3:7] *= -1
+        o = np.asarray(env.obs(d, info))
+        dq.append(max(np.abs(q - s["qpos"]).max(), np.abs(np.asarray(d.qvel) - s["qvel"]).max(), np.abs(o - s["obs"]).max()))
+    print(f"[terrain start] {len(dq)} walk/trot starts on the field: max |diff| qpos/qvel/obs {max(dq):.2e} (median {np.median(dq):.1e})")
+
+    @jax.jit
+    def senses(qpos, qvel, info):
+        d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel))
+        terms, err = env.tracking(d, info)
+        return env.obs(d, info), terms, env.body_on_floor(d)
+
+    @jax.jit
+    def one_step(qpos, qvel, ctrl, info, a):
+        d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel, ctrl=ctrl))
+        d = env.physics(env.mx, d.replace(ctrl=jp.clip(env.ref(info, "joints", 1) + env.scale * a, env.lo, env.hi)))
+        c = env.contact(d)
+        tg = env.terrain["geom"]
+        return d.qpos, jp.sum((c.dist < 0) & ((c.geom[:, 0] == tg) | (c.geom[:, 1] == tg)))
+
+    do, dt, dp, nter_cpu, nter_mjx = [], [], [], 0, 0
+    for s in C["steps"]:
+        p = s["pre"]
+        info = info_of(dict(p), t=p["t"] + 1, la=s["action"])
+        o, terms, bof = senses(jp.array(s["qpos"], jp.float32), jp.array(s["qvel"], jp.float32), info)
+        do.append(np.abs(np.asarray(o) - s["f_obs"]).max())
+        dt.append(max(abs(float(terms[k]) - s["f_terms"][k]) for k in M.WEIGHTS))
+        q, nt = one_step(jp.array(p["qpos"], jp.float32), jp.array(p["qvel"], jp.float32), jp.array(p["ctrl"], jp.float32),
+                         info_of(dict(p), t=p["t"]), jp.array(s["action"], jp.float32))
+        dp.append(np.abs(np.asarray(q)[7:19] - s["qpos"][7:19]).max())
+        nter_cpu += s["n_ter"] > 0
+        nter_mjx += int(nt) > 0
+    pc = lambda x: ", ".join(f"p{k} {np.percentile(x, k):.1e}" for k in (50, 90)) + f", max {max(x):.1e}"
+    print(f"[terrain steps] {len(do)} steps: obs |diff| {pc(do)}; reward terms |diff| max {max(dt):.1e}; one step joint angles |diff| {pc(dp)} rad; "
+          f"paws/shins on the bumps in {nter_cpu} (CPU) / {nter_mjx} (MJX) states")
+    envp = M.MjxImitate(randomize=True, terrain_cm=5.0, push_interval=0.1, push_prob=1.0)
+    st = jax.jit(envp.reset)(jax.random.PRNGKey(2))
+    for _ in range(6):
+        st = jax.jit(envp.step)(st, jp.zeros(12))
+    print(f"[terrain+push reset+steps] obs {st.obs.shape}, finite {bool(jp.all(jp.isfinite(st.obs)))}")
+
+
+def dump_shove(rng):
+    """bolt_env.apply_shove on random states (check_shove)."""
+    from bolt_env import apply_shove
+    cases = []
+    for k in range(50):
+        R = np.linalg.qr(rng.normal(size=(3, 3)))[0]
+        qv, sp, spin, side = rng.normal(size=18), rng.uniform(0, 3), rng.uniform(0, 6), (1.0, -1.0)[k % 2]
+        cases.append(dict(R=R, qvel=qv, speed=sp, spin=spin, side=side, out=apply_shove(qv, R, sp, spin, side)))
+    return cases
+
+
+def check_shove(M, C):
+    import jax.numpy as jp
+    d = max(np.abs(np.asarray(M.apply_shove(jp.array(c["qvel"], jp.float32), jp.array(c["R"], jp.float32), c["speed"], c["spin"], c["side"])) - c["out"]).max()
+            for c in C)
+    print(f"[shove] {len(C)} shoves: mjx_imitate.apply_shove vs bolt_env.apply_shove |diff| max {d:.1e}")
 
 
 def dump_real(pol, rng):
@@ -702,7 +880,8 @@ def dump(zip_path, warm_path, out):
     print(f"numpy brain vs ImitatePolicy.act: max |diff| {np.abs(acts - nacts).max():.2e}")
     Path(out).write_bytes(pickle.dumps(dict(starts=starts, steps=steps, switches=switches, obs=obs_set, acts=acts, landing=dump_landing(pol, rng),
                                             moving=dump_moving(pol, rng), brake=dump_brake(pol, rng),
-                                            transition=dump_transition(pol, rng), real=dump_real(pol, rng))))
+                                            transition=dump_transition(pol, rng), real=dump_real(pol, rng),
+                                            terrain=dump_terrain(pol, rng), shove=dump_shove(rng))))
     print(f"{len(starts)} starts, {len(steps)} steps, {len(switches)} switches -> {out}")
 
 
@@ -794,6 +973,10 @@ def check(warm_path, cases):
         check_transition(M, C["transition"])
     if "real" in C:
         check_real(M, C["real"])
+    if "terrain" in C:
+        check_terrain(M, C["terrain"])
+    if "shove" in C:
+        check_shove(M, C["shove"])
     # 5. warm-started Brax policy vs ImitatePolicy.act
     W = pickle.loads(Path(warm_path).read_bytes())
     nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(75, 12)

@@ -49,7 +49,7 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
-from bolt_env import LIE_POSE, BoltEnv
+from bolt_env import LIE_POSE, BoltEnv, apply_shove
 from evaluate import Policy
 from getup_env import GetUpEnv, GetUpPolicy
 from imitate_env import ImitateEnv, ImitatePolicy, closest_moment   # noqa: F401  (closest_moment: the one hand-over rule, shared with the training env)
@@ -302,8 +302,7 @@ class Bolt:
         """A hard sideways shove (a kick to the flank): body velocity and roll rate changed at once."""
         R = self.data.xmat[self.world.torso].reshape(3, 3)
         s = side if side is not None else (1 if self.im.rng.random() < 0.5 else -1)
-        self.data.qvel[0:3] += R @ np.array([0.0, s * speed, 0.0])
-        self.data.qvel[3:6] += np.array([-s * spin, 0.0, 0.0])   # body frame: roll away from the push
+        self.data.qvel[:] = apply_shove(self.data.qvel, R, speed, spin, s)   # bolt_env: shared with the training pushes
         self.events.append(dict(t=self.t, kind="shove", side=int(s)))
 
     # ---------- queries ----------

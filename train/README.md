@@ -80,6 +80,26 @@ Real-gap flags (all default 0 = off; the models are mastermind/env.py's stress t
 `imitate_env.NOISE`), `--motor-lag-ms` (first-order lag time constant). `imitate_env.exam` adds a latency sweep,
 `lat<ms>_track` / `lat<ms>_fall` at 0/10/20/40 ms (the 360M brain: falls 0 / 6% / 42% / 89%).
 
+```bash
+# rough terrain curriculum (0 -> 5 -> 10 cm at 0 / 30 / 60 % of the steps) and pushes (every 2 s, half the time, 1 m/s)
+python mjx_imitate.py train --warm ../models/bolt-dog-imitate-gpu-360M/params.pkl --reward-scaling 0.246 \
+    --steps 20000 --envs 16 --out /tmp/smoke_terrain --quick --terrain-cm 0 5 10 --terrain-at 0 0.3 0.6
+python mjx_imitate.py train --warm ../models/bolt-dog-imitate-gpu-360M/params.pkl --reward-scaling 0.246 \
+    --steps 20000 --envs 16 --out /tmp/smoke_push --quick --push-interval 2
+```
+Terrain (step 6): `bolt_env.TERRAIN` / `terrain_xml` add a 40 x 40 m height field (uniform random heights per 10 cm cell up
+to `--terrain-cm`, field fixed by `--terrain-seed`) beside the flat floor, centred 40 m out, only when the height is
+above 0 (so bolt.xml and every existing brain are untouched). `--terrain-clips` (default walk trot) tries start on it
+within `--terrain-spread` m (5) of its middle; body height is measured from the ground under the body. Only paws and
+shins touch the bumps (body/head/thigh boxes on a height field made MJX 6x slower; paws and shins cost 1.9x).
+`--terrain-cm 0 5 10 --terrain-at 0 0.3 0.6` trains in phases, each warm-started from the last. Pushes:
+`--push-interval` (s, default 0 = off), `--push-prob` (0.5), `--push-speed` (1.0 m/s), `--push-spin` (0 rad/s), the
+switch test's shove (`bolt_env.apply_shove`, also used by `skills.Bolt.shove`). The target test:
+```bash
+python -c "from imitate_env import exam_terrain; from mjx_imitate import MjxImitatePolicy as P; print(exam_terrain(P('<brain.pkl>'), 5, clip='trot'))"
+```
+(30 tries of 4 s, randomized physics; a fall is the skill manager's: tipped past 60 degrees or the body down 0.1 s.)
+
 CPU-vs-GPU parity of all of it (CPU venv dumps, JAX venv checks; needs a 75-input SB3 checkpoint):
 ```bash
 python test_mjx_imitate.py dump runs/imitate18d_start/policy_14000000_steps.zip warm.pkl cases.pkl   # CPU stack

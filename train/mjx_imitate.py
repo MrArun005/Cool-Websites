@@ -27,6 +27,11 @@ switch, -weight x (roll and pitch beyond --transition-threshold rad, each agains
 Real-robot gaps (--latency-min-ms/--latency-max-ms, --obs-noise, --motor-lag-ms; all off by default) as ImitateEnv's
 (mastermind/env.py's stress-test models): action latency drawn per try at the 500 Hz physics rate, legged_gym sensor
 noise, first-order motor lag. Off: the same computation as before.
+Rough terrain and pushes (step 6; --terrain-cm, --push-interval; off by default) as ImitateEnv's: bolt_env's height
+field beside the flat floor, walk and trot tries starting on it, body height measured from the ground under the body;
+sideways pushes (bolt_env.apply_shove, the switch test's shove). --terrain-cm takes several heights and --terrain-at
+the step fractions where each starts (a curriculum, e.g. 0 5 10 at 0 0.3 0.6): training runs in phases, each phase a
+fresh env warm-started from the previous phase's brain.
 Motor brake (--motor-brake, on by default for training; MjxImitate(motor_brake=False) by default, as bolt_env's process
 default): back-EMF braking above --brake-speed (25 rad/s, the drive cutoff), --brake-gain N·m per rad/s (3.5), capped
 at the motor's torque, as bolt_env.physics.
@@ -65,6 +70,49 @@ MOTOR = dict(torque=33.5, power=420.0, speed=21.0, cutoff=25.0)
 TRANSITION = dict(weight=0.0, window=1.0, threshold=0.3)   # as imitate_env.TRANSITION
 NOISE = dict(grav=0.05, gyro=0.2, linvel=0.1, height=0.02, qpos=0.01, qvel=1.5)   # as imitate_env / mastermind.env NOISE
 REAL = dict(latency_ms=(0.0, 0.0), obs_noise=0.0, motor_lag_ms=0.0)              # as imitate_env.REAL: off
+# rough terrain and pushes, copied from bolt_env (TERRAIN, terrain_field, terrain_xml, terrain_height, apply_shove) and
+# imitate_env (TERRAIN_ARGS, PUSH); test_mjx_imitate.py checks the copies give the same field, xml, heights and shoves
+TERRAIN = dict(cm=0.0, half=20.0, cell=0.1, at=(40.0, 0.0), seed=0, base=0.05)
+TERRAIN_ARGS = dict(cm=TERRAIN["cm"], clips=("walk", "trot"), spread=5.0, seed=TERRAIN["seed"])
+PUSH = dict(interval=0.0, prob=0.5, speed=1.0, spin=0.0)
+
+
+def terrain_field(seed=TERRAIN["seed"], half=TERRAIN["half"], cell=TERRAIN["cell"]):
+    n = int(round(2 * half / cell)) + 1
+    return np.random.default_rng(seed).uniform(0.0, 1.0, (n, n))
+
+
+def terrain_xml(xml, cm, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN["at"], base=TERRAIN["base"]):
+    n = int(round(2 * half / cell)) + 1
+    asset = f'<hfield name="terrain" nrow="{n}" ncol="{n}" size="{half} {half} {cm / 100.0} {base}"/>'
+    xml = xml.replace("<asset>", "<asset>\n    " + asset, 1)
+    # only the paws and shins touch the bumps (contype bit 4); the body, head and thighs meet the flat floor under the
+    # field. Box-on-hfield contacts made MJX 6x slower (paws and shins: 1.9x); on 5-10 cm bumps an upright body is 30+ cm
+    # above them, and a fall is still caught (height and tilt limits, the floor under the field)
+    geom = (f'<geom name="terrain" type="hfield" hfield="terrain" pos="{at[0]} {at[1]} 0" contype="0" conaffinity="4" '
+            'rgba="0.55 0.5 0.42 1"/>')
+    for cls, typ in (("foot", "sphere"), ("shin", "capsule")):   # CPU: 1 | 4 (mjx_imitate.collisions makes it 2 | 4)
+        xml = xml.replace(f'<default class="{cls}"><geom type="{typ}"', f'<default class="{cls}"><geom type="{typ}" contype="5"', 1)
+    i = xml.rindex("</worldbody>")
+    return xml[:i] + "  " + geom + "\n  " + xml[i:]
+
+
+def terrain_height(field, cm, x, y, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN["at"]):
+    """Ground height (m) at (x, y): bilinear in the field's cells, 0 off the field (JAX)."""
+    n = field.shape[0]
+    u, v = (x - at[0] + half) / cell, (y - at[1] + half) / cell
+    on = (u >= 0) & (u <= n - 1) & (v >= 0) & (v <= n - 1)
+    u, v = jp.clip(u, 0, n - 1 - 1e-6), jp.clip(v, 0, n - 1 - 1e-6)
+    c, r = jp.floor(u).astype(jp.int32), jp.floor(v).astype(jp.int32)
+    fu, fv = u - c, v - r
+    h = (field[r, c] * (1 - fu) * (1 - fv) + field[r, c + 1] * fu * (1 - fv) + field[r + 1, c] * (1 - fu) * fv
+         + field[r + 1, c + 1] * fu * fv)
+    return jp.where(on, h * cm / 100.0, 0.0)
+
+
+def apply_shove(qvel, R, speed, spin, side):
+    """bolt_env.apply_shove in JAX: body velocity + side x speed along the body's y axis, roll rate - side x spin."""
+    return qvel.at[0:3].add(R @ jp.array([0.0, 1.0, 0.0]) * (side * speed)).at[3:6].add(jp.array([-1.0, 0.0, 0.0]) * (side * spin))
 BRAKE = dict(speed=MOTOR["cutoff"], gain=3.5)   # bolt_env: brake_speed default the drive cutoff, BRAKE_GAIN
 ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup"]
 WEIGHTS = dict(pose=0.5, vel=0.05, paw=0.2, root=0.15, root_vel=0.1)
@@ -88,7 +136,7 @@ def floor_only(xml):
 def collisions(xml):
     """floor_only, plus the contacts of the thighs with the torso, which the CPU env has in about a third of all steps
     (pushing at ~130 N): leg-on-leg contacts never happen there, so only these were missing."""
-    xml = floor_only(xml)
+    xml = floor_only(xml).replace('contype="5"', 'contype="6"')   # rough terrain: paws and shins 2 | 4 (terrain_xml)
     for leg in ("FL", "FR", "RL", "RR"):   # the thigh capsules, in this order in bolt.xml
         xml = xml.replace('<geom class="thigh" fromto', f'<geom name="{leg}_thigh_geom" class="thigh" fromto', 1)
     pairs = "".join(f'<pair geom1="torso" geom2="{leg}_thigh_geom" condim="3" friction="1 1 0.02 0.01 0.01"/>' for leg in ("FL", "FR", "RL", "RR"))
@@ -188,11 +236,25 @@ class MjxImitate:
                  moving_rate=MOVING["rate"], moving_speed=MOVING["speed"], moving_gaits=MOVING["gaits"], moving_clips=MOVING["clips"],
                  pose_time=None, pose_weight=MOVING["weight"], transition_weight=TRANSITION["weight"],
                  transition_window=TRANSITION["window"], transition_threshold=TRANSITION["threshold"],
-                 latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"]):
+                 latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"],
+                 terrain_cm=TERRAIN_ARGS["cm"], terrain_clips=TERRAIN_ARGS["clips"], terrain_spread=TERRAIN_ARGS["spread"],
+                 terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"], push_speed=PUSH["speed"],
+                 push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"]):
         from brax.envs.base import State
         self.State = State
-        xml = collisions((HERE / "bolt.xml").read_text())
+        xml = (HERE / "bolt.xml").read_text()
+        if terrain_cm > 0:   # rough terrain beside the floor (bolt_env.terrain_xml)
+            xml = terrain_xml(xml, terrain_cm)
+        xml = collisions(xml)
         self.m = m = mujoco.MjModel.from_xml_string(xml)
+        self.terrain = None
+        if terrain_cm > 0:
+            field = terrain_field(terrain_seed)
+            m.hfield_data[:] = field.ravel()
+            self.terrain = dict(field=jp.array(field, jp.float32), cm=float(terrain_cm), geom=m.geom("terrain").id,
+                                clips=jp.array([n in terrain_clips for n in (clips or ALL_CLIPS)]), spread=float(terrain_spread))
+        self.push_steps = int(round(push_interval / (m.opt.timestep * 10))) if push_interval else 0
+        self.push_prob, self.push_speed, self.push_spin = float(push_prob), float(push_speed), float(push_spin)
         # contact solver: MuJoCo's 100/50 iterations run to the slowest env under vmap; 5/8 gives the same physics
         # here (one control step off the CPU env by the same amounts as 100/50) at a third of the cost
         m.opt.iterations, m.opt.ls_iterations = iterations, ls_iterations
@@ -213,7 +275,8 @@ class MjxImitate:
         assert all(m.body(m.geom_bodyid[m.geom(f"{l}_thigh_geom").id]).name == f"{l}_thigh" for l in ("FL", "FR", "RL", "RR"))
         self.feet = jp.array([m.geom(f"{l}_foot").id for l in ("FL", "FR", "RL", "RR")])
         bodies = [mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, b) or "" for b in m.geom_bodyid]
-        self.body_mask = jp.array([n[:2] not in ("FL", "FR", "RL", "RR") and g != self.floor for g, n in enumerate(bodies)])
+        ground = {self.floor} | ({self.terrain["geom"]} if self.terrain else set())
+        self.body_mask = jp.array([n[:2] not in ("FL", "FR", "RL", "RR") and g not in ground for g, n in enumerate(bodies)])
         self.lo, self.hi = jp.array(m.actuator_ctrlrange[:, 0]), jp.array(m.actuator_ctrlrange[:, 1])
         self.kp0, self.fric0, self.mass0 = jp.array(m.actuator_gainprm[:, 0]), jp.array(m.geom_friction[:, 0]), float(m.body_mass[self.torso])
         self.qpos0 = jp.array(m.qpos0, jp.float32)
@@ -346,7 +409,8 @@ class MjxImitate:
         R = d.xmat[self.torso]
         ph = 2 * jp.pi * self.phase(info)
         onehot = jp.zeros(len(ALL_CLIPS)).at[self.slot[info["clip"]]].set(1.0)
-        o = jp.concatenate([R.T @ jp.array([0.0, 0.0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3], d.qpos[2:3],
+        o = jp.concatenate([R.T @ jp.array([0.0, 0.0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3],
+                            d.qpos[2:3] if self.terrain is None else (d.qpos[2] - self.ground_z(d))[None],
                             d.qpos[7:19] - self.dog, d.qvel[6:18] * 0.1, info["last_action"], jp.stack([jp.sin(ph), jp.cos(ph)]), onehot,
                             self.ref(info, "joints", 1) - self.dog, self.ref(info, "height", 1)[None], self.ref(info, "v_body", 1),
                             self.ref(info, "w_body", 1)[2:3], self.finished(info)[None]])
@@ -373,7 +437,7 @@ class MjxImitate:
         e_pose = jp.sum((self.ref(info, "joints") - q) ** 2)
         e_vel = jp.sum((self.ref(info, "joint_vel") - qd) ** 2)
         e_paw = jp.sum((self.ref(info, "paws") - self.heading_paws(d)) ** 2)
-        e_h = self.ref(info, "height") - d.qpos[2]
+        e_h = self.ref(info, "height") - (d.qpos[2] if self.terrain is None else d.qpos[2] - self.ground_z(d))
         g, g_ref = R.T @ jp.array([0.0, 0.0, -1.0]), self.ref(info, "gravity")
         tilt = jp.arccos(jp.clip(jp.dot(g, g_ref) / jp.linalg.norm(g_ref), -1.0, 1.0))
         v, w = R.T @ d.qvel[0:3], d.qvel[3:6]
@@ -387,8 +451,17 @@ class MjxImitate:
     def contact(d):
         return d._impl.contact if hasattr(d, "_impl") and hasattr(d._impl, "contact") else d.contact
 
+    def ground_z(self, d):
+        """Height of the ground under the body (the terrain's, 0 off it; imitate_env.ImitateEnv.ground_z)."""
+        return terrain_height(self.terrain["field"], self.terrain["cm"], d.qpos[0], d.qpos[1])
+
     def body_on_floor(self, d):
         c = self.contact(d)
+        if self.terrain is not None:   # the terrain is floor too
+            tg = self.terrain["geom"]
+            g0f, g1f = (c.geom[:, 0] == self.floor) | (c.geom[:, 0] == tg), (c.geom[:, 1] == self.floor) | (c.geom[:, 1] == tg)
+            other = jp.where(g0f, c.geom[:, 1], c.geom[:, 0])
+            return jp.any((c.dist < 0.0) & (g0f | g1f) & self.body_mask[other])
         other = jp.where(c.geom[:, 0] == self.floor, c.geom[:, 1], c.geom[:, 0])
         with_floor = (c.dist < 0.0) & ((c.geom[:, 0] == self.floor) | (c.geom[:, 1] == self.floor))
         return jp.any(with_floor & self.body_mask[other])
@@ -416,6 +489,8 @@ class MjxImitate:
         return jp.where(self.loop[c], self.max_steps, jp.maximum(25, jp.minimum(self.max_steps, left)).astype(jp.int32)) + t
 
     def start_info(self, rng):
+        if self.terrain is not None:   # terrain on: the start spot's own key
+            rng, k_ter = jax.random.split(rng)
         if self.real_on:   # real-robot gaps on: the latency's own key
             rng, k_lat = jax.random.split(rng)
         if self.L is not None:   # landing starts on: their own keys, the rest drawn as always
@@ -453,7 +528,19 @@ class MjxImitate:
             gi = jp.argmin(jp.abs(self.M["speed"] - v))   # the gait at about that pace
             g = self.M["gaits"][gi]
             info = self.moving_info(info, on, post, g, jax.random.uniform(km[3]) * self.length[g], v / self.M["speed"][gi])
+        if self.terrain is not None:   # walk/trot tries (not landing or moving starts) start on the rough field
+            on = self.terrain["clips"][info["clip"]]
+            if self.L is not None:
+                on = on & (info["land"] < 0)
+            if self.M is not None:
+                on = on & (info["mg"] < 0)
+            w = self.terrain["spread"]
+            xy = jp.array(TERRAIN["at"], jp.float32) + jax.random.uniform(k_ter, (2,), minval=-w, maxval=w)
+            info = self.terrain_info(info, on, xy)
         return info, yaw
+
+    def terrain_info(self, info, on, xy):
+        return dict(info, ton=jp.asarray(on), txy=jp.where(on, xy, 0.0).astype(jp.float32))
 
     def moving_info(self, info, on, post, g, tau_g, vscale):
         """info for a moving start (on): Bolt in gait g at tau_g, body speed times vscale, told to do posture clip post
@@ -512,6 +599,10 @@ class MjxImitate:
             lqpos = self.qpos0.at[2].set(lq[2]).at[3:7].set(self.mat2quat(Rz @ R0)).at[7:19].set(lj)
             lqvel = jp.concatenate([Rz @ lv[0:3], lv[3:18]])
             qpos, qvel, joints = jp.where(land, lqpos, qpos), jp.where(land, lqvel, qvel), jp.where(land, lj, joints)
+        if self.terrain is not None:   # on the rough field: that spot, at the ground's height there
+            xy = info["txy"]
+            gz = terrain_height(self.terrain["field"], self.terrain["cm"], xy[0], xy[1])
+            qpos = jp.where(info["ton"], qpos.at[0:2].set(xy).at[2].add(gz), qpos)
         d = mjx.make_data(mx).replace(qpos=qpos, qvel=qvel, ctrl=joints)
         d = mjx.forward(mx, d)
         pen = jp.maximum(0.0, jp.max(-self.contact(d).dist))    # never start with a paw or the body in the floor
@@ -567,6 +658,11 @@ class MjxImitate:
         mx = self.model_for(info)
         a = jp.clip(action, -1.0, 1.0)
         d = d.replace(ctrl=jp.clip(self.ref(info, "joints", 1) + self.scale * a, self.lo, self.hi))
+        if self.push_steps:   # now and then a sideways push (imitate_env: the switch test's shove, push-sized)
+            rng, k_push, k_side = jax.random.split(rng, 3)
+            go = (info["t"] > 0) & (info["t"] % self.push_steps == 0) & (jax.random.uniform(k_push) < self.push_prob)
+            side = jp.where(jax.random.uniform(k_side) < 0.5, 1.0, -1.0)
+            d = d.replace(qvel=jp.where(go, apply_shove(d.qvel, d.xmat[self.torso], self.push_speed, self.push_spin, side), d.qvel))
         if self.real_on:
             d, info = self.physics_real(mx, d, info)
         else:
@@ -682,55 +778,83 @@ def to_numpy(params, extra=None):
                 hidden=tuple(int(W.shape[1]) for W, _ in layers[:-1]), **(extra or {}))
 
 
+def curriculum(levels, at, steps):
+    """The terrain curriculum: [(terrain_cm, steps)] phases, level i from step fraction at[i] to at[i+1] (the last to
+    the end). levels (0 5 10) and at (0 0.3 0.6) must have the same length, at[0] = 0, increasing."""
+    assert len(levels) == len(at) and at[0] == 0 and all(b > a for a, b in zip(at, at[1:])) and at[-1] < 1, (levels, at)
+    ends = list(at[1:]) + [1.0]
+    return [(float(cm), int(round((b - a) * steps))) for cm, a, b in zip(levels, at, ends)]
+
+
 def train(args):
     from brax.training.agents.ppo import train as ppo
     out = Path(args.out)
     (out / "checkpoints").mkdir(parents=True, exist_ok=True)
     W = pickle.loads(Path(args.warm).read_bytes()) if args.warm else None
-    env = MjxImitate(switch_rate=args.switch_rate, landing_rate=args.landing_rate, landing_file=args.landing_file,
-                     landing_grace=args.landing_grace, landing_bridge=args.landing_bridge, landing_then=args.landing_then,
-                     moving_rate=args.moving_rate, moving_speed=args.moving_speed, moving_gaits=args.moving_gaits, moving_clips=args.moving_clips,
-                     pose_time={k: float(v) for k, v in (kv.split("=") for kv in args.pose_time)},
-                     pose_weight=args.pose_weight, transition_weight=args.transition_weight, transition_window=args.transition_window,
-                     transition_threshold=args.transition_threshold, latency_ms=(args.latency_min_ms, args.latency_max_ms),
-                     obs_noise=args.obs_noise, motor_lag_ms=args.motor_lag_ms, motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain)
-    print(f"motor brake: {'on' if env.brake else 'off'}" + (f" above {env.brake[0]:g} rad/s, {env.brake[1]:g} N·m per rad/s" if env.brake else ""), flush=True)
+
+    def make_env(cm):
+        return MjxImitate(switch_rate=args.switch_rate, landing_rate=args.landing_rate, landing_file=args.landing_file,
+                          landing_grace=args.landing_grace, landing_bridge=args.landing_bridge, landing_then=args.landing_then,
+                          moving_rate=args.moving_rate, moving_speed=args.moving_speed, moving_gaits=args.moving_gaits, moving_clips=args.moving_clips,
+                          pose_time={k: float(v) for k, v in (kv.split("=") for kv in args.pose_time)},
+                          pose_weight=args.pose_weight, transition_weight=args.transition_weight, transition_window=args.transition_window,
+                          transition_threshold=args.transition_threshold, latency_ms=(args.latency_min_ms, args.latency_max_ms),
+                          obs_noise=args.obs_noise, motor_lag_ms=args.motor_lag_ms, terrain_cm=cm, terrain_clips=args.terrain_clips,
+                          terrain_spread=args.terrain_spread, terrain_seed=args.terrain_seed, push_interval=args.push_interval,
+                          push_prob=args.push_prob, push_speed=args.push_speed, push_spin=args.push_spin,
+                          motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain)
+
+    phases = curriculum(args.terrain_cm, args.terrain_at, args.steps)
     hidden = W["hidden"] if W else (512, 256)
-    restore = to_brax(W) if W else None
     reward_scale = args.reward_scaling or (W["reward_scale"] if W else 1.0)
-    start, log, base = time.time(), [], int(W["steps"]) if W else 0
-
-    def progress(n, m):
-        L = max(1.0, float(m.get("eval/avg_episode_length", 1.0)))
-        row = dict(steps=int(n), total=base + int(n), minutes=round((time.time() - start) / 60, 1), length=round(L, 1),
-                   reward_per_step=float(m.get("eval/episode_reward", np.nan)) / L,
-                   fell=float(m.get("eval/episode_fell", np.nan)),
-                   canter=float(m.get("eval/episode_canter", np.nan)) / max(1e-6, float(m.get("eval/episode_canter_steps", np.nan))),
-                   sps=float(m.get("training/sps", np.nan)), **{k: float(m.get(f"eval/episode_r_{k}", np.nan)) / L for k in WEIGHTS})
-        log.append(row)
-        (out / "progress.json").write_text(json.dumps(log, indent=1))
-        print(f"update at {n}: reward/step {row['reward_per_step']:.3f} (canter {row['canter']:.3f}), try {L:.0f} steps, fell {row['fell']:.2f}, "
-              f"pose {row['pose']:.2f}, {row['sps']:.0f} steps/s, {row['minutes']} min", flush=True)
-        if args.hours and time.time() - start > args.hours * 3600:
-            raise TimeoutError(f"time budget of {args.hours} h used up at {n} steps")
-
-    def save(step, make_policy, params):
-        P = to_numpy(params, dict(steps=base + int(step), source="mjx_imitate"))
-        (out / "checkpoints" / f"params_{int(step)}.pkl").write_bytes(pickle.dumps(P))
-        (out / "params.pkl").write_bytes(pickle.dumps(P))
-
+    start, log, base0 = time.time(), [], int(W["steps"]) if W else 0
+    done_steps = 0   # steps of the finished phases
     q = args.quick
     try:
-        _, params, _ = ppo.train(
-            environment=env, num_timesteps=args.steps, episode_length=env.max_steps, num_envs=args.envs, num_eval_envs=min(args.envs, 128),
-            wrap_env_fn=wrap_for_training, learning_rate=args.lr, learning_rate_schedule="ADAPTIVE_KL", desired_kl=args.kl,
-            learning_rate_schedule_max_lr=1e-3, entropy_cost=args.entropy, discounting=0.95, gae_lambda=0.95, unroll_length=20,
-            batch_size=min(64, args.envs) if q else 256, num_minibatches=4 if q else 32, num_updates_per_batch=4 if q else 5,
-            normalize_observations=True, reward_scaling=reward_scale, clipping_epsilon=0.2, max_grad_norm=1.0,
-            num_evals=args.evals, network_factory=make_networks(hidden, float(np.mean(W["log_std"])) if W else -1.0),
-            restore_params=restore, restore_value_fn=True, seed=args.seed, deterministic_eval=True,
-            progress_fn=progress, policy_params_fn=save)
-        (out / "params.pkl").write_bytes(pickle.dumps(to_numpy(params, dict(steps=base + args.steps, source="mjx_imitate"))))
+        for k, (cm, n_steps) in enumerate(phases):
+            env = make_env(cm)
+            if k == 0:
+                print(f"motor brake: {'on' if env.brake else 'off'}" + (f" above {env.brake[0]:g} rad/s, {env.brake[1]:g} N·m per rad/s" if env.brake else ""), flush=True)
+            if len(phases) > 1:
+                print(f"phase {k + 1}/{len(phases)}: terrain {cm:g} cm for {n_steps:,} steps", flush=True)
+            base = base0 + done_steps
+            restore = to_brax(W) if W else None
+            last = [0]   # the steps this phase actually ran (Brax rounds up to whole iterations)
+
+            def progress(n, m, cm=cm, base=base, off=done_steps):
+                L = max(1.0, float(m.get("eval/avg_episode_length", 1.0)))
+                last[0] = max(last[0], int(n))
+                row = dict(steps=off + int(n), total=base + int(n), terrain_cm=cm, minutes=round((time.time() - start) / 60, 1), length=round(L, 1),
+                           reward_per_step=float(m.get("eval/episode_reward", np.nan)) / L,
+                           fell=float(m.get("eval/episode_fell", np.nan)),
+                           canter=float(m.get("eval/episode_canter", np.nan)) / max(1e-6, float(m.get("eval/episode_canter_steps", np.nan))),
+                           sps=float(m.get("training/sps", np.nan)), **{t: float(m.get(f"eval/episode_r_{t}", np.nan)) / L for t in WEIGHTS})
+                log.append(row)
+                (out / "progress.json").write_text(json.dumps(log, indent=1))
+                print(f"update at {off + int(n)}: reward/step {row['reward_per_step']:.3f} (canter {row['canter']:.3f}), try {L:.0f} steps, fell {row['fell']:.2f}, "
+                      f"pose {row['pose']:.2f}, {row['sps']:.0f} steps/s, {row['minutes']} min" + (f", terrain {cm:g} cm" if len(phases) > 1 else ""), flush=True)
+                if args.hours and time.time() - start > args.hours * 3600:
+                    raise TimeoutError(f"time budget of {args.hours} h used up at {off + int(n)} steps")
+
+            def save(step, make_policy, params, base=base, off=done_steps, cm=cm):
+                P = to_numpy(params, dict(steps=base + int(step), source="mjx_imitate", terrain_cm=cm))
+                (out / "checkpoints" / f"params_{off + int(step)}.pkl").write_bytes(pickle.dumps(P))
+                (out / "params.pkl").write_bytes(pickle.dumps(P))
+
+            evals = args.evals if len(phases) == 1 else max(2, int(round(args.evals * n_steps / args.steps)))
+            _, params, _ = ppo.train(
+                environment=env, num_timesteps=n_steps, episode_length=env.max_steps, num_envs=args.envs, num_eval_envs=min(args.envs, 128),
+                wrap_env_fn=wrap_for_training, learning_rate=args.lr, learning_rate_schedule="ADAPTIVE_KL", desired_kl=args.kl,
+                learning_rate_schedule_max_lr=1e-3, entropy_cost=args.entropy, discounting=0.95, gae_lambda=0.95, unroll_length=20,
+                batch_size=min(64, args.envs) if q else 256, num_minibatches=4 if q else 32, num_updates_per_batch=4 if q else 5,
+                normalize_observations=True, reward_scaling=reward_scale, clipping_epsilon=0.2, max_grad_norm=1.0,
+                num_evals=evals, network_factory=make_networks(hidden, float(np.mean(W["log_std"])) if W else -1.0),
+                restore_params=restore, restore_value_fn=True, seed=args.seed + k, deterministic_eval=True,
+                progress_fn=progress, policy_params_fn=save)
+            ran = max(last[0], n_steps)
+            W = to_numpy(params, dict(steps=base + ran, source="mjx_imitate", terrain_cm=cm))   # the next phase starts here
+            (out / "params.pkl").write_bytes(pickle.dumps(W))
+            done_steps += ran
     except TimeoutError as e:
         print(f"stopped: {e}; the last saved brain is {out / 'params.pkl'}", flush=True)
     print(f"done: {(time.time() - start) / 60:.1f} min -> {out}", flush=True)
@@ -784,6 +908,16 @@ def main():
                    help="... to this (ms); 0: no latency, as before (mastermind's stress test: 10/20/40 ms)")
     t.add_argument("--obs-noise", type=float, default=REAL["obs_noise"], help="sensor noise, x legged_gym's levels (NOISE); 0: none")
     t.add_argument("--motor-lag-ms", type=float, default=REAL["motor_lag_ms"], help="first-order motor lag time constant (ms); 0: none")
+    t.add_argument("--terrain-cm", type=float, nargs="+", default=[TERRAIN_ARGS["cm"]],
+                   help="rough terrain height (cm), or several for a curriculum with --terrain-at (e.g. 0 5 10); 0: flat, as before")
+    t.add_argument("--terrain-at", type=float, nargs="+", default=[0.0], help="step fraction where each --terrain-cm level starts (e.g. 0 0.3 0.6)")
+    t.add_argument("--terrain-clips", nargs="+", default=list(TERRAIN_ARGS["clips"]), help="clips whose tries start on the terrain")
+    t.add_argument("--terrain-spread", type=float, default=TERRAIN_ARGS["spread"], help="m around the field's middle where they start")
+    t.add_argument("--terrain-seed", type=int, default=TERRAIN_ARGS["seed"], help="the field's random heights")
+    t.add_argument("--push-interval", type=float, default=PUSH["interval"], help="s between push chances; 0: no pushes, as before")
+    t.add_argument("--push-prob", type=float, default=PUSH["prob"], help="chance of a push at each (default %(default)s)")
+    t.add_argument("--push-speed", type=float, default=PUSH["speed"], help="sideways push, m/s of body speed (default %(default)s, legged_gym's max)")
+    t.add_argument("--push-spin", type=float, default=PUSH["spin"], help="roll rate the push adds, rad/s (default %(default)s)")
     t.add_argument("--motor-brake", action=argparse.BooleanOptionalAction, default=True,
                    help="motor braking above --brake-speed (bolt_env back-EMF model); default on for training")
     t.add_argument("--brake-speed", type=float, default=BRAKE["speed"], help="rad/s where braking starts (default %(default)s, the drive cutoff)")

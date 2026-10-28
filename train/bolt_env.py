@@ -172,6 +172,66 @@ HURDLE_HALF = 0.3           # m: the bar is a 60 cm box, sunk into the floor to 
 HURDLE_XML = (f'<body name="hurdle" mocap="true" pos="100 0 -1"><geom name="hurdle" type="box" '
               f'size="0.025 0.6 {HURDLE_HALF}" rgba="0.89 0.38 0.04 1"/></body>')
 HURDLE_MARGIN = 0.07        # m of paw clearance over the bar
+
+# Rough terrain (step 6, --terrain-cm): a height field, uniform random heights per 10 cm cell up to `cm` (legged_gym's
+# "random uniform" rough terrain), 40 x 40 m, beside the flat floor: its middle is TERRAIN["at"], 40 m from the origin,
+# so a try started at the origin stays on flat floor and a try started on the field stays on it for a 5 s try
+# (trot 1.9 m/s). It is added to the world only when cm > 0 (terrain_xml), as the last world geom so every other geom
+# keeps its id; with cm = 0 the model is bolt.xml exactly. The field is fixed per seed (terrain_field), so the CPU and
+# GPU envs share it; heights are the field's 0..1 values times cm.
+TERRAIN = dict(cm=0.0, half=20.0, cell=0.1, at=(40.0, 0.0), seed=0, base=0.05)
+
+
+def terrain_field(seed=TERRAIN["seed"], half=TERRAIN["half"], cell=TERRAIN["cell"]):
+    """The field's heights, 0..1 (rows along y, columns along x, as MuJoCo's hfield_data)."""
+    n = int(round(2 * half / cell)) + 1
+    return np.random.default_rng(seed).uniform(0.0, 1.0, (n, n))
+
+
+def terrain_xml(xml, cm, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN["at"], base=TERRAIN["base"]):
+    """bolt.xml with the height field (cm high) added; the heights are set from terrain_field after loading."""
+    n = int(round(2 * half / cell)) + 1
+    asset = f'<hfield name="terrain" nrow="{n}" ncol="{n}" size="{half} {half} {cm / 100.0} {base}"/>'
+    xml = xml.replace("<asset>", "<asset>\n    " + asset, 1)
+    # only the paws and shins touch the bumps (contype bit 4); the body, head and thighs meet the flat floor under the
+    # field. Box-on-hfield contacts made MJX 6x slower (paws and shins: 1.9x); on 5-10 cm bumps an upright body is 30+ cm
+    # above them, and a fall is still caught (height and tilt limits, the floor under the field)
+    geom = (f'<geom name="terrain" type="hfield" hfield="terrain" pos="{at[0]} {at[1]} 0" contype="0" conaffinity="4" '
+            'rgba="0.55 0.5 0.42 1"/>')
+    for cls, typ in (("foot", "sphere"), ("shin", "capsule")):   # CPU: 1 | 4 (mjx_imitate.collisions makes it 2 | 4)
+        xml = xml.replace(f'<default class="{cls}"><geom type="{typ}"', f'<default class="{cls}"><geom type="{typ}" contype="5"', 1)
+    i = xml.rindex("</worldbody>")
+    return xml[:i] + "  " + geom + "\n  " + xml[i:]
+
+
+def terrain_height(field, cm, x, y, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN["at"]):
+    """Ground height (m) at (x, y): bilinear in the field's cells, 0 off the field. Works on numpy and JAX arrays
+    (xp: the array module of field)."""
+    xp = np if isinstance(field, np.ndarray) else __import__("jax.numpy", fromlist=["numpy"])
+    n = field.shape[0]
+    u, v = (x - at[0] + half) / cell, (y - at[1] + half) / cell     # column, row
+    on = (u >= 0) & (u <= n - 1) & (v >= 0) & (v <= n - 1)
+    u, v = xp.clip(u, 0, n - 1 - 1e-6), xp.clip(v, 0, n - 1 - 1e-6)
+    c, r = xp.floor(u).astype(xp.int32), xp.floor(v).astype(xp.int32)
+    fu, fv = u - c, v - r
+    h = (field[r, c] * (1 - fu) * (1 - fv) + field[r, c + 1] * fu * (1 - fv) + field[r + 1, c] * (1 - fu) * fv
+         + field[r + 1, c + 1] * fu * fv)
+    return xp.where(on, h * cm / 100.0, 0.0)
+
+
+def apply_shove(qvel, R, speed, spin, side):
+    """A sideways shove (a kick to the flank): body velocity changed by `speed` m/s along the body's y axis and the
+    roll rate by `spin` rad/s away from the push; side +1/-1. skills.Bolt.shove (the switch test's) and the pushes
+    of imitate_env/mjx_imitate all use this. Returns the new qvel (numpy or JAX)."""
+    xp = np if isinstance(qvel, np.ndarray) else __import__("jax.numpy", fromlist=["numpy"])
+    dv = R @ xp.array([0.0, 1.0, 0.0]) * (side * speed)
+    dw = xp.array([-1.0, 0.0, 0.0]) * (side * spin)   # body frame: roll away from the push
+    if xp is np:
+        qvel = qvel.copy()
+        qvel[0:3] += dv
+        qvel[3:6] += dw
+        return qvel
+    return qvel.at[0:3].add(dv).at[3:6].add(dw)
 HURDLE_ZONE = (-0.7, 1.0)   # m: high steps from 1.0 m before the bar until the body is 0.7 m past it
 
 class BoltEnv(gym.Env):
@@ -179,7 +239,8 @@ class BoltEnv(gym.Env):
 
     def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
                  skills=None, gait_generator=False, turning=False, handover_brain=None, speed_control=False,
-                 sharp_turns=False, getting_up=False, hurdles=False, motor_brake=None):
+                 sharp_turns=False, getting_up=False, hurdles=False, motor_brake=None, terrain_cm=TERRAIN["cm"],
+                 terrain_seed=TERRAIN["seed"]):
         # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
         # brain only adds corrections on top (residual control, as in "policies modulating trajectory
         # generators"). The legs are coordinated from the first step instead of having to discover it.
@@ -207,6 +268,8 @@ class BoltEnv(gym.Env):
         elif scale == 1.0 and hurdles:  # the same robot, plus a hurdle (parked far away until placed)
             xml = MODEL.read_text().replace('<geom name="floor"', HURDLE_XML + '\n    <geom name="floor"', 1)
             self.model = mujoco.MjModel.from_xml_string(xml)
+        elif scale == 1.0 and terrain_cm > 0:   # rough terrain beside the floor (TERRAIN, terrain_xml)
+            self.model = mujoco.MjModel.from_xml_string(terrain_xml(MODEL.read_text(), terrain_cm))
         elif scale == 1.0:
             self.model = mujoco.MjModel.from_xml_path(str(MODEL))
         else:
@@ -244,6 +307,14 @@ class BoltEnv(gym.Env):
         self.torso = m.body("torso").id
         self.foot_ids = [m.geom(f).id for f in FEET]
         self.floor = m.geom("floor").id
+        # rough terrain: the field (heights 0..1), its height (cm) and geom; None on flat ground
+        assert not (terrain_cm > 0 and (hurdles or scale != 1.0)), "terrain is for the full-size robot without hurdles"
+        self.terrain = None
+        if terrain_cm > 0:
+            field = terrain_field(terrain_seed)
+            m.hfield_data[:] = field.ravel()
+            self.terrain = dict(field=field, cm=float(terrain_cm), geom=m.geom("terrain").id)
+        self.ground = {self.floor} | ({self.terrain["geom"]} if self.terrain else set())   # what the paws stand on
         # which leg each geom belongs to (0-3), or -1 for the body (torso, head, snout)
         names = [mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, b) or "" for b in m.geom_bodyid]
         self.geom_leg = np.array([["FL", "FR", "RL", "RR"].index(n[:2]) if n[:2] in ("FL", "FR", "RL", "RR") else -1

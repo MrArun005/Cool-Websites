@@ -1,0 +1,80 @@
+{
+ "brain": "models/bolt-dog-imitate-gpu-360M/params.pkl",
+ "test": "imitate_env.exam_terrain: 30 tries x 4 s, randomized physics, seed 9000, brake off",
+ "rows": [
+  {
+   "cm": 0,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.0,
+   "ended": 0.0,
+   "track": 0.92,
+   "speed": 0.9
+  },
+  {
+   "cm": 5,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.0,
+   "ended": 0.0,
+   "track": 0.837,
+   "speed": 0.79
+  },
+  {
+   "cm": 10,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.5666666666666667,
+   "ended": 0.5666666666666667,
+   "track": 0.431,
+   "speed": 0.34
+  },
+  {
+   "cm": 0,
+   "clip": "walk",
+   "tries": 30,
+   "fall": 0.0,
+   "ended": 0.0,
+   "track": 0.929,
+   "speed": 0.88
+  },
+  {
+   "cm": 5,
+   "clip": "walk",
+   "tries": 30,
+   "fall": 0.03333333333333333,
+   "ended": 0.03333333333333333,
+   "track": 0.847,
+   "speed": 0.73
+  },
+  {
+   "cm": 10,
+   "clip": "walk",
+   "tries": 30,
+   "fall": 0.8,
+   "ended": 0.8333333333333334,
+   "track": 0.349,
+   "speed": 0.2
+  },
+  {
+   "cm": 5,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.3333333333333333,
+   "ended": 0.3333333333333333,
+   "track": 0.609,
+   "speed": 0.54,
+   "push": "1 m/s at 1 s"
+  },
+  {
+   "cm": 0,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 1.0,
+   "ended": 1.0,
+   "track": 0.24,
+   "speed": 0.27,
+   "push": "switch-test shove 2.5 m/s, 6 rad/s at 1 s"
+  }
+ ]
+}

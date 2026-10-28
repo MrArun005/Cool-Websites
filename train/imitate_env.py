@@ -88,6 +88,19 @@ mastermind/env.py's stress test:
 The "previous action" input stays what the brain sent (as on a robot). exam() adds a latency sweep: lat<ms>_score
 and lat<ms>_fall at 0/10/20/40 ms (LATENCY_SWEEP).
 
+Rough terrain and pushes (step 6), off by default:
+    terrain_cm      bolt_env's height field (TERRAIN: uniform random heights up to terrain_cm per 10 cm cell, 40 x 40 m
+                    beside the flat floor). Tries starting in terrain_clips (walk, trot) start on it, at a random spot
+                    within terrain_spread m of its middle; every other try starts on the flat floor at the origin, as
+                    before. On terrain the body height (input 9, the height term and the 15 cm limit) is measured from
+                    the ground under the body (bolt_env.terrain_height), as on flat floor. Only the paws and shins touch
+                    the bumps; body, head and thighs meet the flat floor under the field (bolt_env.terrain_xml: box-on-
+                    height-field contacts made the GPU env 6x slower).
+    push_interval   s between push chances (0: no pushes); each chance pushes with push_prob, a sideways shove of
+                    push_speed m/s and push_spin rad/s of roll to a random side (bolt_env.apply_shove: the switch
+                    test's shove, skills.Bolt.shove). The switch test's shove is 2.5 m/s and 6 rad/s (it topples Bolt);
+                    legged_gym trains with pushes up to 1 m/s.
+
 motor_brake: None = bolt_env's process default (off unless set; train_imitate.py turns it on), True/False for this
 env (bolt_env: back-EMF braking above the drive cutoff).
 """
@@ -100,7 +113,7 @@ import torch  # noqa: F401  (imported by the policies below; keeps the import or
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
-from bolt_env import ACTION_SCALE, STANCES, BoltEnv, physics
+from bolt_env import ACTION_SCALE, STANCES, TERRAIN, BoltEnv, apply_shove, physics, terrain_height
 from pose_reached import CLIP_POSE, pose_ok
 
 DOG = STANCES["dog"]
@@ -130,6 +143,10 @@ TRANSITION = dict(weight=0.0, window=1.0, threshold=0.3)
 NOISE = dict(grav=0.05, gyro=0.2, linvel=0.1, height=0.02, qpos=0.01, qvel=1.5)
 REAL = dict(latency_ms=(0.0, 0.0), obs_noise=0.0, motor_lag_ms=0.0)   # defaults: off
 LATENCY_SWEEP = (0, 10, 20, 40)   # ms, exam(): mastermind's stress-test points
+# rough terrain and pushes (see above): defaults off (cm 0, interval 0); clips that start on the terrain, m around its
+# middle where they start; push chance, push size (legged_gym's max push speed; no roll spin unless asked)
+TERRAIN_ARGS = dict(cm=TERRAIN["cm"], clips=("walk", "trot"), spread=5.0, seed=TERRAIN["seed"])
+PUSH = dict(interval=0.0, prob=0.5, speed=1.0, spin=0.0)
 
 
 def roll_pitch(R):
@@ -213,9 +230,12 @@ class ImitateEnv(BoltEnv):
                  moving_speed=MOVING["speed"], moving_gaits=MOVING["gaits"], moving_clips=MOVING["clips"],
                  pose_time=None, pose_weight=MOVING["weight"], transition_weight=TRANSITION["weight"],
                  transition_window=TRANSITION["window"], transition_threshold=TRANSITION["threshold"],
-                 latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"], motor_brake=None):
+                 latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"],
+                 terrain_cm=TERRAIN_ARGS["cm"], terrain_clips=TERRAIN_ARGS["clips"], terrain_spread=TERRAIN_ARGS["spread"],
+                 terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"],
+                 push_speed=PUSH["speed"], push_spin=PUSH["spin"], motor_brake=None):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
-                         skills=["stand"], motor_brake=motor_brake)
+                         skills=["stand"], motor_brake=motor_brake, terrain_cm=terrain_cm, terrain_seed=terrain_seed)
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
         self.switch_rate = switch_rate   # chance per second of switching to a following clip mid-try (training only)
         self.OBS = 66 + slots
@@ -225,7 +245,10 @@ class ImitateEnv(BoltEnv):
         self.residual = residual
         self.weights = dict(WEIGHTS, **(weights or {}))   # e.g. {"root_vel": 0.25} if it keeps poses but not pace
         self.exam_start = None        # (clip name, start time s): exams set it; training draws it
-        self.body_geoms = {g for g in range(self.model.ngeom) if self.geom_leg[g] < 0 and g != self.floor}
+        self.body_geoms = {g for g in range(self.model.ngeom) if self.geom_leg[g] < 0 and g != self.floor and g not in self.ground}
+        self.terrain_clips, self.terrain_spread = tuple(terrain_clips), terrain_spread
+        self.push_steps = int(round(push_interval / self.dt)) if push_interval else 0
+        self.push_prob, self.push_speed, self.push_spin = push_prob, push_speed, push_spin
         self.clip, self.tau0 = self.clips[self.clip_names[0]], 0.0
         # landing starts (module docstring): share of tries, the states, s without the height check, s of the bridge
         # clip before landing_then (None or 0 s: no forced switch)
@@ -276,8 +299,17 @@ class ImitateEnv(BoltEnv):
         rel = np.array([self.data.geom_xpos[g] for g in self.foot_ids]) - self.data.qpos[:3]
         return rel @ _rotz(yaw)
 
+    def ground_z(self):
+        """Height of the ground under the body (m): the terrain's (0 off it), or None on a flat-floor env."""
+        if self.terrain is None:
+            return None
+        return float(terrain_height(self.terrain["field"], self.terrain["cm"], self.data.qpos[0], self.data.qpos[1]))
+
     def body_on_floor(self):
         d = self.data
+        if self.terrain is not None:   # the terrain is floor too
+            return any((c.geom1 in self.ground and c.geom2 in self.body_geoms) or
+                       (c.geom2 in self.ground and c.geom1 in self.body_geoms) for c in d.contact[:d.ncon])
         return any((c.geom1 == self.floor and c.geom2 in self.body_geoms) or
                    (c.geom2 == self.floor and c.geom1 in self.body_geoms) for c in d.contact[:d.ncon])
 
@@ -292,7 +324,8 @@ class ImitateEnv(BoltEnv):
         onehot = np.zeros(self.slots)
         onehot[ALL_CLIPS.index(self.clip.name)] = 1.0
         obs = np.concatenate([
-            R.T @ np.array([0, 0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3], [d.qpos[2]],
+            R.T @ np.array([0, 0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3],
+            [d.qpos[2] if self.terrain is None else d.qpos[2] - self.ground_z()],
             d.qpos[7:19] - DOG, d.qvel[6:18] * 0.1, self.last_action,
             [np.sin(ph), np.cos(ph)], onehot,
             self.ref("joints", 1) - DOG, [self.ref("height", 1)], self.ref("v_body", 1), [self.ref("w_body", 1)[2]],
@@ -347,10 +380,10 @@ class ImitateEnv(BoltEnv):
             self.tau0 = float(self.rng.uniform(0, c.length if c.loop else c.length + 0.3 * HOLD))
         self.clip = self.clips[name]
         self.t = 0
-        self._rsi()
+        self._rsi(on_terrain=self.terrain is not None and name in self.terrain_clips)
         return self._settle()
 
-    def _rsi(self, vscale=1.0):
+    def _rsi(self, vscale=1.0, on_terrain=False):
         """Reference state initialization: Bolt starts in the dog's pose at that moment, moving as it was (the body's
         linear velocity times vscale: moving starts)."""
         m, d = self.model, self.data
@@ -361,6 +394,10 @@ class ImitateEnv(BoltEnv):
         q = np.zeros(4)
         mujoco.mju_mat2Quat(q, Rw.reshape(-1))
         d.qpos[:3] = [0.0, 0.0, self.ref("height") + 0.005]
+        if on_terrain:   # a random spot on the rough field, at the ground's height there
+            at, w = TERRAIN["at"], self.terrain_spread
+            d.qpos[0:2] = [at[0] + self.rng.uniform(-w, w), at[1] + self.rng.uniform(-w, w)]
+            d.qpos[2] += self.ground_z()
         d.qpos[3:7] = q
         d.qpos[7:19] = np.clip(self.ref("joints"), self.lo, self.hi)
         moving = 0.0 if self.finished() > 0 else 1.0
@@ -433,7 +470,7 @@ class ImitateEnv(BoltEnv):
         e_pose = np.sum((self.ref("joints") - q) ** 2)
         e_vel = np.sum((self.ref("joint_vel") - qd) ** 2)
         e_paw = np.sum((self.ref("paws") - self.heading_paws()) ** 2)
-        e_h = self.ref("height") - d.qpos[2]
+        e_h = self.ref("height") - (d.qpos[2] if self.terrain is None else d.qpos[2] - self.ground_z())
         g, g_ref = R.T @ np.array([0, 0, -1.0]), self.ref("gravity")
         tilt = np.arccos(np.clip(np.dot(g, g_ref) / np.linalg.norm(g_ref), -1, 1))
         v, w = R.T @ d.qvel[0:3], d.qvel[3:6]   # MuJoCo free joint: angular velocity is in the body frame
@@ -447,6 +484,9 @@ class ImitateEnv(BoltEnv):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
         base = self.ref("joints", 1) if self.residual else DOG
         self.data.ctrl[:] = np.clip(base + ACTION_SCALE * a, self.lo, self.hi)
+        if self.push_steps and self.t > 0 and self.t % self.push_steps == 0 and self.rng.random() < self.push_prob:
+            side = 1.0 if self.rng.random() < 0.5 else -1.0   # a push now (the switch test's shove, push-sized)
+            self.data.qvel[:] = apply_shove(self.data.qvel, self._rotation(), self.push_speed, self.push_spin, side)
         if self.delay_sub or self.motor_lag_ms:
             self._delayed_physics()
         else:
@@ -643,3 +683,40 @@ def score(result):
     names = [k[6:] for k in result if k.startswith("track_")]
     return float(np.mean([result[f"track_{n}"] * float(np.clip(result.get(f"speed_{n}", 1.0), 0.0, 1.0))
                           for n in names]))
+
+
+def exam_terrain(policy, cm, clip="trot", tries=30, seconds=4.0, seed=9000, push_speed=0.0, push_spin=0.0):
+    """Step 6's target test: `tries` tries of `clip` on the rough field (bolt_env TERRAIN, cm high; 0: the flat floor),
+    each starting at an evenly spaced moment of the stride, randomized physics, `seconds` long. A fall is the skill
+    manager's (skills.FALL_UP / _after_step): tipped past 60 degrees, or the body on the ground for 0.1 s; a try that
+    the env ends early for losing the motion (15 cm off the reference height, 0.8 rad tilt) is counted apart (ended).
+    push_speed/push_spin: one sideways shove 1 s in (0: none). Returns fall, ended, track (mean reward per step), speed
+    (forward distance over the clip's)."""
+    env = ImitateEnv(randomize=True, clips=[clip], terrain_cm=cm)
+    c = env.clips[clip]
+    steps = int(round(seconds / env.dt))
+    falls, ended, track, pace = 0, 0, [], []
+    for k in range(tries):
+        env.exam_start = (clip, (k / tries) * c.length)
+        obs, _ = env.reset(seed=seed + k)
+        env.limit = steps
+        R = env._rotation()
+        h0, p0 = np.arctan2(R[1, 0], R[0, 0]), env.data.qpos[:2].copy()
+        floor_steps, fell, early, total = 0, False, False, 0.0
+        for t in range(steps):
+            if push_speed and t == int(round(1.0 / env.dt)):
+                env.data.qvel[:] = apply_shove(env.data.qvel, env._rotation(), push_speed, push_spin, 1.0 if k % 2 else -1.0)
+            obs, r, lost, done, info = env.step(policy.act(obs))
+            total += r
+            floor_steps = floor_steps + 1 if env.body_on_floor() else 0
+            if env._rotation()[2, 2] < 0.5 or floor_steps >= 5:
+                fell = True
+                break
+            if lost and not early:
+                early = True   # the env would end the try here; keep going to see whether Bolt really falls
+        falls += fell
+        ended += early or fell
+        track.append(total / steps)
+        pace.append(float(np.dot(env.data.qpos[:2] - p0, [np.cos(h0), np.sin(h0)])) / (steps * env.dt * c.v_body[:, 0].mean()))
+    return dict(cm=cm, clip=clip, tries=tries, fall=falls / tries, ended=ended / tries, track=round(float(np.mean(track)), 3),
+                speed=round(float(np.mean(pace)), 2))

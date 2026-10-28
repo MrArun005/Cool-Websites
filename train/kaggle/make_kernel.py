@@ -17,6 +17,11 @@
         --steps 1000000000 --hours 10.5 --landing-rate 0.2 --moving-rate 0.2 --transition-weight 0.3 \
         --latency-min-ms 0 --latency-max-ms 40 --obs-noise 1.0 \
         --evals 40 --extra "--reward-scaling 0.246 --switch-rate 0.3 --seed 3" -o /tmp/kg3
+    # rough terrain + pushes (step 6): terrain curriculum 0 -> 5 -> 10 cm at 0 / 30 / 60 % of the steps, pushes up to 1 m/s
+    python kaggle/make_kernel.py --user <user> --job imitate --slug bolt-dog-terrain --warm-dataset <user>/bolt-imitate-360m \
+        --steps 1000000000 --hours 10.5 --terrain-cm 0 5 10 --terrain-at 0 0.3 0.6 --push-interval 2 --push-prob 0.5 \
+        --push-speed 1.0 --landing-rate 0.2 --moving-rate 0.2 --transition-weight 0.3 --latency-min-ms 0 --latency-max-ms 40 \
+        --obs-noise 1.0 --evals 40 --extra "--reward-scaling 0.246 --switch-rate 0.3 --seed 6" -o /tmp/kt
     MUJOCO_GL=osmesa python /tmp/kg3/kernel.py --local /tmp/kg3_run   # optional local smoke test: runs the trainer
                                                                       # with --steps 20000 --envs 16 --quick in /tmp/kg3_run
 
@@ -86,6 +91,10 @@ def main():
                      ("--pose-weight", dict(type=float)), ("--transition-weight", dict(type=float)), ("--transition-window", dict(type=float)),
                      ("--transition-threshold", dict(type=float)), ("--latency-min-ms", dict(type=float)), ("--latency-max-ms", dict(type=float)),
                      ("--obs-noise", dict(type=float)), ("--motor-lag-ms", dict(type=float)),
+                     ("--terrain-cm", dict(type=float, nargs="+")), ("--terrain-at", dict(type=float, nargs="+")),
+                     ("--terrain-clips", dict(nargs="+")), ("--terrain-spread", dict(type=float)), ("--terrain-seed", dict(type=int)),
+                     ("--push-interval", dict(type=float)), ("--push-prob", dict(type=float)), ("--push-speed", dict(type=float)),
+                     ("--push-spin", dict(type=float)),
                      ("--brake-speed", dict(type=float)), ("--brake-gain", dict(type=float))]:
         ap.add_argument(flag, **kw, help="imitate: passed to mjx_imitate.py train (default: its own)")
     ap.add_argument("--motor-brake", action=argparse.BooleanOptionalAction, help="imitate: passed on (default: mjx_imitate's, on)")
