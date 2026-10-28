@@ -90,6 +90,7 @@ def main():
     ap.add_argument("--exam-episodes", type=int, default=10)
     ap.add_argument("--lr", type=float, help="learning rate (on --resume/--init-from too; default 3e-4 / the saved one)")
     ap.add_argument("--target-kl", type=float, help="PPO target kl (default 0.03 / the saved one)")
+    ap.add_argument("--n-steps", type=int, help="steps per env per update (default 2048 / the saved one)")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
     args = ap.parse_args()
@@ -97,7 +98,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
     venv = make_vec_env(GetUpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(goal=args.goal, hard=args.hard))
-    over = {k: v for k, v in dict(learning_rate=args.lr, target_kl=args.target_kl).items() if v is not None}
+    over = {k: v for k, v in dict(learning_rate=args.lr, target_kl=args.target_kl, n_steps=args.n_steps).items() if v is not None}
     if args.init_from and not args.resume:
         src = Path(args.init_from)
         venv = VecNormalize.load(str(src / "vecnormalize.pkl"), venv)
@@ -112,7 +113,7 @@ def main():
     else:
         venv = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
         # 16k steps per update (2048 per env): runs 15c-15e with 4k steps per update broke down again and again
-        model = PPO("MlpPolicy", venv, n_steps=2048, batch_size=4096, n_epochs=5, learning_rate=3e-4, gamma=0.99,
+        model = PPO("MlpPolicy", venv, n_steps=args.n_steps or 2048, batch_size=4096, n_epochs=5, learning_rate=3e-4, gamma=0.99,
                     gae_lambda=0.95, clip_range=0.2, ent_coef=0.0, max_grad_norm=1.0, target_kl=0.03,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256]), activation_fn=torch.nn.ELU,
                                        log_std_init=0.0),   # more exploration: rolling over needs big moves
