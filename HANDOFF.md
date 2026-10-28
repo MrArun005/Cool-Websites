@@ -97,6 +97,7 @@ Do not claim to beat a specialist at its speciality unless the same test says so
 
 ## Strict standing rules (set by the owner, 27 Oct)
 0. (28 Oct) Always give times to the owner in Indian Standard Time (IST, UTC+5:30), e.g. "08:29 IST".
+0b. (28 Oct) Kaggle runs stay LONG: size each job to use nearly all of Kaggle's 12 h session limit (time guard ~10.5-11.5 h), results once a day, rather than short 2-4 h runs.
 1. Every 30 minutes, check everything, whether or not anyone reported: each training run's log is fresh (< 40 min),
    checkpoints arrive, exams improve; each agent is alive; this machine's background tasks are running; pages are
    published with the latest data (with a "what's new" table); git is committed and pushed.
