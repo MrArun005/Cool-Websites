@@ -1,0 +1,336 @@
+{
+ "settings": {
+  "folder": "../models/bolt-dog-jump-trot-55M",
+  "speed": 2.5,
+  "dist": 1.5,
+  "height": 0.6,
+  "gait": true,
+  "episodes": 30,
+  "seed": 9000,
+  "max_steps": 220,
+  "window": 0.4,
+  "out": "research/results/crouch_trot55_v25_60.json",
+  "motor_brake": true,
+  "brake_speed": 25.0,
+  "brake_gain": 3.5
+ },
+ "summary": {
+  "clean": {
+   "n": 7,
+   "mean_run_height": 0.419,
+   "mean_dip": 0.113,
+   "mean_takeoff_vz": 3.048,
+   "mean_apex": 0.943
+  },
+  "failed": {
+   "n": 23,
+   "mean_run_height": 0.441,
+   "mean_dip": 0.13,
+   "mean_takeoff_vz": 2.587,
+   "mean_apex": 0.814
+  }
+ },
+ "tries": [
+  {
+   "seed": 9000,
+   "clean": false,
+   "run_height": 0.42728398149644553,
+   "crouch_low": 0.2971091701837041,
+   "dip": 0.13017481131274145,
+   "takeoff_vz": 2.7879450358176343,
+   "apex": 0.874828684686292,
+   "takeoff_s": 0.34
+  },
+  {
+   "seed": 9001,
+   "clean": true,
+   "run_height": 0.4210943055627195,
+   "crouch_low": 0.29287480828863977,
+   "dip": 0.12821949727407972,
+   "takeoff_vz": 3.086321760399167,
+   "apex": 0.952156431966551,
+   "takeoff_s": 0.34
+  },
+  {
+   "seed": 9002,
+   "clean": false,
+   "run_height": 0.44828683131238833,
+   "crouch_low": 0.2980373128328845,
+   "dip": 0.15024951847950385,
+   "takeoff_vz": 2.749915474714183,
+   "apex": 0.8493391102826323,
+   "takeoff_s": 0.36
+  },
+  {
+   "seed": 9003,
+   "clean": false,
+   "run_height": 0.4503600396165165,
+   "crouch_low": 0.31951563312815856,
+   "dip": 0.13084440648835793,
+   "takeoff_vz": 2.3287355309385287,
+   "apex": 0.7340724011764721,
+   "takeoff_s": 0.3
+  },
+  {
+   "seed": 9004,
+   "clean": true,
+   "run_height": 0.4219843387399586,
+   "crouch_low": 0.3222518874449939,
+   "dip": 0.09973245129496472,
+   "takeoff_vz": 3.1415880530020734,
+   "apex": 0.9614753719249279,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9005,
+   "clean": true,
+   "run_height": 0.416070512613197,
+   "crouch_low": 0.3094406027003348,
+   "dip": 0.1066299099128622,
+   "takeoff_vz": 3.0243457516987817,
+   "apex": 0.9500725927576633,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9006,
+   "clean": false,
+   "run_height": 0.4497884596114321,
+   "crouch_low": 0.31844972226744994,
+   "dip": 0.13133873734398216,
+   "takeoff_vz": 2.585354054983253,
+   "apex": 0.8167330827174655,
+   "takeoff_s": 0.3
+  },
+  {
+   "seed": 9007,
+   "clean": true,
+   "run_height": 0.4219884097720112,
+   "crouch_low": 0.321614653518679,
+   "dip": 0.10037375625333217,
+   "takeoff_vz": 3.214153809894334,
+   "apex": 0.9818611718732329,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9008,
+   "clean": false,
+   "run_height": 0.4485904465368296,
+   "crouch_low": 0.3148546892416982,
+   "dip": 0.13373575729513143,
+   "takeoff_vz": 2.5766182945562233,
+   "apex": 0.7962904584013303,
+   "takeoff_s": 0.3
+  },
+  {
+   "seed": 9009,
+   "clean": true,
+   "run_height": 0.41574600453152666,
+   "crouch_low": 0.29227896684690613,
+   "dip": 0.12346703768462053,
+   "takeoff_vz": 3.0564458199211626,
+   "apex": 0.9434266692914139,
+   "takeoff_s": 0.34
+  },
+  {
+   "seed": 9010,
+   "clean": false,
+   "run_height": 0.4489726872681404,
+   "crouch_low": 0.31150668145296695,
+   "dip": 0.13746600581517343,
+   "takeoff_vz": 2.5434050466350504,
+   "apex": 0.8053047027298645,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9011,
+   "clean": false,
+   "run_height": 0.4120765496117581,
+   "crouch_low": 0.30198259791338183,
+   "dip": 0.11009395169837627,
+   "takeoff_vz": 2.6219937381283906,
+   "apex": 0.8462212248734321,
+   "takeoff_s": 0.3
+  },
+  {
+   "seed": 9012,
+   "clean": false,
+   "run_height": 0.4106916116528862,
+   "crouch_low": 0.303912572616446,
+   "dip": 0.1067790390364402,
+   "takeoff_vz": 2.6862059681850075,
+   "apex": 0.8588398703480408,
+   "takeoff_s": 0.34
+  },
+  {
+   "seed": 9013,
+   "clean": false,
+   "run_height": 0.45029437940068323,
+   "crouch_low": 0.3182802273970969,
+   "dip": 0.13201415200358635,
+   "takeoff_vz": 2.4031911667664785,
+   "apex": 0.7400117577412452,
+   "takeoff_s": 0.3
+  },
+  {
+   "seed": 9014,
+   "clean": false,
+   "run_height": 0.44946045518255245,
+   "crouch_low": 0.3190054352493168,
+   "dip": 0.13045501993323566,
+   "takeoff_vz": 2.497153068029067,
+   "apex": 0.7749767689837914,
+   "takeoff_s": 0.3
+  },
+  {
+   "seed": 9015,
+   "clean": false,
+   "run_height": 0.41199129229548076,
+   "crouch_low": 0.3082863740470124,
+   "dip": 0.10370491824846834,
+   "takeoff_vz": 2.814255099762111,
+   "apex": 0.8746239778968588,
+   "takeoff_s": 0.34
+  },
+  {
+   "seed": 9016,
+   "clean": true,
+   "run_height": 0.41203357412971625,
+   "crouch_low": 0.30578534512723693,
+   "dip": 0.10624822900247932,
+   "takeoff_vz": 2.9392134522944975,
+   "apex": 0.923781530324349,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9017,
+   "clean": false,
+   "run_height": 0.44898671430158343,
+   "crouch_low": 0.3109065583108136,
+   "dip": 0.13808015599076984,
+   "takeoff_vz": 2.280963162898548,
+   "apex": 0.7393253243057044,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9018,
+   "clean": false,
+   "run_height": 0.4107194351308661,
+   "crouch_low": 0.3041227250854898,
+   "dip": 0.1065967100453763,
+   "takeoff_vz": 2.855127356890488,
+   "apex": 0.9048115658324457,
+   "takeoff_s": 0.34
+  },
+  {
+   "seed": 9019,
+   "clean": false,
+   "run_height": 0.44856684959337373,
+   "crouch_low": 0.31408885181385326,
+   "dip": 0.13447799777952046,
+   "takeoff_vz": 2.6856643777370035,
+   "apex": 0.8244200464951393,
+   "takeoff_s": 0.3
+  },
+  {
+   "seed": 9020,
+   "clean": false,
+   "run_height": 0.4489556648582052,
+   "crouch_low": 0.3114493630105449,
+   "dip": 0.13750630184766033,
+   "takeoff_vz": 2.674267629119122,
+   "apex": 0.8422416728157343,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9021,
+   "clean": false,
+   "run_height": 0.44895952186407545,
+   "crouch_low": 0.31101939467187417,
+   "dip": 0.13794012719220128,
+   "takeoff_vz": 2.5409676325160935,
+   "apex": 0.8065613731104881,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9022,
+   "clean": false,
+   "run_height": 0.4489682019885435,
+   "crouch_low": 0.31149802669994975,
+   "dip": 0.13747017528859373,
+   "takeoff_vz": 2.5903968790862013,
+   "apex": 0.8227747657019892,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9023,
+   "clean": false,
+   "run_height": 0.44895164308917385,
+   "crouch_low": 0.3124160703015792,
+   "dip": 0.13653557278759465,
+   "takeoff_vz": 2.5501109155156536,
+   "apex": 0.8068327556851153,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9024,
+   "clean": false,
+   "run_height": 0.448587029329693,
+   "crouch_low": 0.3153522262410311,
+   "dip": 0.13323480308866192,
+   "takeoff_vz": 2.617186465161038,
+   "apex": 0.8052554549907822,
+   "takeoff_s": 0.3
+  },
+  {
+   "seed": 9025,
+   "clean": false,
+   "run_height": 0.4489667212621243,
+   "crouch_low": 0.311488673292384,
+   "dip": 0.13747804796974028,
+   "takeoff_vz": 2.4301200025141716,
+   "apex": 0.768824586441965,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9026,
+   "clean": false,
+   "run_height": 0.4489770002747622,
+   "crouch_low": 0.3116933357184636,
+   "dip": 0.1372836645562986,
+   "takeoff_vz": 2.4581099204295866,
+   "apex": 0.7720579345801437,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9027,
+   "clean": false,
+   "run_height": 0.42726429783111564,
+   "crouch_low": 0.29894476587528745,
+   "dip": 0.12831953195582818,
+   "takeoff_vz": 2.7949773670792424,
+   "apex": 0.8735374172009472,
+   "takeoff_s": 0.34
+  },
+  {
+   "seed": 9028,
+   "clean": false,
+   "run_height": 0.4485428662047762,
+   "crouch_low": 0.3162786442107088,
+   "dip": 0.1322642219940674,
+   "takeoff_vz": 2.426768200249912,
+   "apex": 0.7820535387829547,
+   "takeoff_s": 0.32
+  },
+  {
+   "seed": 9029,
+   "clean": true,
+   "run_height": 0.4272700832522882,
+   "crouch_low": 0.30020308909881477,
+   "dip": 0.12706699415347344,
+   "takeoff_vz": 2.8716516001660946,
+   "apex": 0.891496685957154,
+   "takeoff_s": 0.34
+  }
+ ],
+ "command": "python research/crouch_check.py ../models/bolt-dog-jump-trot-55M --speed 2.5 --dist 1.5 --height 0.60 --gait --episodes 30 --seed 9000 --motor-brake --out research/results/crouch_trot55_v25_60.json"
+}
