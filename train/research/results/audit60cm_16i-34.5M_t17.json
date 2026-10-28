@@ -1,0 +1,1710 @@
+{
+ "args": {
+  "folder": "../models/bolt-dog-jump-runup-16i-34.5M",
+  "zip": "policy.zip",
+  "stats": "vecnormalize.pkl",
+  "torque": 17.0,
+  "height": 0.6,
+  "speed": 2.0,
+  "dist": 1.5,
+  "episodes": 30,
+  "seed": 7000,
+  "best": 5,
+  "out": "research/results/audit60cm_16i-34.5M_t17.json"
+ },
+ "motor": {
+  "torque": 17.0,
+  "power": 420.0,
+  "speed": 21.0,
+  "cutoff": 25.0
+ },
+ "clean": 0,
+ "cleared": 30,
+ "tries": 30,
+ "apex_max": 0.685,
+ "paw_clearance_max": -0.273,
+ "peak_all": {
+  "abd": {
+   "peak_speed": 24.8,
+   "over_21_pct": 0.07,
+   "peak_torque": 17.0,
+   "peak_power_w": 320,
+   "takeoff_at_limit_pct": 13.2,
+   "takeoff_peak_speed": 17.8,
+   "takeoff_over_21_pct": 0.0,
+   "takeoff_peak_power_w": 205,
+   "peak_asked_torque": 55.8
+  },
+  "hip": {
+   "peak_speed": 27.3,
+   "over_21_pct": 5.73,
+   "peak_torque": 17.0,
+   "peak_power_w": 357,
+   "takeoff_at_limit_pct": 37.8,
+   "takeoff_peak_speed": 24.7,
+   "takeoff_over_21_pct": 7.83,
+   "takeoff_peak_power_w": 357,
+   "peak_asked_torque": 103.0
+  },
+  "knee": {
+   "peak_speed": 29.6,
+   "over_21_pct": 16.46,
+   "peak_torque": 17.0,
+   "peak_power_w": 357,
+   "takeoff_at_limit_pct": 41.0,
+   "takeoff_peak_speed": 29.6,
+   "takeoff_over_21_pct": 22.0,
+   "takeoff_peak_power_w": 357,
+   "peak_asked_torque": 101.1
+  }
+ },
+ "peak_best": {
+  "abd": {
+   "peak_speed": 22.2,
+   "over_21_pct": 0.01,
+   "peak_torque": 17.0,
+   "peak_power_w": 287,
+   "takeoff_at_limit_pct": 3.8,
+   "takeoff_peak_speed": 11.1,
+   "takeoff_over_21_pct": 0.0,
+   "takeoff_peak_power_w": 177,
+   "peak_asked_torque": 51.2
+  },
+  "hip": {
+   "peak_speed": 27.2,
+   "over_21_pct": 4.87,
+   "peak_torque": 17.0,
+   "peak_power_w": 357,
+   "takeoff_at_limit_pct": 15.8,
+   "takeoff_peak_speed": 24.1,
+   "takeoff_over_21_pct": 5.5,
+   "takeoff_peak_power_w": 355,
+   "peak_asked_torque": 98.6
+  },
+  "knee": {
+   "peak_speed": 29.2,
+   "over_21_pct": 15.5,
+   "peak_torque": 17.0,
+   "peak_power_w": 357,
+   "takeoff_at_limit_pct": 13.5,
+   "takeoff_peak_speed": 25.6,
+   "takeoff_over_21_pct": 9.67,
+   "takeoff_peak_power_w": 356,
+   "peak_asked_torque": 96.0
+  }
+ },
+ "best": [
+  {
+   "seed": 7026,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.681,
+   "body_over_bar": 0.681,
+   "paw_clearance": -0.273,
+   "joints": {
+    "abd": {
+     "peak_speed": 15.6,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 214,
+     "takeoff_at_limit_pct": 2.5,
+     "takeoff_peak_speed": 11.1,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 177,
+     "peak_asked_torque": 48.4
+    },
+    "hip": {
+     "peak_speed": 25.1,
+     "over_21_pct": 2.55,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 15.8,
+     "takeoff_peak_speed": 23.7,
+     "takeoff_over_21_pct": 4.5,
+     "takeoff_peak_power_w": 355,
+     "peak_asked_torque": 97.3
+    },
+    "knee": {
+     "peak_speed": 28.5,
+     "over_21_pct": 7.58,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 10.0,
+     "takeoff_peak_speed": 25.2,
+     "takeoff_over_21_pct": 4.0,
+     "takeoff_peak_power_w": 355,
+     "peak_asked_torque": 81.4
+    }
+   }
+  },
+  {
+   "seed": 7028,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": true,
+   "apex": 0.685,
+   "body_over_bar": 0.685,
+   "paw_clearance": -0.335,
+   "joints": {
+    "abd": {
+     "peak_speed": 13.2,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 184,
+     "takeoff_at_limit_pct": 1.7,
+     "takeoff_peak_speed": 9.2,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 157,
+     "peak_asked_torque": 37.8
+    },
+    "hip": {
+     "peak_speed": 25.2,
+     "over_21_pct": 4.87,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 10.2,
+     "takeoff_peak_speed": 23.5,
+     "takeoff_over_21_pct": 1.83,
+     "takeoff_peak_power_w": 348,
+     "peak_asked_torque": 93.3
+    },
+    "knee": {
+     "peak_speed": 28.7,
+     "over_21_pct": 11.59,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 12.8,
+     "takeoff_peak_speed": 25.6,
+     "takeoff_over_21_pct": 9.67,
+     "takeoff_peak_power_w": 356,
+     "peak_asked_torque": 96.0
+    }
+   }
+  },
+  {
+   "seed": 7022,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": true,
+   "apex": 0.678,
+   "body_over_bar": 0.678,
+   "paw_clearance": -0.342,
+   "joints": {
+    "abd": {
+     "peak_speed": 14.1,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 181,
+     "takeoff_at_limit_pct": 0.8,
+     "takeoff_peak_speed": 9.0,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 104,
+     "peak_asked_torque": 39.1
+    },
+    "hip": {
+     "peak_speed": 27.2,
+     "over_21_pct": 4.62,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 9.3,
+     "takeoff_peak_speed": 23.2,
+     "takeoff_over_21_pct": 2.33,
+     "takeoff_peak_power_w": 354,
+     "peak_asked_torque": 98.6
+    },
+    "knee": {
+     "peak_speed": 29.2,
+     "over_21_pct": 15.5,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 13.5,
+     "takeoff_peak_speed": 25.3,
+     "takeoff_over_21_pct": 8.83,
+     "takeoff_peak_power_w": 339,
+     "peak_asked_torque": 86.1
+    }
+   }
+  },
+  {
+   "seed": 7017,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": true,
+   "apex": 0.615,
+   "body_over_bar": 0.612,
+   "paw_clearance": -0.345,
+   "joints": {
+    "abd": {
+     "peak_speed": 17.2,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 237,
+     "takeoff_at_limit_pct": 2.7,
+     "takeoff_peak_speed": 7.4,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 120,
+     "peak_asked_torque": 50.0
+    },
+    "hip": {
+     "peak_speed": 25.1,
+     "over_21_pct": 4.54,
+     "peak_torque": 17.0,
+     "peak_power_w": 353,
+     "takeoff_at_limit_pct": 9.8,
+     "takeoff_peak_speed": 24.1,
+     "takeoff_over_21_pct": 4.0,
+     "takeoff_peak_power_w": 346,
+     "peak_asked_torque": 96.4
+    },
+    "knee": {
+     "peak_speed": 27.8,
+     "over_21_pct": 13.53,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 12.3,
+     "takeoff_peak_speed": 24.8,
+     "takeoff_over_21_pct": 4.17,
+     "takeoff_peak_power_w": 333,
+     "peak_asked_torque": 89.0
+    }
+   }
+  },
+  {
+   "seed": 7008,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.624,
+   "body_over_bar": 0.623,
+   "paw_clearance": -0.384,
+   "joints": {
+    "abd": {
+     "peak_speed": 22.2,
+     "over_21_pct": 0.01,
+     "peak_torque": 17.0,
+     "peak_power_w": 287,
+     "takeoff_at_limit_pct": 3.8,
+     "takeoff_peak_speed": 7.8,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 132,
+     "peak_asked_torque": 51.2
+    },
+    "hip": {
+     "peak_speed": 24.0,
+     "over_21_pct": 1.89,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 11.0,
+     "takeoff_peak_speed": 24.0,
+     "takeoff_over_21_pct": 5.5,
+     "takeoff_peak_power_w": 348,
+     "peak_asked_torque": 94.5
+    },
+    "knee": {
+     "peak_speed": 26.7,
+     "over_21_pct": 6.68,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 9.3,
+     "takeoff_peak_speed": 25.1,
+     "takeoff_over_21_pct": 2.5,
+     "takeoff_peak_power_w": 356,
+     "peak_asked_torque": 79.5
+    }
+   }
+  }
+ ],
+ "all": [
+  {
+   "seed": 7000,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.586,
+   "body_over_bar": 0.543,
+   "paw_clearance": -0.534,
+   "joints": {
+    "abd": {
+     "peak_speed": 21.5,
+     "over_21_pct": 0.01,
+     "peak_torque": 17.0,
+     "peak_power_w": 295,
+     "takeoff_at_limit_pct": 7.3,
+     "takeoff_peak_speed": 14.9,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 201,
+     "peak_asked_torque": 52.4
+    },
+    "hip": {
+     "peak_speed": 24.7,
+     "over_21_pct": 2.06,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 27.7,
+     "takeoff_peak_speed": 24.3,
+     "takeoff_over_21_pct": 3.83,
+     "takeoff_peak_power_w": 357,
+     "peak_asked_torque": 99.5
+    },
+    "knee": {
+     "peak_speed": 26.4,
+     "over_21_pct": 6.69,
+     "peak_torque": 17.0,
+     "peak_power_w": 354,
+     "takeoff_at_limit_pct": 24.8,
+     "takeoff_peak_speed": 25.3,
+     "takeoff_over_21_pct": 6.67,
+     "takeoff_peak_power_w": 346,
+     "peak_asked_torque": 78.5
+    }
+   }
+  },
+  {
+   "seed": 7001,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.62,
+   "body_over_bar": 0.611,
+   "paw_clearance": -0.529,
+   "joints": {
+    "abd": {
+     "peak_speed": 15.5,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 193,
+     "takeoff_at_limit_pct": 1.8,
+     "takeoff_peak_speed": 11.9,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 183,
+     "peak_asked_torque": 51.1
+    },
+    "hip": {
+     "peak_speed": 25.0,
+     "over_21_pct": 2.23,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 10.8,
+     "takeoff_peak_speed": 23.7,
+     "takeoff_over_21_pct": 4.0,
+     "takeoff_peak_power_w": 344,
+     "peak_asked_torque": 99.2
+    },
+    "knee": {
+     "peak_speed": 28.4,
+     "over_21_pct": 7.09,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 9.8,
+     "takeoff_peak_speed": 25.5,
+     "takeoff_over_21_pct": 2.83,
+     "takeoff_peak_power_w": 326,
+     "peak_asked_torque": 101.1
+    }
+   }
+  },
+  {
+   "seed": 7002,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.649,
+   "body_over_bar": 0.635,
+   "paw_clearance": -0.41,
+   "joints": {
+    "abd": {
+     "peak_speed": 20.7,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 268,
+     "takeoff_at_limit_pct": 5.7,
+     "takeoff_peak_speed": 7.0,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 80,
+     "peak_asked_torque": 45.7
+    },
+    "hip": {
+     "peak_speed": 24.6,
+     "over_21_pct": 1.82,
+     "peak_torque": 17.0,
+     "peak_power_w": 353,
+     "takeoff_at_limit_pct": 12.5,
+     "takeoff_peak_speed": 24.6,
+     "takeoff_over_21_pct": 7.33,
+     "takeoff_peak_power_w": 348,
+     "peak_asked_torque": 91.2
+    },
+    "knee": {
+     "peak_speed": 27.0,
+     "over_21_pct": 6.66,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 15.5,
+     "takeoff_peak_speed": 25.0,
+     "takeoff_over_21_pct": 4.83,
+     "takeoff_peak_power_w": 348,
+     "peak_asked_torque": 73.5
+    }
+   }
+  },
+  {
+   "seed": 7003,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.636,
+   "body_over_bar": 0.632,
+   "paw_clearance": -0.54,
+   "joints": {
+    "abd": {
+     "peak_speed": 20.7,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 297,
+     "takeoff_at_limit_pct": 1.7,
+     "takeoff_peak_speed": 12.8,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 171,
+     "peak_asked_torque": 55.8
+    },
+    "hip": {
+     "peak_speed": 23.8,
+     "over_21_pct": 1.56,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 12.2,
+     "takeoff_peak_speed": 23.4,
+     "takeoff_over_21_pct": 2.17,
+     "takeoff_peak_power_w": 353,
+     "peak_asked_torque": 92.7
+    },
+    "knee": {
+     "peak_speed": 26.8,
+     "over_21_pct": 6.56,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 6.2,
+     "takeoff_peak_speed": 25.2,
+     "takeoff_over_21_pct": 4.5,
+     "takeoff_peak_power_w": 350,
+     "peak_asked_torque": 81.4
+    }
+   }
+  },
+  {
+   "seed": 7004,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.6,
+   "body_over_bar": 0.596,
+   "paw_clearance": -0.412,
+   "joints": {
+    "abd": {
+     "peak_speed": 21.7,
+     "over_21_pct": 0.01,
+     "peak_torque": 17.0,
+     "peak_power_w": 258,
+     "takeoff_at_limit_pct": 5.5,
+     "takeoff_peak_speed": 7.5,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 97,
+     "peak_asked_torque": 49.3
+    },
+    "hip": {
+     "peak_speed": 25.3,
+     "over_21_pct": 1.88,
+     "peak_torque": 17.0,
+     "peak_power_w": 355,
+     "takeoff_at_limit_pct": 12.7,
+     "takeoff_peak_speed": 24.7,
+     "takeoff_over_21_pct": 7.83,
+     "takeoff_peak_power_w": 355,
+     "peak_asked_torque": 88.9
+    },
+    "knee": {
+     "peak_speed": 26.9,
+     "over_21_pct": 6.74,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 11.5,
+     "takeoff_peak_speed": 24.4,
+     "takeoff_over_21_pct": 3.0,
+     "takeoff_peak_power_w": 340,
+     "peak_asked_torque": 76.2
+    }
+   }
+  },
+  {
+   "seed": 7005,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.563,
+   "body_over_bar": 0.497,
+   "paw_clearance": -0.439,
+   "joints": {
+    "abd": {
+     "peak_speed": 24.2,
+     "over_21_pct": 0.07,
+     "peak_torque": 17.0,
+     "peak_power_w": 294,
+     "takeoff_at_limit_pct": 5.3,
+     "takeoff_peak_speed": 14.5,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 185,
+     "peak_asked_torque": 51.7
+    },
+    "hip": {
+     "peak_speed": 25.7,
+     "over_21_pct": 3.54,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 37.8,
+     "takeoff_peak_speed": 24.0,
+     "takeoff_over_21_pct": 3.83,
+     "takeoff_peak_power_w": 347,
+     "peak_asked_torque": 103.0
+    },
+    "knee": {
+     "peak_speed": 26.8,
+     "over_21_pct": 9.8,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 40.7,
+     "takeoff_peak_speed": 25.0,
+     "takeoff_over_21_pct": 16.0,
+     "takeoff_peak_power_w": 347,
+     "peak_asked_torque": 78.1
+    }
+   }
+  },
+  {
+   "seed": 7006,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": true,
+   "apex": 0.632,
+   "body_over_bar": 0.631,
+   "paw_clearance": -0.4,
+   "joints": {
+    "abd": {
+     "peak_speed": 16.4,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 228,
+     "takeoff_at_limit_pct": 1.7,
+     "takeoff_peak_speed": 8.5,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 122,
+     "peak_asked_torque": 46.2
+    },
+    "hip": {
+     "peak_speed": 24.7,
+     "over_21_pct": 3.71,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 10.8,
+     "takeoff_peak_speed": 23.4,
+     "takeoff_over_21_pct": 2.67,
+     "takeoff_peak_power_w": 343,
+     "peak_asked_torque": 93.5
+    },
+    "knee": {
+     "peak_speed": 26.7,
+     "over_21_pct": 11.43,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 12.8,
+     "takeoff_peak_speed": 24.8,
+     "takeoff_over_21_pct": 6.0,
+     "takeoff_peak_power_w": 352,
+     "peak_asked_torque": 91.3
+    }
+   }
+  },
+  {
+   "seed": 7007,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.574,
+   "body_over_bar": 0.542,
+   "paw_clearance": -0.522,
+   "joints": {
+    "abd": {
+     "peak_speed": 22.2,
+     "over_21_pct": 0.05,
+     "peak_torque": 17.0,
+     "peak_power_w": 253,
+     "takeoff_at_limit_pct": 8.3,
+     "takeoff_peak_speed": 8.8,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 66,
+     "peak_asked_torque": 52.3
+    },
+    "hip": {
+     "peak_speed": 24.2,
+     "over_21_pct": 1.8,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 10.8,
+     "takeoff_peak_speed": 24.2,
+     "takeoff_over_21_pct": 5.67,
+     "takeoff_peak_power_w": 350,
+     "peak_asked_torque": 91.8
+    },
+    "knee": {
+     "peak_speed": 26.8,
+     "over_21_pct": 6.69,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 16.3,
+     "takeoff_peak_speed": 24.5,
+     "takeoff_over_21_pct": 4.33,
+     "takeoff_peak_power_w": 350,
+     "peak_asked_torque": 85.8
+    }
+   }
+  },
+  {
+   "seed": 7008,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.624,
+   "body_over_bar": 0.623,
+   "paw_clearance": -0.384,
+   "joints": {
+    "abd": {
+     "peak_speed": 22.2,
+     "over_21_pct": 0.01,
+     "peak_torque": 17.0,
+     "peak_power_w": 287,
+     "takeoff_at_limit_pct": 3.8,
+     "takeoff_peak_speed": 7.8,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 132,
+     "peak_asked_torque": 51.2
+    },
+    "hip": {
+     "peak_speed": 24.0,
+     "over_21_pct": 1.89,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 11.0,
+     "takeoff_peak_speed": 24.0,
+     "takeoff_over_21_pct": 5.5,
+     "takeoff_peak_power_w": 348,
+     "peak_asked_torque": 94.5
+    },
+    "knee": {
+     "peak_speed": 26.7,
+     "over_21_pct": 6.68,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 9.3,
+     "takeoff_peak_speed": 25.1,
+     "takeoff_over_21_pct": 2.5,
+     "takeoff_peak_power_w": 356,
+     "peak_asked_torque": 79.5
+    }
+   }
+  },
+  {
+   "seed": 7009,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.622,
+   "body_over_bar": 0.603,
+   "paw_clearance": -0.453,
+   "joints": {
+    "abd": {
+     "peak_speed": 21.7,
+     "over_21_pct": 0.01,
+     "peak_torque": 17.0,
+     "peak_power_w": 265,
+     "takeoff_at_limit_pct": 5.2,
+     "takeoff_peak_speed": 6.9,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 97,
+     "peak_asked_torque": 50.4
+    },
+    "hip": {
+     "peak_speed": 25.1,
+     "over_21_pct": 1.88,
+     "peak_torque": 17.0,
+     "peak_power_w": 355,
+     "takeoff_at_limit_pct": 11.8,
+     "takeoff_peak_speed": 24.3,
+     "takeoff_over_21_pct": 6.83,
+     "takeoff_peak_power_w": 351,
+     "peak_asked_torque": 89.0
+    },
+    "knee": {
+     "peak_speed": 26.5,
+     "over_21_pct": 7.42,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 12.0,
+     "takeoff_peak_speed": 24.7,
+     "takeoff_over_21_pct": 2.0,
+     "takeoff_peak_power_w": 343,
+     "peak_asked_torque": 79.9
+    }
+   }
+  },
+  {
+   "seed": 7010,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.585,
+   "body_over_bar": 0.531,
+   "paw_clearance": -0.534,
+   "joints": {
+    "abd": {
+     "peak_speed": 22.4,
+     "over_21_pct": 0.05,
+     "peak_torque": 17.0,
+     "peak_power_w": 262,
+     "takeoff_at_limit_pct": 13.2,
+     "takeoff_peak_speed": 17.8,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 205,
+     "peak_asked_torque": 48.2
+    },
+    "hip": {
+     "peak_speed": 24.6,
+     "over_21_pct": 2.25,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 18.8,
+     "takeoff_peak_speed": 24.3,
+     "takeoff_over_21_pct": 4.67,
+     "takeoff_peak_power_w": 345,
+     "peak_asked_torque": 100.0
+    },
+    "knee": {
+     "peak_speed": 27.5,
+     "over_21_pct": 7.04,
+     "peak_torque": 17.0,
+     "peak_power_w": 355,
+     "takeoff_at_limit_pct": 13.7,
+     "takeoff_peak_speed": 25.0,
+     "takeoff_over_21_pct": 4.5,
+     "takeoff_peak_power_w": 340,
+     "peak_asked_torque": 95.5
+    }
+   }
+  },
+  {
+   "seed": 7011,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.655,
+   "body_over_bar": 0.655,
+   "paw_clearance": -0.431,
+   "joints": {
+    "abd": {
+     "peak_speed": 15.0,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 230,
+     "takeoff_at_limit_pct": 1.7,
+     "takeoff_peak_speed": 8.9,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 151,
+     "peak_asked_torque": 42.9
+    },
+    "hip": {
+     "peak_speed": 24.7,
+     "over_21_pct": 1.39,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 11.8,
+     "takeoff_peak_speed": 24.0,
+     "takeoff_over_21_pct": 4.83,
+     "takeoff_peak_power_w": 357,
+     "peak_asked_torque": 92.0
+    },
+    "knee": {
+     "peak_speed": 27.3,
+     "over_21_pct": 6.12,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 7.7,
+     "takeoff_peak_speed": 25.6,
+     "takeoff_over_21_pct": 4.33,
+     "takeoff_peak_power_w": 294,
+     "peak_asked_torque": 75.5
+    }
+   }
+  },
+  {
+   "seed": 7012,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.607,
+   "body_over_bar": 0.605,
+   "paw_clearance": -0.445,
+   "joints": {
+    "abd": {
+     "peak_speed": 16.0,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 180,
+     "takeoff_at_limit_pct": 2.5,
+     "takeoff_peak_speed": 6.5,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 98,
+     "peak_asked_torque": 49.1
+    },
+    "hip": {
+     "peak_speed": 24.8,
+     "over_21_pct": 2.96,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 9.5,
+     "takeoff_peak_speed": 24.1,
+     "takeoff_over_21_pct": 3.5,
+     "takeoff_peak_power_w": 350,
+     "peak_asked_torque": 97.0
+    },
+    "knee": {
+     "peak_speed": 29.0,
+     "over_21_pct": 8.99,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 8.5,
+     "takeoff_peak_speed": 24.2,
+     "takeoff_over_21_pct": 1.5,
+     "takeoff_peak_power_w": 341,
+     "peak_asked_torque": 92.2
+    }
+   }
+  },
+  {
+   "seed": 7013,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": true,
+   "apex": 0.624,
+   "body_over_bar": 0.62,
+   "paw_clearance": -0.417,
+   "joints": {
+    "abd": {
+     "peak_speed": 15.6,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 168,
+     "takeoff_at_limit_pct": 2.7,
+     "takeoff_peak_speed": 6.7,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 103,
+     "peak_asked_torque": 44.8
+    },
+    "hip": {
+     "peak_speed": 25.6,
+     "over_21_pct": 5.73,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 10.0,
+     "takeoff_peak_speed": 23.9,
+     "takeoff_over_21_pct": 3.67,
+     "takeoff_peak_power_w": 348,
+     "peak_asked_torque": 94.1
+    },
+    "knee": {
+     "peak_speed": 27.8,
+     "over_21_pct": 16.46,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 10.5,
+     "takeoff_peak_speed": 24.7,
+     "takeoff_over_21_pct": 4.5,
+     "takeoff_peak_power_w": 330,
+     "peak_asked_torque": 88.5
+    }
+   }
+  },
+  {
+   "seed": 7014,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.67,
+   "body_over_bar": 0.669,
+   "paw_clearance": -0.459,
+   "joints": {
+    "abd": {
+     "peak_speed": 15.4,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 195,
+     "takeoff_at_limit_pct": 1.5,
+     "takeoff_peak_speed": 13.7,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 195,
+     "peak_asked_torque": 46.2
+    },
+    "hip": {
+     "peak_speed": 27.3,
+     "over_21_pct": 2.11,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 12.8,
+     "takeoff_peak_speed": 23.9,
+     "takeoff_over_21_pct": 5.83,
+     "takeoff_peak_power_w": 356,
+     "peak_asked_torque": 95.9
+    },
+    "knee": {
+     "peak_speed": 28.2,
+     "over_21_pct": 7.05,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 8.8,
+     "takeoff_peak_speed": 25.1,
+     "takeoff_over_21_pct": 4.33,
+     "takeoff_peak_power_w": 357,
+     "peak_asked_torque": 84.2
+    }
+   }
+  },
+  {
+   "seed": 7015,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.682,
+   "body_over_bar": 0.682,
+   "paw_clearance": -0.412,
+   "joints": {
+    "abd": {
+     "peak_speed": 13.7,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 181,
+     "takeoff_at_limit_pct": 0.0,
+     "takeoff_peak_speed": 8.0,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 50,
+     "peak_asked_torque": 37.8
+    },
+    "hip": {
+     "peak_speed": 25.1,
+     "over_21_pct": 2.55,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 5.7,
+     "takeoff_peak_speed": 23.7,
+     "takeoff_over_21_pct": 2.0,
+     "takeoff_peak_power_w": 351,
+     "peak_asked_torque": 93.5
+    },
+    "knee": {
+     "peak_speed": 26.9,
+     "over_21_pct": 7.42,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 10.0,
+     "takeoff_peak_speed": 25.4,
+     "takeoff_over_21_pct": 8.5,
+     "takeoff_peak_power_w": 339,
+     "peak_asked_torque": 79.2
+    }
+   }
+  },
+  {
+   "seed": 7016,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.676,
+   "body_over_bar": 0.676,
+   "paw_clearance": -0.467,
+   "joints": {
+    "abd": {
+     "peak_speed": 14.0,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 182,
+     "takeoff_at_limit_pct": 0.0,
+     "takeoff_peak_speed": 7.9,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 33,
+     "peak_asked_torque": 38.0
+    },
+    "hip": {
+     "peak_speed": 25.1,
+     "over_21_pct": 1.7,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 5.7,
+     "takeoff_peak_speed": 23.6,
+     "takeoff_over_21_pct": 2.0,
+     "takeoff_peak_power_w": 319,
+     "peak_asked_torque": 94.4
+    },
+    "knee": {
+     "peak_speed": 29.0,
+     "over_21_pct": 6.28,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 9.3,
+     "takeoff_peak_speed": 26.2,
+     "takeoff_over_21_pct": 8.83,
+     "takeoff_peak_power_w": 345,
+     "peak_asked_torque": 79.9
+    }
+   }
+  },
+  {
+   "seed": 7017,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": true,
+   "apex": 0.615,
+   "body_over_bar": 0.612,
+   "paw_clearance": -0.345,
+   "joints": {
+    "abd": {
+     "peak_speed": 17.2,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 237,
+     "takeoff_at_limit_pct": 2.7,
+     "takeoff_peak_speed": 7.4,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 120,
+     "peak_asked_torque": 50.0
+    },
+    "hip": {
+     "peak_speed": 25.1,
+     "over_21_pct": 4.54,
+     "peak_torque": 17.0,
+     "peak_power_w": 353,
+     "takeoff_at_limit_pct": 9.8,
+     "takeoff_peak_speed": 24.1,
+     "takeoff_over_21_pct": 4.0,
+     "takeoff_peak_power_w": 346,
+     "peak_asked_torque": 96.4
+    },
+    "knee": {
+     "peak_speed": 27.8,
+     "over_21_pct": 13.53,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 12.3,
+     "takeoff_peak_speed": 24.8,
+     "takeoff_over_21_pct": 4.17,
+     "takeoff_peak_power_w": 333,
+     "peak_asked_torque": 89.0
+    }
+   }
+  },
+  {
+   "seed": 7018,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.603,
+   "body_over_bar": 0.595,
+   "paw_clearance": -0.443,
+   "joints": {
+    "abd": {
+     "peak_speed": 23.7,
+     "over_21_pct": 0.04,
+     "peak_torque": 17.0,
+     "peak_power_w": 256,
+     "takeoff_at_limit_pct": 6.0,
+     "takeoff_peak_speed": 9.2,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 115,
+     "peak_asked_torque": 51.4
+    },
+    "hip": {
+     "peak_speed": 25.2,
+     "over_21_pct": 2.15,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 14.2,
+     "takeoff_peak_speed": 24.3,
+     "takeoff_over_21_pct": 6.0,
+     "takeoff_peak_power_w": 352,
+     "peak_asked_torque": 89.9
+    },
+    "knee": {
+     "peak_speed": 27.9,
+     "over_21_pct": 7.2,
+     "peak_torque": 17.0,
+     "peak_power_w": 355,
+     "takeoff_at_limit_pct": 12.5,
+     "takeoff_peak_speed": 24.3,
+     "takeoff_over_21_pct": 3.33,
+     "takeoff_peak_power_w": 345,
+     "peak_asked_torque": 78.7
+    }
+   }
+  },
+  {
+   "seed": 7019,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.611,
+   "body_over_bar": 0.574,
+   "paw_clearance": -0.444,
+   "joints": {
+    "abd": {
+     "peak_speed": 21.8,
+     "over_21_pct": 0.03,
+     "peak_torque": 17.0,
+     "peak_power_w": 248,
+     "takeoff_at_limit_pct": 4.0,
+     "takeoff_peak_speed": 7.4,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 127,
+     "peak_asked_torque": 50.4
+    },
+    "hip": {
+     "peak_speed": 24.7,
+     "over_21_pct": 2.15,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 10.3,
+     "takeoff_peak_speed": 24.5,
+     "takeoff_over_21_pct": 5.17,
+     "takeoff_peak_power_w": 342,
+     "peak_asked_torque": 92.2
+    },
+    "knee": {
+     "peak_speed": 27.3,
+     "over_21_pct": 5.46,
+     "peak_torque": 17.0,
+     "peak_power_w": 355,
+     "takeoff_at_limit_pct": 12.8,
+     "takeoff_peak_speed": 24.8,
+     "takeoff_over_21_pct": 3.83,
+     "takeoff_peak_power_w": 347,
+     "peak_asked_torque": 76.1
+    }
+   }
+  },
+  {
+   "seed": 7020,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.669,
+   "body_over_bar": 0.659,
+   "paw_clearance": -0.438,
+   "joints": {
+    "abd": {
+     "peak_speed": 15.6,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 199,
+     "takeoff_at_limit_pct": 2.0,
+     "takeoff_peak_speed": 12.2,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 174,
+     "peak_asked_torque": 47.3
+    },
+    "hip": {
+     "peak_speed": 24.6,
+     "over_21_pct": 2.09,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 10.0,
+     "takeoff_peak_speed": 23.7,
+     "takeoff_over_21_pct": 4.83,
+     "takeoff_peak_power_w": 356,
+     "peak_asked_torque": 100.7
+    },
+    "knee": {
+     "peak_speed": 27.4,
+     "over_21_pct": 7.34,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 10.7,
+     "takeoff_peak_speed": 25.2,
+     "takeoff_over_21_pct": 3.17,
+     "takeoff_peak_power_w": 348,
+     "peak_asked_torque": 100.6
+    }
+   }
+  },
+  {
+   "seed": 7021,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.674,
+   "body_over_bar": 0.674,
+   "paw_clearance": -0.425,
+   "joints": {
+    "abd": {
+     "peak_speed": 14.7,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 184,
+     "takeoff_at_limit_pct": 0.0,
+     "takeoff_peak_speed": 8.5,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 42,
+     "peak_asked_torque": 40.6
+    },
+    "hip": {
+     "peak_speed": 23.9,
+     "over_21_pct": 1.43,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 5.3,
+     "takeoff_peak_speed": 23.8,
+     "takeoff_over_21_pct": 1.33,
+     "takeoff_peak_power_w": 356,
+     "peak_asked_torque": 98.7
+    },
+    "knee": {
+     "peak_speed": 26.7,
+     "over_21_pct": 6.85,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 8.2,
+     "takeoff_peak_speed": 25.8,
+     "takeoff_over_21_pct": 7.67,
+     "takeoff_peak_power_w": 356,
+     "peak_asked_torque": 78.9
+    }
+   }
+  },
+  {
+   "seed": 7022,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": true,
+   "apex": 0.678,
+   "body_over_bar": 0.678,
+   "paw_clearance": -0.342,
+   "joints": {
+    "abd": {
+     "peak_speed": 14.1,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 181,
+     "takeoff_at_limit_pct": 0.8,
+     "takeoff_peak_speed": 9.0,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 104,
+     "peak_asked_torque": 39.1
+    },
+    "hip": {
+     "peak_speed": 27.2,
+     "over_21_pct": 4.62,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 9.3,
+     "takeoff_peak_speed": 23.2,
+     "takeoff_over_21_pct": 2.33,
+     "takeoff_peak_power_w": 354,
+     "peak_asked_torque": 98.6
+    },
+    "knee": {
+     "peak_speed": 29.2,
+     "over_21_pct": 15.5,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 13.5,
+     "takeoff_peak_speed": 25.3,
+     "takeoff_over_21_pct": 8.83,
+     "takeoff_peak_power_w": 339,
+     "peak_asked_torque": 86.1
+    }
+   }
+  },
+  {
+   "seed": 7023,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.658,
+   "body_over_bar": 0.645,
+   "paw_clearance": -0.492,
+   "joints": {
+    "abd": {
+     "peak_speed": 15.8,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 195,
+     "takeoff_at_limit_pct": 2.0,
+     "takeoff_peak_speed": 12.3,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 179,
+     "peak_asked_torque": 48.7
+    },
+    "hip": {
+     "peak_speed": 24.2,
+     "over_21_pct": 1.71,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 9.3,
+     "takeoff_peak_speed": 24.2,
+     "takeoff_over_21_pct": 3.83,
+     "takeoff_peak_power_w": 351,
+     "peak_asked_torque": 99.9
+    },
+    "knee": {
+     "peak_speed": 26.8,
+     "over_21_pct": 6.15,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 9.0,
+     "takeoff_peak_speed": 25.0,
+     "takeoff_over_21_pct": 4.17,
+     "takeoff_peak_power_w": 349,
+     "peak_asked_torque": 89.2
+    }
+   }
+  },
+  {
+   "seed": 7024,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.597,
+   "body_over_bar": 0.568,
+   "paw_clearance": -0.473,
+   "joints": {
+    "abd": {
+     "peak_speed": 20.0,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 253,
+     "takeoff_at_limit_pct": 9.5,
+     "takeoff_peak_speed": 9.6,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 125,
+     "peak_asked_torque": 51.9
+    },
+    "hip": {
+     "peak_speed": 25.1,
+     "over_21_pct": 2.59,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 15.2,
+     "takeoff_peak_speed": 24.1,
+     "takeoff_over_21_pct": 6.67,
+     "takeoff_peak_power_w": 355,
+     "peak_asked_torque": 91.3
+    },
+    "knee": {
+     "peak_speed": 26.4,
+     "over_21_pct": 7.04,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 14.7,
+     "takeoff_peak_speed": 24.9,
+     "takeoff_over_21_pct": 1.83,
+     "takeoff_peak_power_w": 338,
+     "peak_asked_torque": 84.7
+    }
+   }
+  },
+  {
+   "seed": 7025,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.524,
+   "body_over_bar": 0.472,
+   "paw_clearance": -0.52,
+   "joints": {
+    "abd": {
+     "peak_speed": 24.8,
+     "over_21_pct": 0.06,
+     "peak_torque": 17.0,
+     "peak_power_w": 320,
+     "takeoff_at_limit_pct": 2.2,
+     "takeoff_peak_speed": 13.4,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 186,
+     "peak_asked_torque": 53.4
+    },
+    "hip": {
+     "peak_speed": 24.7,
+     "over_21_pct": 2.43,
+     "peak_torque": 17.0,
+     "peak_power_w": 355,
+     "takeoff_at_limit_pct": 32.5,
+     "takeoff_peak_speed": 24.7,
+     "takeoff_over_21_pct": 5.17,
+     "takeoff_peak_power_w": 349,
+     "peak_asked_torque": 87.0
+    },
+    "knee": {
+     "peak_speed": 29.6,
+     "over_21_pct": 8.66,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 41.0,
+     "takeoff_peak_speed": 29.6,
+     "takeoff_over_21_pct": 22.0,
+     "takeoff_peak_power_w": 356,
+     "peak_asked_torque": 78.7
+    }
+   }
+  },
+  {
+   "seed": 7026,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.681,
+   "body_over_bar": 0.681,
+   "paw_clearance": -0.273,
+   "joints": {
+    "abd": {
+     "peak_speed": 15.6,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 214,
+     "takeoff_at_limit_pct": 2.5,
+     "takeoff_peak_speed": 11.1,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 177,
+     "peak_asked_torque": 48.4
+    },
+    "hip": {
+     "peak_speed": 25.1,
+     "over_21_pct": 2.55,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 15.8,
+     "takeoff_peak_speed": 23.7,
+     "takeoff_over_21_pct": 4.5,
+     "takeoff_peak_power_w": 355,
+     "peak_asked_torque": 97.3
+    },
+    "knee": {
+     "peak_speed": 28.5,
+     "over_21_pct": 7.58,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 10.0,
+     "takeoff_peak_speed": 25.2,
+     "takeoff_over_21_pct": 4.0,
+     "takeoff_peak_power_w": 355,
+     "peak_asked_torque": 81.4
+    }
+   }
+  },
+  {
+   "seed": 7027,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.668,
+   "body_over_bar": 0.668,
+   "paw_clearance": -0.46,
+   "joints": {
+    "abd": {
+     "peak_speed": 14.1,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 170,
+     "takeoff_at_limit_pct": 0.0,
+     "takeoff_peak_speed": 8.2,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 31,
+     "peak_asked_torque": 37.7
+    },
+    "hip": {
+     "peak_speed": 24.6,
+     "over_21_pct": 1.7,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 5.3,
+     "takeoff_peak_speed": 23.4,
+     "takeoff_over_21_pct": 1.5,
+     "takeoff_peak_power_w": 342,
+     "peak_asked_torque": 93.7
+    },
+    "knee": {
+     "peak_speed": 27.0,
+     "over_21_pct": 7.46,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 9.5,
+     "takeoff_peak_speed": 26.0,
+     "takeoff_over_21_pct": 8.83,
+     "takeoff_peak_power_w": 353,
+     "peak_asked_torque": 83.6
+    }
+   }
+  },
+  {
+   "seed": 7028,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": true,
+   "apex": 0.685,
+   "body_over_bar": 0.685,
+   "paw_clearance": -0.335,
+   "joints": {
+    "abd": {
+     "peak_speed": 13.2,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 184,
+     "takeoff_at_limit_pct": 1.7,
+     "takeoff_peak_speed": 9.2,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 157,
+     "peak_asked_torque": 37.8
+    },
+    "hip": {
+     "peak_speed": 25.2,
+     "over_21_pct": 4.87,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 10.2,
+     "takeoff_peak_speed": 23.5,
+     "takeoff_over_21_pct": 1.83,
+     "takeoff_peak_power_w": 348,
+     "peak_asked_torque": 93.3
+    },
+    "knee": {
+     "peak_speed": 28.7,
+     "over_21_pct": 11.59,
+     "peak_torque": 17.0,
+     "peak_power_w": 356,
+     "takeoff_at_limit_pct": 12.8,
+     "takeoff_peak_speed": 25.6,
+     "takeoff_over_21_pct": 9.67,
+     "takeoff_peak_power_w": 356,
+     "peak_asked_torque": 96.0
+    }
+   }
+  },
+  {
+   "seed": 7029,
+   "clean": false,
+   "cleared": true,
+   "dropped": true,
+   "touched": true,
+   "fell": false,
+   "apex": 0.651,
+   "body_over_bar": 0.647,
+   "paw_clearance": -0.472,
+   "joints": {
+    "abd": {
+     "peak_speed": 14.1,
+     "over_21_pct": 0.0,
+     "peak_torque": 17.0,
+     "peak_power_w": 165,
+     "takeoff_at_limit_pct": 1.7,
+     "takeoff_peak_speed": 9.4,
+     "takeoff_over_21_pct": 0.0,
+     "takeoff_peak_power_w": 160,
+     "peak_asked_torque": 48.5
+    },
+    "hip": {
+     "peak_speed": 24.0,
+     "over_21_pct": 1.54,
+     "peak_torque": 17.0,
+     "peak_power_w": 357,
+     "takeoff_at_limit_pct": 9.3,
+     "takeoff_peak_speed": 23.7,
+     "takeoff_over_21_pct": 3.83,
+     "takeoff_peak_power_w": 342,
+     "peak_asked_torque": 90.8
+    },
+    "knee": {
+     "peak_speed": 28.5,
+     "over_21_pct": 7.17,
+     "peak_torque": 17.0,
+     "peak_power_w": 355,
+     "takeoff_at_limit_pct": 6.5,
+     "takeoff_peak_speed": 25.5,
+     "takeoff_over_21_pct": 4.17,
+     "takeoff_peak_power_w": 352,
+     "peak_asked_torque": 78.5
+    }
+   }
+  }
+ ]
+}
