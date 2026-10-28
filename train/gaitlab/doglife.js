@@ -11,7 +11,7 @@
 //            canter, and canter -> trot           canter-switching brain (run 18g, 35.5M: canter->trot 93%)
 //            sharp turns at a walk                run 12 walk brain (turns up to ~1.4 rad/s)
 //            standing still, sniffing             posture brain
-//            jumping a hurdle                     run-up jump brain (run 16i, 35.5M), handed over 1.1 m out
+//            jumping a hurdle                     jump brain trained from a trot (jump-trot 55M, from 16i), handed over 1.1 m out
 //            after a fall                         self-righting brain (run 17e) + posture brain (game.js GetUp)
 //   Mind   what a dog does next: wander and sniff, trot about, zoomies, sit, nap, jump, fetch, come when
 //          called, and never step off the kerb.
@@ -98,11 +98,11 @@ export let LANDING = "bridge";   // after a jump: "bridge" (a moment of canter, 
 export function setLanding(l) { LANDING = l; }
 export const BRAIN_NAMES = {
   gpu: "GPU dog-motion brain (360M steps)", g18: "canter-switching brain (run 18g)", posture: "posture brain",
-  walk12: "run 12 walk brain (sharp turns)", jump: "run-up jump brain (run 16i)", getup: "self-righting brain (run 17e) + posture brain",
+  walk12: "run 12 walk brain (sharp turns)", jump: "jump brain trained from a trot (55M)", getup: "self-righting brain (run 17e) + posture brain",
 };
 
 export class DogBody {
-  // gpu, g18: Imitate instances on the same bolt; jumpBrain: the 16i brain (live.js Brain)
+  // gpu, g18: Imitate instances on the same bolt; jumpBrain: the jump-trot brain (live.js Brain)
   constructor(bolt, gpu, g18) {
     this.bolt = bolt; this.gpu = gpu; this.g18 = g18; this.dog = gpu;
     this.want = { gait: "stand", steer: null };
@@ -698,14 +698,14 @@ export function newDay(L, bundle, seed) {
   return L;
 }
 
-// Everything for a page or a test. brains: { gpu, g18, jump16i } brain specs; clips: dog_clips.json
+// Everything for a page or a test. brains: { gpu, g18, jump } brain specs; clips: dog_clips.json
 export function makeLife(live, mj, bundle, brains, clips, seed) {
   const bolt = new live.Bolt(mj, bundle);
-  if (brains.jump16i) { bolt.brains.jump = new live.Brain(brains.jump16i); bolt.c = { ...bolt.c, jump_steps: brains.jump16i.jump_steps || 200 }; }
+  if (brains.jump) { bolt.brains.jump = new live.Brain(brains.jump); bolt.c = { ...bolt.c, jump_steps: brains.jump.jump_steps || 200 }; }
   setupYard(bolt, bundle);
   const gpu = new Imitate(bolt, brains.gpu, clips), g18 = new Imitate(bolt, brains.g18, clips);
   const body = new DogBody(bolt, gpu, g18);
-  body.jumpLimit = brains.jump16i ? brains.jump16i.jump_steps || 200 : 150;
+  body.jumpLimit = brains.jump ? brains.jump.jump_steps || 200 : 150;
   const sn = (bundle.geoms || []).find((g) => g.part === "snout");
   body.snout = sn ? sn.id : undefined;
   const mind = new Mind(bolt, body, { seed });

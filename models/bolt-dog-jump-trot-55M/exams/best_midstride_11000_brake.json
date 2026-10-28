@@ -1,0 +1,24 @@
+{
+ "v15_jump_40": 1.0,
+ "v15_jump_50": 0.9666666666666667,
+ "v15_jump_60": 0.0,
+ "v15_gait_jump_40": 0.9666666666666667,
+ "v15_gait_jump_50": 0.8,
+ "v15_gait_jump_60": 0.5,
+ "v20_jump_40": 1.0,
+ "v20_jump_50": 1.0,
+ "v20_jump_60": 0.16666666666666666,
+ "v20_gait_jump_40": 0.9,
+ "v20_gait_jump_50": 0.7333333333333333,
+ "v20_gait_jump_60": 0.4,
+ "max_steps": 220,
+ "dist": 1.5,
+ "motor_brake": {
+  "on": true,
+  "speed": 25.0,
+  "gain": 3.5
+ },
+ "episodes": 30,
+ "seed": 11000,
+ "minutes": 4.1
+}

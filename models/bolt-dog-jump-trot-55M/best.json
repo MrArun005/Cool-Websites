@@ -1,0 +1,30 @@
+{
+ "steps": 55043360,
+ "scores": {
+  "label": 55043360,
+  "folder": "runs/kaggle-jump-trot/runs/jumptrot/checkpoints",
+  "zip": "policy_55043360_steps.zip",
+  "stats": "policy_vecnormalize_55043360_steps.pkl",
+  "mid_40": 0.9666666666666667,
+  "mid_50": 0.7,
+  "mid_mean": 0.8333333333333333,
+  "still_40": 1.0,
+  "still_50": 1.0,
+  "still_mean": 1.0,
+  "seconds": 75.8
+ },
+ "command": "python research/reselect_jump.py runs/kaggle-jump-trot/runs/jumptrot --every-k 2 --workers 4 --compare ../models/bolt-dog-jump-runup-16i-35.5M runs/kaggle-jump-trot/runs/jumptrot/best",
+ "settings": {
+  "episodes": 30,
+  "seed": 7000,
+  "heights": [
+   0.4,
+   0.5
+  ],
+  "max_steps": 220,
+  "mid_speed": 1.7,
+  "mid_dist": 1.1,
+  "still_speed": 2.0,
+  "still_dist": 1.5
+ }
+}

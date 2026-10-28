@@ -10,7 +10,7 @@ const [mujocoJs, dataDir, secsArg = "300", seedArg = "1", viewerArg = "1"] = pro
 const mj = await (await import(path.resolve(mujocoJs))).default();
 const read = (f) => JSON.parse(fs.readFileSync(path.join(dataDir, f)));
 const bundle = read("bolt_run.json");
-const brains = { gpu: read("dog_gpu360.json"), g18: read("dog_18g.json"), jump16i: read("jump_16i.json") };
+const brains = { gpu: read("dog_gpu360.json"), g18: read("dog_18g.json"), jump: read("jump_trot.json") };
 const clips = read("dog_clips.json");
 const { bolt, body, mind } = makeLife(live, mj, bundle, brains, clips, +seedArg);
 const secs = +secsArg, dt = bolt.dt, viewer = viewerArg === "1";

@@ -130,7 +130,7 @@
         <li data-b="g18"><b>Canter-switching brain (run 18g)</b><span class="muted">the canter for zoomies, and dropping from canter to trot (93% in tests)</span></li>
         <li data-b="walk12"><b>Run 12 walk brain</b><span class="muted">sharp turns at a walk and slowing to a stop</span></li>
         <li data-b="posture"><b>Posture brain</b><span class="muted">standing still to sniff, and standing up from a sit</span></li>
-        <li data-b="jump"><b>Run-up jump brain (run 16i)</b><span class="muted">takes over 1.1 m before the bar from a trot; clears 40 cm about half the time in tests</span></li>
+        <li data-b="jump"><b>Jump brain trained from a trot (Kaggle, 55M steps)</b><span class="muted">takes over 1.1 m before the bar mid-stride; in simulation tests it clears 40 cm about 9 times in 10 (the old brain: half)</span></li>
         <li data-b="getup"><b>Self-righting brain (run 17e) + posture brain</b><span class="muted">after a fall: roll onto the belly, tuck, stand</span></li>
       </ul>
     </section>
@@ -507,10 +507,10 @@
     try {
       const [l, a, m, b, gpu, g18, j16, cl, h3] = await Promise.all([import("./live.js"), import("./doglife.js"), import("./mujoco/mujoco.js"),
         fetch("data/bolt_run.json").then((x) => x.json()), fetch("data/dog_gpu360.json").then((x) => x.json()), fetch("data/dog_18g.json").then((x) => x.json()),
-        fetch("data/jump_16i.json").then((x) => x.json()), fetch("data/dog_clips.json").then((x) => x.json()), import("./hurdles3d.js")]);
+        fetch("data/jump_trot.json").then((x) => x.json()), fetch("data/dog_clips.json").then((x) => x.json()), import("./hurdles3d.js")]);
       live = l; lib = a; bundle = b;
       const seed = Number(q.get("seed")) || (Date.now() % 1000000);
-      L = lib.makeLife(live, await m.default(), bundle, { gpu, g18, jump16i: j16 }, cl, seed);
+      L = lib.makeLife(live, await m.default(), bundle, { gpu, g18, jump: j16 }, cl, seed);
       drawHurdles = h3.makeHurdles(THREE, scene, L.bolt, mesh, lin);
       buildDog(bundle.geoms);
       newDay(seed);
