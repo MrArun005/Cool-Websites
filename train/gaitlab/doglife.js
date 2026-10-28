@@ -262,9 +262,9 @@ export class DogBody {
     if (m === "stand" || m === "rise" || m === "sniff") return b.run({ command: "stand", turn: 0, speed: 0.2 });
     if (m === "sharp") {
       const steer = w.steer || 0, top = Math.min(1.4, b.maxTurn(this.vs || 0.5));
-      const target = Math.abs(steer) < 0.3 ? 0.65 : clamp(0.25 + 0.6 * Math.cos(steer), 0.3, 0.6);
+      const target = Math.abs(steer) < 0.3 ? 0.65 : clamp(0.25 + 0.6 * Math.cos(steer), TURN.vmin, 0.6);
       this.vs = target > this.vs ? Math.min(target, this.vs + 0.6 * b.dt) : Math.max(target, this.vs - 1.0 * b.dt);
-      const cap = Math.abs(steer) > 1.2 ? 0.9 : top;
+      const cap = Math.abs(steer) > 1.2 ? TURN.cap : top;   // turning right round: gently (1.4 rad/s tipped it over)
       return b.run({ command: "walk", turn: clamp(2.5 * steer, -cap, cap), speed: this.vs });
     }
     if (m === "brake") { this.vs = Math.max(0.2, this.vs - 0.6 * b.dt); return b.run({ command: "walk", turn: 0, speed: this.vs }); }
@@ -276,6 +276,8 @@ export class DogBody {
   }
 }
 // how Bolt gets up from a sit, and what follows the get-up clip (measured in doglife_test.mjs)
+export const TURN = { cap: 0.9, vmin: 0.3 };
+export function setTurnLimits(cap, vmin) { TURN.cap = cap; TURN.vmin = vmin; }
 export let SIT_EXIT = "rise", GETUP_EXIT = "walk", LIE_FROM_WALK = false;
 export function setLieFromWalk(v) { LIE_FROM_WALK = v; }
 export function setExits(sit, getup) { SIT_EXIT = sit; GETUP_EXIT = getup; }
