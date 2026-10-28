@@ -96,7 +96,7 @@ Bolt's edge is the whole dog in one stack, measured honestly. Steps:
 Do not claim to beat a specialist at its speciality unless the same test says so.
 
 ## Strict standing rules (set by the owner, 27 Oct)
-0. (28 Oct) Always use Kaggle for training: new training runs go to Kaggle (CPU sessions for CPU work such as MasterMind DAgger; GPU sessions while the weekly GPU hours last), not to this machine or new cloud sessions.
+0. (28 Oct) Always give times to the owner in Indian Standard Time (IST, UTC+5:30), e.g. "08:29 IST".
 1. Every 30 minutes, check everything, whether or not anyone reported: each training run's log is fresh (< 40 min),
    checkpoints arrive, exams improve; each agent is alive; this machine's background tasks are running; pages are
    published with the latest data (with a "what's new" table); git is committed and pushed.
