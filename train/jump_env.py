@@ -57,7 +57,8 @@ DOG = STANCES["dog"]
 class JumpEnv(BoltEnv):
     OBS = 49   # 51 with real=True
 
-    def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0):
+    def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0,
+                 approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
                          hurdles="real" if real else True, skills=["stand"])
         self.real = real
@@ -77,18 +78,26 @@ class JumpEnv(BoltEnv):
         # approach_speed: half the tries start already running at the bar (1 m/s up to this, e.g. 3 = a canter),
         # the way a dog arrives at a jump on a course (run 16i). 0: always from standing.
         self.approach_speed = approach_speed
+        # run "jump-trot" (from 16i): running tries start at approach_speed_min..approach_speed (1.2-2.4: trot to
+        # canter, as MasterMind hands over), run_frac of all tries start running (16i: 0.5), and gait_start of the
+        # running tries start mid-stride in a trot/canter pose taken from the dog clips (legs and joint speeds of
+        # a random moment of the gait) instead of the settled dog stance: in MasterMind the jump brain takes over
+        # from the trot brain mid-stride. bar_max: the highest practice bar (16i: 0.50). Defaults = old runs.
+        self.approach_speed_min, self.run_frac, self.gait_start, self.bar_max = approach_speed_min, run_frac, gait_start, bar_max
+        self.exam_gait = False   # exams: start mid-stride (with exam_speed)
+        self._clips = None
         self.exam_speed = None   # exams: start speed (m/s) or None for standing
         # adaptive bar height, like a coach: it goes up (0.5 cm) while clean jumps are common, down when rare
         self.bar_level, self.clean_rate = 0.12, 0.0
 
     def _bar_height(self):
-        return float(np.clip(self.rng.uniform(self.bar_level - 0.05, self.bar_level + 0.03), 0.06, 0.50))
+        return float(np.clip(self.rng.uniform(self.bar_level - 0.05, self.bar_level + 0.03), 0.06, self.bar_max))
 
     def _grade(self, clean):
         """After each training try: raise the bar when clean jumps are common, lower it when they are rare."""
         self.clean_rate = 0.9 * self.clean_rate + 0.1 * float(clean)
         if self.clean_rate > 0.6:
-            self.bar_level = min(0.48, self.bar_level + 0.005)
+            self.bar_level = min(self.bar_max - 0.02, self.bar_level + 0.005)
         elif self.clean_rate < 0.15:
             self.bar_level = max(0.10, self.bar_level - 0.005)
 
@@ -168,14 +177,17 @@ class JumpEnv(BoltEnv):
         mujoco.mj_forward(m, d)
         for _ in range(25):  # settle into the dog stance on the motors
             physics(m, d, self.frame_skip)
+        exam = self.exam_bar is not None
+        v0 = self.exam_speed if exam else (
+            self.rng.uniform(self.approach_speed_min, self.approach_speed) if self.approach_speed and self.rng.random() < self.run_frac else 0.0)
+        if v0 and ((exam and self.exam_gait) or (not exam and self.gait_start and self.rng.random() < self.gait_start)):
+            self._gait_pose(v0)
         dist, h = self.exam_bar or (self.rng.uniform(*self.approach), self._bar_height())
         if self.real:   # like a game: up to 11 degrees askew and 10 cm off the line
             askew, side = self.exam_askew or (self.rng.uniform(-0.2, 0.2), self.rng.uniform(-0.1, 0.1))
             self.place_real(dist, h, askew, side)
         else:
             self.place_hurdle(dist, h)
-        v0 = self.exam_speed if self.exam_bar is not None else (
-            self.rng.uniform(1.0, self.approach_speed) if self.approach_speed and self.rng.random() < 0.5 else 0.0)
         if v0:   # arriving at a run: the body moves at v0 along its heading
             R = self._rotation()
             d.qvel[0:2] = v0 * R[:2, 0] / np.linalg.norm(R[:2, 0])
@@ -184,6 +196,33 @@ class JumpEnv(BoltEnv):
         self.clear_t = None
         self.best_past = self.paws_past().min()
         return self._obs(), {}
+
+    def _gait_pose(self, v0):
+        """Mid-stride: the legs (and joint speeds) and the body's tilt and height at a random moment of the
+        dog's trot (below 2 m/s) or canter clip, keeping the heading; joint speeds scaled to the cadence of v0."""
+        from imitate_env import Clip, _rotz
+        if self._clips is None:
+            self._clips = {n: Clip(n) for n in ("trot", "canter")}
+        c = self._clips["trot" if v0 < 2.0 else "canter"]
+        k = int(self.rng.integers(c.n))
+        m, d = self.model, self.data
+        R = self._rotation()
+        yaw = np.arctan2(R[1, 0], R[0, 0])
+        Rw = _rotz(yaw) @ c.tilt[k]
+        u, _, vt = np.linalg.svd(Rw)
+        q = np.zeros(4)
+        mujoco.mju_mat2Quat(q, (u @ vt).reshape(-1))
+        d.qpos[2], d.qpos[3:7] = c.height[k] + 0.005, q
+        d.qpos[7:19] = d.ctrl[:] = np.clip(c.joints[k], self.lo, self.hi)
+        clip_speed = max(0.5, float(np.linalg.norm(c.v_body[:, :2], axis=1).mean()))
+        d.qvel[:] = 0
+        d.qvel[3:6] = c.w_body[k] * 0.5
+        d.qvel[6:18] = c.joint_vel[k] * float(np.clip(v0 / clip_speed, 0.6, 1.2))
+        mujoco.mj_forward(m, d)
+        pen = max([0.0] + [-x.dist for x in d.contact[:d.ncon]])   # never start with a paw in the floor
+        if pen > 0:
+            d.qpos[2] += pen + 0.002
+            mujoco.mj_forward(m, d)
 
     def step(self, action):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
@@ -268,18 +307,20 @@ class JumpPolicy:
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
-def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None):
+def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None,
+         strict_too=True, gait=False):
     """Jump the bar from `dist` m away (55 cm up to run 16h; 1.5 m with a run-up from run 16i), optionally
     arriving at `speed` m/s. Two scores per height:
     jump_<cm>  fair, agility rules: straight approach, fixed physics; a jump counts if the bar stays in its
                cups (a brush is no fault, as in dog agility) and Bolt lands on its feet without falling.
     strict_<cm> the old test: randomized physics, half the tries 6 degrees askew and 5 cm off the line, no touch
-               at all, standing tall at the end and facing within 20 degrees of the jump."""
+               at all, standing tall at the end and facing within 20 degrees of the jump.
+    strict_too=False: the fair score only. gait=True (with speed): start mid-stride in the dog's trot/canter pose."""
     out = {}
     real = getattr(policy, "real", False)
-    for strict in (False, True):
+    for strict in ((False, True) if strict_too else (False,)):
         env = JumpEnv(randomize=strict, real=real, max_steps=max_steps)
-        env.exam_speed = speed
+        env.exam_speed, env.exam_gait = speed, gait
         for h in heights:
             wins = 0
             for k in range(episodes):

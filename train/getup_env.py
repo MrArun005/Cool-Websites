@@ -43,8 +43,11 @@ STAND_HEIGHT = 0.43
 class GetUpEnv(BoltEnv):
     OBS = 46
 
-    def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand"):
+    def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand", hard=False):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", skills=["stand"])
+        # hard=True (run "recover", from 17e): tougher falls and physics, see HARD_KINDS and _hard_physics
+        self.hard = hard
+        self.shove_at, self.ice = None, False
         self.goal = goal   # "stand": get all the way up; "selfright": belly down, legs tucked, still
         # self-righting reaches each joint's whole range around the dog stance (walking's ACTION_SCALE
         # only reached +-0.4 rad sideways)
@@ -73,12 +76,70 @@ class GetUpEnv(BoltEnv):
             return r.choice([-1, 1]) * r.uniform(0.5, 1.2), r.uniform(-0.6, 0.6)
         return r.uniform(-0.15, 0.15), r.uniform(-0.15, 0.15)
 
+    def _hard_physics(self, kind):
+        """Run "recover": wider physics than the other brains (motor stiffness 75-125%, every body's mass
+        90-110% and the torso's 80-130%, friction 40-140%), and a fifth of the tries on ice (all friction
+        12-30% of normal: MuJoCo takes the larger friction of a contact pair, so the paws must be slippery too)."""
+        m, r = self.model, self.rng
+        kp = self.nominal_kp * r.uniform(0.75, 1.25)
+        m.actuator_gainprm[:, 0], m.actuator_biasprm[:, 1] = kp, -kp
+        m.body_mass[:] = self.nominal_mass * r.uniform(0.9, 1.1, self.nominal_mass.shape)
+        m.body_mass[self.torso] = self.nominal_mass[self.torso] * r.uniform(0.8, 1.3)
+        self.ice = kind == "ice" or (self.exam_start is None and r.random() < 0.2)
+        m.geom_friction[:, 0] = self.nominal_friction * (r.uniform(0.12, 0.3) if self.ice else r.uniform(0.4, 1.4))
+
+    def _shove(self, speed, spin):
+        """A kick: body velocity sideways (and a little forward/back) and a roll (and some pitch/yaw) rate."""
+        r, d = self.rng, self.data
+        R = self._rotation()
+        s = r.choice([-1, 1])
+        d.qvel[0:3] += R @ np.array([r.uniform(-0.4, 0.4) * speed, s * speed, r.uniform(0.0, 0.3) * speed])
+        d.qvel[3:6] += np.array([-s * spin, r.uniform(-0.3, 0.3) * spin, r.uniform(-0.3, 0.3) * spin])
+
+    def _hard_start(self, kind):
+        """shoved / ice: standing in the dog stance, kicked (1.5-4.5 m/s, rolling 3-12 rad/s), the motors
+        holding the stance until it has fallen (body tipped past 60 degrees, at most 1.5 s), as when MasterMind's
+        fall detector hands over. dropped: a bad landing, from 0.55-1.0 m in any roll, pitched up to 45
+        degrees, tumbling and drifting, under control from the start. Lying starts slide and spin half the time."""
+        m, d, r = self.model, self.data, self.rng
+        if kind in ("shoved", "ice"):
+            d.qpos[2], d.qpos[7:19] = 0.45, np.clip(DOG + r.normal(0, 0.03, 12), self.lo, self.hi)
+            d.ctrl[:] = d.qpos[7:19]
+            mujoco.mj_forward(m, d)
+            for _ in range(25):
+                physics(m, d, self.frame_skip)
+            self._shove(r.uniform(1.5, 4.5), r.uniform(3.0, 12.0))
+            for _ in range(75):
+                physics(m, d, self.frame_skip)
+                if self._rotation()[2, 2] < 0.5:
+                    break
+            return
+        if kind == "dropped":
+            d.qpos[2] = r.uniform(0.55, 1.0)
+            mujoco.mj_forward(m, d)
+            d.qvel[0:2] = r.uniform(-1.5, 1.5, 2)
+            d.qvel[3:6] = r.normal(0, 3.0, 3)
+            return
+        for _ in range(50):   # lying kinds: as before, 1 s to drop and come to rest
+            physics(m, d, self.frame_skip)
+        if r.random() < 0.5:   # still sliding and rolling when the brain takes over
+            d.qvel[0:2] += r.uniform(-1.5, 1.5, 2)
+            d.qvel[3:6] += r.normal(0, 2.0, 3)
+
     def reset(self, seed=None, options=None):
         gym.Env.reset(self, seed=seed)
         if seed is not None:
             self.rng = self.np_random
         m, d = self.model, self.data
         mujoco.mj_resetData(m, d)
+        if self.hard:
+            kind = self.exam_start or self.rng.choice(HARD_KINDS, p=HARD_P)
+            self._hard_physics(kind)
+            self._place(kind)
+            self._hard_start(kind)
+            # a second kick while getting up, in a third of the training tries (never in exams)
+            self.shove_at = int(self.rng.integers(25, 150)) if self.exam_start is None and self.rng.random() < 0.35 else None
+            return self._begin(kind)
         if self.randomize:   # the same physics randomization as the other brains
             kp = self.nominal_kp * self.rng.uniform(0.85, 1.15)
             m.actuator_gainprm[:, 0], m.actuator_biasprm[:, 1] = kp, -kp
@@ -86,7 +147,20 @@ class GetUpEnv(BoltEnv):
             m.body_mass[self.torso] = self.nominal_mass[self.torso] * self.rng.uniform(0.85, 1.15)
             m.geom_friction[:, 0] = self.nominal_friction * self.rng.uniform(0.6, 1.3)
         kind = self.exam_start or self.rng.choice(["side", "back", "tipped", "standing"], p=[0.35, 0.3, 0.25, 0.1])
-        roll, pitch = self._fallen_pose(kind)
+        self._place(kind)
+        for _ in range(50):   # 1 s to drop and come to rest, the motors holding that pose
+            physics(m, d, self.frame_skip)
+        return self._begin(kind)
+
+    def _place(self, kind):
+        """Bolt in the start pose of this kind of fall (not yet simulated)."""
+        m, d = self.model, self.data
+        if kind in ("shoved", "ice"):
+            roll, pitch = 0.0, 0.0
+        elif kind == "dropped":
+            roll, pitch = self.rng.uniform(-np.pi, np.pi), self.rng.uniform(-0.8, 0.8)
+        else:
+            roll, pitch = self._fallen_pose(kind)
         yaw = self.rng.uniform(-np.pi, np.pi)
         # roll about the body's x, then pitch about y, then yaw about the vertical
         qr = np.array([np.cos(roll / 2), np.sin(roll / 2), 0, 0])
@@ -104,8 +178,8 @@ class GetUpEnv(BoltEnv):
             d.qpos[2] = 0.5
         d.qpos[7:19] = d.ctrl[:] = np.clip(legs, self.lo, self.hi)
         mujoco.mj_forward(m, d)
-        for _ in range(50):   # 1 s to drop and come to rest, the motors holding that pose
-            physics(m, d, self.frame_skip)
+
+    def _begin(self, kind):
         self.kind = kind
         self.t, self.last_action = 0, np.zeros(12)
         self.stood_at = None
@@ -115,6 +189,8 @@ class GetUpEnv(BoltEnv):
     def step(self, action):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
         self.data.ctrl[:] = np.clip(DOG + self.scale * a, self.lo, self.hi)   # the full motor range
+        if self.shove_at is not None and self.t == self.shove_at:   # knocked again while getting up
+            self._shove(self.rng.uniform(0.5, 2.0), self.rng.uniform(1.0, 5.0))
         physics(self.model, self.data, self.frame_skip)
         self.t += 1
         self.env_steps += 1
@@ -149,6 +225,12 @@ class GetUpEnv(BoltEnv):
         return self._obs(), float(reward), False, done, info
 
 
+# run "recover": the kinds of fall in training (hard=True) and their shares; "ice" is a shove on ice
+HARD_KINDS = ["side", "back", "tipped", "standing", "shoved", "dropped", "ice"]
+HARD_P = [0.15, 0.15, 0.12, 0.05, 0.23, 0.2, 0.1]
+EXAM_KINDS = ("side", "back", "tipped", "shoved", "dropped", "ice")
+
+
 class GetUpPolicy:
     def __init__(self, run_dir, zip_name="policy.zip", stats_name="vecnormalize.pkl"):
         from pathlib import Path
@@ -161,11 +243,11 @@ class GetUpPolicy:
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
-def exam(policy, episodes=10, seed=7000, kinds=("side", "back", "tipped", "standing"), goal="stand"):
+def exam(policy, episodes=10, seed=7000, kinds=("side", "back", "tipped", "standing"), goal="stand", hard=False):
     """From each kind of fall: standing (upright, at height) at the end of the 4 s, and the median time it
     took to first stand up."""
     out = {}
-    env = GetUpEnv(randomize=True, goal=goal)
+    env = GetUpEnv(randomize=True, goal=goal, hard=hard)
     for kind in kinds:
         wins, times = 0, []
         for k in range(episodes):
@@ -182,4 +264,69 @@ def exam(policy, episodes=10, seed=7000, kinds=("side", "back", "tipped", "stand
                 times.append(info["stood_at"] * env.dt)
         out[f"up_{kind}"] = wins / episodes
         out[f"secs_{kind}"] = round(float(np.median(times)), 2) if times else None
+    return out
+
+
+_POSTURE = None
+
+
+def full_recovery(env, righter, obs):
+    """The whole recovery MasterMind and the games use (learnwatch.recovery, skills.Bolt.recover): self-right
+    until belly-down and still for 0.3 s (at most 4 s), tuck with the posture brain's "lie" (until every joint
+    is within 0.6 rad of the lying pose, at most 2 s), then its "stand" for 3 s. Returns (stood at the end:
+    upright and body above 38 cm, seconds from the hand-over to first standing like that or None)."""
+    global _POSTURE
+    from pathlib import Path
+    from bolt_env import LIE_POSE
+    from evaluate import Policy
+    if _POSTURE is None:
+        _POSTURE = Policy(Path(__file__).resolve().parent.parent / "models" / "bolt-dog-posture-getup-3M")
+    env.max_steps = 10 ** 6
+    t, first, calm = 0, None, 0
+
+    def check():
+        nonlocal first
+        p = env.posture()
+        if first is None and p["up"] > 0.9 and p["height"] > 0.38:
+            first = t * env.dt
+    for _ in range(200):
+        obs, _, _, _, info = env.step(righter.act(obs))
+        t += 1
+        calm = calm + 1 if info["standing"] else 0
+        if calm >= 15:
+            break
+    for cmd, steps in (("lie", 100), ("stand", 150)):
+        env.forced_command = cmd   # forced, as skills.Bolt does: BoltEnv.step never draws a new command
+        env.set_command(cmd)
+        env.last_action = np.zeros(12)
+        for _ in range(steps):
+            BoltEnv.step(env, _POSTURE.act(BoltEnv._obs(env)))
+            t += 1
+            if cmd == "stand":
+                check()
+            if cmd == "lie" and np.abs(env.data.qpos[7:19] - LIE_POSE).max() < 0.6:
+                break
+    p = env.posture()
+    ok = bool(p["up"] > 0.9 and p["height"] > 0.38)
+    return ok, (first if ok else None)
+
+
+def exam_full(righter, episodes=10, seed=7000, kinds=EXAM_KINDS, hard=True):
+    """Fair full-recovery exam: from each kind of fall (hard=True: run "recover"'s tougher falls and physics,
+    the same fixed seeds for every brain, no second kick), stood_<kind>: share of tries standing at the end;
+    tsec_<kind>: median seconds from the hand-over to first standing (self-right + tuck + stand)."""
+    out = {}
+    env = GetUpEnv(randomize=True, goal="selfright", hard=hard)
+    for kind in kinds:
+        wins, times = 0, []
+        for k in range(episodes):
+            env.exam_start = kind
+            env.max_steps = 200
+            obs, _ = env.reset(seed=seed + k)
+            ok, sec = full_recovery(env, righter, obs)
+            wins += ok
+            if sec is not None:
+                times.append(sec)
+        out[f"stood_{kind}"] = wins / episodes
+        out[f"tsec_{kind}"] = round(float(np.median(times)), 2) if times else None
     return out

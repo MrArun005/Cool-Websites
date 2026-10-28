@@ -53,13 +53,19 @@ def widen(src, out):
 class Examiner(BaseCallback):
     """Every `every` steps: save a checkpoint, take the exam, keep the best."""
 
-    def __init__(self, out, every, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None):
+    def __init__(self, out, every, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None, extra=()):
         super().__init__()
+        self.exam_first = False
         self.out, self.every, self.next, self.best, self.heights = out, every, every, -1.0, heights
         self.dist, self.max_steps, self.speed = dist, max_steps, speed
+        # extra exams, (speed, dist) each, fair score only, keys "v<speed x10>_jump_<cm>" (e.g. v20_jump_50): run
+        # jump-trot examines 1.5 m/s (main) and 2.0 m/s, and picks the best brain on all their fair jump keys
+        self.extra = list(extra)
 
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
         self.next = (self.num_timesteps // self.every + 1) * self.every
+        if self.exam_first and not (self.out / "checkpoints" / f"policy_{self.num_timesteps}_steps.zip").exists():
+            self._exam(self.num_timesteps)   # the starting brain, on the same exam: the bar to beat
         best = self.out / "best" / "best.json"
         if best.exists():   # a resumed run keeps its best brain (run 16i's reset to 0 at 44.5M and overwrote it)
             self.best = json.loads(best.read_text()).get("score", self.best)
@@ -68,14 +74,21 @@ class Examiner(BaseCallback):
         if self.num_timesteps < self.next:
             return not (self.out / "STOP").exists()
         self.next += self.every
+        self._exam(self.num_timesteps)
+        return not (self.out / "STOP").exists()
+
+    def _exam(self, n):
         ck = self.out / "checkpoints"
         ck.mkdir(exist_ok=True)
-        n = self.num_timesteps
         self.model.save(ck / f"policy_{n}_steps.zip")
         self.training_env.save(str(ck / f"policy_vecnormalize_{n}_steps.pkl"))
         result = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), heights=self.heights,
                       dist=self.dist, max_steps=self.max_steps, speed=self.speed)
-        fair = [v for k, v in result.items() if k.startswith("jump_")]   # the best brain is picked on the fair score
+        for sp, di in self.extra:
+            more = exam(JumpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), heights=self.heights,
+                        dist=di, max_steps=self.max_steps, speed=sp, strict_too=False)
+            result.update({f"v{round(sp * 10)}_{k}": v for k, v in more.items()})
+        fair = [v for k, v in result.items() if "jump_" in k]   # the best brain is picked on the fair score(s)
         score = sum(fair) / len(fair)
         levels = self.training_env.get_attr("bar_level")
         print(f"checkpoint {n} ready: {result} (practice bars now {100 * sum(levels) / len(levels):.0f} cm)", flush=True)
@@ -89,7 +102,25 @@ class Examiner(BaseCallback):
             shutil.copy(ck / f"policy_vecnormalize_{n}_steps.pkl", best / "vecnormalize.pkl")
             (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=score), indent=2))
             print(f"new best at {n}: score {score:.2f}", flush=True)
-        return not (self.out / "STOP").exists()
+
+
+class TimeGuard(BaseCallback):
+    """Stop cleanly after `hours` (a Kaggle session ends at 12 h): save a checkpoint and end training."""
+
+    def __init__(self, hours, out):
+        super().__init__()
+        self.end, self.out = time.time() + hours * 3600, out
+
+    def _on_step(self):
+        if time.time() < self.end:
+            return True
+        ck = self.out / "checkpoints"
+        ck.mkdir(exist_ok=True)
+        n = self.num_timesteps
+        self.model.save(ck / f"policy_{n}_steps.zip")
+        self.training_env.save(str(ck / f"policy_vecnormalize_{n}_steps.pkl"))
+        print(f"time guard: stopping at {n} steps after the time budget", flush=True)
+        return False
 
 
 def main():
@@ -98,6 +129,7 @@ def main():
     ap.add_argument("--steps", type=int, default=6_000_000)
     ap.add_argument("--envs", type=int, default=8)
     ap.add_argument("--resume")
+    ap.add_argument("--init-from", help="a model folder (policy.zip + vecnormalize.pkl) to fine-tune, e.g. ../models/bolt-dog-jump-runup-16i-35.5M")
     ap.add_argument("--lr", type=float, default=3e-4, help="learning rate (on --resume too)")
     ap.add_argument("--target-kl", type=float, default=0.03)
     ap.add_argument("--n-steps", type=int, default=512, help="steps per env per update (x envs = samples per update)")
@@ -111,17 +143,34 @@ def main():
     ap.add_argument("--exam-heights", type=float, nargs="+", default=[0.15, 0.20, 0.25, 0.30],
                     help="bar heights (m) of the exam, e.g. 0.25 0.30 0.40 0.50 for a brain that clears 30 cm")
     ap.add_argument("--bar-start", type=float, help="the coach's starting bar height (m), e.g. 0.20 for a skilled brain")
+    ap.add_argument("--approach-speed-min", type=float, default=1.0, help="running tries start at this speed or more (jump-trot: 1.2)")
+    ap.add_argument("--run-frac", type=float, default=0.5, help="share of tries that start running (jump-trot: 0.85)")
+    ap.add_argument("--gait-start", type=float, default=0.0, help="share of running tries that start mid-stride in a trot/canter pose")
+    ap.add_argument("--bar-max", type=float, default=0.50, help="highest practice bar (m); 16i: 0.50, jump-trot: 0.75")
+    ap.add_argument("--exam2", type=float, nargs=2, action="append", default=[], metavar=("SPEED", "DIST"),
+                    help="an extra fair exam at SPEED m/s from DIST m (repeatable), e.g. --exam2 2.0 1.5")
+    ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints and exams")
+    ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
+    ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
     args = ap.parse_args()
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
     venv = make_vec_env(JumpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(real=args.real, approach=tuple(args.approach), max_steps=args.max_steps,
-                                                                                           approach_speed=args.approach_speed))
+                                                                                           approach_speed=args.approach_speed,
+                                                                                           approach_speed_min=args.approach_speed_min, run_frac=args.run_frac,
+                                                                                           gait_start=args.gait_start, bar_max=args.bar_max))
     if args.widen_from and not args.resume:
         args.resume = str(widen(args.widen_from, out / "widened"))
+    if args.init_from and not args.resume:   # a model folder: policy.zip + vecnormalize.pkl
+        args.resume = str(Path(args.init_from) / "policy.zip")
+        stats = Path(args.init_from) / "vecnormalize.pkl"
+    elif args.resume:
+        ck = Path(args.resume)
+        stats = ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")
     if args.resume:
         ck = Path(args.resume)
-        venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)
+        venv = VecNormalize.load(str(stats), venv)
         model = PPO.load(ck, env=venv, device="cpu", custom_objects=dict(learning_rate=args.lr, target_kl=args.target_kl, n_steps=args.n_steps))
         venv.env_method("__setattr__", "env_steps", model.num_timesteps // args.envs)  # keep the bar-height curriculum
         if args.bar_start:
@@ -135,8 +184,12 @@ def main():
                                        log_std_init=-0.5),
                     device="cpu", verbose=0)
     start = time.time()
-    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, 500_000, tuple(args.exam_heights), args.exam_dist, args.max_steps,
-                                                                                          args.exam_speed),
+    cbs = [Examiner(out, args.every, tuple(args.exam_heights), args.exam_dist, args.max_steps, args.exam_speed,
+                    [tuple(e) for e in args.exam2])]
+    cbs[0].exam_first = args.exam_first
+    if args.hours:
+        cbs.append(TimeGuard(args.hours, out))
+    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=cbs,
                 reset_num_timesteps=not args.resume, progress_bar=False)
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))

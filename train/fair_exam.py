@@ -1,0 +1,66 @@
+"""Fair exams on fresh seeds for a finished jump or recovery brain (a model folder or a run's best/ folder).
+
+    # jump: 30 tries per bar height at each approach speed (fair agility score, fixed physics, straight approach)
+    python fair_exam.py jump runs/jumptrot/best --speeds 1.5 2.0 --dist 1.5 --heights 0.40 0.50 0.60 0.70
+    python fair_exam.py jump ../models/bolt-dog-jump-runup-16i-35.5M --speeds 1.5 2.0      # the old brain, same test
+    # recovery: 30 tries per kind of fall, the whole recovery (self-right, tuck, stand) and self-righting alone
+    python fair_exam.py recover runs/recover/best
+    python fair_exam.py recover ../models/bolt-dog-selfright-17e-16.5M
+
+Seeds 9000+ by default: the training runs examine on seeds 5000+ (jump) and 7000+ (recovery), so these tries
+were never used to pick a brain. Writes <folder>/fair_exam_<what>.json unless --no-save.
+"""
+import argparse
+import json
+import time
+from pathlib import Path
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("what", choices=["jump", "recover"])
+    ap.add_argument("folder")
+    ap.add_argument("--episodes", type=int, default=30)
+    ap.add_argument("--seed", type=int, default=9000)
+    ap.add_argument("--speeds", type=float, nargs="+", default=[1.5, 2.0])
+    ap.add_argument("--dist", type=float, default=1.5)
+    ap.add_argument("--heights", type=float, nargs="+", default=[0.40, 0.50, 0.60, 0.70])
+    ap.add_argument("--gait", action="store_true", help="jump: also start mid-stride (trot/canter pose) at each speed")
+    ap.add_argument("--strict", action="store_true", help="jump: also the old strict test (randomized physics, askew)")
+    ap.add_argument("--easy", action="store_true", help="recover: also the old falls and physics (17e's exam conditions)")
+    ap.add_argument("--no-save", action="store_true")
+    a = ap.parse_args()
+    folder, out, t0 = Path(a.folder), {}, time.time()
+    if a.what == "jump":
+        from jump_env import JumpPolicy, exam
+        pol = JumpPolicy(folder)
+        for sp in a.speeds:
+            for gait in ((False, True) if a.gait else (False,)):
+                r = exam(pol, episodes=a.episodes, seed=a.seed, heights=tuple(a.heights), dist=a.dist, max_steps=200,
+                         speed=sp, strict_too=a.strict, gait=gait)
+                tag = f"v{round(sp * 10)}{'_gait' if gait else ''}"
+                out.update({f"{tag}_{k}": v for k, v in r.items()})
+                print(tag, r, flush=True)
+    else:
+        from getup_env import EXAM_KINDS, GetUpPolicy, exam, exam_full
+        pol = GetUpPolicy(folder)
+        r = exam_full(pol, episodes=a.episodes, seed=a.seed, hard=True)
+        print("full recovery, tough falls:", r, flush=True)
+        out.update({f"full_{k}": v for k, v in r.items()})
+        r = exam(pol, episodes=a.episodes, seed=a.seed, kinds=EXAM_KINDS, goal="selfright", hard=True)
+        print("self-righting alone, tough falls:", r, flush=True)
+        out.update({f"right_{k}": v for k, v in r.items()})
+        if a.easy:
+            r = exam_full(pol, episodes=a.episodes, seed=a.seed, kinds=("side", "back", "tipped", "standing"), hard=False)
+            print("full recovery, old falls:", r, flush=True)
+            out.update({f"old_{k}": v for k, v in r.items()})
+        stood = [v for k, v in out.items() if k.startswith("full_stood_")]
+        out["full_stood_mean"] = sum(stood) / len(stood)
+    out["episodes"], out["seed"], out["minutes"] = a.episodes, a.seed, round((time.time() - t0) / 60, 1)
+    print(json.dumps(out, indent=1))
+    if not a.no_save:
+        (folder / f"fair_exam_{a.what}.json").write_text(json.dumps(out, indent=1))
+
+
+if __name__ == "__main__":
+    main()
