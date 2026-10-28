@@ -103,7 +103,7 @@ def latest():
 rc = 0
 for attempt in range(CFG["attempts"]):
     left = CFG["train_h"] - (time.time() - T0) / 3600
-    if left < 0.25:
+    if left < min(0.25, CFG["train_h"] / 4):
         say(f"{left:.2f} h of training time left: no more attempts")
         break
     ck = latest()
