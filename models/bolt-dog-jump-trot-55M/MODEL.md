@@ -35,3 +35,14 @@ The neighbouring checkpoint (55.0M) scores within a few points (`exams/ck5500000
 Weak spot: mid-stride at 2.0 m/s (canter speed). 60 cm is not solved.
 
 Load with `jump_env.JumpPolicy(folder, "policy.zip", "vecnormalize.pkl")`.
+
+## In Bolt's Day Out (browser physics, every task a jump, 4 runs x 240 s, seeds 1-4)
+
+    cd train/gaitlab && node doglife_jumptest.mjs <mujoco.js> <data folder> <seed> 240
+
+| | jumps | clean | bar down | falls (of them: in the trot/canter hand-over after landing) |
+|---|---|---|---|---|
+| this brain | 29 | 21 | 7 | 21 (9) |
+| 16i-35.5M | 11 | 5 | 4 | 22 (falls mostly running into the jump: 11) |
+
+Per-run lines: `exams/dayout_jumptest.txt`. Next weak spot: the canter->trot bridge after landing.
