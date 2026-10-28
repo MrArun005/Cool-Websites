@@ -99,6 +99,7 @@ Do not claim to beat a specialist at its speciality unless the same test says so
 ## Strict standing rules (set by the owner, 27 Oct)
 0. (28 Oct) Always give times to the owner in Indian Standard Time (IST, UTC+5:30), e.g. "08:29 IST".
 0b. (28 Oct) Kaggle runs stay LONG: size each job to use nearly all of Kaggle's 12 h session limit (time guard ~10.5-11.5 h), results once a day, rather than short 2-4 h runs.
+0d. (28 Oct) LinkedIn post: Friday 30 Oct night or Monday 2 Nov morning IST, after the real-world checks (noise/latency stress test, second simulator, A1/Go2 port). Have a draft + 20-40 s video ready by Friday afternoon; say "in simulation", credit AI assistance and the CC BY-NC dog data, no "best in the world" claims, invite labs with a Go2/A1.
 0c. (28 Oct, owner delegated these calls "best for our reputation in the real world"):
    - Body = 33.5 N·m A1 motors (420 W, 21 rad/s rated, drive fades to 0 at 25 rad/s).
    - --motor-brake: brake starts at 25 rad/s (the drive cutoff, so fade and brake don't overlap), gain 3.5 N·m·s/rad (motor-constant estimate, the stricter choice). ON for all new training; exams default OFF for old brains; brains trained with the brake are examined with it ON, and their reports show both.
