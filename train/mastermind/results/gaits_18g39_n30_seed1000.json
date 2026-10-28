@@ -1,0 +1,102 @@
+{
+ "brain": "teacher",
+ "teachers": "v3",
+ "over": {
+  "canter": "18g"
+ },
+ "imitate": "18g",
+ "n": 30,
+ "seed": 1000,
+ "seconds": 64,
+ "switches": [
+  {
+   "switch": "walk->trot",
+   "ok": 30,
+   "tries": 30,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->canter",
+   "ok": 30,
+   "tries": 30,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "canter->trot",
+   "ok": 27,
+   "tries": 30,
+   "rate": 0.9,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 2.18,
+     "min_height": 0.363,
+     "min_up": 0.48,
+     "fell_after": 0.78,
+     "in_skill": "trot",
+     "height": 0.475,
+     "speed": 0.69,
+     "roll": 0.58,
+     "pitch": -0.76
+    },
+    {
+     "speed_at_switch": 2.25,
+     "min_height": 0.395,
+     "min_up": 0.46,
+     "fell_after": 0.38,
+     "in_skill": "trot",
+     "height": 0.402,
+     "speed": -0.14,
+     "roll": 0.24,
+     "pitch": -1.03
+    },
+    {
+     "speed_at_switch": 2.36,
+     "min_height": 0.366,
+     "min_up": 0.43,
+     "fell_after": 0.64,
+     "in_skill": "trot",
+     "height": 0.405,
+     "speed": 0.41,
+     "roll": 0.33,
+     "pitch": -1.0
+    }
+   ]
+  },
+  {
+   "switch": "trot->walk",
+   "ok": 25,
+   "tries": 27,
+   "rate": 0.93,
+   "not_reached": 3,
+   "failures": [
+    {
+     "speed_at_switch": 1.32,
+     "min_height": 0.362,
+     "min_up": 0.47,
+     "fell_after": 1.24,
+     "in_skill": "walk",
+     "height": 0.407,
+     "speed": -0.2,
+     "roll": 0.01,
+     "pitch": -1.08
+    },
+    {
+     "speed_at_switch": 1.51,
+     "min_height": 0.372,
+     "min_up": 0.46,
+     "fell_after": 0.64,
+     "in_skill": "walk",
+     "height": 0.404,
+     "speed": -0.24,
+     "roll": 0.03,
+     "pitch": -1.09
+    }
+   ]
+  }
+ ]
+}
