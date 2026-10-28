@@ -140,11 +140,11 @@ def build_data(a):
         p = Path(f)
         if (p.parent == Path("train") and p.suffix in (".py", ".xml")) or \
            (p.parent == Path("train/mastermind") and p.suffix == ".py") or \
-           p.parent == Path("train/dogmotion/clips") or f == INIT or \
+           p.parent == Path("train/dogmotion/clips") or f in (INIT, a.init_student) or \
            (len(p.parts) == 3 and p.parts[0] == "models" and p.parts[1] in MODELS):
             keep.append(f)
     missing = [m for m in MODELS if not any(f.startswith(f"models/{m}/") for f in keep)]
-    assert not missing and INIT in keep, (missing, INIT)
+    assert not missing and INIT in keep and (not a.init_student or a.init_student in keep), (missing, INIT, a.init_student)
     with tarfile.open(out / TAR, "w") as t:
         for f in keep:
             blob = subprocess.run(["git", "show", f"HEAD:{f}"], cwd=REPO, capture_output=True, check=True).stdout
