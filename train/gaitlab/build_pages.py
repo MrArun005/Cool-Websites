@@ -1,6 +1,6 @@
-"""Assemble Bolt's Castle, the Agility Cup, Bolt at home and Bolt's Agility Run from their templates plus the Gait Lab's 3D code.
+"""Assemble Bolt's Castle, the Agility Cup, Bolt at home, Bolt's Agility Run and Bolt's Day Out (doglife) from their templates plus the Gait Lab's 3D code.
 
-    python build_pages.py <scratchpad> [page names, default: castle agility home agilityrun]
+    python build_pages.py <scratchpad> [page names, default: castle agility home agilityrun; also doglife]
 """
 import sys, re, os
 S = sys.argv[1]

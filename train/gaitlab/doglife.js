@@ -420,7 +420,7 @@ export class Mind {
       sniffSpot: 0.15 + 0.7 * C,
       sniffBin: 0.1 + 0.6 * C,
       trot: E > 0.35 ? 0.2 + 0.4 * P * E : 0,
-      zoomies: E > 0.45 ? 0.15 + 1.3 * P * E * E : 0,
+      zoomies: E > 0.45 ? 0.1 + 0.9 * P * E * E : 0,
       jump: E > 0.4 ? 0.15 + 0.6 * P * E : 0,
       pace: 0.12 + 0.15 * E,
       sit: 0.18 + 0.3 * (1 - E),
