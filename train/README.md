@@ -10,7 +10,7 @@ Teaching a robot to be a pet is two separate kinds of training, just like with a
 
 ## 1. Body training (this folder)
 
-`bolt.xml` is Bolt as a MuJoCo physics model: 12 kg, 12 motors limited to 17 N·m each, real foot contacts and friction. Nothing is scripted; the network has to find out how to use its motors.
+`bolt.xml` is Bolt as a MuJoCo physics model: 12 kg, 12 motors of 33.5 N·m each (the Unitree A1's joint motor; `bolt_env.MOTOR` also limits each to 420 W and 21 rad/s), real foot contacts and friction. Brains trained before 27 Oct (commit fd5199b) had a 17 N·m cap: each `models/*/MODEL.md` says which body it was trained in, and `BOLT_MOTOR_TORQUE=17` examines it in that body. Nothing is scripted; the network has to find out how to use its motors.
 
 `bolt_env.py` is the training ground. 50 times a second the policy (a neural network with two 256-neuron layers) feels the body's tilt, spin, joint angles and the current command, and sets 12 motor targets. It's scored on:
 - **doing what was asked**: the right height and posture for *stand*, *sit* and *lie*; moving forward at 0.5 m/s with a trot rhythm for *walk*
@@ -33,6 +33,24 @@ python watch.py runs/bolt --log train.log --out runs/bolt/watch   # film + test 
 `watch.py` runs next to training (send train.py's output to `train.log`). Each time a checkpoint is saved, it films the dog obeying commands while still practising (exploration noise included, so you see it wobble and fall) and gives it a quick exam. It writes `data.json` and `clips/*.mp4` for a progress page.
 
 On Linux without a display, set `MUJOCO_GL=osmesa` (install `libosmesa6`) for the video.
+
+### Dog-motion brain on a GPU: skill-switch training flags (`mjx_imitate.py`)
+
+Each flag defaults to off, so a run without it trains exactly as before. CPU smoke test for each (the `--quick` path,
+16 envs, 20k steps, JAX venv; the 360M brain's `params.pkl` has no reward scale, so pass the one the GPU runs use):
+
+```bash
+# landing starts: 30% of tries start in the run-up jump brain's landing (mid-air to touch-down), canter 0.6 s, then trot
+python research/gen_landing_starts.py --tries 96          # once: research/results/landing_starts.npz (2398 states)
+python mjx_imitate.py train --warm ../models/bolt-dog-imitate-gpu-360M/params.pkl --reward-scaling 0.246 \
+    --steps 20000 --envs 16 --out /tmp/smoke_landing --quick --landing-rate 0.3
+python -m unittest test_mjx_imitate                       # CPU stack: landing start keeps the 75-input layout
+# (the smoke run takes ~18 min on 4 CPU cores, mostly compiling and the eval rollouts)
+```
+Landing flags: `--landing-rate` (share of tries, default 0), `--landing-file` (default
+`research/results/landing_starts.npz`), `--landing-grace` (s without the 15 cm height check while still in the air,
+default 0.5), `--landing-bridge` (s of canter before the switch, default 0.6 = `skills.BRIDGE`), `--landing-then`
+(default trot). The CPU env (`imitate_env.ImitateEnv`) takes the same arguments.
 
 ### Results
 

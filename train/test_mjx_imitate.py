@@ -7,12 +7,187 @@ The CPU stack (torch, SB3) and JAX live in different virtualenvs, so this runs i
 Compared: the 75 observations and the five reward terms for identical states (qpos, qvel, clip, time, last action),
 the reference-state start (same clip, moment and heading), the clip switch (same new clip), one control step of
 physics, and the deterministic action of the warm-started Brax policy against ImitatePolicy.act.
+Landing starts (landing_rate > 0): the same start state from the same landing state and heading, then 40 steps
+from identical states (forced switch to trot after the bridge, the height-check grace) in both envs.
+
+Unit tests (CPU stack; landing starts keep the 75-input layout, rate 0 leaves the env as it was):
+    <cpu python> -m unittest test_mjx_imitate
 """
 import pickle
 import sys
+import unittest
 from pathlib import Path
 
 import numpy as np
+
+HERE = Path(__file__).resolve().parent
+BRAIN_360M = HERE.parent / "models" / "bolt-dog-imitate-gpu-360M" / "params.pkl"
+
+
+class LandingStartTest(unittest.TestCase):
+    """A landing start (imitate_env landing_rate) is an ordinary try for the brain: same inputs, same order, same size."""
+
+    def test_landing_start_obs_layout(self):
+        from imitate_env import ALL_CLIPS, DOG, LANDING_FILE, ImitateEnv
+        from mjx_imitate import MjxImitatePolicy
+        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, landing_rate=1.0)
+        plain = ImitateEnv(randomize=False, clips=ALL_CLIPS)
+        self.assertEqual(env.observation_space.shape, plain.observation_space.shape)
+        self.assertEqual(env.observation_space.shape, (75,))
+        air = np.flatnonzero(np.load(LANDING_FILE)["airborne"])
+        self.assertGreater(len(air), 0)
+        env.exam_landing = int(air[0])   # a mid-air landing state
+        obs, _ = env.reset(seed=0)
+        d = env.data
+        self.assertEqual(obs.shape, (75,))
+        self.assertEqual(obs.dtype, np.float32)
+        self.assertEqual(env.feet_on_ground().sum(), 0)   # it starts in the air
+        np.testing.assert_allclose(obs[9], d.qpos[2], atol=1e-6)                      # body height
+        np.testing.assert_allclose(obs[10:22], d.qpos[7:19] - DOG, atol=1e-6)          # joint angles - stance
+        np.testing.assert_allclose(obs[22:34], d.qvel[6:18] * 0.1, atol=1e-5)          # joint velocities
+        np.testing.assert_array_equal(obs[34:46], 0.0)                                 # no previous action
+        onehot = np.zeros(len(ALL_CLIPS))
+        onehot[ALL_CLIPS.index("canter")] = 1
+        np.testing.assert_array_equal(obs[48:57], onehot)                              # tracking the canter
+        np.testing.assert_allclose(obs[57:69], env.ref("joints", 1) - DOG, atol=1e-6)  # reference joints
+        self.assertEqual(obs[74], 0.0)                                                 # a loop: no clip end
+        pol = MjxImitatePolicy(BRAIN_360M)   # the 360M brain (9 slots) runs on it unchanged
+        self.assertEqual(pol.slots, 9)
+        a = pol.act(obs)
+        self.assertEqual(a.shape, (12,))
+        obs2, r, fell, done, info = env.step(a)
+        self.assertEqual(obs2.shape, (75,))
+        self.assertTrue(np.all(np.isfinite(obs2)) and np.isfinite(r))
+        np.testing.assert_allclose(obs2[34:46], a, atol=1e-6)                          # previous action
+        self.assertEqual(info["clip"], "canter")
+        self.assertFalse(fell)   # in the air, ~10 cm above the canter's height: the grace keeps the try going
+
+    def test_landing_bridge_switch(self):
+        from imitate_env import ALL_CLIPS, ImitateEnv
+        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, landing_rate=1.0, landing_bridge=0.1)
+        env.exam_landing = 0
+        env.reset(seed=1)
+        clips = []
+        for _ in range(6):
+            _, _, fell, _, info = env.step(np.zeros(12))
+            clips.append(info["clip"])
+        self.assertEqual(clips, ["canter"] * 4 + ["trot"] * 2)   # 0.1 s = 5 steps of canter, then trot
+
+    def test_rate_zero_is_the_old_env(self):
+        """landing_rate 0 (the default) draws nothing extra: the same tries, step for step."""
+        from imitate_env import ALL_CLIPS, ImitateEnv
+        a, b = ImitateEnv(seed=3, clips=ALL_CLIPS, switch_rate=0.3), ImitateEnv(seed=3, clips=ALL_CLIPS, switch_rate=0.3, landing_rate=0.0)
+        rng = np.random.default_rng(0)
+        for ep in range(6):
+            oa, _ = a.reset(seed=ep if ep % 2 else None)
+            ob, _ = b.reset(seed=ep if ep % 2 else None)
+            np.testing.assert_array_equal(oa, ob)
+            for _ in range(30):
+                act = rng.uniform(-1, 1, 12)
+                ra, rb = a.step(act), b.step(act)
+                np.testing.assert_array_equal(ra[0], rb[0])
+                self.assertEqual(ra[1:4], rb[1:4])
+                if ra[2] or ra[3]:
+                    break
+
+
+def dump_landing(pol, rng):
+    """Landing starts through ImitateEnv: start states and 40 steps each (for check_landing)."""
+    import mujoco
+    from imitate_env import ALL_CLIPS, LANDING_FILE, ImitateEnv
+    z = np.load(LANDING_FILE)
+    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, landing_rate=1.0)
+    picks = np.unique(np.concatenate([np.flatnonzero(z["airborne"])[::max(1, int(z["airborne"].sum()) // 6)][:6],
+                                      np.flatnonzero(~z["airborne"])[::max(1, int((~z["airborne"]).sum()) // 4)][:4]]))
+    starts, steps = [], []
+    for k, i in enumerate(picks):
+        env.exam_landing = int(i)
+        obs, _ = env.reset(seed=700 + k)
+        R = env._rotation()
+        starts.append(dict(idx=int(i), yaw=float(np.arctan2(R[1, 0], R[0, 0])), qpos=env.data.qpos.copy(), qvel=env.data.qvel.copy(), obs=obs,
+                           limit=env.limit, clip=ALL_CLIPS.index(env.clip.name), tau0=env.tau0, grace=env.grace_steps, lswitch=env.land_switch_at))
+        for t in range(40):
+            pre = dict(clip=ALL_CLIPS.index(env.clip.name), tau0=env.tau0, t=env.t, last_action=env.last_action.copy(), qpos=env.data.qpos.copy(),
+                       qvel=env.data.qvel.copy(), ctrl=env.data.ctrl.copy(), limit=env.limit, idx=int(i), grace=env.grace_steps, lswitch=env.land_switch_at)
+            a = np.clip(pol.act(obs) + rng.normal(0, 0.1, 12), -1, 1)
+            obs, r, fell, done, info = env.step(a)
+            d2 = mujoco.MjData(env.model)   # up-to-date kinematics, as dump() does
+            d2.qpos[:], d2.qvel[:], d2.ctrl[:] = env.data.qpos, env.data.qvel, env.data.ctrl
+            mujoco.mj_forward(env.model, d2)
+            d, env.data = env.data, d2
+            _, f_err = env.tracking()
+            env.data = d
+            steps.append(dict(pre=pre, action=a, clip=ALL_CLIPS.index(env.clip.name), tau0=env.tau0, limit=env.limit, fell=fell, done=done,
+                              f_err=f_err, qpos=env.data.qpos.copy(), qvel=env.data.qvel.copy(), t=env.t))
+            if fell or done:
+                break
+    return dict(starts=starts, steps=steps)
+
+
+def check_landing(M, C):
+    """The landing parts of check(): MjxImitate(landing_rate=1) against dump_landing's ImitateEnv tries."""
+    import jax
+    import jax.numpy as jp
+    from mujoco import mjx
+    env = M.MjxImitate(randomize=False, switch_rate=0.0, landing_rate=1.0)
+    names = env.names
+
+    def info_of(s, t=0, last_action=None):
+        info = dict(kp=jp.float32(1), mass=jp.float32(1), fric=jp.float32(1), clip=jp.int32(names.index(M.ALL_CLIPS[s["clip"]])),
+                    tau0=jp.float32(s["tau0"]), t=jp.int32(t), last_action=jp.array(np.zeros(12) if last_action is None else last_action, jp.float32),
+                    trunc=jp.float32(0), limit=jp.int32(s["limit"]))
+        info = env.landing_info(info, jp.int32(s["idx"]))   # the landing keys (land, grace, lswitch) as at the try's start
+        return dict(info, clip=jp.int32(names.index(M.ALL_CLIPS[s["clip"]])), tau0=jp.float32(s["tau0"]), limit=jp.int32(s["limit"])) if t else info
+
+    start_data = jax.jit(env.start_data)
+    dq, bad_info = [], 0
+    for s in C["starts"]:
+        info = info_of(s)
+        bad_info += int(info["clip"]) != names.index(M.ALL_CLIPS[s["clip"]]) or abs(float(info["tau0"]) - s["tau0"]) > 1e-5 or \
+            int(info["limit"]) != s["limit"] or int(info["grace"]) != s["grace"] or int(info["lswitch"]) != s["lswitch"]
+        d = start_data(info, jp.float32(s["yaw"]))
+        q = np.array(d.qpos)
+        if np.dot(q[3:7], s["qpos"][3:7]) < 0:
+            q[3:7] *= -1
+        o = np.asarray(env.obs(d, info))
+        dq.append(max(np.abs(q - s["qpos"]).max(), np.abs(np.asarray(d.qvel) - s["qvel"]).max(), np.abs(o - s["obs"]).max()))
+    print(f"[landing start] {len(dq)} landing starts: max |diff| qpos/qvel/obs {max(dq):.2e} (median {np.median(dq):.1e}); "
+          f"clip/moment/limit/grace/switch step differ in {bad_info}")
+
+    @jax.jit
+    def one_step(qpos, qvel, ctrl, info, a):
+        d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel, ctrl=ctrl))
+        st = env.State(pipeline_state=d, obs=jp.zeros(75), reward=jp.float32(0), done=jp.float32(0),
+                       metrics={f"r_{k}": jp.float32(0) for k in M.WEIGHTS} | dict(fell=jp.float32(0), canter=jp.float32(0), canter_steps=jp.float32(0)),
+                       info=info | dict(rng=jax.random.PRNGKey(0)))
+        n = env.step(st, a)
+        return n.obs, n.done, n.info, n.metrics["fell"]
+
+    sw, dn, near, n_sw, dp = 0, 0, 0, 0, []
+    for s in C["steps"]:
+        p = s["pre"]
+        info = info_of(p, t=p["t"], last_action=p["last_action"])
+        o, done, info2, fell = one_step(jp.array(p["qpos"], jp.float32), jp.array(p["qvel"], jp.float32), jp.array(p["ctrl"], jp.float32), info,
+                                        jp.array(s["action"], jp.float32))
+        self_switch = s["clip"] != p["clip"]
+        n_sw += self_switch
+        if not bool(done):
+            sw += int(info2["clip"]) != names.index(M.ALL_CLIPS[s["clip"]]) or abs(float(info2["tau0"]) - s["tau0"]) > 1e-4 or int(info2["limit"]) != s["limit"]
+            dp.append(np.abs(np.asarray(o)[10:22] - (s["qpos"][7:19] - M.DOG)).max())
+        if bool(done) != (s["fell"] or s["done"]):
+            # a float32 step may land on the other side of a termination threshold (15 cm / 0.8 rad)
+            e = s["f_err"]
+            near += min(abs(abs(e["height_err"]) - 0.15), abs(e["tilt"] - 0.8)) < 0.02
+            dn += 1
+    print(f"[landing steps] {len(C['steps'])} steps ({n_sw} bridge switches to trot): clip/moment/end step differ in {sw}; "
+          f"end of try differs in {dn} ({near} within 2 cm / 0.02 rad of a limit); joint angles |diff| max {max(dp):.1e} rad")
+    # rate 0 builds no landing keys and draws nothing extra
+    env0 = M.MjxImitate(randomize=True)
+    assert env0.L is None and "land" not in env0.reset(jax.random.PRNGKey(0)).info
+    # a landing start through reset, one step: the 75 inputs, nothing else
+    st = jax.jit(env.reset)(jax.random.PRNGKey(3))
+    st2 = jax.jit(env.step)(st, jp.zeros(12))
+    print(f"[landing reset+step] obs {st.obs.shape} -> {st2.obs.shape}, landing state {int(st.info['land'])}, finite {bool(jp.all(jp.isfinite(st2.obs)))}")
 
 
 def dump(zip_path, warm_path, out):
@@ -77,7 +252,7 @@ def dump(zip_path, warm_path, out):
     acts = np.array([pol.act(o) for o in obs_set])
     nacts = np.array([npol.act(o) for o in obs_set])
     print(f"numpy brain vs ImitatePolicy.act: max |diff| {np.abs(acts - nacts).max():.2e}")
-    Path(out).write_bytes(pickle.dumps(dict(starts=starts, steps=steps, switches=switches, obs=obs_set, acts=acts)))
+    Path(out).write_bytes(pickle.dumps(dict(starts=starts, steps=steps, switches=switches, obs=obs_set, acts=acts, landing=dump_landing(pol, rng))))
     print(f"{len(starts)} starts, {len(steps)} steps, {len(switches)} switches -> {out}")
 
 
@@ -159,6 +334,8 @@ def check(warm_path, cases):
     pc = lambda x: ", ".join(f"p{k} {np.percentile(x, k):.1e}" for k in (50, 90, 99)) + f", max {max(x):.1e}"
     print(f"[one step] {len(dp)} steps: joint angles |diff| {pc(dp)} rad; obs |diff| {pc(do1)} (worst inputs {np.bincount(wi, minlength=75).argsort()[::-1][:3].tolist()}); "
           f"CPU self-contacts (thigh-torso) in {sum(s['legleg'] > 0 for s in C['steps'])} of {len(C['steps'])} states")
+    if "landing" in C:
+        check_landing(M, C["landing"])
     # 5. warm-started Brax policy vs ImitatePolicy.act
     W = pickle.loads(Path(warm_path).read_bytes())
     nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(75, 12)

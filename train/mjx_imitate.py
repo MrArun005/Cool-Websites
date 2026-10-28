@@ -14,6 +14,10 @@ with the torso (the only self-contacts the CPU env ever has), but nothing else w
 float32 (test_mjx_imitate.py measures the gap). Each try restarts from a fresh random clip and moment when it ends
 (not from the env's first state as Brax's AutoResetWrapper would), and the end of a clip or of the 5 s on a loop is
 a time-out (truncation), not a failure, as in the CPU env.
+Landing starts (--landing-rate, default 0) as ImitateEnv's: that share of the tries starts in a landing state of the
+run-up jump brain (research/results/landing_starts.npz), tracking canter, with --landing-grace s free of the height
+check and a switch to --landing-then after --landing-bridge s. At rate 0 nothing extra is drawn or computed: the env
+is the same computation as before (test_mjx_imitate.py checks both).
 
 The brain: Brax PPO with SB3's network (ELU MLP, plain Gaussian with a learned log std, inputs normalized and clipped
 to +-10), so the CPU brain's weights load unchanged (warm), and a trained brain exports back to numpy
@@ -52,6 +56,8 @@ HOLD, LOOP_SECONDS = 1.0, 5.0
 GAITS = ("walk", "trot", "pace", "canter", "turn_left", "turn_right")
 NEXT = {**{g: GAITS + ("sit",) for g in GAITS}, "sit": ("lie",), "lie": ("getup",), "getup": ("walk", "trot")}
 CLIP_WEIGHTS = {"canter": 3.0}   # how often each clip is drawn (1 for the rest): the canter matters most
+LANDING_FILE = HERE / "research" / "results" / "landing_starts.npz"   # research/gen_landing_starts.py
+LANDING = dict(rate=0.0, grace=0.5, bridge=0.6, then="trot")         # as imitate_env.LANDING
 KEYS = ("joints", "joint_vel", "height", "gravity", "v_body", "w_body", "paws", "tilt")
 
 
@@ -159,7 +165,8 @@ class MjxImitate:
     backend = "mjx"
 
     def __init__(self, randomize=True, clips=None, switch_rate=0.3, weights=None, clip_weights=None, clip_dir=CLIP_DIR,
-                 iterations=5, ls_iterations=8):
+                 iterations=5, ls_iterations=8, landing_rate=LANDING["rate"], landing_file=LANDING_FILE,
+                 landing_grace=LANDING["grace"], landing_bridge=LANDING["bridge"], landing_then=LANDING["then"]):
         from brax.envs.base import State
         self.State = State
         xml = collisions((HERE / "bolt.xml").read_text())
@@ -191,6 +198,18 @@ class MjxImitate:
         self.dt = float(m.opt.timestep * 10)
         self.max_steps = int(LOOP_SECONDS * 50)
         self.dog, self.scale = jp.array(DOG, jp.float32), jp.array(ACTION_SCALE, jp.float32)
+        # landing starts (as ImitateEnv): None at rate 0, so reset and step are the computation they always were
+        self.landing_rate = float(landing_rate)
+        self.L = None
+        if self.landing_rate > 0:
+            z = np.load(landing_file)
+            need = {ALL_CLIPS[c] for c in np.unique(z["clip"])} | ({landing_then} if landing_then and landing_bridge else set())
+            assert need <= set(self.names), f"landing starts need the clips {sorted(need)} (env has {self.names})"
+            self.L = dict(qpos=jp.array(z["qpos"], jp.float32), qvel=jp.array(z["qvel"], jp.float32),
+                          clip=jp.array([self.names.index(ALL_CLIPS[c]) for c in z["clip"]], jp.int32), tau0=jp.array(z["tau0"], jp.float32))
+            self.grace_steps = int(round(landing_grace / self.dt))
+            self.land_switch_at = int(round(landing_bridge / self.dt)) if landing_then and landing_bridge else -1
+            self.land_then = self.names.index(landing_then) if landing_then and landing_bridge else -1
 
     @property
     def unwrapped(self):
@@ -313,6 +332,8 @@ class MjxImitate:
         return jp.where(self.loop[c], self.max_steps, jp.maximum(25, jp.minimum(self.max_steps, left)).astype(jp.int32)) + t
 
     def start_info(self, rng):
+        if self.L is not None:   # landing starts on: their own keys, the rest drawn as always
+            rng, k_land = jax.random.split(rng)
         k = jax.random.split(rng, 6)
         one = jp.float32(1.0)
         info = dict(kp=jax.random.uniform(k[0], minval=0.85, maxval=1.15) if self.randomize else one,
@@ -324,7 +345,21 @@ class MjxImitate:
         info["tau0"] = jax.random.uniform(k[4]) * jp.where(self.loop[c], self.length[c], self.length[c] + 0.3 * HOLD)
         info["limit"] = self.limit_for(c, info["tau0"], 0)
         yaw = jax.random.uniform(k[5], minval=-jp.pi, maxval=jp.pi)
+        if self.L is not None:
+            kl = jax.random.split(k_land)
+            land = jax.random.uniform(kl[0]) < self.landing_rate
+            idx = jax.random.randint(kl[1], (), 0, self.L["tau0"].shape[0])
+            info = self.landing_info(info, jp.where(land, idx, -1))
         return info, yaw
+
+    def landing_info(self, info, idx):
+        """info for landing state idx (-1: not a landing start; info unchanged but for the landing keys)."""
+        land = idx >= 0
+        i = jp.maximum(idx, 0)
+        c = jp.where(land, self.L["clip"][i], info["clip"])
+        tau0 = jp.where(land, self.L["tau0"][i], info["tau0"])
+        return dict(info, clip=c, tau0=tau0, limit=jp.where(land, self.limit_for(c, tau0, 0), info["limit"]), land=idx.astype(jp.int32),
+                    grace=jp.where(land, self.grace_steps, 0).astype(jp.int32), lswitch=jp.where(land, self.land_switch_at, -1).astype(jp.int32))
 
     def start_data(self, info, yaw):
         """Reference state initialization: the dog's pose at that moment (any heading), moving as it was."""
@@ -336,9 +371,24 @@ class MjxImitate:
         qpos = self.qpos0.at[0:3].set(jp.stack([0.0, 0.0, self.ref(info, "height") + 0.005])).at[3:7].set(self.mat2quat(Rw)).at[7:19].set(joints)
         moving = jp.where(self.finished(info) > 0, 0.0, 1.0)
         qvel = jp.concatenate([Rw @ self.ref(info, "v_body") * moving, self.ref(info, "w_body") * moving, self.ref(info, "joint_vel") * moving])
+        if self.L is not None:   # a landing start: the stored state, turned to this heading
+            land, i = info["land"] >= 0, jp.maximum(info["land"], 0)
+            lq, lv = self.L["qpos"][i], self.L["qvel"][i]
+            Rz = jp.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+            R0 = jp.array([[1 - 2 * (lq[5] ** 2 + lq[6] ** 2), 2 * (lq[4] * lq[5] - lq[3] * lq[6]), 2 * (lq[4] * lq[6] + lq[3] * lq[5])],
+                           [2 * (lq[4] * lq[5] + lq[3] * lq[6]), 1 - 2 * (lq[4] ** 2 + lq[6] ** 2), 2 * (lq[5] * lq[6] - lq[3] * lq[4])],
+                           [2 * (lq[4] * lq[6] - lq[3] * lq[5]), 2 * (lq[5] * lq[6] + lq[3] * lq[4]), 1 - 2 * (lq[4] ** 2 + lq[5] ** 2)]])
+            lj = jp.clip(lq[7:19], self.lo, self.hi)
+            lqpos = self.qpos0.at[2].set(lq[2]).at[3:7].set(self.mat2quat(Rz @ R0)).at[7:19].set(lj)
+            lqvel = jp.concatenate([Rz @ lv[0:3], lv[3:18]])
+            qpos, qvel, joints = jp.where(land, lqpos, qpos), jp.where(land, lqvel, qvel), jp.where(land, lj, joints)
         d = mjx.make_data(mx).replace(qpos=qpos, qvel=qvel, ctrl=joints)
         d = mjx.forward(mx, d)
         pen = jp.maximum(0.0, jp.max(-self.contact(d).dist))    # never start with a paw or the body in the floor
+        if self.L is not None:   # landing starts: floor contacts only (as ImitateEnv; legs touching each other stay)
+            cg = self.contact(d).geom
+            on_floor = (cg[:, 0] == self.floor) | (cg[:, 1] == self.floor)
+            pen = jp.where(land, jp.maximum(0.0, jp.max(jp.where(on_floor, -self.contact(d).dist, 0.0))), pen)
         d = d.replace(qpos=d.qpos.at[2].add(jp.where(pen > 0, pen + 0.002, 0.0)))
         return mjx.forward(mx, d)
 
@@ -377,10 +427,18 @@ class MjxImitate:
             nc = jax.random.categorical(k_pick, jp.where(allowed, 0.0, -1e9)).astype(jp.int32)
             tau0, limit = self.switch_to(info, d.qpos[7:19], nc)
             info.update(clip=jp.where(go, nc, c), tau0=jp.where(go, tau0, info["tau0"]), limit=jp.where(go, limit, info["limit"]))
+        if self.L is not None and self.land_then >= 0:   # a landing start's bridge is over: on in landing_then
+            go = (info["t"] == info["lswitch"]) & (info["clip"] != self.land_then)
+            tau0, limit = self.switch_to(info, d.qpos[7:19], jp.int32(self.land_then))
+            info.update(clip=jp.where(go, self.land_then, info["clip"]).astype(jp.int32), tau0=jp.where(go, tau0, info["tau0"]),
+                        limit=jp.where(go, limit, info["limit"]))
         terms, err = self.tracking(d, info)
         reward = sum(self.weights[k] * v for k, v in terms.items())
         floor_ok = self.ref(info, "height") < 0.3     # sitting and lying: the body may rest on the floor
-        lost = (jp.abs(err["height_err"]) > 0.15) | (err["tilt"] > 0.8)
+        high = jp.abs(err["height_err"]) > 0.15
+        if self.L is not None:   # landing starts: no height check for the first landing_grace s (still in the air)
+            high = high & (info["t"] > info["grace"])
+        lost = high | (err["tilt"] > 0.8)
         fell = lost | (self.body_on_floor(d) & ~floor_ok)
         trunc = (info["t"] >= info["limit"]) & ~fell
         done = fell | trunc
@@ -463,7 +521,8 @@ def train(args):
     out = Path(args.out)
     (out / "checkpoints").mkdir(parents=True, exist_ok=True)
     W = pickle.loads(Path(args.warm).read_bytes()) if args.warm else None
-    env = MjxImitate(switch_rate=args.switch_rate)
+    env = MjxImitate(switch_rate=args.switch_rate, landing_rate=args.landing_rate, landing_file=args.landing_file,
+                     landing_grace=args.landing_grace, landing_bridge=args.landing_bridge, landing_then=args.landing_then)
     hidden = W["hidden"] if W else (512, 256)
     restore = to_brax(W) if W else None
     reward_scale = args.reward_scaling or (W["reward_scale"] if W else 1.0)
@@ -526,6 +585,14 @@ def main():
     t.add_argument("--hours", type=float, help="stop after this many hours (the last saved brain stays)")
     t.add_argument("--seed", type=int, default=0)
     t.add_argument("--quick", action="store_true")
+    t.add_argument("--landing-rate", type=float, default=LANDING["rate"],
+                   help="share of tries that start in the run-up jump brain's landing (mid-air to touch-down); 0: none, as before")
+    t.add_argument("--landing-file", default=str(LANDING_FILE), help="landing states (research/gen_landing_starts.py)")
+    t.add_argument("--landing-grace", type=float, default=LANDING["grace"],
+                   help="s after a landing start without the 15 cm height check (tilt and body-on-floor stay on)")
+    t.add_argument("--landing-bridge", type=float, default=LANDING["bridge"],
+                   help="s of the landing state's clip (canter) before switching to --landing-then (skills.BRIDGE); 0: no switch")
+    t.add_argument("--landing-then", default=LANDING["then"], help="clip after the bridge (test_skills: trot)")
     args = ap.parse_args()
     if args.cmd == "warm":
         z = Path(args.zip)

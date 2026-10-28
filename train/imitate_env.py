@@ -48,6 +48,15 @@ Observation (OBS = 75 floats; 74 for brains from before the getup clip), in this
     73  reference spin rate (yaw)            1   next step
     74  time since clip end (s, 0 while it plays; sit/lie/getup hold)  1
 Physics randomization (motor strength, body mass, floor friction) and sensor noise as in the other envs.
+
+Landing starts (landing_rate > 0, step 1 of the skill-switch fixes): that share of the tries starts instead in a body
+state of the run-up jump brain's landing, from mid-air through touch-down (research/gen_landing_starts.py ->
+research/results/landing_starts.npz, at any heading), tracking the clip the skill manager hands over to at the
+landing (canter, at its closest-pose moment). For landing_grace s the try is not ended for being off the
+reference height (Bolt is still in the air, up to ~35 cm above the canter's body height; the 0.8 rad tilt limit and
+the body-on-floor check stay on), and after landing_bridge s the clip switches to landing_then (the jump ->
+(canter) -> trot hand-over of test_skills.py). landing_rate 0 (the default) draws nothing extra: tries are exactly
+as before.
 """
 from pathlib import Path
 
@@ -72,6 +81,15 @@ HOLD = 1.0          # s: sit and lie hold their final pose this long
 GAITS = ("walk", "trot", "pace", "canter", "turn_left", "turn_right")
 NEXT = {**{g: GAITS + ("sit",) for g in GAITS}, "sit": ("lie",), "lie": ("getup",), "getup": ("walk", "trot")}
 LOOP_SECONDS = 5.0  # s: longest try on a looping gait
+LANDING_FILE = Path(__file__).with_name("research") / "results" / "landing_starts.npz"   # gen_landing_starts.py
+LANDING = dict(rate=0.0, grace=0.5, bridge=0.6, then="trot")   # defaults of the landing-start arguments (see above)
+
+
+def load_landing(path=LANDING_FILE):
+    """The landing states (gen_landing_starts.py): qpos (N, 19) and qvel (N, 18) in their heading frame, the clip
+    (ALL_CLIPS index) and clip time to track from each."""
+    z = np.load(path)
+    return dict(qpos=z["qpos"], qvel=z["qvel"], clip=z["clip"].astype(int), tau0=z["tau0"])
 
 
 def _rotz(a):
@@ -129,7 +147,9 @@ class Clip:
 class ImitateEnv(BoltEnv):
     OBS = 66 + len(ALL_CLIPS)
 
-    def __init__(self, randomize=True, seed=None, clips=None, residual=True, weights=None, slots=len(ALL_CLIPS), switch_rate=0.0):
+    def __init__(self, randomize=True, seed=None, clips=None, residual=True, weights=None, slots=len(ALL_CLIPS), switch_rate=0.0,
+                 landing_rate=LANDING["rate"], landing_file=LANDING_FILE, landing_grace=LANDING["grace"],
+                 landing_bridge=LANDING["bridge"], landing_then=LANDING["then"]):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
                          skills=["stand"])
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
@@ -143,6 +163,15 @@ class ImitateEnv(BoltEnv):
         self.exam_start = None        # (clip name, start time s): exams set it; training draws it
         self.body_geoms = {g for g in range(self.model.ngeom) if self.geom_leg[g] < 0 and g != self.floor}
         self.clip, self.tau0 = self.clips[self.clip_names[0]], 0.0
+        # landing starts (module docstring): share of tries, the states, s without the height check, s of the bridge
+        # clip before landing_then (None or 0 s: no forced switch)
+        self.landing_rate, self.landing_grace, self.landing_bridge, self.landing_then = landing_rate, landing_grace, landing_bridge, landing_then
+        self.landing = load_landing(landing_file) if landing_rate > 0 else None
+        if self.landing is not None:
+            need = {ALL_CLIPS[c] for c in np.unique(self.landing["clip"])} | ({landing_then} if landing_then and landing_bridge else set())
+            assert need <= set(self.clip_names), f"landing starts need the clips {sorted(need)} (env has {self.clip_names})"
+        self.exam_landing = None      # index of a landing state to start from (tests, exams); training draws it
+        self.grace_steps, self.land_switch_at = 0, -1
 
     # ---------- reference ----------
     def tau(self, ahead=0):
@@ -195,6 +224,12 @@ class ImitateEnv(BoltEnv):
             m.body_mass[:] = self.nominal_mass
             m.body_mass[self.torso] = self.nominal_mass[self.torso] * self.rng.uniform(0.85, 1.15)
             m.geom_friction[:, 0] = self.nominal_friction * self.rng.uniform(0.6, 1.3)
+        land = self.exam_landing
+        if land is None and self.landing_rate and not self.exam_start and self.rng.random() < self.landing_rate:
+            land = int(self.rng.integers(len(self.landing["tau0"])))
+        if land is not None:
+            return self._landing_start(land)
+        self.grace_steps, self.land_switch_at = 0, -1
         if self.exam_start:
             name, self.tau0 = self.exam_start
         else:
@@ -220,8 +255,13 @@ class ImitateEnv(BoltEnv):
         d.qvel[6:18] = self.ref("joint_vel") * moving
         d.ctrl[:] = d.qpos[7:19]
         mujoco.mj_forward(m, d)
-        # never start with a paw or the body in the floor: lift by the deepest penetration
-        pen = max([0.0] + [-c.dist for c in d.contact[:d.ncon]])
+        return self._settle()
+
+    def _settle(self, floor_only=False):
+        m, d = self.model, self.data
+        # never start with a paw or the body in the floor: lift by the deepest penetration (landing starts: of the floor
+        # contacts only; a recorded state's legs may touch each other, which lifting does not change)
+        pen = max([0.0] + [-c.dist for c in d.contact[:d.ncon] if not floor_only or self.floor in (c.geom1, c.geom2)])
         if pen > 0:
             d.qpos[2] += pen + 0.002
             mujoco.mj_forward(m, d)
@@ -229,6 +269,26 @@ class ImitateEnv(BoltEnv):
         steps_left = (self.clip.length + HOLD - self.tau0) / self.dt if not self.clip.loop else self.max_steps
         self.limit = int(max(25, min(self.max_steps, steps_left)))
         return self._obs(), {}
+
+    def _landing_start(self, i):
+        """Start in landing state i (its heading frame turned to a random heading), tracking its clip from its moment."""
+        m, d, L = self.model, self.data, self.landing
+        self.clip, self.tau0, self.t = self.clips[ALL_CLIPS[L["clip"][i]]], float(L["tau0"][i]), 0
+        yaw = self.rng.uniform(-np.pi, np.pi)
+        R0 = _mat(L["qpos"][i][3:7])
+        q = np.zeros(4)
+        mujoco.mju_mat2Quat(q, (_rotz(yaw) @ R0).reshape(-1))
+        d.qpos[:3] = [0.0, 0.0, L["qpos"][i][2]]
+        d.qpos[3:7] = q
+        d.qpos[7:19] = np.clip(L["qpos"][i][7:19], self.lo, self.hi)
+        d.qvel[0:3] = _rotz(yaw) @ L["qvel"][i][0:3]
+        d.qvel[3:18] = L["qvel"][i][3:18]
+        d.ctrl[:] = d.qpos[7:19]
+        mujoco.mj_forward(m, d)
+        self.grace_steps = int(round(self.landing_grace / self.dt))
+        bridge = self.landing_then and self.landing_bridge
+        self.land_switch_at = int(round(self.landing_bridge / self.dt)) if bridge else -1
+        return self._settle(floor_only=True)
 
     def tracking(self):
         """The five tracking terms (each 0..1) and the raw errors used for early termination."""
@@ -256,11 +316,13 @@ class ImitateEnv(BoltEnv):
         self.env_steps += 1
         if self.switch_rate and not self.exam_start:
             self._maybe_switch()
+        if self.t == self.land_switch_at and self.clip.name != self.landing_then:   # a landing start's bridge is over:
+            self._switch_to(self.clips[self.landing_then])                         # on in landing_then (test_skills' trot)
         terms, err = self.tracking()
         reward = sum(self.weights[k] * v for k, v in terms.items())
         self.last_action = a
         floor_ok = self.ref("height") < 0.3     # sitting and lying: the body may rest on the floor
-        lost = abs(err["height_err"]) > 0.15 or err["tilt"] > 0.8
+        lost = (abs(err["height_err"]) > 0.15 and self.t > self.grace_steps) or err["tilt"] > 0.8   # grace: landing starts
         fell = lost or (self.body_on_floor() and not floor_ok)
         done = self.t >= self.limit
         info = dict(err, clip=self.clip.name, tau=self.tau(), fell=fell, **{f"r_{k}": float(v) for k, v in terms.items()})
@@ -273,7 +335,10 @@ class ImitateEnv(BoltEnv):
         nxt = [n for n in NEXT.get(self.clip.name, ()) if n in self.clips and n != self.clip.name]
         if not ready or not nxt or self.rng.random() > self.switch_rate * self.dt:
             return
-        c = self.clips[self.rng.choice(nxt)]
+        self._switch_to(self.clips[self.rng.choice(nxt)])
+
+    def _switch_to(self, c):
+        """Hand over to clip c now."""
         if c.loop:   # join the new gait at the frame whose pose is closest to the current one
             k = int(np.argmin(np.sum((c.joints - self.data.qpos[7:19]) ** 2, 1)))
             start = k / c.fps
