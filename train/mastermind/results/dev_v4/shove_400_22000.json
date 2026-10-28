@@ -1,0 +1,50 @@
+{
+ "brain": "teacher",
+ "teachers": "v4",
+ "over": {
+  "sr_limit": 400
+ },
+ "imitate": null,
+ "n": 30,
+ "seed": 22000,
+ "seconds": 43,
+ "switches": [
+  {
+   "switch": "shove -> fall",
+   "ok": 30,
+   "tries": 30,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "fall -> recover (stood up)",
+   "ok": 26,
+   "tries": 30,
+   "rate": 0.87,
+   "not_reached": 0,
+   "failures": [
+    {
+     "end_height": 0.141
+    },
+    {
+     "end_height": 0.115
+    },
+    {
+     "end_height": 0.115
+    },
+    {
+     "end_height": 0.115
+    }
+   ]
+  },
+  {
+   "switch": "recover -> walk",
+   "ok": 26,
+   "tries": 26,
+   "rate": 1.0,
+   "not_reached": 4,
+   "failures": []
+  }
+ ]
+}

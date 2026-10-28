@@ -6,6 +6,7 @@ v3: dog-motion run 18e at 36M (models/bolt-dog-switching-18e-36M) for walk/trot/
 18c at 29.5M for the canter clip (fair canter 68%, 1/30 falls), and the run-up jump brain 16i at 35.5M handed over
 1.1 m before the bar (it trained from 0.5-1.5 m, arriving at up to 3 m/s, 200-step tries; see SETS), and research
 student r4 for the 2.6 s after a landing.
+v4: run 18g at 35.5M (gait switches practised) for walk/trot/canter/turns, the rest as v3 (REPORT.md, v4 section).
 """
 import os
 from pathlib import Path

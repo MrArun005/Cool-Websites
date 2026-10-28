@@ -351,3 +351,162 @@ Reproduce (from `train/`, `MUJOCO_GL=osmesa OMP_NUM_THREADS=1`):
     python mastermind/test_master.py --brain runs/mastermind/v3/daggerb/student_r5.pt --teachers v3 --n 30 --seed 1000 --with-50 --exam --out mastermind/results/student_v3_r5_n30.json
     python mastermind/baseline.py --teachers v3 --n 30 --seed 1000 --with-50 --out mastermind/results/manager_v3_n30.json
     python mastermind/compare.py --col "new=mastermind/results/student_v3_r5_n30.json,mastermind/results/student_v3_r5_n30_seed5000.json"
+
+## v4: the student retrained with a gait-switching teacher (2026-10-28)
+
+**Result.** The v4 student succeeds at **83.0% of switches (818/985, ± 1.2)** with the 50 cm rows and **86.6% (752/868)**
+on REPORT's v2 rows (N=60, seed sets 1000 and 5000). v3 was 81.5% (792/972) and 84.5% (721/853). The manager running the v4
+brains gets 74.2% / 78.8%. Per seed set: 83.2% (seed 1000) and 82.9% (seed 5000). **canter->trot went from 68% to 86%**,
+which was the aim. But the pooled gain over v3 is only about 1.5-2 points, about one standard error of the difference, so
+it is **not clearly better overall**. The owner's **95% target is not met**. The remaining failures are where every
+teacher is weak: sitting from a walk, jumps of 40-50 cm from a trot, and the 2.6 s after a landing.
+
+### Teachers (teacher set "v4", `teachers.SETS`)
+
+| behaviour | v3 teacher | v4 teacher |
+|---|---|---|
+| walk, trot, canter, turns (also the 0.6 s canter bridge) | 18e-36M; canter 18c-29.5M | **18g at 35.5M** (`models/bolt-dog-canter-switching-18g-35.5M`, `clips` map, key `18g35`) |
+| pace, sit, lie | 18e-36M | 18e-36M (unchanged) |
+| jump, landing, stand, recovery | 16i-35.5M at 1.1 m, r4 for 2.6 s, posture, self-right 17e, `rec_cmd` | unchanged |
+
+New in the code: `SETS[...]["clips"]` ({clip: brain}, used by env.py and baseline.Manager), `approach` (a brain for the
+gait during a jump's run-up), `sr_limit` (the self-right timeout when not training), `teachers.imitate_policy()` (also
+loads the Kaggle GPU brain `gpu360`), and `dagger.py --init-student`.
+
+**Step 1: the teachers in the MasterMind world** (`results/teachers_v4.json`, `teachers_v4b.json`):
+
+* 18g-35.5M canter, exam_canter protocol (N=30, seeds 5000+): **69.7%, 0/30 falls**, speed 68%. Standalone: 69.4%.
+* 18g walk/trot/turns .902/.883/.882/.877 (18e-36M had .865/.827/.850/.851). pace/sit/lie from 18e-36M .895/.923/.915, the same as in v3.
+* 16i fair jump: 40 cm 100%, 50 cm 83%, the same as in v3.
+* GPU brain (360M, arrived during the run): canter 76.1%, 0/30 falls; walk .931, trot .920, sit .967, lie .937. Its standalone numbers are 76%, 93, 92, 97, 94.
+
+**Choosing the sit/lie teacher.** This used the teacher chain on dev seeds 20000 (N=30, `results/dev_v4/teach_*.json`),
+never the test seeds. With 18g for the gaits:
+
+| sit/lie teacher | walk->sit pose reached | pooled (with 50 cm) |
+|---|---|---|
+| 18e-36M (v4) | **24/30** | **77%** |
+| 18d-24.5M (v4d) | 2/30 | 67% |
+| 18g itself (v4g, 8-slot) | 2/30 | 67% |
+| v3 set, for reference | 21/30 | 74% |
+
+18d's sit is the best when it starts from its own standing pose (95%). Handed 18g's walking body, it almost never
+sits. Only 18e-36M learned clip switches that include sit, so it stays.
+
+**Jumps got harder for the teachers.** With 18g's trot, the teacher chain's clean jumps on dev seeds were 73/57/23/0%
+at 20/30/40/50 cm. With v3 (18e's trot) they were 67/70/40/10%. Running the approach on 18e-36M (`v4a`) gave no clear
+gain over two dev seed sets (104 vs 98 clean jumps of 240), so v4 keeps 18g for the approach. A longer self-right
+timeout (400 steps) changed nothing (26/30 and 28/30 either way). Recovery failures are self-righting that stays on
+its back, or a tuck that never reaches the lie pose, not the timeout.
+
+### DAgger (`dagger.py --teachers v4`)
+
+v3's recipe, warm-started from the v3 student's weights (`--init-student runs/mastermind/v3/daggerb/student_r5.pt`).
+Round 0 is 400k teacher states; rounds 1-8 add 200k each (beta 0.5 -> 0.2). The net is 1024-512-256, 3 workers, about
+75 min. The fit is 0.051 rad RMS at round 4 (v3: 0.071).
+
+**Round choice on dev seeds 20000 (N=30 per sequence, with 50 cm; `results/dev_v4/`):** r3 77%, **r4 82.3%**, r5 81.6%,
+r6 81%, r7 77%, r8 79%. The v3 student on the same seeds gets 78%. **r4** was taken. It was the only round tested on
+the test seeds.
+
+**Second run with the GPU brain (`v4b`)**, as the coordinator suggested. This set uses the GPU brain for every clip,
+including sit/lie. Its teacher chain on dev seeds: canter->trot 59/60, sit 48/60 vs v4's 47/60, so it looked at least
+as good. It was warm-started from v4 r8, with the same recipe. **The student copied the gaits perfectly but not the
+sit:** dev canter->trot 30/30 in every round, but sit pose 37-60% (the teacher gets 87% on the same seeds), and clean
+jumps fell too. Pooled on dev: r3 76%, r4 74%, r5-r8 73-75%. It lost to v4 r4 on dev and was not tested on the test
+seeds. The fit was even lower (0.041 rad), so the cause is not capacity. The GPU brain's sit from a moving walk is
+probably harder to copy, but this has not been checked. Manager with the v4b brains on the test seeds:
+76.2% / 81.4% (`manager_v4b_*.json`).
+
+### Step 3: switch success (N=60: seed sets 1000 and 5000; rate ± binomial s.e. in points)
+
+| switch | v3 student r5 | manager, v3 brains | manager, v4 brains | teacher chain in env, v4 | **v4 student r4** |
+|---|---|---|---|---|---|
+| walk->trot | 60/60 100% ± 0 | 59/60 98% ± 2 | 60/60 100% ± 0 | 60/60 100% ± 0 | 60/60 100% ± 0 |
+| trot->canter | 57/60 95% ± 3 | 54/59 92% ± 4 | 60/60 100% ± 0 | 60/60 100% ± 0 | 59/60 98% ± 2 |
+| canter->trot | 39/57 68% ± 6 | 40/54 74% ± 6 | 56/60 93% ± 3 | 53/60 88% ± 4 | **51/59 86% ± 4** |
+| trot->walk | 39/39 100% ± 0 | 38/38 100% ± 0 | 55/56 98% ± 2 | 53/53 100% ± 0 | 49/50 98% ± 2 |
+| walk->sit [pose reached] | 49/60 82% ± 5 | 49/60 82% ± 5 | 47/60 78% ± 5 | 47/60 78% ± 5 | 47/60 78% ± 5 |
+| sit->lie [pose reached] | 49/60 82% ± 5 | 49/60 82% ± 5 | 47/60 78% ± 5 | 47/60 78% ± 5 | 47/60 78% ± 5 |
+| lie->stand (posture) | 49/49 100% ± 0 | 49/49 100% ± 0 | 47/47 100% ± 0 | 47/47 100% ± 0 | 47/47 100% ± 0 |
+| trot->jump 20 cm | 47/60 78% ± 5 | 43/60 72% ± 6 | 37/60 62% ± 6 | 43/60 72% ± 6 | 51/60 85% ± 5 |
+| jump 20 cm->(canter)->trot | 47/58 81% ± 5 | 47/60 78% ± 5 | 42/58 72% ± 6 | 49/60 82% ± 5 | 44/60 73% ± 6 |
+| trot->jump 30 cm | 47/60 78% ± 5 | 34/60 57% ± 6 | 27/60 45% ± 6 | 38/60 63% ± 6 | 52/60 87% ± 4 |
+| jump 30 cm->(canter)->trot | 51/60 85% ± 5 | 43/57 75% ± 6 | 42/58 72% ± 6 | 47/59 80% ± 5 | 48/60 80% ± 5 |
+| trot->jump 40 cm | 37/60 62% ± 6 | 18/60 30% ± 6 | 17/60 28% ± 6 | 25/60 42% ± 6 | 39/60 65% ± 6 |
+| jump 40 cm->(canter)->trot | 48/59 81% ± 5 | 45/56 80% ± 5 | 39/58 67% ± 6 | 43/58 74% ± 6 | 50/58 86% ± 5 |
+| fall -> recover (stood up) | 51/60 85% ± 5 | 54/60 90% ± 4 | 56/60 93% ± 3 | 57/60 95% ± 3 | 54/60 90% ± 4 |
+| recover -> walk | 51/51 100% ± 0 | 54/54 100% ± 0 | 56/56 100% ± 0 | 57/57 100% ± 0 | 54/54 100% ± 0 |
+| trot->jump 50 cm | 26/60 43% ± 6 | 8/60 13% ± 4 | 5/60 8% ± 4 | 3/60 5% ± 3 | 21/60 35% ± 6 |
+| jump 50 cm->(canter)->trot | 45/59 76% ± 6 | 40/57 70% ± 6 | 44/60 73% ± 6 | 48/58 83% ± 5 | 45/57 79% ± 5 |
+| **pooled** | **792/972 81.5% ± 1.2** | **724/964 75.1% ± 1.4** | **737/993 74.2% ± 1.4** | **777/992 78.3% ± 1.3** | **818/985 83.0% ± 1.2** |
+
+On REPORT's v2 rows (no 50 cm): v3 student 721/853 84.5%, manager with the v3 brains 79.8%, manager with the v4 brains
+688/873 78.8%, teacher chain with the v4 brains 726/874 83.1%, **v4 student 752/868 86.6% ± 1.2**.
+
+Canter copy, exam_canter protocol (N=30, seeds 5000+, `canter_exam.py`; tracking / falls / speed):
+
+* v3 student: 0.66 / 1 of 30 / 0.68
+* **v4 student: 0.672 / 1 of 30 / 0.65**
+* its teacher 18g in the world: 0.697 / 0 of 30 / 0.68
+
+Per-clip exam (4 per clip, seed 9000): walk .908, trot .886, pace .907, canter .695 (0/4 falls), turns .888/.881,
+sit .926, lie .904. Walk and trot are up from v3's .870/.829, following 18g.
+
+### What got better, what got worse
+
+* **Better:**
+  * canter->trot 68% -> 86% ± 4 (the teacher is at 88-93%)
+  * walk and trot tracking .87/.83 -> .91/.89
+  * clean jumps 20/30 cm 78/78% -> 85/87%. The student again beats its teachers here (chain 72/63%).
+  * recovery 85% -> 90%
+* **Worse (all within about 1 s.e., but the direction is down):**
+  * landing->trot after 20 cm: 81% -> 73% ± 6
+  * after 30 cm: 85% -> 80%
+  * 50 cm clean: 43% -> 35% ± 6
+  * sit/lie pose reached: 82% -> 78%. The teacher chain itself is at 78%: 18g's walk brakes less well into 18e's sit.
+* **Level:**
+  * 40 cm (62 -> 65%)
+  * trot->canter (95 -> 98%)
+  * canter copy 0.66 -> 0.67, still 1 fall in 30. The target of 70%+ with no falls is not met; the teacher is at 0.70.
+* **Targets not met:**
+  * 95% of switches: 83% with 50 cm, 87% without
+  * canter 70% with no falls
+  * 50 cm jumps (35%)
+
+### Caveats
+
+* One training seed per configuration. The rounds were chosen on dev seeds 20000. The teacher choices (sit/lie
+  teacher, approach brain, self-right timeout) were made on dev seeds 20000-22000 only. Test seed sets 1000/5000 were
+  run once, for v4 r4 only.
+* The page needs the same `rec_cmd` recovery rule as v3 (`export_v4/model.json` "recovery").
+
+### Next
+
+1. **The hybrid set**: the GPU brain for the gaits (its chain is 100% on canter->trot on dev, and the student copies
+   its gaits perfectly) plus 18e-36M for sit/lie. It needs a teacher-chain check of GPU walk -> 18e sit, then about
+   75 min of DAgger.
+2. **Sit from a walk** (78-82% in every teacher here): a dog-motion brain fine-tuned with walk->sit switches from 18g's/the
+   GPU brain's walking states, or a braking "stop" clip before sit.
+3. **Jumps and landings** are as in v3's Next: fine-tune 16i on hand-overs from recorded 18g trot states, and a
+   landing-aware gait brain.
+
+### Files (v4)
+
+* code: `teachers.py` (sets v4, v4a, v4d, v4g, v4b/v4gpu_*, keys `18g35`, `18d`, `imitate_policy`/`gpu360`), `env.py`
+  (`clips`, `approach`, `sr_limit`), `baseline.py` (the same for the Manager), `dagger.py` (`--init-student`, v4 handler)
+* results: `teachers_v4.json`, `teachers_v4b.json`, `manager_v4_n30*.json`, `manager_v4b_n30*.json`,
+  `teacher_in_env_v4_n30*.json`, `student_v4_r4_n30*.json`, `canter30_student_v4.json`, `dagger_v4_history.json`,
+  `dagger_v4b_history.json`, and `dev_v4/` (every dev-seed run: teacher choices, rounds of both runs, v3 student on dev)
+* `export_v4/`: brain.json (torch parity 1.2e-5), model.json, student.pt (v4 round 4)
+* Big files: `train/runs/mastermind/v4/` (gitignored): `dagger/` (v4), `daggerb/` (v4b), `dev*/`, `final/`
+
+Reproduce (from `train/`, `MUJOCO_GL=osmesa OMP_NUM_THREADS=1`):
+
+    python mastermind/check_teachers.py --teachers v4 --out mastermind/results/teachers_v4.json
+    python mastermind/dagger.py --teachers v4 --rounds 9 --steps0 400000 --steps 200000 --workers 3 --beta-floor 0.2 \
+        --hidden 1024,512,256 --epochs0 20 --epochs 6 --init-student runs/mastermind/v3/daggerb/student_r5.pt --out runs/mastermind/v4/dagger --seed 6
+    python mastermind/test_master.py --brain runs/mastermind/v4/dagger/student_r4.pt --teachers v4 --n 30 --seed 20000 --with-50 --out dev.json   # round choice
+    python mastermind/test_master.py --brain mastermind/export_v4/student.pt --teachers v4 --n 30 --seed 1000 --with-50 --exam --out mastermind/results/student_v4_r4_n30.json
+    python mastermind/baseline.py --teachers v4 --n 30 --seed 1000 --with-50 --out mastermind/results/manager_v4_n30.json
+    python mastermind/canter_exam.py --brain mastermind/export_v4/student.pt --teachers v4 --out mastermind/results/canter30_student_v4.json
