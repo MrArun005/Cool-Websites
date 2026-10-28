@@ -6,3 +6,4 @@ train/runs/
 hardware/mini/cad/stl/
 duck/parts/
 .keepalive-*/
+train/robots/*/assets/

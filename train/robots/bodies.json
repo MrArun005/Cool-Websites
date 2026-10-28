@@ -1,0 +1,165 @@
+[
+ {
+  "robot": "bolt",
+  "xml": "bolt.xml",
+  "mass_kg": 12.0,
+  "torso_kg": 9.0,
+  "legs_kg": 3.0,
+  "thigh_m": 0.2,
+  "shin_m": 0.2,
+  "hip_spacing_m": [
+   0.44,
+   0.3
+  ],
+  "thigh_joint_width_m": 0.3,
+  "keyframe_height_m": null,
+  "knees": "front backward, rear forward",
+  "range_FL_rad": {
+   "abd": [
+    -0.84,
+    0.84
+   ],
+   "hip": [
+    -1.2,
+    2.6
+   ],
+   "knee": [
+    -2.75,
+    -0.2
+   ]
+  },
+  "actuator": "position (kp 45, kv 1.2)",
+  "torque_limit_Nm": [
+   33.5
+  ],
+  "motor_speed_rad_s": "21 (fades to 0 at 25)",
+  "motor_power": "420 W",
+  "foot": "sphere r=0.025 m, friction 1, condim 3",
+  "joint_damping": 0.05,
+  "frictionloss": 0.02,
+  "timestep": 0.002,
+  "joints": [
+   "FL_abd",
+   "FL_hip",
+   "FL_knee",
+   "FR_abd",
+   "FR_hip",
+   "FR_knee",
+   "RL_abd",
+   "RL_hip",
+   "RL_knee",
+   "RR_abd",
+   "RR_hip",
+   "RR_knee"
+  ]
+ },
+ {
+  "robot": "a1",
+  "xml": "robots/unitree_a1/a1_nomesh.xml",
+  "mass_kg": 12.45,
+  "torso_kg": 4.71,
+  "legs_kg": 7.74,
+  "thigh_m": 0.2,
+  "shin_m": 0.2,
+  "hip_spacing_m": [
+   0.366,
+   0.094
+  ],
+  "thigh_joint_width_m": 0.264,
+  "keyframe_height_m": 0.27,
+  "knees": "all backward",
+  "range_FL_rad": {
+   "abd": [
+    -0.803,
+    0.803
+   ],
+   "hip": [
+    -1.047,
+    4.189
+   ],
+   "knee": [
+    -2.697,
+    -0.916
+   ]
+  },
+  "actuator": "position (kp 100, kv 0)",
+  "torque_limit_Nm": [
+   33.5
+  ],
+  "motor_speed_rad_s": "21",
+  "motor_power": "-",
+  "foot": "sphere r=0.020 m, friction 0.8, condim 6",
+  "joint_damping": 2.0,
+  "frictionloss": 0.2,
+  "timestep": 0.002,
+  "joints": [
+   "FR_hip_joint",
+   "FR_thigh_joint",
+   "FR_calf_joint",
+   "FL_hip_joint",
+   "FL_thigh_joint",
+   "FL_calf_joint",
+   "RR_hip_joint",
+   "RR_thigh_joint",
+   "RR_calf_joint",
+   "RL_hip_joint",
+   "RL_thigh_joint",
+   "RL_calf_joint"
+  ]
+ },
+ {
+  "robot": "go2",
+  "xml": "robots/unitree_go2/go2_nomesh.xml",
+  "mass_kg": 15.21,
+  "torso_kg": 6.92,
+  "legs_kg": 8.29,
+  "thigh_m": 0.213,
+  "shin_m": 0.213,
+  "hip_spacing_m": [
+   0.387,
+   0.093
+  ],
+  "thigh_joint_width_m": 0.284,
+  "keyframe_height_m": 0.27,
+  "knees": "all backward",
+  "range_FL_rad": {
+   "abd": [
+    -1.047,
+    1.047
+   ],
+   "hip": [
+    -1.571,
+    3.491
+   ],
+   "knee": [
+    -2.723,
+    -0.838
+   ]
+  },
+  "actuator": "torque",
+  "torque_limit_Nm": [
+   23.7,
+   45.43
+  ],
+  "motor_speed_rad_s": "30.1 hip/thigh, 15.7 knee",
+  "motor_power": "-",
+  "foot": "sphere r=0.022 m, friction 0.8, condim 6",
+  "joint_damping": 2.0,
+  "frictionloss": 0.2,
+  "timestep": 0.002,
+  "joints": [
+   "FL_hip_joint",
+   "FL_thigh_joint",
+   "FL_calf_joint",
+   "FR_hip_joint",
+   "FR_thigh_joint",
+   "FR_calf_joint",
+   "RL_hip_joint",
+   "RL_thigh_joint",
+   "RL_calf_joint",
+   "RR_hip_joint",
+   "RR_thigh_joint",
+   "RR_calf_joint"
+  ]
+ }
+]
