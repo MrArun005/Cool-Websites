@@ -1,0 +1,113 @@
+{
+ "brain": "teacher",
+ "teachers": "v3",
+ "over": {
+  "canter": "18g"
+ },
+ "imitate": "18g",
+ "n": 30,
+ "seed": 5000,
+ "seconds": 64,
+ "switches": [
+  {
+   "switch": "walk->trot",
+   "ok": 30,
+   "tries": 30,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->canter",
+   "ok": 30,
+   "tries": 30,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "canter->trot",
+   "ok": 25,
+   "tries": 30,
+   "rate": 0.83,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 2.28,
+     "min_height": 0.404,
+     "min_up": 0.49,
+     "fell_after": 0.3,
+     "in_skill": "trot",
+     "height": 0.457,
+     "speed": 0.72,
+     "roll": 0.21,
+     "pitch": -1.01
+    },
+    {
+     "speed_at_switch": 2.37,
+     "min_height": 0.338,
+     "min_up": 0.45,
+     "fell_after": 0.56,
+     "in_skill": "trot",
+     "height": 0.343,
+     "speed": -0.44,
+     "roll": 0.58,
+     "pitch": -0.79
+    },
+    {
+     "speed_at_switch": 2.43,
+     "min_height": 0.403,
+     "min_up": 0.46,
+     "fell_after": 0.28,
+     "in_skill": "trot",
+     "height": 0.44,
+     "speed": 0.78,
+     "roll": 0.17,
+     "pitch": -1.06
+    },
+    {
+     "speed_at_switch": 2.37,
+     "min_height": 0.394,
+     "min_up": 0.43,
+     "fell_after": 0.32,
+     "in_skill": "trot",
+     "height": 0.422,
+     "speed": 0.9,
+     "roll": 0.22,
+     "pitch": -1.06
+    },
+    {
+     "speed_at_switch": 2.32,
+     "min_height": 0.339,
+     "min_up": 0.47,
+     "fell_after": 1.6,
+     "in_skill": "trot",
+     "height": 0.457,
+     "speed": 0.68,
+     "roll": -0.59,
+     "pitch": -0.76
+    }
+   ]
+  },
+  {
+   "switch": "trot->walk",
+   "ok": 24,
+   "tries": 25,
+   "rate": 0.96,
+   "not_reached": 5,
+   "failures": [
+    {
+     "speed_at_switch": 1.7,
+     "min_height": 0.392,
+     "min_up": 0.48,
+     "fell_after": 0.7,
+     "in_skill": "walk",
+     "height": 0.41,
+     "speed": -0.0,
+     "roll": -1.06,
+     "pitch": -0.09
+    }
+   ]
+  }
+ ]
+}
