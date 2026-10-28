@@ -496,12 +496,14 @@ export class Mind {
   // a straight line for a canter: lined up at a walk, 1.5 s trot, 2-4 s canter, and ~6 m to slow down, all on clear lawn
   zoomLine() {
     const R = this.Y.roam, p = this.where();
-    for (let i = 0; i < 60; i++) {
-      const a = this.randomSpot(1.5), ang = this.rand() * 2 * Math.PI, d = [Math.cos(ang), Math.sin(ang)];
+    for (let i = 0; i < 80; i++) {
+      // first: bolt off from right here, roughly the way Bolt faces; then from a spot nearby
+      const here = i < 30, a = here ? [p.x, p.y] : this.randomSpot(1.5);
+      const ang = here ? p.yaw + (this.rand() - 0.5) * (i < 12 ? 1.2 : 3.0) : this.rand() * 2 * Math.PI, d = [Math.cos(ang), Math.sin(ang)];
       const b = [a[0] + 17 * d[0], a[1] + 17 * d[1]];
       if (b[0] < R.x0 + 0.5 || b[0] > R.x1 - 0.5 || b[1] < R.y0 + 0.5 || b[1] > R.y1 - 0.5) continue;
       if (!this.lineClear(a, b, 0.7)) continue;
-      if (hyp(a[0] - p.x, a[1] - p.y) > 16) continue;
+      if (hyp(a[0] - p.x, a[1] - p.y) > 8) continue;
       return [a, b, ang];
     }
     return null;
