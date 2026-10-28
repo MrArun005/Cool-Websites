@@ -89,6 +89,9 @@ SETS["v4g"] = dict(SETS["v3"], dog="18g35", canter=None)
 SETS["v4gpu_c"] = dict(SETS["v4"], clips=dict(_G4, canter="gpu360"))
 SETS["v4gpu_s"] = dict(SETS["v4"], clips=dict(_G4, sit="gpu360", lie="gpu360"))
 SETS["v4b"] = SETS["v4gpu_all"] = dict(SETS["v4"], clips={c: "gpu360" for c in ("walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie")})
+# v5 (28 Oct): v4 with the jump brain trained from a trot (models/bolt-dog-jump-trot-55M, Kaggle jump-trot, re-picked
+# on the mid-stride hand-over: fair mid-stride 1.5 m/s 40/50 cm 92/65% vs 16i 17/5%). Same hand-over and clock.
+SETS["v5"] = dict(SETS["v4"], jump=MODELS / "bolt-dog-jump-trot-55M")
 
 
 def teacher_set(name="v2", **over):
