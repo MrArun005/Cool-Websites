@@ -30,6 +30,10 @@ def imitate_brain(which="18e"):
         return MODELS / "bolt-dog-running-18c-29.5M", "policy.zip", "vecnormalize.pkl"
     if which == "18c24":
         return MODELS / "bolt-dog-running-18c-24.5M", "policy.zip", "vecnormalize.pkl"
+    if which == "18f31":
+        return MODELS / "bolt-dog-running-18f-31M", "policy.zip", "vecnormalize.pkl"
+    if which == "18g":   # run 18g's newest best (canter switching), fetched into $IMITATE18G
+        return Path(os.environ.get("IMITATE18G", MODELS / "bolt-dog-canter-switching-18g")), "policy.zip", "vecnormalize.pkl"
     if which == "r4":
         return MODELS / "bolt-dog-imitate-pps-student-r4", "policy.zip", "vecnormalize.pkl"
     if which == "18b":
