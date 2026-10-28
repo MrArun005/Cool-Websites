@@ -8,6 +8,8 @@ Jobs (JOBS below):
   jump-trot  train_jump.py from the run-up brain 16i-35.5M: jump from a trot to a canter (1.2-2.4 m/s, most tries
              mid-stride), practice bars up to 75 cm; exams at 1.5 m/s and 2.0 m/s from 1.5 m, 40-70 cm, still legs;
              best/ picked (from 28 Oct) on the mid-stride exam: 1.7 m/s from 1.1 m, 40/50/60 cm, legs mid-stride.
+  jump-run60 train_jump.py from jump-trot-55M: run-up only (1.8-3.2 m/s from 1.5-4 m), bars 55-75 cm, brake on;
+             best/ picked mid-stride at 2.5 m/s from 3 m over 55/60/65 cm.
   recover    train_getup.py from self-righting 17e-16.5M: kicks, bad landings, ice, a second kick, wider physics;
              exam = the whole recovery (self-right, tuck, stand) from those falls.
 
@@ -36,7 +38,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -57,6 +59,22 @@ JOBS = {
                  "--max-steps", "220"],
                 ["jump", "--speeds", "1.7", "--dist", "1.1", "--heights", "0.40", "0.50", "0.60", "--gait",
                  "--max-steps", "220"]]),
+    "jump-run60": dict(
+        # 60 cm needs a run-up: every try starts running (1.8-3.2 m/s, 1.5-4 m out, mostly mid-stride), bars 55-75 cm;
+        # from the trot jump brain (jump-trot 55M). Motor brake on (train_jump default; owner rule 0c for 60 cm work).
+        # Same 200-step try as its training (the clock input is t / max_steps), long enough for a 4 m run-up.
+        name="jumprun60", script="train_jump.py", start="../models/bolt-dog-jump-trot-55M",
+        args=["--real", "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "1.5", "4.0", "--approach-speed", "3.2", "--approach-speed-min", "1.8", "--run-frac", "1.0",
+              "--gait-start", "0.8", "--bar-start", "0.55", "--bar-max", "0.75",
+              "--exam-speed", "2.5", "--exam-dist", "3.0", "--exam-heights", "0.50", "0.60", "0.70",
+              "--exam2", "2.0", "1.5",
+              "--select", "midstride", "--select-speed", "2.5", "--select-dist", "3.0",
+              "--select-heights", "0.55", "0.60", "0.65"],
+        finals=[["jump", "--speeds", "2.0", "2.5", "3.0", "--dist", "3.0", "--heights", "0.50", "0.60", "0.70", "--gait",
+                 "--max-steps", "220", "--motor-brake"],
+                ["jump", "--speeds", "1.7", "--dist", "1.1", "--heights", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake"]]),
     "recover": dict(
         name="recover", script="train_getup.py", start="../models/bolt-dog-selfright-17e-16.5M",
         args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015"],
