@@ -1,0 +1,107 @@
+{
+ "brain": "runs/kaggle-gpu3/run/checkpoints/params_565903360.pkl",
+ "motor_brake": [
+  true,
+  25.0,
+  3.5
+ ],
+ "episodes": 10,
+ "seeds": [
+  9000,
+  11000
+ ],
+ "exam": {
+  "track_walk": 0.833,
+  "fall_walk": 0.0,
+  "speed_walk": 0.77,
+  "track_trot": 0.782,
+  "fall_trot": 0.0,
+  "speed_trot": 0.78,
+  "track_pace": 0.851,
+  "fall_pace": 0.0,
+  "speed_pace": 0.795,
+  "track_turn_left": 0.787,
+  "fall_turn_left": 0.0,
+  "speed_turn_left": 0.25,
+  "track_turn_right": 0.812,
+  "fall_turn_right": 0.0,
+  "speed_turn_right": 0.275,
+  "track_sit": 0.961,
+  "fall_sit": 0.0,
+  "track_lie": 0.92,
+  "fall_lie": 0.0,
+  "pose_still_sit": 1.0,
+  "pose_moving_walk_sit": 1.0,
+  "fall_moving_walk_sit": 0.0,
+  "pose_moving_trot_sit": 0.95,
+  "fall_moving_trot_sit": 0.05,
+  "pose_still_lie": 1.0,
+  "pose_moving_walk_lie": 1.0,
+  "fall_moving_walk_lie": 0.0,
+  "pose_moving_trot_lie": 1.0,
+  "fall_moving_trot_lie": 0.0,
+  "lat0_track": 0.849,
+  "lat0_fall": 0.0,
+  "lat10_track": 0.887,
+  "lat10_fall": 0.0,
+  "lat20_track": 0.887,
+  "lat20_fall": 0.0,
+  "lat40_track": 0.748,
+  "lat40_fall": 0.028,
+  "score": 0.604
+ },
+ "terrain": [
+  {
+   "push": 0.0,
+   "cm": 0,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.0,
+   "ended": 0.0,
+   "track": 0.778,
+   "speed": 0.77
+  },
+  {
+   "push": 0.0,
+   "cm": 5,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.03333333333333333,
+   "ended": 0.03333333333333333,
+   "track": 0.699,
+   "speed": 0.62
+  },
+  {
+   "push": 0.0,
+   "cm": 10,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.7,
+   "ended": 0.7,
+   "track": 0.362,
+   "speed": 0.23
+  },
+  {
+   "push": 0.0,
+   "cm": 10,
+   "clip": "walk",
+   "tries": 30,
+   "fall": 0.9666666666666667,
+   "ended": 0.9666666666666667,
+   "track": 0.215,
+   "speed": 0.12
+  },
+  {
+   "push": 1.0,
+   "cm": 5,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.26666666666666666,
+   "ended": 0.26666666666666666,
+   "track": 0.557,
+   "speed": 0.44
+  }
+ ],
+ "minutes": 6.5,
+ "command": "python research/gpu_brain_exam.py runs/kaggle-gpu3/run/checkpoints/params_565903360.pkl --motor-brake --out research/results/gpu3/exam_gpu3_566M_brake.json"
+}

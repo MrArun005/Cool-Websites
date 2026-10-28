@@ -1,0 +1,107 @@
+{
+ "brain": "runs/kaggle-gpu3/run/params.pkl",
+ "motor_brake": [
+  true,
+  25.0,
+  3.5
+ ],
+ "episodes": 10,
+ "seeds": [
+  9000,
+  11000
+ ],
+ "exam": {
+  "track_walk": 0.835,
+  "fall_walk": 0.0,
+  "speed_walk": 0.785,
+  "track_trot": 0.782,
+  "fall_trot": 0.0,
+  "speed_trot": 0.78,
+  "track_pace": 0.851,
+  "fall_pace": 0.0,
+  "speed_pace": 0.8,
+  "track_turn_left": 0.788,
+  "fall_turn_left": 0.0,
+  "speed_turn_left": 0.24,
+  "track_turn_right": 0.807,
+  "fall_turn_right": 0.0,
+  "speed_turn_right": 0.25,
+  "track_sit": 0.96,
+  "fall_sit": 0.0,
+  "track_lie": 0.917,
+  "fall_lie": 0.0,
+  "pose_still_sit": 1.0,
+  "pose_moving_walk_sit": 1.0,
+  "fall_moving_walk_sit": 0.0,
+  "pose_moving_trot_sit": 1.0,
+  "fall_moving_trot_sit": 0.0,
+  "pose_still_lie": 1.0,
+  "pose_moving_walk_lie": 1.0,
+  "fall_moving_walk_lie": 0.0,
+  "pose_moving_trot_lie": 1.0,
+  "fall_moving_trot_lie": 0.0,
+  "lat0_track": 0.849,
+  "lat0_fall": 0.0,
+  "lat10_track": 0.885,
+  "lat10_fall": 0.0,
+  "lat20_track": 0.887,
+  "lat20_fall": 0.0,
+  "lat40_track": 0.758,
+  "lat40_fall": 0.015,
+  "score": 0.602
+ },
+ "terrain": [
+  {
+   "push": 0.0,
+   "cm": 0,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.0,
+   "ended": 0.0,
+   "track": 0.778,
+   "speed": 0.77
+  },
+  {
+   "push": 0.0,
+   "cm": 5,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.06666666666666667,
+   "ended": 0.06666666666666667,
+   "track": 0.681,
+   "speed": 0.63
+  },
+  {
+   "push": 0.0,
+   "cm": 10,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.6666666666666666,
+   "ended": 0.7666666666666667,
+   "track": 0.343,
+   "speed": 0.24
+  },
+  {
+   "push": 0.0,
+   "cm": 10,
+   "clip": "walk",
+   "tries": 30,
+   "fall": 0.9333333333333333,
+   "ended": 0.9333333333333333,
+   "track": 0.22,
+   "speed": 0.13
+  },
+  {
+   "push": 1.0,
+   "cm": 5,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.2,
+   "ended": 0.2,
+   "track": 0.595,
+   "speed": 0.55
+  }
+ ],
+ "minutes": 6.5,
+ "command": "python research/gpu_brain_exam.py runs/kaggle-gpu3/run/params.pkl --motor-brake --out research/results/gpu3/exam_gpu3_617M_brake.json"
+}

@@ -1,0 +1,107 @@
+{
+ "brain": "../models/bolt-dog-imitate-gpu-360M/params.pkl",
+ "motor_brake": [
+  false,
+  25.0,
+  3.5
+ ],
+ "episodes": 10,
+ "seeds": [
+  9000,
+  11000
+ ],
+ "exam": {
+  "track_walk": 0.929,
+  "fall_walk": 0.0,
+  "speed_walk": 0.9,
+  "track_trot": 0.919,
+  "fall_trot": 0.0,
+  "speed_trot": 0.9,
+  "track_pace": 0.939,
+  "fall_pace": 0.0,
+  "speed_pace": 0.88,
+  "track_turn_left": 0.911,
+  "fall_turn_left": 0.0,
+  "speed_turn_left": 0.4,
+  "track_turn_right": 0.913,
+  "fall_turn_right": 0.0,
+  "speed_turn_right": 0.27,
+  "track_sit": 0.969,
+  "fall_sit": 0.0,
+  "track_lie": 0.94,
+  "fall_lie": 0.0,
+  "pose_still_sit": 1.0,
+  "pose_moving_walk_sit": 0.85,
+  "fall_moving_walk_sit": 0.15,
+  "pose_moving_trot_sit": 0.15,
+  "fall_moving_trot_sit": 0.85,
+  "pose_still_lie": 1.0,
+  "pose_moving_walk_lie": 0.05,
+  "fall_moving_walk_lie": 0.95,
+  "pose_moving_trot_lie": 0.0,
+  "fall_moving_trot_lie": 1.0,
+  "lat0_track": 0.931,
+  "lat0_fall": 0.0,
+  "lat10_track": 0.869,
+  "lat10_fall": 0.0,
+  "lat20_track": 0.335,
+  "lat20_fall": 0.407,
+  "lat40_track": 0.077,
+  "lat40_fall": 0.921,
+  "score": 0.716
+ },
+ "terrain": [
+  {
+   "push": 0.0,
+   "cm": 0,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.0,
+   "ended": 0.0,
+   "track": 0.92,
+   "speed": 0.9
+  },
+  {
+   "push": 0.0,
+   "cm": 5,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.0,
+   "ended": 0.0,
+   "track": 0.837,
+   "speed": 0.79
+  },
+  {
+   "push": 0.0,
+   "cm": 10,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.5666666666666667,
+   "ended": 0.5666666666666667,
+   "track": 0.431,
+   "speed": 0.34
+  },
+  {
+   "push": 0.0,
+   "cm": 10,
+   "clip": "walk",
+   "tries": 30,
+   "fall": 0.8,
+   "ended": 0.8333333333333334,
+   "track": 0.349,
+   "speed": 0.2
+  },
+  {
+   "push": 1.0,
+   "cm": 5,
+   "clip": "trot",
+   "tries": 30,
+   "fall": 0.3333333333333333,
+   "ended": 0.3333333333333333,
+   "track": 0.609,
+   "speed": 0.54
+  }
+ ],
+ "minutes": 5.0,
+ "command": "python research/gpu_brain_exam.py ../models/bolt-dog-imitate-gpu-360M/params.pkl --out research/results/gpu3/exam_360M.json"
+}
