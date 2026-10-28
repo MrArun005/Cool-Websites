@@ -29,7 +29,7 @@ import tarfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
-TAR = "bolt-mastermind.tar"
+TAR = "bolt-mastermind.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
 # teacher set v4 (mastermind/teachers.py): dog 18e-36M, clips 18g-35.5M, landing r4, jump 16i-35.5M; skills.Bolt
 # also loads its default jump (16g), self-right (17e) and posture (getup-3M) brains
 MODELS = ["bolt-dog-switching-18e-36M", "bolt-dog-canter-switching-18g-35.5M", "bolt-dog-imitate-pps-student-r4",
@@ -61,7 +61,7 @@ if not os.environ.get("NO_PIP"):
 import numpy, torch, mujoco, stable_baselines3  # noqa: E401
 say(f"python {sys.version.split()[0]} numpy {numpy.__version__} torch {torch.__version__} mujoco {mujoco.__version__} "
     f"sb3 {stable_baselines3.__version__} cpus {os.cpu_count()}")
-# the code and brains: the data set's tar (or Kaggle's unpacked copy of it)
+# the code and brains: the data set's tar (named .pack so that Kaggle leaves it, and the policy.zip files in it, packed)
 tars = sorted(glob.glob(str(INP / "**" / CFG["tar"]), recursive=True))
 if not (ROOT / "train" / "mastermind" / "dagger.py").exists():
     if tars and Path(tars[0]).is_file():
@@ -125,7 +125,7 @@ h = history()
                                                   exit_code=rc, config=CFG), indent=1))
 if h and not CFG["keep_data"] and (OUT / "data.npz").exists():
     (OUT / "data.npz").unlink()
-say(f"done: {len(h)} rounds, newest student {OUT / 'student.pt'}")
+say(f"done: {len(h)} rounds" + (f", newest student {OUT / 'student.pt'}" if h else ""))
 sys.exit(1 if rc and not h else 0)
 '''
 
