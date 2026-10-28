@@ -108,7 +108,7 @@ def add_brake_args(ap, default):
     ap.add_argument("--brake-speed", type=float, default=MOTOR["brake_speed"],
                     help=f"rad/s where braking starts (default {MOTOR['brake_speed']:g}, the drive cutoff)")
     ap.add_argument("--brake-gain", type=float, default=MOTOR["brake_gain"],
-                    help=f"braking N·m per rad/s above --brake-speed (default {MOTOR["brake_gain"]:.3g}, motor-constant estimate)")
+                    help=f"braking N·m per rad/s above --brake-speed (default {MOTOR['brake_gain']:.3g}, motor-constant estimate)")
 
 
 def brake_torque(qvel, speed, gain):
