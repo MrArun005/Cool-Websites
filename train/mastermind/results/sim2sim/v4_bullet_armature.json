@@ -1,0 +1,586 @@
+{
+ "engine": "bullet",
+ "brain": "mastermind/export_v4/student.pt",
+ "teachers": "v4",
+ "n": 30,
+ "seed": 1000,
+ "randomize": false,
+ "armature_approx": true,
+ "iterations": 50,
+ "exam": {
+  "track_walk": 0.83,
+  "fall_walk": 0.0,
+  "speed_walk": 0.78,
+  "track_trot": 0.744,
+  "fall_trot": 0.0,
+  "speed_trot": 0.8,
+  "track_pace": 0.839,
+  "fall_pace": 0.0,
+  "speed_pace": 0.84,
+  "track_canter": 0.429,
+  "fall_canter": 0.25,
+  "speed_canter": 0.41,
+  "track_turn_left": 0.826,
+  "fall_turn_left": 0.0,
+  "speed_turn_left": 0.39,
+  "track_turn_right": 0.799,
+  "fall_turn_right": 0.0,
+  "speed_turn_right": 0.39,
+  "track_sit": 0.885,
+  "fall_sit": 0.0,
+  "track_lie": 0.855,
+  "fall_lie": 0.0
+ },
+ "seconds": 414,
+ "switches": [
+  {
+   "switch": "walk->trot",
+   "ok": 30,
+   "tries": 30,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "trot->canter",
+   "ok": 19,
+   "tries": 30,
+   "rate": 0.63,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 1.31,
+     "min_height": 0.329,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "canter",
+     "height": 0.397,
+     "speed": -0.69,
+     "roll": 1.03,
+     "pitch": 0.15
+    },
+    {
+     "speed_at_switch": 1.44,
+     "min_height": 0.356,
+     "min_up": 0.47,
+     "fell_after": 0.54,
+     "in_skill": "canter",
+     "height": 0.357,
+     "speed": 0.7,
+     "roll": 0.94,
+     "pitch": -0.37
+    },
+    {
+     "speed_at_switch": 1.36,
+     "min_height": 0.348,
+     "min_up": 0.44,
+     "fell_after": 1.02,
+     "in_skill": "canter",
+     "height": 0.42,
+     "speed": -0.15,
+     "roll": 0.88,
+     "pitch": 0.48
+    },
+    {
+     "speed_at_switch": 1.31,
+     "min_height": 0.329,
+     "min_up": 0.46,
+     "fell_after": 1.76,
+     "in_skill": "canter",
+     "height": 0.393,
+     "speed": -1.78,
+     "roll": 1.09,
+     "pitch": 0.01
+    },
+    {
+     "speed_at_switch": 1.22,
+     "min_height": 0.325,
+     "min_up": 0.49,
+     "fell_after": 1.14,
+     "in_skill": "canter",
+     "height": 0.325,
+     "speed": -0.71,
+     "roll": 1.01,
+     "pitch": -0.19
+    },
+    {
+     "speed_at_switch": 1.44,
+     "min_height": 0.357,
+     "min_up": 0.5,
+     "fell_after": 0.98,
+     "in_skill": "canter",
+     "height": 0.463,
+     "speed": 1.05,
+     "roll": 0.85,
+     "pitch": -0.45
+    },
+    {
+     "speed_at_switch": 1.33,
+     "min_height": 0.327,
+     "min_up": 0.5,
+     "fell_after": 1.2,
+     "in_skill": "canter",
+     "height": 0.383,
+     "speed": -0.81,
+     "roll": 1.02,
+     "pitch": -0.17
+    },
+    {
+     "speed_at_switch": 1.3,
+     "min_height": 0.355,
+     "min_up": 0.48,
+     "fell_after": 0.74,
+     "in_skill": "canter",
+     "height": 0.406,
+     "speed": 0.43,
+     "roll": 0.89,
+     "pitch": -0.42
+    },
+    {
+     "speed_at_switch": 1.36,
+     "min_height": 0.333,
+     "min_up": 0.5,
+     "fell_after": 0.88,
+     "in_skill": "canter",
+     "height": 0.375,
+     "speed": -1.01,
+     "roll": 1.05,
+     "pitch": 0.02
+    },
+    {
+     "speed_at_switch": 1.19,
+     "min_height": 0.325,
+     "min_up": 0.5,
+     "fell_after": 1.24,
+     "in_skill": "canter",
+     "height": 0.416,
+     "speed": -1.43,
+     "roll": 1.02,
+     "pitch": -0.15
+    },
+    {
+     "speed_at_switch": 1.37,
+     "min_height": 0.33,
+     "min_up": 0.46,
+     "fell_after": 1.86,
+     "in_skill": "canter",
+     "height": 0.387,
+     "speed": -1.18,
+     "roll": 1.09,
+     "pitch": 0.03
+    }
+   ]
+  },
+  {
+   "switch": "canter->trot",
+   "ok": 14,
+   "tries": 18,
+   "rate": 0.78,
+   "not_reached": 12,
+   "failures": [
+    {
+     "speed_at_switch": 2.18,
+     "min_height": 0.383,
+     "min_up": 0.48,
+     "fell_after": 0.36,
+     "in_skill": "trot",
+     "height": 0.424,
+     "speed": -0.13,
+     "roll": 0.21,
+     "pitch": -1.02
+    },
+    {
+     "speed_at_switch": 1.95,
+     "min_height": 0.326,
+     "min_up": 0.49,
+     "fell_after": 1.9,
+     "in_skill": "trot",
+     "height": 0.326,
+     "speed": 0.79,
+     "roll": 1.05,
+     "pitch": -0.07
+    },
+    {
+     "speed_at_switch": 1.88,
+     "min_height": 0.308,
+     "min_up": 0.5,
+     "fell_after": 1.02,
+     "in_skill": "trot",
+     "height": 0.308,
+     "speed": 0.01,
+     "roll": 1.01,
+     "pitch": -0.2
+    },
+    {
+     "speed_at_switch": 2.07,
+     "min_height": 0.376,
+     "min_up": 0.49,
+     "fell_after": 0.38,
+     "in_skill": "trot",
+     "height": 0.418,
+     "speed": -0.18,
+     "roll": 0.25,
+     "pitch": -0.99
+    }
+   ]
+  },
+  {
+   "switch": "trot->walk",
+   "ok": 14,
+   "tries": 14,
+   "rate": 1.0,
+   "not_reached": 16,
+   "failures": []
+  },
+  {
+   "switch": "walk->sit",
+   "ok": 30,
+   "tries": 30,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "walk->sit [pose reached]",
+   "ok": 23,
+   "tries": 30,
+   "rate": 0.77,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 0.78,
+     "min_height": 0.217,
+     "min_up": 0.83,
+     "end_height": 0.227,
+     "end_up": 0.89,
+     "end_pitch": -0.47
+    },
+    {
+     "speed_at_switch": 1.09,
+     "min_height": 0.216,
+     "min_up": 0.83,
+     "end_height": 0.224,
+     "end_up": 0.89,
+     "end_pitch": -0.47
+    },
+    {
+     "speed_at_switch": 0.93,
+     "min_height": 0.237,
+     "min_up": 0.84,
+     "end_height": 0.233,
+     "end_up": 0.88,
+     "end_pitch": -0.49
+    },
+    {
+     "speed_at_switch": 0.76,
+     "min_height": 0.218,
+     "min_up": 0.83,
+     "end_height": 0.226,
+     "end_up": 0.89,
+     "end_pitch": -0.47
+    },
+    {
+     "speed_at_switch": 1.05,
+     "min_height": 0.228,
+     "min_up": 0.87,
+     "end_height": 0.229,
+     "end_up": 0.89,
+     "end_pitch": -0.48
+    },
+    {
+     "speed_at_switch": 0.94,
+     "min_height": 0.232,
+     "min_up": 0.83,
+     "end_height": 0.232,
+     "end_up": 0.88,
+     "end_pitch": -0.49
+    },
+    {
+     "speed_at_switch": 1.03,
+     "min_height": 0.222,
+     "min_up": 0.84,
+     "end_height": 0.225,
+     "end_up": 0.89,
+     "end_pitch": -0.47
+    }
+   ]
+  },
+  {
+   "switch": "sit->lie",
+   "ok": 23,
+   "tries": 30,
+   "rate": 0.77,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 0.03,
+     "min_height": 0.203,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.17,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.429,
+     "end_up": 1.0,
+     "end_pitch": 0.01
+    },
+    {
+     "speed_at_switch": 0.03,
+     "min_height": 0.204,
+     "min_up": 0.45,
+     "fell_after": 1.46,
+     "in_skill": "lie",
+     "height": 0.367,
+     "speed": -0.19,
+     "roll": -0.59,
+     "pitch": -0.78,
+     "end_height": 0.173,
+     "end_up": 0.82,
+     "end_pitch": 0.26
+    },
+    {
+     "speed_at_switch": 0.01,
+     "min_height": 0.204,
+     "min_up": 0.45,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.367,
+     "speed": -0.19,
+     "roll": -0.59,
+     "pitch": -0.77,
+     "end_height": 0.433,
+     "end_up": 1.0,
+     "end_pitch": 0.02
+    },
+    {
+     "speed_at_switch": 0.04,
+     "min_height": 0.204,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.17,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.435,
+     "end_up": 1.0,
+     "end_pitch": 0.02
+    },
+    {
+     "speed_at_switch": 0.04,
+     "min_height": 0.204,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.17,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.428,
+     "end_up": 1.0,
+     "end_pitch": 0.01
+    },
+    {
+     "speed_at_switch": 0.02,
+     "min_height": 0.203,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.17,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.435,
+     "end_up": 1.0,
+     "end_pitch": 0.03
+    },
+    {
+     "speed_at_switch": 0.04,
+     "min_height": 0.204,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.16,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.431,
+     "end_up": 1.0,
+     "end_pitch": 0.02
+    }
+   ]
+  },
+  {
+   "switch": "sit->lie [pose reached]",
+   "ok": 23,
+   "tries": 30,
+   "rate": 0.77,
+   "not_reached": 0,
+   "failures": [
+    {
+     "speed_at_switch": 0.03,
+     "min_height": 0.203,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.17,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.429,
+     "end_up": 1.0,
+     "end_pitch": 0.01
+    },
+    {
+     "speed_at_switch": 0.03,
+     "min_height": 0.204,
+     "min_up": 0.45,
+     "fell_after": 1.46,
+     "in_skill": "lie",
+     "height": 0.367,
+     "speed": -0.19,
+     "roll": -0.59,
+     "pitch": -0.78,
+     "end_height": 0.173,
+     "end_up": 0.82,
+     "end_pitch": 0.26
+    },
+    {
+     "speed_at_switch": 0.01,
+     "min_height": 0.204,
+     "min_up": 0.45,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.367,
+     "speed": -0.19,
+     "roll": -0.59,
+     "pitch": -0.77,
+     "end_height": 0.433,
+     "end_up": 1.0,
+     "end_pitch": 0.02
+    },
+    {
+     "speed_at_switch": 0.04,
+     "min_height": 0.204,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.17,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.435,
+     "end_up": 1.0,
+     "end_pitch": 0.02
+    },
+    {
+     "speed_at_switch": 0.04,
+     "min_height": 0.204,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.17,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.428,
+     "end_up": 1.0,
+     "end_pitch": 0.01
+    },
+    {
+     "speed_at_switch": 0.02,
+     "min_height": 0.203,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.17,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.435,
+     "end_up": 1.0,
+     "end_pitch": 0.03
+    },
+    {
+     "speed_at_switch": 0.04,
+     "min_height": 0.204,
+     "min_up": 0.5,
+     "fell_after": 1.44,
+     "in_skill": "lie",
+     "height": 0.36,
+     "speed": -0.16,
+     "roll": -0.56,
+     "pitch": -0.76,
+     "end_height": 0.431,
+     "end_up": 1.0,
+     "end_pitch": 0.02
+    }
+   ]
+  },
+  {
+   "switch": "lie->stand (posture)",
+   "ok": 23,
+   "tries": 23,
+   "rate": 1.0,
+   "not_reached": 7,
+   "failures": []
+  },
+  {
+   "switch": "shove -> fall",
+   "ok": 30,
+   "tries": 30,
+   "rate": 1.0,
+   "not_reached": 0,
+   "failures": []
+  },
+  {
+   "switch": "fall -> recover (stood up)",
+   "ok": 20,
+   "tries": 30,
+   "rate": 0.67,
+   "not_reached": 0,
+   "failures": [
+    {
+     "end_height": 0.319
+    },
+    {
+     "end_height": 0.171
+    },
+    {
+     "end_height": 0.135
+    },
+    {
+     "end_height": 0.188
+    },
+    {
+     "end_height": 0.143
+    },
+    {
+     "end_height": 0.202
+    },
+    {
+     "end_height": 0.175
+    },
+    {
+     "end_height": 0.187
+    },
+    {
+     "end_height": 0.195
+    },
+    {
+     "end_height": 0.196
+    }
+   ]
+  },
+  {
+   "switch": "recover -> walk",
+   "ok": 20,
+   "tries": 20,
+   "rate": 1.0,
+   "not_reached": 10,
+   "failures": []
+  }
+ ]
+}

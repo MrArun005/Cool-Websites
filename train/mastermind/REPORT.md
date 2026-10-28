@@ -510,3 +510,80 @@ Reproduce (from `train/`, `MUJOCO_GL=osmesa OMP_NUM_THREADS=1`):
     python mastermind/test_master.py --brain mastermind/export_v4/student.pt --teachers v4 --n 30 --seed 1000 --with-50 --exam --out mastermind/results/student_v4_r4_n30.json
     python mastermind/baseline.py --teachers v4 --n 30 --seed 1000 --with-50 --out mastermind/results/manager_v4_n30.json
     python mastermind/canter_exam.py --brain mastermind/export_v4/student.pt --teachers v4 --out mastermind/results/canter30_student_v4.json
+
+## Second simulator: the student in PyBullet (2026-10-28, in simulation)
+
+**Question.** Does MasterMind only work in MuJoCo, or does it still work in a second physics engine on the same body?
+This is not hardware. It is a cheap check for brains that over-fit one simulator's contact model.
+
+**Result.** Most of it works in PyBullet.
+* Walk, trot, pace, the turns, sit and lie run without a fall. Tracking drops from 0.89-0.93 to 0.71-0.84, and speed
+  from 0.88-0.89 to 0.75-0.80 of the dog's.
+* walk->trot is 30/30 in both engines.
+* The canter breaks: tracking 0.15, 3 of 4 starts fall, and trot->canter goes from 100% to 60%.
+* Recovery after a shove drops from 100% to 70%. Sit pose reached drops from 90% to 73%.
+* Pooled switches (gaits, rest, shove; N=30, seed 1000): **v4 258/266 97% in MuJoCo vs 186/223 83% in PyBullet**, with
+  83% of the planned switches reached instead of 99%.
+* The v3 student loses more: 88% -> 70%, and only 6 of 18 lie->stand.
+
+So the slow and medium gaits do not depend on MuJoCo's contacts. The canter, self-righting and the sit do, at least
+in part. The canter was already the weakest skill (its teacher scores 0.70).
+
+**How** (`sim2sim.py`, `bullet_server.py`).
+* The Master env and the test sequences run unchanged. Only the physics call is swapped.
+* Each 20 ms the joint targets go to a PyBullet process. It simulates 10 steps of 2 ms with bolt.xml's motor model in
+  torque control: a kp 45 / kv 1.2 servo, clipped to the 33.5 N·m / 420 W / 21-25 rad/s limits, plus the joint damping
+  and friction.
+* The robot state comes back into MuJoCo's data and is `mj_forward`ed. So the observation, the fall detector, the
+  scores and the bookkeeping are the same code in both engines.
+* The body is bolt.xml converted to URDF by `write_urdf()` (`robots/bolt.urdf`): same masses, full inertias, joint
+  frames, axes and limits, the collision primitives, friction 1.0, and self-collision except parent-child.
+* Sanity check: holding the dog stance open-loop for 2 s settles at 0.438 m in MuJoCo and 0.436 m in PyBullet.
+* Both engines run the **nominal** body here (no randomization, no sensor noise), so the MuJoCo column is higher than
+  the randomized test rows above.
+* Not modelled in PyBullet: joint armature (0.01 kg m² rotor inertia per joint). `--armature-approx` adds it to each
+  leg link's inertia instead. It changes the pooled rate by nothing (186/225) and helps the canter and sit somewhat
+  (canter 0.43, 1 of 4 falls; sit 0.89).
+* No hurdle in PyBullet, so no jump rows. pybullet has no wheel for Python 3.13, so it runs in a Python 3.11 venv
+  (`BULLET_PYTHON`), talking JSON over a pipe.
+
+| switch | v4 MuJoCo | v4 PyBullet | v4 PyBullet, armature approx. | v3 MuJoCo | v3 PyBullet |
+|---|---|---|---|---|---|
+| walk->trot | 30/30 100% ± 0 | 30/30 100% ± 0 | 30/30 100% ± 0 | 28/30 93% ± 5 | 30/30 100% ± 0 |
+| trot->canter | 30/30 100% ± 0 | 18/30 60% ± 9 | 19/30 63% ± 9 | 28/28 100% ± 0 | 16/30 53% ± 9 |
+| canter->trot | 29/30 97% ± 3 | 15/16 94% ± 6 | 14/18 78% ± 10 | 12/24 50% ± 10 | 11/11 100% ± 0 |
+| trot->walk | 28/29 97% ± 3 | 15/15 100% ± 0 | 14/14 100% ± 0 | 12/12 100% ± 0 | 11/11 100% ± 0 |
+| walk->sit [pose reached] | 27/30 90% ± 5 | 22/30 73% ± 8 | 23/30 77% ± 8 | 24/30 80% ± 7 | 18/30 60% ± 9 |
+| sit->lie [pose reached] | 27/30 90% ± 5 | 22/29 76% ± 8 | 23/30 77% ± 8 | 24/30 80% ± 7 | 18/18 100% ± 0 |
+| lie->stand (posture) | 27/27 100% ± 0 | 22/22 100% ± 0 | 23/23 100% ± 0 | 24/24 100% ± 0 | 6/18 33% ± 11 |
+| fall -> recover (stood up) | 30/30 100% ± 0 | 21/30 70% ± 8 | 20/30 67% ± 9 | 28/30 93% ± 5 | 11/30 37% ± 9 |
+| recover -> walk | 30/30 100% ± 0 | 21/21 100% ± 0 | 20/20 100% ± 0 | 28/28 100% ± 0 | 11/11 100% ± 0 |
+| **pooled** | **258/266 97% ± 1** | **186/223 83% ± 2** | **186/225 83% ± 3** | **208/236 88% ± 2** | **132/189 70% ± 3** |
+| switches reached (tried / planned) | 266/270 99% | 223/270 83% | 225/270 83% | 236/270 87% | 189/270 70% |
+
+Per-clip exam (4 starts per clip, seed 9000; tracking / share of starts that fell / speed kept):
+
+| clip | v4 MuJoCo | v4 PyBullet | v4 PyBullet, armature | v3 MuJoCo | v3 PyBullet |
+|---|---|---|---|---|---|
+| walk | .91 / 0 / .88 | .82 / 0 / .75 | .83 / 0 / .78 | .87 / 0 / .92 | .79 / 0 / .82 |
+| trot | .89 / 0 / .89 | .75 / 0 / .80 | .74 / 0 / .80 | .83 / 0 / .83 | .71 / 0 / .79 |
+| pace | .91 / 0 / .88 | .82 / 0 / .78 | .84 / 0 / .84 | .91 / 0 / .88 | .80 / 0 / .76 |
+| canter | .70 / 0 / .68 | **.15 / .75 / .11** | .43 / .25 / .41 | .70 / 0 / .73 | .16 / .75 / .15 |
+| turn left / right | .89 / .89 | .77 / .77 | .83 / .80 | .85 / .86 | .77 / .75 |
+| sit / lie | .93 / .91 | .71 / .76 | .89 / .85 | .93 / .89 | .65 / .72 |
+
+Caveats:
+* N=30 on one seed set (1000); the ± is binomial over the tries reached. A harder engine also means fewer switches are
+  reached, because a fall before a switch skips it (last row).
+* PyBullet's contact parameters are its defaults (50 solver iterations, no tuning). That is deliberate: tuning them
+  until the brain works would defeat the check.
+
+Reproduce (from `train/`, `MUJOCO_GL=osmesa OMP_NUM_THREADS=1`, `BULLET_PYTHON` = a Python with pybullet + numpy, e.g.
+`python3.11 -m venv venv311 && venv311/bin/pip install pybullet numpy`):
+
+    python mastermind/sim2sim.py --engine mujoco --brain mastermind/export_v4/student.pt --teachers v4 --n 30 --exam --out mastermind/results/sim2sim/v4_mujoco.json
+    python mastermind/sim2sim.py --engine bullet --brain mastermind/export_v4/student.pt --teachers v4 --n 30 --exam --out mastermind/results/sim2sim/v4_bullet.json
+    python mastermind/sim2sim.py --engine bullet --armature-approx --brain mastermind/export_v4/student.pt --teachers v4 --n 30 --exam --out mastermind/results/sim2sim/v4_bullet_armature.json
+    python mastermind/sim2sim.py --engine mujoco --brain mastermind/export_v3/student.pt --teachers v3 --n 30 --exam --out mastermind/results/sim2sim/v3_mujoco.json
+    python mastermind/sim2sim.py --engine bullet --brain mastermind/export_v3/student.pt --teachers v3 --n 30 --exam --out mastermind/results/sim2sim/v3_bullet.json
+    python mastermind/compare.py --reached --col "v4 MuJoCo=mastermind/results/sim2sim/v4_mujoco.json" --col "v4 PyBullet=mastermind/results/sim2sim/v4_bullet.json"

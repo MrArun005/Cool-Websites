@@ -22,9 +22,10 @@ def merged(paths):
     out = OrderedDict()
     for p in paths:
         for k, r in rows(p).items():
-            o = out.setdefault(k, dict(switch=k, ok=0, tries=0))
+            o = out.setdefault(k, dict(switch=k, ok=0, tries=0, not_reached=0))
             o["ok"] += r["ok"]
             o["tries"] += r["tries"]
+            o["not_reached"] += r.get("not_reached", 0)
     return out
 
 
@@ -35,7 +36,7 @@ def cell(r):
     return f"{r['ok']}/{n} {p:.0%} ± {round(100 * (p * (1 - p) / n) ** 0.5)}"
 
 
-def table(data, skip=(), only=None):
+def table(data, skip=(), only=None, reached=False):
     keys = []
     for _, d in data:
         keys += [k for k in d if k not in keys]
@@ -49,6 +50,12 @@ def table(data, skip=(), only=None):
         p = ok / n if n else 0
         pooled.append(f"**{ok}/{n} {p:.0%} ± {round(100 * (p * (1 - p) / max(n, 1)) ** 0.5)}**")
     lines.append("| **pooled** | " + " | ".join(pooled) + " |")
+    if reached:   # a switch after an earlier fall is not tried, so a harsher test also has fewer tries: show how many were
+        cells = []
+        for _, d in data:
+            n, miss = sum(d[k]["tries"] for k in keys if k in d), sum(d[k]["not_reached"] for k in keys if k in d)
+            cells.append(f"{n}/{n + miss} {n / max(n + miss, 1):.0%}")
+        lines.append("| switches reached (tried / planned) | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
@@ -57,6 +64,7 @@ def main():
     ap.add_argument("files", nargs="*")
     ap.add_argument("--col", action="append", default=[], help="label=file1,file2,...")
     ap.add_argument("--skip", nargs="*", default=["still:", "shove -> fall"])
+    ap.add_argument("--reached", action="store_true", help="also a row: switches tried out of planned (falls before a switch skip it)")
     a = ap.parse_args()
     if a.col:
         data = [(c.split("=", 1)[0], merged(c.split("=", 1)[1].split(","))) for c in a.col]
@@ -64,7 +72,7 @@ def main():
         cols = [("manager 18b", HERE / "results" / "manager_18b_n30.json"), ("manager 18e", HERE / "results" / "manager_18e_n30.json")]
         cols += [(Path(p).stem, p) for p in a.files]
         data = [(name, merged([p])) for name, p in cols]
-    print(table(data, a.skip))
+    print(table(data, a.skip, reached=a.reached))
 
 
 if __name__ == "__main__":

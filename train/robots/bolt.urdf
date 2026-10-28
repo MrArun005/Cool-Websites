@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<!-- generated from bolt.xml by train/mastermind/sim2sim.py write_urdf(); do not edit -->
+<robot name="bolt">
+  <link name="torso">
+    <inertial><origin xyz="0.04 0 0.00944444" rpy="0 0 0"/><mass value="9"/><inertia ixx="0.0627972" ixy="0" ixz="-0.0268" iyy="0.350631" iyz="0" izz="0.367967"/></inertial>
+    <collision name="torso"><origin xyz="0 0 0" rpy="0 -0 0"/><geometry><box size="0.56 0.24 0.15"/></geometry></collision>
+    <collision name="head"><origin xyz="0.34 0 0.09" rpy="0 -0 0"/><geometry><box size="0.17 0.15 0.13"/></geometry></collision>
+    <collision name="snout"><origin xyz="0.44 0 0.065" rpy="0 -0 0"/><geometry><box size="0.08 0.1 0.07"/></geometry></collision>
+  </link>
+  <link name="FL_hip">
+    <inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.1"/><inertia ixx="4.624e-05" ixy="0" ixz="0" iyy="4.624e-05" iyz="0" izz="4.624e-05"/></inertial>
+  </link>
+  <joint name="FL_abd" type="revolute"><parent link="torso"/><child link="FL_hip"/><origin xyz="0.22 0.15 -0.03" rpy="0 -0 0"/><axis xyz="1 0 0"/><limit lower="-0.84" upper="0.84" effort="33.5" velocity="25"/></joint>
+  <link name="FL_thigh">
+    <inertial><origin xyz="0 0 -0.1" rpy="0 0 0"/><mass value="0.35"/><inertia ixx="0.00162997" ixy="0" ixz="0" iyy="0.00162997" iyz="0" izz="9.80193e-05"/></inertial>
+    <collision name="g7"><origin xyz="0 0 -0.1" rpy="0 -0 0"/><geometry><capsule radius="0.024" length="0.2"/></geometry></collision>
+  </link>
+  <joint name="FL_hip" type="revolute"><parent link="FL_hip"/><child link="FL_thigh"/><origin xyz="0 0 0" rpy="0 -0 0"/><axis xyz="0 1 0"/><limit lower="-1.2" upper="2.6" effort="33.5" velocity="25"/></joint>
+  <link name="FL_shin">
+    <inertial><origin xyz="0 0 -0.116667" rpy="0 0 0"/><mass value="0.3"/><inertia ixx="0.00151401" ixy="0" ixz="0" iyy="0.00151401" iyz="0" izz="5.66104e-05"/></inertial>
+    <collision name="g9"><origin xyz="0 0 -0.1" rpy="0 -0 0"/><geometry><capsule radius="0.019" length="0.2"/></geometry></collision>
+    <collision name="FL_foot"><origin xyz="0 0 -0.2" rpy="0 -0 0"/><geometry><sphere radius="0.025"/></geometry></collision>
+  </link>
+  <joint name="FL_knee" type="revolute"><parent link="FL_thigh"/><child link="FL_shin"/><origin xyz="0 0 -0.2" rpy="0 -0 0"/><axis xyz="0 1 0"/><limit lower="-2.75" upper="-0.2" effort="33.5" velocity="25"/></joint>
+  <link name="FR_hip">
+    <inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.1"/><inertia ixx="4.624e-05" ixy="0" ixz="0" iyy="4.624e-05" iyz="0" izz="4.624e-05"/></inertial>
+  </link>
+  <joint name="FR_abd" type="revolute"><parent link="torso"/><child link="FR_hip"/><origin xyz="0.22 -0.15 -0.03" rpy="0 -0 0"/><axis xyz="1 0 0"/><limit lower="-0.84" upper="0.84" effort="33.5" velocity="25"/></joint>
+  <link name="FR_thigh">
+    <inertial><origin xyz="0 0 -0.1" rpy="0 0 0"/><mass value="0.35"/><inertia ixx="0.00162997" ixy="0" ixz="0" iyy="0.00162997" iyz="0" izz="9.80193e-05"/></inertial>
+    <collision name="g12"><origin xyz="0 0 -0.1" rpy="0 -0 0"/><geometry><capsule radius="0.024" length="0.2"/></geometry></collision>
+  </link>
+  <joint name="FR_hip" type="revolute"><parent link="FR_hip"/><child link="FR_thigh"/><origin xyz="0 0 0" rpy="0 -0 0"/><axis xyz="0 1 0"/><limit lower="-1.2" upper="2.6" effort="33.5" velocity="25"/></joint>
+  <link name="FR_shin">
+    <inertial><origin xyz="0 0 -0.116667" rpy="0 0 0"/><mass value="0.3"/><inertia ixx="0.00151401" ixy="0" ixz="0" iyy="0.00151401" iyz="0" izz="5.66104e-05"/></inertial>
+    <collision name="g14"><origin xyz="0 0 -0.1" rpy="0 -0 0"/><geometry><capsule radius="0.019" length="0.2"/></geometry></collision>
+    <collision name="FR_foot"><origin xyz="0 0 -0.2" rpy="0 -0 0"/><geometry><sphere radius="0.025"/></geometry></collision>
+  </link>
+  <joint name="FR_knee" type="revolute"><parent link="FR_thigh"/><child link="FR_shin"/><origin xyz="0 0 -0.2" rpy="0 -0 0"/><axis xyz="0 1 0"/><limit lower="-2.75" upper="-0.2" effort="33.5" velocity="25"/></joint>
+  <link name="RL_hip">
+    <inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.1"/><inertia ixx="4.624e-05" ixy="0" ixz="0" iyy="4.624e-05" iyz="0" izz="4.624e-05"/></inertial>
+  </link>
+  <joint name="RL_abd" type="revolute"><parent link="torso"/><child link="RL_hip"/><origin xyz="-0.22 0.15 -0.03" rpy="0 -0 0"/><axis xyz="1 0 0"/><limit lower="-0.84" upper="0.84" effort="33.5" velocity="25"/></joint>
+  <link name="RL_thigh">
+    <inertial><origin xyz="0 0 -0.1" rpy="0 0 0"/><mass value="0.35"/><inertia ixx="0.00162997" ixy="0" ixz="0" iyy="0.00162997" iyz="0" izz="9.80193e-05"/></inertial>
+    <collision name="g17"><origin xyz="0 0 -0.1" rpy="0 -0 0"/><geometry><capsule radius="0.024" length="0.2"/></geometry></collision>
+  </link>
+  <joint name="RL_hip" type="revolute"><parent link="RL_hip"/><child link="RL_thigh"/><origin xyz="0 0 0" rpy="0 -0 0"/><axis xyz="0 1 0"/><limit lower="-2.6" upper="1.2" effort="33.5" velocity="25"/></joint>
+  <link name="RL_shin">
+    <inertial><origin xyz="0 0 -0.116667" rpy="0 0 0"/><mass value="0.3"/><inertia ixx="0.00151401" ixy="0" ixz="0" iyy="0.00151401" iyz="0" izz="5.66104e-05"/></inertial>
+    <collision name="g19"><origin xyz="0 0 -0.1" rpy="0 -0 0"/><geometry><capsule radius="0.019" length="0.2"/></geometry></collision>
+    <collision name="RL_foot"><origin xyz="0 0 -0.2" rpy="0 -0 0"/><geometry><sphere radius="0.025"/></geometry></collision>
+  </link>
+  <joint name="RL_knee" type="revolute"><parent link="RL_thigh"/><child link="RL_shin"/><origin xyz="0 0 -0.2" rpy="0 -0 0"/><axis xyz="0 1 0"/><limit lower="0.2" upper="2.75" effort="33.5" velocity="25"/></joint>
+  <link name="RR_hip">
+    <inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.1"/><inertia ixx="4.624e-05" ixy="0" ixz="0" iyy="4.624e-05" iyz="0" izz="4.624e-05"/></inertial>
+  </link>
+  <joint name="RR_abd" type="revolute"><parent link="torso"/><child link="RR_hip"/><origin xyz="-0.22 -0.15 -0.03" rpy="0 -0 0"/><axis xyz="1 0 0"/><limit lower="-0.84" upper="0.84" effort="33.5" velocity="25"/></joint>
+  <link name="RR_thigh">
+    <inertial><origin xyz="0 0 -0.1" rpy="0 0 0"/><mass value="0.35"/><inertia ixx="0.00162997" ixy="0" ixz="0" iyy="0.00162997" iyz="0" izz="9.80193e-05"/></inertial>
+    <collision name="g22"><origin xyz="0 0 -0.1" rpy="0 -0 0"/><geometry><capsule radius="0.024" length="0.2"/></geometry></collision>
+  </link>
+  <joint name="RR_hip" type="revolute"><parent link="RR_hip"/><child link="RR_thigh"/><origin xyz="0 0 0" rpy="0 -0 0"/><axis xyz="0 1 0"/><limit lower="-2.6" upper="1.2" effort="33.5" velocity="25"/></joint>
+  <link name="RR_shin">
+    <inertial><origin xyz="0 0 -0.116667" rpy="0 0 0"/><mass value="0.3"/><inertia ixx="0.00151401" ixy="0" ixz="0" iyy="0.00151401" iyz="0" izz="5.66104e-05"/></inertial>
+    <collision name="g24"><origin xyz="0 0 -0.1" rpy="0 -0 0"/><geometry><capsule radius="0.019" length="0.2"/></geometry></collision>
+    <collision name="RR_foot"><origin xyz="0 0 -0.2" rpy="0 -0 0"/><geometry><sphere radius="0.025"/></geometry></collision>
+  </link>
+  <joint name="RR_knee" type="revolute"><parent link="RR_thigh"/><child link="RR_shin"/><origin xyz="0 0 -0.2" rpy="0 -0 0"/><axis xyz="0 1 0"/><limit lower="0.2" upper="2.75" effort="33.5" velocity="25"/></joint>
+</robot>
