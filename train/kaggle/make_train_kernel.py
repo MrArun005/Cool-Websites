@@ -20,7 +20,7 @@ Jobs (JOBS below):
 The output: runs/<name>/ (checkpoints/, best/ with best.json, train.log), fair_exam_*.txt (30 tries per test on
 fresh seeds 9000+, for the best brain and the starting brain), summary.json and kernel.log.
 
-Local smoke test of the exact kernel script, Kaggle's folders faked (tiny settings: --hours 0.03 --every 8192
+Local smoke test of the exact kernel script, Kaggle's folders faked (tiny settings: --train-h 0.06 --every 8192
 --envs 2 --n-steps 1024 --exam-episodes 2 --final-episodes 2):
     KAGGLE_INPUT=/tmp/fake/input KAGGLE_WORKING=/tmp/fake/working BOLT_ROOT=/tmp/fake/bolt NO_PIP=1 python /tmp/k1/kernel.py
 """
@@ -179,7 +179,7 @@ def build_kernel(a):
     if a.exam_episodes and job["script"] == "train_getup.py":
         args += ["--exam-episodes", str(a.exam_episodes)]
     cfg = dict(pip=PIP, tar=TAR, script=job["script"], name=job["name"], start=job["start"], args=args,
-               steps=a.steps, envs=a.envs, every=a.every or (1_000_000 if a.job == "jump-trot" else 500_000),
+               steps=a.steps, envs=a.envs, every=a.every or 1_000_000,
                train_h=a.train_h, hard_h=a.hard_h, attempts=3, final=job["final"], final_episodes=a.final_episodes)
     (out / "kernel.py").write_text(KERNEL.replace("@CFG@", repr(cfg)))
     slug = a.slug or f"bolt-{a.job}"
@@ -200,9 +200,9 @@ def main():
     ap.add_argument("--slug", help="kernel name (default bolt-<job>)")
     ap.add_argument("--steps", type=int, default=400_000_000, help="a cap far beyond the session: the time guard ends it")
     ap.add_argument("--envs", type=int, default=8)
-    ap.add_argument("--every", type=int, help="steps between exams (default 1M jump, 500k recover)")
+    ap.add_argument("--every", type=int, help="steps between checkpoints and exams (default 1M)")
     ap.add_argument("--n-steps", type=int, help="override PPO steps per env per update (smoke tests)")
-    ap.add_argument("--exam-episodes", type=int, help="recover: tries per kind in the checkpoint exam (default 10)")
+    ap.add_argument("--exam-episodes", type=int, default=15, help="recover: tries per kind in the checkpoint exam")
     ap.add_argument("--final-episodes", type=int, default=30, help="tries per test in the final fair exams")
     ap.add_argument("--train-h", type=float, default=10.6, help="training ends (time guard) this long after the start")
     ap.add_argument("--hard-h", type=float, default=11.6, help="kill anything still running at this time")
