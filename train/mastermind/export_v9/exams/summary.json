@@ -1,0 +1,44 @@
+{
+ "rounds_done": 18,
+ "hours": 10.54,
+ "exit_code": 0,
+ "config": {
+  "pip": [
+   "numpy>=2",
+   "mujoco==3.17.0",
+   "stable-baselines3==2.9.0",
+   "gymnasium==1.4.0"
+  ],
+  "tar": "bolt-mastermind.pack",
+  "rounds": 20,
+  "args": [
+   "--teachers",
+   "v7",
+   "--steps0",
+   "1000000",
+   "--steps",
+   "500000",
+   "--workers",
+   "4",
+   "--beta-floor",
+   "0.2",
+   "--hidden",
+   "1024,512,256",
+   "--epochs0",
+   "20",
+   "--epochs",
+   "6",
+   "--seed",
+   "7",
+   "--init-student",
+   "../train/mastermind/export_v4/student.pt"
+  ],
+  "steps0": 1000000,
+  "steps": 500000,
+  "epochs0": 20,
+  "epochs": 6,
+  "budget_h": 11.3,
+  "hard_h": 11.7,
+  "keep_data": false
+ }
+}
