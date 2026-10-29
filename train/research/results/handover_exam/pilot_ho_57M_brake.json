@@ -1,0 +1,15 @@
+{
+ "folder": "runs/pilot_ho/ck57000000",
+ "states": "research/results/handover_states_test.npz",
+ "n": 100,
+ "motor_brake": [
+  true,
+  25.0,
+  3.5
+ ],
+ "jump_20": 0.88,
+ "jump_30": 0.87,
+ "jump_40": 0.81,
+ "jump_50": 0.68,
+ "command": "python research/handover_exam.py runs/pilot_ho/ck57000000 --states research/results/handover_states_test.npz --motor-brake --out research/results/handover_exam/pilot_ho_57M_brake.json"
+}

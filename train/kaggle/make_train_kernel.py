@@ -91,6 +91,19 @@ JOBS = {
                  "--max-steps", "220", "--motor-brake"],
                 ["jump", "--speeds", "1.7", "--dist", "1.1", "--heights", "0.40", "0.50", "--gait",
                  "--max-steps", "220", "--motor-brake"]]),
+    "jump-handover": dict(
+        # 29 Oct pilot (2M steps, local): practising from REAL MasterMind hand-overs (research/record_handover.py)
+        # took the held-out hand-over exam from 81/77/61/31% to 88/87/81/68% at 20/30/40/50 cm (brake on).
+        # Win: held-out 30 cm >= 90%, 40 cm >= 85%, 50 cm >= 70% with the still-legs exam not worse than 55M.
+        name="jumpho", script="train_jump.py", start="../models/bolt-dog-jump-trot-55M",
+        args=["--real", "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "0.8", "2.0", "--approach-speed", "2.4", "--approach-speed-min", "1.2", "--run-frac", "0.85",
+              "--gait-start", "0.7", "--bar-start", "0.30", "--bar-max", "0.65",
+              "--handover-file", "research/results/handover_states.npz", "--handover-rate", "0.6",
+              "--exam-speed", "1.7", "--exam-dist", "1.1", "--exam-heights", "0.30", "0.40", "0.50",
+              "--exam2", "2.0", "1.5"],
+        finals=[["jump", "--speeds", "1.5", "2.0", "--dist", "1.5", "--heights", "0.40", "0.50", "0.60", "--gait",
+                 "--max-steps", "220", "--motor-brake"]]),
     "recover": dict(
         name="recover", script="train_getup.py", start="../models/bolt-dog-selfright-17e-16.5M",
         args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015"],
@@ -200,6 +213,7 @@ def build_data(a):
     for f in files:
         p = Path(f)
         if (p.parent == Path("train") and p.suffix in (".py", ".xml")) or p.parent == Path("train/dogmotion/clips") or \
+           f == "train/research/results/handover_states.npz" or \
            (len(p.parts) == 3 and p.parts[0] == "models" and p.parts[1] in MODELS and p.suffix in (".zip", ".pkl", ".md", ".json", ".txt")):
             keep.append(f)
     missing = [m for m in MODELS if not any(f == f"models/{m}/policy.zip" for f in keep)]
