@@ -1,0 +1,184 @@
+{
+ "obs_size": 84,
+ "obs_layout": [
+  [
+   "gravity_in_body_frame",
+   3
+  ],
+  [
+   "angular_velocity_x0.25",
+   3
+  ],
+  [
+   "linear_velocity_body",
+   3
+  ],
+  [
+   "body_height",
+   1
+  ],
+  [
+   "joint_pos_minus_dog_stance",
+   12
+  ],
+  [
+   "joint_vel_x0.1",
+   12
+  ],
+  [
+   "previous_output",
+   12
+  ],
+  [
+   "command_one_hot",
+   10
+  ],
+  [
+   "ref_active",
+   1
+  ],
+  [
+   "clip_phase_sin_cos",
+   2
+  ],
+  [
+   "ref_joints_next_minus_dog_stance",
+   12
+  ],
+  [
+   "ref_height_next",
+   1
+  ],
+  [
+   "ref_velocity_body_next",
+   3
+  ],
+  [
+   "ref_yaw_rate_next",
+   1
+  ],
+  [
+   "seconds_since_clip_end",
+   1
+  ],
+  [
+   "hurdle_present",
+   1
+  ],
+  [
+   "hurdle_ahead_m_clipped_-1_3",
+   1
+  ],
+  [
+   "bar_height",
+   1
+  ],
+  [
+   "sin_heading_error",
+   1
+  ],
+  [
+   "off_line_m",
+   1
+  ],
+  [
+   "jump_clock_s_over_2",
+   1
+  ],
+  [
+   "seconds_since_command_over_3_max_1",
+   1
+  ]
+ ],
+ "commands": [
+  "walk",
+  "trot",
+  "pace",
+  "canter",
+  "turn_left",
+  "turn_right",
+  "sit",
+  "lie",
+  "stand",
+  "jump"
+ ],
+ "imitate_teacher": "18e36",
+ "dagger_round": 4,
+ "action": "ctrl = clip(dog_stance + full_range * output, lo, hi)  (joint position targets, rad)",
+ "dog_stance": [
+  0.0,
+  0.2747,
+  -0.5493,
+  0.0,
+  0.2747,
+  -0.5493,
+  0.0,
+  -0.2747,
+  0.5493,
+  0.0,
+  -0.2747,
+  0.5493
+ ],
+ "full_range": [
+  0.84,
+  2.3253,
+  2.2007,
+  0.84,
+  2.3253,
+  2.2007,
+  0.84,
+  2.3253,
+  2.2007,
+  0.84,
+  2.3253,
+  2.2007
+ ],
+ "lo": [
+  -0.84,
+  -1.2,
+  -2.75,
+  -0.84,
+  -1.2,
+  -2.75,
+  -0.84,
+  -2.6,
+  0.2,
+  -0.84,
+  -2.6,
+  0.2
+ ],
+ "hi": [
+  0.84,
+  2.6,
+  -0.2,
+  0.84,
+  2.6,
+  -0.2,
+  0.84,
+  1.2,
+  2.75,
+  0.84,
+  1.2,
+  2.75
+ ],
+ "control_hz": 50,
+ "teachers": "v8g",
+ "recovery": "after a fall (tipped past 60 degrees, or the body on the floor for 0.1 s on its feet) the command input is 'stand' while self-righting; once upright (body z up > 0.9) and still (speed < 0.2 m/s) for 15 steps, or after 4 s, it becomes 'lie' (tuck) until every joint is within 0.6 rad of LIE_POSE or 2 s passed, then 'stand' for 3 s; the command clock restarts at each change",
+ "lie_pose": [
+  0.0,
+  1.35,
+  -2.7,
+  0.0,
+  1.35,
+  -2.7,
+  0.0,
+  -1.35,
+  2.7,
+  0.0,
+  -1.35,
+  2.7
+ ],
+ "jump": {
+  "note": "the hurdle inputs are on from the jump command until 1.5 m past the bar; the jump clock input (s/2) runs from 1.1 m before the bar"
+ }
+}
