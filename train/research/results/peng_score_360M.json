@@ -1,0 +1,65 @@
+{
+ "brain": "../models/bolt-dog-imitate-gpu-360M/params.pkl",
+ "seconds": 10.0,
+ "seeds": [
+  1,
+  2,
+  3
+ ],
+ "episodes": 5,
+ "clips": {
+  "pace": {
+   "peng_normalized_return": 0.797,
+   "sd": 0.01,
+   "full_episodes": 1.0,
+   "terms": {
+    "pose": 0.975,
+    "vel": 0.669,
+    "paw": 0.975,
+    "root": 0.117,
+    "root_vel": 0.638,
+    "drift_m": 3.752
+   }
+  },
+  "trot": {
+   "peng_normalized_return": 0.742,
+   "sd": 0.007,
+   "full_episodes": 1.0,
+   "terms": {
+    "pose": 0.969,
+    "vel": 0.468,
+    "paw": 0.973,
+    "root": 0.092,
+    "root_vel": 0.255,
+    "drift_m": 10.249
+   }
+  },
+  "canter": {
+   "peng_normalized_return": 0.637,
+   "sd": 0.014,
+   "full_episodes": 1.0,
+   "terms": {
+    "pose": 0.912,
+    "vel": 0.121,
+    "paw": 0.818,
+    "root": 0.024,
+    "root_vel": 0.075,
+    "drift_m": 15.658
+   }
+  },
+  "walk": {
+   "peng_normalized_return": 0.764,
+   "sd": 0.011,
+   "full_episodes": 1.0,
+   "terms": {
+    "pose": 0.974,
+    "vel": 0.616,
+    "paw": 0.97,
+    "root": 0.101,
+    "root_vel": 0.37,
+    "drift_m": 7.229
+   }
+  }
+ },
+ "command": "python research/peng_score.py ../models/bolt-dog-imitate-gpu-360M/params.pkl --clips pace trot canter walk --seconds 10 --seeds 1 2 3 --episodes 5 --out research/results/peng_score_360M.json"
+}

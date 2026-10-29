@@ -193,3 +193,29 @@ sweep.
 2109.11978, 2212.03238, 2301.10602, 2107.04034, 2308.15143, 2308.03273, 2303.15331, 2203.17138, 2507.00677,
 2306.09557, 2310.05714 (abstract only), 2409.13678, 2412.16924, 2509.11504, 2610.10601. GitHub repositories as
 linked above (existence and file lists checked).
+
+---
+
+## Bolt re-scored on Peng 2020's exact formula (29 Oct)
+
+    cd train
+    MUJOCO_GL=osmesa OMP_NUM_THREADS=1 python research/peng_score.py ../models/bolt-dog-imitate-gpu-360M/params.pkl \
+        --clips pace trot canter walk --seconds 10 --seeds 1 2 3 --episodes 5 --out research/results/peng_score_360M.json
+
+Eq. 4-9 with the global root position, full root rotation and global root velocity; the reference root is integrated
+from the try's start; canonical (fixed) physics; normalized return = mean reward per step over the episode. All
+simulation (MuJoCo, our A1-class body), not Peng's Laikago in PyBullet: same formula, not the same test.
+
+| clip | Bolt 360M, 10 s | Bolt 360M, 4 s | Peng 2020 sim, robust / no randomization |
+|---|---|---|---|
+| pace | 0.797 | 0.846 | 0.820 / 0.839 |
+| trot | 0.742 | 0.787 | 0.727 / 0.752 |
+| canter | 0.637 | | not attempted |
+| walk | 0.764 | | not reported |
+
+Per term (10 s): pose 0.97, paws 0.97, joint velocity 0.47-0.67 (trot/pace), **root pose 0.09-0.12**, root velocity
+0.26-0.64. Bolt copies the legs very closely but does not hold the reference's heading and path: on the trot it
+turns about +4 deg/s while the dog clip turns about -5 deg/s, so after 10 s it is ~10 m off the reference path. Our
+training reward never penalized heading (root term = height + tilt only). Supported claim: **on Peng's own formula,
+Bolt's sim tracking is about equal to Peng's sim numbers (pace slightly lower, trot equal or slightly higher), not
+better.** Fix: train with Peng's global root terms (heading and path), then re-score.
