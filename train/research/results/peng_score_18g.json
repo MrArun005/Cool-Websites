@@ -1,0 +1,38 @@
+{
+ "brain": "../models/bolt-dog-canter-switching-18g-35.5M",
+ "seconds": 10.0,
+ "seeds": [
+  1,
+  2
+ ],
+ "episodes": 5,
+ "clips": {
+  "trot": {
+   "peng_normalized_return": 0.7,
+   "sd": 0.003,
+   "full_episodes": 1.0,
+   "terms": {
+    "pose": 0.943,
+    "vel": 0.372,
+    "paw": 0.936,
+    "root": 0.072,
+    "root_vel": 0.119,
+    "drift_m": 17.475
+   }
+  },
+  "pace": {
+   "peng_normalized_return": 0.668,
+   "sd": 0.003,
+   "full_episodes": 1.0,
+   "terms": {
+    "pose": 0.892,
+    "vel": 0.447,
+    "paw": 0.87,
+    "root": 0.057,
+    "root_vel": 0.174,
+    "drift_m": 10.844
+   }
+  }
+ },
+ "command": "python research/peng_score.py ../models/bolt-dog-canter-switching-18g-35.5M --clips trot pace --seconds 10 --seeds 1 2 --episodes 5 --out research/results/peng_score_18g.json"
+}
