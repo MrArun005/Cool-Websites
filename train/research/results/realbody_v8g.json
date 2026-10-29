@@ -1,0 +1,199 @@
+{
+ "brain": "mastermind/export_v8g/student.pt",
+ "teachers": "v8g",
+ "n": 20,
+ "seed": 1000,
+ "rows": [
+  {
+   "issue": "baseline",
+   "real_robot": "no issue",
+   "flags": [],
+   "env": {},
+   "ok": 396,
+   "reached": 411,
+   "rate": 0.964,
+   "minutes": 2.7
+  },
+  {
+   "issue": "delay 10 ms",
+   "real_robot": "control loop latency (A1/Go1: ~10-20 ms)",
+   "flags": [
+    "--latency-ms",
+    "10"
+   ],
+   "env": {},
+   "ok": 357,
+   "reached": 406,
+   "rate": 0.879,
+   "minutes": 2.8
+  },
+  {
+   "issue": "delay 20 ms",
+   "real_robot": "",
+   "flags": [
+    "--latency-ms",
+    "20"
+   ],
+   "env": {},
+   "ok": 274,
+   "reached": 370,
+   "rate": 0.741,
+   "minutes": 3.2
+  },
+  {
+   "issue": "sensor noise",
+   "real_robot": "IMU and encoder noise (legged_gym levels)",
+   "flags": [
+    "--obs-noise"
+   ],
+   "env": {},
+   "ok": 388,
+   "reached": 412,
+   "rate": 0.942,
+   "minutes": 2.6
+  },
+  {
+   "issue": "IMU tilt bias 3 deg",
+   "real_robot": "a mis-mounted or uncalibrated IMU",
+   "flags": [
+    "--imu-bias",
+    "0.05"
+   ],
+   "env": {},
+   "ok": 393,
+   "reached": 414,
+   "rate": 0.949,
+   "minutes": 2.5
+  },
+  {
+   "issue": "gyro bias 0.1 rad/s",
+   "real_robot": "gyro offset drift",
+   "flags": [
+    "--gyro-bias",
+    "0.1"
+   ],
+   "env": {},
+   "ok": 400,
+   "reached": 413,
+   "rate": 0.969,
+   "minutes": 2.5
+  },
+  {
+   "issue": "speed estimate off 0.2 m/s",
+   "real_robot": "a real robot estimates its body speed (no sensor measures it)",
+   "flags": [
+    "--vel-bias",
+    "0.2"
+   ],
+   "env": {},
+   "ok": 367,
+   "reached": 406,
+   "rate": 0.904,
+   "minutes": 2.5
+  },
+  {
+   "issue": "height estimate off 3 cm",
+   "real_robot": "body height is estimated from leg kinematics",
+   "flags": [
+    "--height-bias",
+    "0.03"
+   ],
+   "env": {},
+   "ok": 395,
+   "reached": 411,
+   "rate": 0.961,
+   "minutes": 2.6
+  },
+  {
+   "issue": "encoder step 0.01 rad",
+   "real_robot": "coarse joint encoders",
+   "flags": [
+    "--quant",
+    "0.01"
+   ],
+   "env": {},
+   "ok": 389,
+   "reached": 407,
+   "rate": 0.956,
+   "minutes": 2.4
+  },
+  {
+   "issue": "10% packets lost",
+   "real_robot": "a lossy motor bus",
+   "flags": [
+    "--drop",
+    "0.1"
+   ],
+   "env": {},
+   "ok": 359,
+   "reached": 400,
+   "rate": 0.897,
+   "minutes": 2.6
+  },
+  {
+   "issue": "motor lag 20 ms",
+   "real_robot": "motor current loop and gearbox response",
+   "flags": [
+    "--motor-lag-ms",
+    "20"
+   ],
+   "env": {},
+   "ok": 304,
+   "reached": 386,
+   "rate": 0.788,
+   "minutes": 2.7
+  },
+  {
+   "issue": "PD gains -20%",
+   "real_robot": "motor constants off from the datasheet",
+   "flags": [
+    "--gain-scale",
+    "0.8"
+   ],
+   "env": {},
+   "ok": 385,
+   "reached": 409,
+   "rate": 0.941,
+   "minutes": 2.6
+  },
+  {
+   "issue": "motors 80% torque",
+   "real_robot": "battery sag, hot motors",
+   "flags": [],
+   "env": {
+    "BOLT_MOTOR_TORQUE": "26.8"
+   },
+   "ok": 392,
+   "reached": 414,
+   "rate": 0.947,
+   "minutes": 2.7
+  },
+  {
+   "issue": "payload +20%",
+   "real_robot": "a battery pack or sensor head",
+   "flags": [
+    "--payload",
+    "0.2"
+   ],
+   "env": {},
+   "ok": 327,
+   "reached": 395,
+   "rate": 0.828,
+   "minutes": 2.8
+  },
+  {
+   "issue": "slippery floor (grip x0.5)",
+   "real_robot": "tiles, wet floor",
+   "flags": [
+    "--friction",
+    "0.5"
+   ],
+   "env": {},
+   "ok": 364,
+   "reached": 404,
+   "rate": 0.901,
+   "minutes": 2.7
+  }
+ ],
+ "command": "python research/realbody_stress.py mastermind/export_v8g/student.pt --teachers v8g --n 20 --workers 1 --out research/results/realbody_v8g.json"
+}
