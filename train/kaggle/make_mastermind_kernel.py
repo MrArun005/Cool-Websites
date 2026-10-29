@@ -35,7 +35,7 @@ TAR = "bolt-mastermind.pack"   # a tar under a name Kaggle does not unpack (it u
 MODELS = ["bolt-dog-switching-18e-36M", "bolt-dog-canter-switching-18g-35.5M", "bolt-dog-imitate-pps-student-r4",
           "bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-a1-16g-27M", "bolt-dog-selfright-17e-16.5M",
           "bolt-dog-posture-getup-3M", "bolt-dog-jump-trot-55M", "bolt-dog-imitate-gpu3-617M",
-          "bolt-dog-jump-handover-59M", "bolt-dog-canter-speed-38M"]   # canter-speed-38M: v7c; jump-trot-55M: teacher set v5; gpu3 + jump-handover: v6/v7
+          "bolt-dog-jump-handover-59M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-delay-76M", "bolt-dog-recover-delay-30M"]   # canter-speed-38M: v7c; jump-delay-76M + recover-delay-30M: v10d; jump-trot-55M: teacher set v5; gpu3 + jump-handover: v6/v7
 INIT = "train/mastermind/export_v3/student.pt"   # the v3 student (run b round 5), as the local v4 run
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own (numpy >= 2: the brains' stats were pickled with numpy 2)
 
@@ -165,6 +165,9 @@ def build_kernel(a):
             "--seed", str(a.seed)]
     if a.init_student:
         args += ["--init-student", str(Path("..") / a.init_student)]   # relative to train/
+    if a.extra:   # more dagger.py flags, e.g. the real-body gaps for a delay-robust student
+        import shlex
+        args += shlex.split(a.extra)
     cfg = dict(pip=PIP, tar=TAR, rounds=a.rounds, args=args, steps0=a.steps0, steps=a.steps, epochs0=a.epochs0,
                epochs=a.epochs, budget_h=a.budget_h, hard_h=a.hard_h, keep_data=a.keep_data)
     (out / "kernel.py").write_text(KERNEL.replace("@CFG@", repr(cfg)))
@@ -195,6 +198,7 @@ def main():
     ap.add_argument("--init-student", default=INIT, help="'' for a fresh network")
     ap.add_argument("--budget-h", type=float, default=11.3, help="start no round that would end after this")
     ap.add_argument("--hard-h", type=float, default=11.7, help="kill a round still running at this time")
+    ap.add_argument("--extra", default="", help="more dagger.py arguments (quoted), e.g. \"--latency-max-ms 30 --drop-max 0.1\"")
     ap.add_argument("--keep-data", action="store_true", help="keep run/data.npz in the output (GBs; needed to --resume elsewhere)")
     a = ap.parse_args()
     build_data(a) if a.what == "data" else build_kernel(a)
