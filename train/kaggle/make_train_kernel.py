@@ -38,7 +38,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -90,6 +90,20 @@ JOBS = {
         finals=[["jump", "--speeds", "2.0", "2.5", "3.0", "--dist", "3.0", "--heights", "0.50", "0.60", "0.70", "--gait",
                  "--max-steps", "220", "--motor-brake"],
                 ["jump", "--speeds", "1.7", "--dist", "1.1", "--heights", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake"]]),
+    "jump-runup": dict(
+        # 29 Oct: run60b (mixed run-ups) learned nothing from 3 m; run60's 74M is the only brain that clears 50 cm from a
+        # long run-up (43% at 2.5 m/s). A separate run-up brain from it: long run-ups only, practice bar from 50 cm.
+        # Pass: mid-stride 50 cm from 3 m at 2.5 m/s >= 50% in the final fair exam (30 tries, seed 9000).
+        name="jumprunup", script="train_jump.py", start="../models/bolt-dog-jump-run60-74M",
+        args=["--real", "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "1.5", "4.0", "--approach-speed", "3.2", "--approach-speed-min", "1.8", "--run-frac", "1.0",
+              "--gait-start", "0.8", "--bar-start", "0.50", "--bar-max", "0.75",
+              "--exam-speed", "2.5", "--exam-dist", "3.0", "--exam-heights", "0.50", "0.60", "0.70",
+              "--exam2", "2.0", "3.0",
+              "--select", "midstride", "--select-speed", "2.5", "--select-dist", "3.0",
+              "--select-heights", "0.50", "0.55", "0.60"],
+        finals=[["jump", "--speeds", "2.0", "2.5", "3.0", "--dist", "3.0", "--heights", "0.50", "0.60", "--gait",
                  "--max-steps", "220", "--motor-brake"]]),
     "jump-handover": dict(
         # 29 Oct pilot (2M steps, local): practising from REAL MasterMind hand-overs (research/record_handover.py)
