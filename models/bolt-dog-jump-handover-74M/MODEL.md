@@ -1,4 +1,4 @@
-# bolt-dog-jump-handover-74M (simulation): the jump brain Bolt uses from 29 Oct
+# bolt-dog-jump-handover-74M (simulation): better alone, NOT used (worse inside MasterMind's chain)
 
 Kaggle job jump-handover (29 Oct, 12 h CPU, from jump-trot 55M, 55.0M -> 74.2M steps): practises from REAL
 MasterMind trot -> jump hand-overs (research/record_handover.py, handover_states.npz) plus synthetic starts, motor
@@ -31,3 +31,19 @@ Verdict on test hand-overs (handover_states_test.npz, seeds 90000+, never used t
         --states research/results/handover_states_test.npz --heights 0.20 0.30 0.40 0.50 --motor-brake
     MUJOCO_GL=osmesa OMP_NUM_THREADS=1 python fair_exam.py jump ../models/bolt-dog-jump-handover-74M --speeds 1.7 \
         --dist 1.1 --heights 0.30 0.40 0.50 --gait --max-steps 220 --motor-brake --episodes 30 --no-save
+
+## Inside MasterMind's teacher chain: worse, so not used
+
+test_master.py --brain teacher, dev seeds 20000 and 20015 (2 x 15 tries per switch, with 50 cm), simulation;
+logs in train/research/results/teacher_chain_v9j/:
+
+| | v8g (jump-handover 59M) | v9j (this brain) |
+|---|---|---|
+| all switches | 94.3% (582/617) | 93.6% (582/622) |
+| trot -> jump 20 / 30 / 40 / 50 cm | 21 / 24 / 24 / 23 of 30 | 26 / 25 / 24 / **14** of 30 |
+
+Likely cause: the hand-over states it trained on were recorded with teachers v6h (the older dog-motion brain), while
+v8g's trot is gpu3, so the jump is handed slightly different states. Next: record hand-overs from the v8g chain and
+train on those. jump-handover 59M stays in every teacher set and in Bolt's Day Out.
+
+    MUJOCO_GL=osmesa OMP_NUM_THREADS=1 python mastermind/test_master.py --brain teacher --teachers v9j --n 15 --seed 20000 --with-50
