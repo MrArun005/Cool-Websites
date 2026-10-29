@@ -1,0 +1,819 @@
+{
+ "simulation": true,
+ "date": "2026-10-29",
+ "auto": [
+  {
+   "seed": 1,
+   "secs": 240,
+   "wall_s": 32,
+   "falls": 1,
+   "recoveries": 1,
+   "bumps": 0,
+   "touch_s": 0,
+   "road_crossings": 0,
+   "min_y": -7.69,
+   "kerb": -15,
+   "kerb_stops": 0,
+   "mapped_pct": 84,
+   "hurdles_seen": [
+    {
+     "k": 0,
+     "pos_cm": 1,
+     "h_est": 0.41,
+     "h_true": 0.4,
+     "from": "bar",
+     "width": 1.88,
+     "points": 162
+    },
+    {
+     "k": 1,
+     "pos_cm": 1,
+     "h_est": 0.46,
+     "h_true": 0.45,
+     "from": "bar",
+     "width": 1.88,
+     "points": 167
+    }
+   ],
+   "jumps": 3,
+   "jumps_clean_true": 3,
+   "jumps_detail": [
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": -1
+     }
+    },
+    {
+     "k": 1,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 0
+     }
+    },
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 1
+     }
+    }
+   ],
+   "mind_stats": {
+    "jumps": 3,
+    "clean": 3,
+    "knocked": 0,
+    "distance": 138.84068351955221,
+    "naps": 1,
+    "zoomies": 0,
+    "sniffs": 2,
+    "kerbStops": 0,
+    "replans": 0,
+    "blocked": 0
+   },
+   "tasks": {
+    "trot": 1,
+    "sit": 1,
+    "jump": 3,
+    "explore": 1,
+    "sniff": 2,
+    "nap": 1
+   },
+   "distance_m": 139
+  },
+  {
+   "seed": 2,
+   "secs": 240,
+   "wall_s": 32,
+   "falls": 1,
+   "recoveries": 1,
+   "bumps": 0,
+   "touch_s": 0,
+   "road_crossings": 0,
+   "min_y": -13.71,
+   "kerb": -15,
+   "kerb_stops": 1,
+   "mapped_pct": 95,
+   "hurdles_seen": [
+    {
+     "k": 0,
+     "pos_cm": 1,
+     "h_est": 0.41,
+     "h_true": 0.4,
+     "from": "bar",
+     "width": 1.88,
+     "points": 158
+    },
+    {
+     "k": 1,
+     "pos_cm": 1,
+     "h_est": null,
+     "h_true": 0.45,
+     "from": "unknown",
+     "width": 1.88,
+     "points": 87
+    }
+   ],
+   "jumps": 1,
+   "jumps_clean_true": 1,
+   "jumps_detail": [
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 1
+     }
+    }
+   ],
+   "mind_stats": {
+    "jumps": 1,
+    "clean": 1,
+    "knocked": 0,
+    "distance": 146.388184675861,
+    "naps": 1,
+    "zoomies": 1,
+    "sniffs": 2,
+    "kerbStops": 1,
+    "replans": 0,
+    "blocked": 0
+   },
+   "tasks": {
+    "trot": 1,
+    "sit": 1,
+    "explore": 5,
+    "sniff": 2,
+    "jump": 2,
+    "zoomies": 1,
+    "nap": 2,
+    "kerb": 1
+   },
+   "distance_m": 146
+  },
+  {
+   "seed": 3,
+   "secs": 240,
+   "wall_s": 30,
+   "falls": 0,
+   "recoveries": 0,
+   "bumps": 2,
+   "touch_s": 10.6,
+   "road_crossings": 0,
+   "min_y": -11.02,
+   "kerb": -15,
+   "kerb_stops": 0,
+   "mapped_pct": 99,
+   "hurdles_seen": [
+    {
+     "k": 0,
+     "pos_cm": 1,
+     "h_est": 0.41,
+     "h_true": 0.4,
+     "from": "bar",
+     "width": 1.88,
+     "points": 173
+    },
+    {
+     "k": 1,
+     "pos_cm": 1,
+     "h_est": 0.46,
+     "h_true": 0.45,
+     "from": "bar",
+     "width": 1.87,
+     "points": 165
+    }
+   ],
+   "jumps": 3,
+   "jumps_clean_true": 3,
+   "jumps_detail": [
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 1
+     }
+    },
+    {
+     "k": 1,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 1
+     }
+    },
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 1
+     }
+    }
+   ],
+   "mind_stats": {
+    "jumps": 3,
+    "clean": 3,
+    "knocked": 0,
+    "distance": 164.5484579829878,
+    "naps": 0,
+    "zoomies": 0,
+    "sniffs": 3,
+    "kerbStops": 0,
+    "replans": 0,
+    "blocked": 18
+   },
+   "tasks": {
+    "trot": 1,
+    "sit": 1,
+    "explore": 5,
+    "jump": 3,
+    "sniff": 3,
+    "nap": 1
+   },
+   "distance_m": 165
+  },
+  {
+   "seed": 4,
+   "secs": 240,
+   "wall_s": 31,
+   "falls": 1,
+   "recoveries": 1,
+   "bumps": 0,
+   "touch_s": 0,
+   "road_crossings": 0,
+   "min_y": -14.19,
+   "kerb": -15,
+   "kerb_stops": 1,
+   "mapped_pct": 79,
+   "hurdles_seen": [
+    {
+     "k": 0,
+     "pos_cm": 1,
+     "h_est": 0.4,
+     "h_true": 0.4,
+     "from": "bar",
+     "width": 1.88,
+     "points": 132
+    },
+    {
+     "k": 1,
+     "pos_cm": 2,
+     "h_est": null,
+     "h_true": 0.45,
+     "from": "unknown",
+     "width": 1.87,
+     "points": 55
+    }
+   ],
+   "jumps": 2,
+   "jumps_clean_true": 2,
+   "jumps_detail": [
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 0
+     }
+    },
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 0
+     }
+    }
+   ],
+   "mind_stats": {
+    "jumps": 2,
+    "clean": 2,
+    "knocked": 0,
+    "distance": 140.8765774261904,
+    "naps": 1,
+    "zoomies": 0,
+    "sniffs": 2,
+    "kerbStops": 1,
+    "replans": 0,
+    "blocked": 0
+   },
+   "tasks": {
+    "trot": 1,
+    "sit": 1,
+    "explore": 5,
+    "jump": 4,
+    "sniff": 2,
+    "nap": 1,
+    "kerb": 1
+   },
+   "distance_m": 141
+  },
+  {
+   "seed": 5,
+   "secs": 240,
+   "wall_s": 29,
+   "falls": 1,
+   "recoveries": 1,
+   "bumps": 0,
+   "touch_s": 0,
+   "road_crossings": 0,
+   "min_y": -11.4,
+   "kerb": -15,
+   "kerb_stops": 0,
+   "mapped_pct": 99,
+   "hurdles_seen": [
+    {
+     "k": 0,
+     "pos_cm": 1,
+     "h_est": 0.41,
+     "h_true": 0.4,
+     "from": "bar",
+     "width": 1.88,
+     "points": 143
+    },
+    {
+     "k": 1,
+     "pos_cm": 0,
+     "h_est": 0.46,
+     "h_true": 0.45,
+     "from": "bar",
+     "width": 1.88,
+     "points": 180
+    }
+   ],
+   "jumps": 2,
+   "jumps_clean_true": 2,
+   "jumps_detail": [
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": -1
+     }
+    },
+    {
+     "k": 1,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 0,
+      "yaw_deg": 0,
+      "h_cm": 1
+     }
+    }
+   ],
+   "mind_stats": {
+    "jumps": 2,
+    "clean": 2,
+    "knocked": 0,
+    "distance": 158.14549690498956,
+    "naps": 1,
+    "zoomies": 0,
+    "sniffs": 2,
+    "kerbStops": 0,
+    "replans": 8,
+    "blocked": 0
+   },
+   "tasks": {
+    "sit": 1,
+    "explore": 4,
+    "sniff": 4,
+    "jump": 2,
+    "pace": 1,
+    "nap": 1
+   },
+   "distance_m": 158
+  },
+  {
+   "seed": 6,
+   "secs": 240,
+   "wall_s": 30,
+   "falls": 0,
+   "recoveries": 0,
+   "bumps": 0,
+   "touch_s": 0,
+   "road_crossings": 0,
+   "min_y": -13.77,
+   "kerb": -15,
+   "kerb_stops": 1,
+   "mapped_pct": 94,
+   "hurdles_seen": [
+    {
+     "k": 0,
+     "pos_cm": 1,
+     "h_est": 0.4,
+     "h_true": 0.4,
+     "from": "bar",
+     "width": 1.88,
+     "points": 176
+    },
+    {
+     "k": 1,
+     "pos_cm": 3,
+     "h_est": null,
+     "h_true": 0.45,
+     "from": "unknown",
+     "width": 1.82,
+     "points": 27
+    }
+   ],
+   "jumps": 3,
+   "jumps_clean_true": 3,
+   "jumps_detail": [
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 0
+     }
+    },
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 0
+     }
+    },
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 0
+     }
+    }
+   ],
+   "mind_stats": {
+    "jumps": 3,
+    "clean": 3,
+    "knocked": 0,
+    "distance": 154.9022121508765,
+    "naps": 1,
+    "zoomies": 0,
+    "sniffs": 1,
+    "kerbStops": 1,
+    "replans": 4,
+    "blocked": 0
+   },
+   "tasks": {
+    "trot": 1,
+    "sit": 1,
+    "explore": 5,
+    "jump": 3,
+    "sniff": 2,
+    "kerb": 1,
+    "nap": 1
+   },
+   "distance_m": 155
+  },
+  {
+   "seed": 7,
+   "secs": 240,
+   "wall_s": 32,
+   "falls": 2,
+   "recoveries": 2,
+   "bumps": 0,
+   "touch_s": 0,
+   "road_crossings": 0,
+   "min_y": -13.75,
+   "kerb": -15,
+   "kerb_stops": 1,
+   "mapped_pct": 97,
+   "hurdles_seen": [
+    {
+     "k": 0,
+     "pos_cm": 1,
+     "h_est": 0.41,
+     "h_true": 0.4,
+     "from": "bar",
+     "width": 1.88,
+     "points": 149
+    },
+    {
+     "k": 1,
+     "pos_cm": 1,
+     "h_est": 0.44,
+     "h_true": 0.45,
+     "from": "bar",
+     "width": 1.86,
+     "points": 29
+    }
+   ],
+   "jumps": 2,
+   "jumps_clean_true": 2,
+   "jumps_detail": [
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 1
+     }
+    },
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 1
+     }
+    }
+   ],
+   "mind_stats": {
+    "jumps": 2,
+    "clean": 2,
+    "knocked": 0,
+    "distance": 158.2010436261885,
+    "naps": 1,
+    "zoomies": 0,
+    "sniffs": 1,
+    "kerbStops": 1,
+    "replans": 8,
+    "blocked": 0
+   },
+   "tasks": {
+    "trot": 1,
+    "sit": 1,
+    "explore": 7,
+    "sniff": 1,
+    "jump": 3,
+    "nap": 2,
+    "kerb": 1
+   },
+   "distance_m": 158
+  },
+  {
+   "seed": 8,
+   "secs": 240,
+   "wall_s": 32,
+   "falls": 1,
+   "recoveries": 1,
+   "bumps": 1,
+   "touch_s": 0,
+   "road_crossings": 0,
+   "min_y": -13.22,
+   "kerb": -15,
+   "kerb_stops": 0,
+   "mapped_pct": 96,
+   "hurdles_seen": [
+    {
+     "k": 0,
+     "pos_cm": 1,
+     "h_est": 0.41,
+     "h_true": 0.4,
+     "from": "bar",
+     "width": 1.88,
+     "points": 154
+    },
+    {
+     "k": 1,
+     "pos_cm": 1,
+     "h_est": null,
+     "h_true": 0.45,
+     "from": "unknown",
+     "width": 1.87,
+     "points": 32
+    }
+   ],
+   "jumps": 2,
+   "jumps_clean_true": 2,
+   "jumps_detail": [
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": -1
+     }
+    },
+    {
+     "k": 0,
+     "clean": true,
+     "past": true,
+     "dropped": false,
+     "fell": false,
+     "estErr": {
+      "pos_cm": 1,
+      "yaw_deg": 0,
+      "h_cm": 1
+     }
+    }
+   ],
+   "mind_stats": {
+    "jumps": 2,
+    "clean": 2,
+    "knocked": 0,
+    "distance": 153.90546744326258,
+    "naps": 1,
+    "zoomies": 0,
+    "sniffs": 1,
+    "kerbStops": 0,
+    "replans": 4,
+    "blocked": 0
+   },
+   "tasks": {
+    "trot": 1,
+    "sit": 1,
+    "jump": 3,
+    "explore": 5,
+    "sniff": 2,
+    "nap": 1
+   },
+   "distance_m": 154
+  }
+ ],
+ "remote": [
+  {
+   "deadman": {
+    "speed_before": 1.8,
+    "gait_before": "trot",
+    "noticed_s": 0.52,
+    "standing_after_s": 3.06,
+    "falls": 0
+   },
+   "mode_switch": {
+    "to_auto": 10,
+    "to_manual": 10,
+    "falls_after_auto": 0,
+    "falls_after_manual": 0,
+    "gaits_at_switch": {
+     "sniff": 1,
+     "walk": 3,
+     "turnclip": 1,
+     "sharp": 3,
+     "stand": 1,
+     "fallen": 1
+    }
+   },
+   "guard_wall": {
+    "target": "house wall (porch in the way at y 7.4-9)",
+    "closest_body_centre_to_wall_m": 2.75,
+    "bumps": 0,
+    "touch_s": 0,
+    "falls": 0,
+    "guard": "obstacle ahead: stopped",
+    "end_y": 6.25
+   },
+   "guard_kerb": {
+    "kerb_y": -15,
+    "min_body_centre_y": -14.07,
+    "nose_margin_m": 0.58,
+    "falls": 0,
+    "guard": "kerb ahead: stopped"
+   },
+   "wall_s": 27
+  },
+  {
+   "deadman": {
+    "speed_before": 1.8,
+    "gait_before": "trot",
+    "noticed_s": 0.52,
+    "standing_after_s": 3.06,
+    "falls": 0
+   },
+   "mode_switch": {
+    "to_auto": 10,
+    "to_manual": 10,
+    "falls_after_auto": 0,
+    "falls_after_manual": 0,
+    "gaits_at_switch": {
+     "sharp": 5,
+     "trot": 1,
+     "turnclip": 2,
+     "walk": 2
+    }
+   },
+   "guard_wall": {
+    "target": "house wall (porch in the way at y 7.4-9)",
+    "closest_body_centre_to_wall_m": 2.75,
+    "bumps": 0,
+    "touch_s": 0,
+    "falls": 0,
+    "guard": "obstacle ahead: stopped",
+    "end_y": 6.25
+   },
+   "guard_kerb": {
+    "kerb_y": -15,
+    "min_body_centre_y": -14.07,
+    "nose_margin_m": 0.58,
+    "falls": 0,
+    "guard": "kerb ahead: stopped"
+   },
+   "wall_s": 26
+  },
+  {
+   "deadman": {
+    "speed_before": 1.8,
+    "gait_before": "trot",
+    "noticed_s": 0.52,
+    "standing_after_s": 3.06,
+    "falls": 0
+   },
+   "mode_switch": {
+    "to_auto": 10,
+    "to_manual": 10,
+    "falls_after_auto": 0,
+    "falls_after_manual": 0,
+    "gaits_at_switch": {
+     "walk": 6,
+     "sharp": 4
+    }
+   },
+   "guard_wall": {
+    "target": "house wall (porch in the way at y 7.4-9)",
+    "closest_body_centre_to_wall_m": 2.75,
+    "bumps": 0,
+    "touch_s": 0,
+    "falls": 0,
+    "guard": "obstacle ahead: stopped",
+    "end_y": 6.25
+   },
+   "guard_kerb": {
+    "kerb_y": -15,
+    "min_body_centre_y": -14.07,
+    "nose_margin_m": 0.58,
+    "falls": 0,
+    "guard": "kerb ahead: stopped"
+   },
+   "wall_s": 29
+  }
+ ],
+ "commands": {
+  "auto": "QUIET=1 node remote_test.mjs <mujoco.js> <site data> auto 240 <seed 1-8>",
+  "remote": "QUIET=1 node remote_test.mjs <mujoco.js> <site data> remote <seed 1-3>"
+ }
+}

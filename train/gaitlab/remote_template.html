@@ -1,0 +1,558 @@
+<meta charset="utf-8">
+<title>Bolt Remote</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+  /* Layout. Bolt screen: the yard in 3D with a HUD, beside it "what Bolt sees" (its own map), then the driving
+     controls, the log and how it works. Remote (a phone): status on top, the Auto self mode switch, a thumb
+     joystick, skill buttons and Stop, all within one screen. Same look as Bolt's Day Out. */
+{{GAME_CSS}}
+  :root { --sky-top: #8fc1ea; --sky-bottom: #dcebf5; --map-unknown: #c9ccc6; --map-free: #f7f8f4; --map-wall: #2a2d2b; --map-road: #8a8f96; --map-ray: rgba(227, 98, 11, 0.35); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --map-unknown: #2b2f2c; --map-free: #3f4541; --map-wall: #e9ebe7; --map-road: #6c727a; --map-ray: rgba(255, 138, 61, 0.4); } }
+  :root[data-theme="dark"] { --map-unknown: #2b2f2c; --map-free: #3f4541; --map-wall: #e9ebe7; --map-road: #6c727a; --map-ray: rgba(255, 138, 61, 0.4); }
+  .stage { aspect-ratio: 16 / 10; background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
+  .hud.tl b#hDoing { font: 800 1.25rem/1.1 var(--display); color: var(--accent); }
+  .hud.tl .brain { font: 500 0.74rem/1.3 var(--mono); color: var(--muted); border: 0; padding: 0; border-radius: 0; display: block; }
+  .hud.tr { grid-template-columns: auto auto; }
+  .mode { display: inline-block; font: 600 0.72rem/1 var(--mono); letter-spacing: 0.08em; padding: 4px 8px; border-radius: 6px; background: var(--ink); color: var(--panel); text-transform: uppercase; }
+  .mode.auto { background: var(--accent); color: var(--panel); }
+  .ticker { position: absolute; left: 10px; right: 10px; bottom: 30px; display: grid; gap: 3px; justify-items: start; pointer-events: none; }
+  .ticker span { font: 500 0.82rem var(--body); padding: 3px 9px; border-radius: 8px; background: color-mix(in srgb, var(--panel) 80%, transparent); border: 1px solid var(--line); max-width: 100%; }
+  .ticker span:not(:last-child) { opacity: 0.7; }
+  .main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
+  .sees { display: grid; gap: 10px; }
+  .sees canvas { width: 100%; aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--line); background: var(--map-unknown); display: block; image-rendering: pixelated; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 400 0.74rem var(--mono); color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; border: 1px solid var(--line); }
+  .found { font: 400 0.8rem var(--mono); color: var(--muted); display: grid; gap: 2px; }
+  .drive { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px 22px; align-items: center; }
+  .joy { width: 168px; height: 168px; border-radius: 50%; border: 1px solid var(--line); background: radial-gradient(circle, var(--panel) 0 30%, var(--accent-soft) 31% 100%); position: relative; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  .joy::before, .joy::after { content: ""; position: absolute; background: var(--line); }
+  .joy::before { left: 50%; top: 10%; bottom: 10%; width: 1px; } .joy::after { top: 50%; left: 10%; right: 10%; height: 1px; }
+  .joy .knob { position: absolute; width: 64px; height: 64px; left: calc(50% - 32px); top: calc(50% - 32px); border-radius: 50%; background: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.25); z-index: 1; transition: transform 0.12s; }
+  .joy.held .knob { transition: none; }
+  .joy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .skills { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+  .skills button, .big { display: grid; place-items: center; gap: 1px; padding: 9px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font: 600 0.92rem var(--body); touch-action: manipulation; min-height: 48px; }
+  .skills button small { font: 400 0.68rem var(--mono); color: var(--muted); }
+  .skills button:hover, .big:hover { border-color: var(--accent); }
+  .skills button:focus-visible, .big:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .skills button:active { background: var(--accent-soft); }
+  .skills button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .big { font: 700 1.05rem var(--display); padding: 12px 18px; min-height: 52px; }
+  .big.auto[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+  .big.stop { background: var(--bad); border-color: var(--bad); color: var(--panel); }
+  .keys { font: 400 0.76rem/1.5 var(--mono); color: var(--muted); }
+  .keys kbd { font: 500 0.72rem var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; background: var(--panel); }
+  .log { max-height: 320px; overflow-y: auto; align-content: start; }
+  .log li span.cmd { color: var(--accent); } .log li span.bad { color: var(--bad); } .log li span.good { color: var(--good); }
+  .link { display: grid; gap: 10px; }
+  .pill.ok .dot { background: var(--good); } .pill.warn .dot { background: var(--warn); } .pill.off .dot { background: var(--muted); }
+  .notes { display: grid; gap: 8px; }
+  .notes li { max-width: 80ch; }
+  .tests { font: 400 0.8rem/1.5 var(--mono); color: var(--muted); }
+  footer { font: 400 0.78rem/1.5 var(--mono); color: var(--muted); display: grid; gap: 4px; }
+
+  /* ---- the remote (a phone) */
+  .rwrap { max-width: 520px; margin: 0 auto; padding: 12px max(16px, env(safe-area-inset-left, 0px)) 24px; display: grid; gap: 12px; }
+  .rwrap[hidden], .wrap[hidden] { display: none; }
+  .rtop { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .rtop h1 { font-size: 1.35rem; }
+  .rstatus { display: grid; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .rstatus b#rDoing { font: 800 1.2rem/1.15 var(--display); color: var(--accent); }
+  .rnums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .rnums div { display: grid; gap: 1px; } .rnums b { font: 600 0.98rem var(--mono); font-variant-numeric: tabular-nums; }
+  .rdrive { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+  .rwrap .joy { width: 180px; height: 180px; }
+  .rwrap .skills { grid-template-columns: repeat(2, 1fr); }
+  .rwrap .big { width: 100%; }
+  .rmsg { font: 400 0.85rem/1.45 var(--body); color: var(--muted); }
+  .rguard { font: 500 0.8rem var(--mono); color: var(--bad); min-height: 1.2em; }
+  @media (max-width: 860px) { .main { grid-template-columns: 1fr; } .sees canvas { max-width: 360px; } }
+  @media (max-width: 560px) {
+    .stage { aspect-ratio: 3 / 4; }
+    .hud { padding: 6px 8px; } .hud.tl { max-width: 60%; left: 6px; top: 6px; } .hud.tr { max-width: 40%; right: 6px; top: 6px; column-gap: 6px; }
+    .hud.tl b#hDoing { font-size: 1rem; } .hud.tl .brain { display: none; } .hud .label { font-size: 0.6rem; } .hud.tr b { font-size: 0.86rem; }
+    .ticker { bottom: 26px; left: 6px; right: 6px; } .ticker span { font-size: 0.74rem; } .ticker span:not(:last-child) { display: none; }
+    .stage .hint { display: none; }
+    .drive { grid-template-columns: 1fr; justify-items: center; } .drive .skills { width: 100%; }
+    .rwrap .joy { width: 150px; height: 150px; } .rwrap .joy .knob { width: 56px; height: 56px; left: calc(50% - 28px); top: calc(50% - 28px); }
+  }
+  @media (max-width: 380px) { .rdrive { grid-template-columns: 1fr; justify-items: center; } .rwrap .skills { width: 100%; grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+<!-- ======================================================= the Bolt screen -->
+<div class="wrap" id="screenView" hidden>
+  <header style="display:grid;gap:6px">
+    <span class="label">Bolt robot dog · simulation · drive it, or let it look after itself</span>
+    <h1>Bolt Remote</h1>
+    <p class="muted" style="margin:0;max-width:76ch">Bolt runs live in this browser: MuJoCo physics, and trained brains choosing every motor command fifty times a second. Drive it with the joystick, the keyboard or a game controller, or open this page on your phone and use that as the remote. Switch on <b>Auto self mode</b> and Bolt explores on its own, using only what its head-mounted scanner has seen: it maps the yard, steers round things, stops at the kerb, finds the hurdles and jumps them.</p>
+  </header>
+
+  <section class="panel link" aria-labelledby="linkTitle">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="linkTitle">Phone remote</h2>
+      <span class="pill off" id="linkPill"><span class="dot"></span><span id="linkText">connecting…</span></span>
+    </div>
+    <p class="muted" id="linkHelp">Open this same page on your phone (signed in to Claude) and it turns into the remote for this screen. Commands go both ways through the page's live room; the round-trip delay is measured and shown on both.</p>
+    <div class="row"><button class="btn" type="button" id="beRemote">Use this device as the remote</button></div>
+  </section>
+
+  <div class="main">
+    <section class="panel" aria-labelledby="yardTitle">
+      <h2 id="yardTitle" class="label" style="font-size:.72rem">The yard, live</h2>
+      <div class="stage" id="stage">
+        <div class="loading" id="loading">Loading the physics and Bolt's brains (about 15 MB)…</div>
+        <div class="hud tl">
+          <span><span class="mode" id="hMode">manual</span></span>
+          <b id="hDoing">waking up</b>
+          <span class="brain" id="hBrain">brain: –</span>
+        </div>
+        <div class="hud tr"><span class="label">Speed</span><b id="hSpeed">0.0 m/s</b><span class="label">Delay</span><b id="hDelay">–</b><span class="label">Falls</span><b id="hFalls">0</b><span class="label">Rate</span><b id="hRate">–</b></div>
+        <div class="ticker" id="ticker" aria-hidden="true"></div>
+        <div class="banner" id="banner" aria-live="polite"></div>
+        <div class="hint">drag to look around · pinch or scroll to zoom</div>
+      </div>
+    </section>
+    <section class="panel sees" aria-labelledby="seesTitle">
+      <h2 id="seesTitle">What Bolt sees</h2>
+      <canvas id="map" width="360" height="360" role="img" aria-label="Bolt's own map of the yard, built from its scanner"></canvas>
+      <div class="legend"><span><i style="background:var(--map-unknown)"></i>not seen yet</span><span><i style="background:var(--map-free)"></i>open ground</span><span><i style="background:var(--map-wall)"></i>something solid</span><span><i style="background:var(--map-road)"></i>road</span><span><i style="background:var(--accent)"></i>hurdle</span></div>
+      <div class="found" id="found"><span>Mapped: –</span></div>
+      <label class="row keys" style="gap:6px"><input type="checkbox" id="showRays" checked> show the scanner rays in 3D</label>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="driveTitle">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="driveTitle">Drive Bolt</h2>
+      <div class="row">
+        <button class="big auto" type="button" id="bAuto" aria-pressed="false">Auto self mode</button>
+        <button class="big stop" type="button" id="bStop">Stop</button>
+      </div>
+    </div>
+    <div class="drive">
+      <div class="joy" id="joy" tabindex="0" role="application" aria-label="Joystick: up to go, sideways to turn"><div class="knob"></div></div>
+      <div style="display:grid;gap:10px">
+        <div class="skills" id="skills" role="group" aria-label="Skills">
+          <button type="button" data-skill="walk">Walk<small>1</small></button>
+          <button type="button" data-skill="trot">Trot<small>2</small></button>
+          <button type="button" data-skill="canter">Canter<small>3</small></button>
+          <button type="button" data-skill="sit">Sit<small>4</small></button>
+          <button type="button" data-skill="lie">Lie down<small>5</small></button>
+          <button type="button" data-skill="stand">Stand<small>6</small></button>
+          <button type="button" data-skill="jump">Jump<small>7 · a hurdle ahead</small></button>
+        </div>
+        <p class="keys">Keyboard: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (<kbd>Shift</kbd> faster), <kbd>1</kbd>–<kbd>7</kbd> skills, <kbd>M</kbd> Auto self mode, <kbd>Space</kbd> stop. Game controller: left stick drives; A jump, B sit, X lie down, Y stand, LB walk, RB trot, RT canter, Start Auto, Back stop. Walk, Trot and Canter keep Bolt going (steer with the stick) until Stop. Bolt cannot walk backwards: pulling back stops it. If no command arrives for half a second, Bolt stops.</p>
+      </div>
+    </div>
+    <div class="row"><button class="btn" type="button" id="bNew">New yard, new Bolt</button><span class="keys" id="seedLine">Seed –</span></div>
+  </section>
+
+  <div class="two">
+    <section class="panel" aria-labelledby="didTitle">
+      <h2 id="didTitle">What happened</h2>
+      <ul class="log" id="log"><li class="muted">Starts as soon as the physics has loaded.</li></ul>
+    </section>
+    <section class="panel notes" aria-labelledby="howTitle">
+      <h2 id="howTitle">How Auto self mode knows where things are</h2>
+      <ul>
+        <li><b>Its own scanner, nothing else.</b> A depth scanner on Bolt's head casts 279 rays (31 across 120°, 9 rows from 2° up to 50° down), five sweeps a second, using MuJoCo's own ray caster against the physics. Each ray reports how far it went and what it hit: ground, road surface, something solid, or a hurdle, as a depth camera with a ground and object classifier would.</li>
+        <li><b>Its own map.</b> From those rays Bolt builds a 25 cm grid of the yard: unknown until seen, then open ground, solid, road or hurdle. Where it goes, what it sniffs, where it naps and which hurdles it jumps all come from this map, never from the yard's plan.</li>
+        <li><b>Hurdles.</b> Bolt works out each hurdle's position and line from the points it saw on it, and the bar's height from the bar itself (it walks up for a closer look if it has only seen the posts). The jump brain is handed that estimate, not the real bar.</li>
+        <li><b>Moving.</b> It plans a path on its map (A*, unknown ground allowed but dearer), steers for the most open heading, and has two reflexes: never walk into something within half a metre, and stop when it sees road ahead.</li>
+        <li><b>What is simplified.</b> Bolt's position comes straight from the simulator (a perfect odometry stand-in; a real robot's estimate drifts). The kerb has no height in this physics, so the road is a thin layer the scanner can tell apart. The scanner is levelled by the IMU and has no noise. Times between the phone and this screen are real.</li>
+      </ul>
+      <p class="tests" id="tests">Headless checks (train/gaitlab/remote_test.mjs, simulation, 29 Oct). Auto self mode, 8 runs of 4 minutes from an empty map: 18 of 18 jumps clean (bar up, all paws past the real bar, no fall), 0 times onto the road, 4 kerb stops, 3 bumps into something (10.6 s touching in 32 minutes), 7 falls, all 7 got up alone, 93% of the yard mapped on average; hurdles placed within 3 cm and bar heights within 1 cm of the real ones. Remote: with no command for 0.5 s Bolt stops (noticed after 0.52 s, standing 3.1 s later from a 1.8 m/s trot); 60 switches between Auto and manual, 0 falls; driven flat out at the house, the guard stopped it 1.15 m short of the porch; walked at the road, it stopped with the nose 0.58 m short of the kerb.</p>
+    </section>
+  </div>
+
+  <footer>
+    <span>Simulation: Bolt is a simulated robot; no real robot is being driven. Dog motion capture data: CC BY-NC 4.0. Robot, brains and page built with AI assistance (Claude).</span>
+    <span>MuJoCo physics with the Unitree A1 motor model, the same as in training. Falls are shown as they happen; Bolt gets itself up.</span>
+  </footer>
+</div>
+
+<!-- ======================================================= the remote (a phone) -->
+<div class="rwrap" id="remoteView" hidden>
+  <div class="rtop">
+    <div style="display:grid;gap:2px"><span class="label">Bolt robot dog · simulation</span><h1>Bolt Remote</h1></div>
+    <span class="pill off" id="rPill"><span class="dot"></span><span id="rLink">connecting…</span></span>
+  </div>
+  <div class="rstatus" aria-live="polite">
+    <span><span class="mode" id="rMode">manual</span></span>
+    <b id="rDoing">looking for Bolt's screen…</b>
+    <div class="rnums">
+      <div><span class="label">Speed</span><b id="rSpeed">–</b></div>
+      <div><span class="label">Delay</span><b id="rDelay">–</b></div>
+      <div><span class="label">Falls</span><b id="rFalls">–</b></div>
+      <div><span class="label">Hurdles</span><b id="rHurdles">–</b></div>
+    </div>
+    <span class="rguard" id="rGuard"></span>
+  </div>
+  <button class="big auto" type="button" id="rAuto" aria-pressed="false">Auto self mode</button>
+  <div class="rdrive">
+    <div class="joy" id="rJoy" tabindex="0" role="application" aria-label="Joystick: up to go, sideways to turn"><div class="knob"></div></div>
+    <div class="skills" id="rSkills" role="group" aria-label="Skills">
+      <button type="button" data-skill="walk">Walk</button>
+      <button type="button" data-skill="trot">Trot</button>
+      <button type="button" data-skill="canter">Canter</button>
+      <button type="button" data-skill="sit">Sit</button>
+      <button type="button" data-skill="lie">Lie down</button>
+      <button type="button" data-skill="stand">Stand</button>
+      <button type="button" data-skill="jump">Jump</button>
+    </div>
+  </div>
+  <button class="big stop" type="button" id="rStop">Stop</button>
+  <p class="rmsg" id="rMsg">Keep this page open on Bolt's screen (a laptop or TV) too. Push the stick up to go, sideways to turn; Walk, Trot and Canter keep Bolt going until Stop. If this phone stops sending (screen off, signal lost), Bolt stops within half a second.</p>
+  <div class="row"><button class="btn" type="button" id="beScreen">Show Bolt on this screen instead</button></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  // ---------- which role: the Bolt screen (the simulation) or the remote (a phone) ----------
+  const hashRole = location.hash === "#remote" ? "remote" : location.hash === "#screen" ? "screen" : null;
+  const phone = window.matchMedia("(pointer: coarse)").matches && Math.min(window.innerWidth, window.innerHeight) < 720;
+  const role = hashRole || (phone ? "remote" : "screen");
+  const switchTo = (r) => { location.hash = r; location.reload(); };
+  $("beRemote").addEventListener("click", () => switchTo("remote"));
+  $("beScreen").addEventListener("click", () => switchTo("screen"));
+
+  // ---------- the live room (the link between the phone and the Bolt screen) ----------
+  // Commands and status travel as presence: absolute state, refreshed many times a second, shared by the platform.
+  // Remote presence: { role: "remote", cmd: { mode, vx, turn, skill: { name, seq }, seq, t }, rtt }
+  // Bolt screen presence: { role: "bolt", st: status, ack: { seq, t } }
+  let room = null;
+  const roomReady = (async () => {
+    try { room = window.claude && window.claude.use ? await window.claude.use("room") : null; } catch (e) { room = null; }
+    return room;
+  })();
+  const others = (r) => (room ? room.peers().filter((p) => !p.sameTab && p.presence && p.presence.role === r) : []);
+  const latest = (list) => list.reduce((a, p) => (!a || p.updatedAt > a.updatedAt ? p : a), null);
+  const pill = (el, text, kind) => { el.className = `pill ${kind}`; el.lastElementChild.textContent = text; };
+
+  // a thumb joystick: x (+ right) and y (+ up) in -1..1 while held, 0 when let go
+  function joystick(el, onMove) {
+    const knob = el.querySelector(".knob"), st = { x: 0, y: 0, held: false };
+    let id = null;
+    const set = (x, y) => { st.x = x; st.y = y; const r = el.clientWidth / 2 - knob.clientWidth / 2; knob.style.transform = `translate(${x * r}px, ${-y * r}px)`; onMove && onMove(st); };
+    const at = (e) => { const b = el.getBoundingClientRect(), r = b.width / 2 - knob.clientWidth / 4; let x = (e.clientX - b.left - b.width / 2) / r, y = -(e.clientY - b.top - b.height / 2) / r; const n = Math.hypot(x, y); if (n > 1) { x /= n; y /= n; } set(x, y); };
+    el.addEventListener("pointerdown", (e) => { id = e.pointerId; el.setPointerCapture(id); st.held = true; el.classList.add("held"); at(e); e.preventDefault(); });
+    el.addEventListener("pointermove", (e) => { if (e.pointerId === id) at(e); });
+    const up = (e) => { if (e.pointerId !== id) return; id = null; st.held = false; el.classList.remove("held"); set(0, 0); };
+    el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); el.addEventListener("lostpointercapture", up);
+    return st;
+  }
+
+  if (role === "remote") startRemote(); else startScreen();
+
+  // ======================================================= the remote
+  function startRemote() {
+    $("remoteView").hidden = false;
+    const joy = joystick($("rJoy"));
+    const cmd = { mode: "manual", vx: 0, turn: 0, skill: { name: "stand", seq: 0 }, seq: 0, t: 0 };
+    let rtt = null, lastAck = 0, bolt = null, toggledAt = 0;
+    const sent = new Map();   // seq -> when it was sent (this phone's clock)
+    const setMode = (m) => { cmd.mode = m; toggledAt = Date.now(); $("rAuto").setAttribute("aria-pressed", String(m === "auto")); };
+    // a skill (or the stick) takes the controls back from Auto self mode
+    const skill = (name) => { setMode("manual"); cmd.skill = { name, seq: cmd.skill.seq + 1 }; if (navigator.vibrate) navigator.vibrate(15); };
+    for (const b of $("rSkills").querySelectorAll("button")) b.addEventListener("click", () => skill(b.dataset.skill));
+    $("rAuto").addEventListener("click", () => setMode(cmd.mode === "auto" ? "manual" : "auto"));
+    $("rStop").addEventListener("click", () => { skill("stand"); if (navigator.vibrate) navigator.vibrate([30, 40, 30]); });
+    roomReady.then((r) => {
+      if (!r) {
+        pill($("rPill"), "no link", "off"); $("rDoing").textContent = "The remote link is not available here";
+        $("rMsg").textContent = "The phone remote needs this page opened in Claude while signed in, on both devices. You can still drive Bolt on its own screen: tap \"Show Bolt on this screen instead\".";
+        return;
+      }
+      // ~20 commands a second while this page is on screen (a hidden page sends none: Bolt stops)
+      setInterval(() => {
+        if (document.visibilityState !== "visible") return;
+        cmd.vx = joy.y; cmd.turn = -joy.x; cmd.seq++;
+        if (cmd.mode === "auto" && (joy.y > 0.3 || Math.abs(joy.x) > 0.4)) setMode("manual"); cmd.t = Date.now(); sent.set(cmd.seq, cmd.t);
+        if (sent.size > 100) sent.delete(sent.keys().next().value);
+        r.presence({ role: "remote", cmd: { ...cmd, skill: { ...cmd.skill } }, rtt }).catch(() => {});
+      }, 50);
+      const show = () => {
+        const p = latest(others("bolt"));
+        bolt = p && Date.now() - p.updatedAt < 3000 ? p : null;
+        if (!r.connected()) pill($("rPill"), "reconnecting…", "warn");
+        else if (!bolt) pill($("rPill"), "no Bolt screen", "warn");
+        else pill($("rPill"), "linked", "ok");
+        if (bolt) {
+          const s = bolt.presence.st || {}, a = bolt.presence.ack;
+          if (a && a.seq !== lastAck && sent.has(a.seq)) { const m = Date.now() - sent.get(a.seq); rtt = rtt === null ? m : Math.round(0.8 * rtt + 0.2 * m); lastAck = a.seq; }
+          $("rMode").textContent = s.mode || "–"; $("rMode").className = `mode ${s.mode === "auto" ? "auto" : ""}`;
+          $("rDoing").textContent = s.doing || "–";
+          $("rSpeed").textContent = s.speed !== undefined ? `${s.speed.toFixed(1)} m/s` : "–";
+          $("rDelay").textContent = rtt !== null ? `${rtt} ms` : "–";
+          $("rFalls").textContent = s.falls !== undefined ? s.falls : "–";
+          $("rHurdles").textContent = s.hurdles !== undefined ? `${s.hurdles} seen` : "–";
+          $("rGuard").textContent = s.deadman ? "No signal reached Bolt: it stopped" : s.guard ? `Guard: ${s.guard}` : "";
+          // the Bolt screen changed mode itself (its own buttons): follow it, unless this phone just switched
+          if (s.mode && s.mode !== cmd.mode && Date.now() - toggledAt > 2000) { cmd.mode = s.mode; $("rAuto").setAttribute("aria-pressed", String(cmd.mode === "auto")); }
+        } else { $("rDoing").textContent = "Open this page on Bolt's screen (a laptop or TV) too"; }
+        requestAnimationFrame(show);
+      };
+      show();
+    });
+  }
+
+  // ======================================================= the Bolt screen
+  function startScreen() {
+    $("screenView").hidden = false;
+    const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+{{SCENE_JS}}
+{{YARD_JS}}
+    ballMesh.visible = false;   // no ball in this yard
+
+    // the scanner's rays in 3D: one line per ray, from the scanner to what it hit
+    const RAYS = 279, rayGeo = new THREE.BufferGeometry(), rayPos = new Float32Array(RAYS * 6);
+    rayGeo.setAttribute("position", new THREE.BufferAttribute(rayPos, 3));
+    const rayLines = new THREE.LineSegments(rayGeo, new THREE.LineBasicMaterial({ color: lin(css("--accent") || "#e3620b"), transparent: true, opacity: 0.22, depthWrite: false }));
+    rayLines.frustumCulled = false; scene.add(rayLines);
+
+    let lib, L = null, bundle = null, drawHurdles = () => {}, seen = 0, bannerUntil = 0;
+    const q = new URLSearchParams(location.search);
+    function banner(text, kind) { const el = $("banner"); el.textContent = text; el.className = `banner show ${kind === "good" ? "good" : kind === "bad" ? "bad" : ""}`; bannerUntil = performance.now() + 1400; }
+    const ticker = [];
+    function log(e) {
+      const li = document.createElement("li");
+      li.innerHTML = `<time>${fmt(e.t)}</time><span class="${e.kind}"></span>`; li.lastChild.textContent = e.text;
+      const list = $("log"); if (list.firstElementChild && list.firstElementChild.classList.contains("muted")) list.innerHTML = "";
+      list.prepend(li); while (list.children.length > 150) list.lastChild.remove();
+      ticker.push(e.text); while (ticker.length > 3) ticker.shift();
+      $("ticker").innerHTML = ""; for (const t of ticker) { const s = document.createElement("span"); s.textContent = t; $("ticker").append(s); }
+      if (/^Clear jump/.test(e.text)) banner("Clear!", "good");
+      else if (/^Bolt fell/.test(e.text)) banner("Fell!", "bad");
+      else if (/^Bolt got itself up/.test(e.text)) banner("Up again", "good");
+      else if (/stops at the kerb/.test(e.text)) banner("Kerb!", "good");
+      else if (/^No signal/.test(e.text)) banner("No signal: stop", "bad");
+    }
+    function resetView() {
+      const w = L.bolt.where(), f = camera.aspect < 1 ? 1.35 : 1;
+      camera.position.set(w.x - 3.0 * f, w.y - 4.6 * f, 2.3 * f);
+      controls.target.set(w.x, w.y, 0.35); controls.update(); look.x = w.x; look.y = w.y;
+    }
+    const look = { x: 0, y: 0 };
+    function follow(dt) {
+      const w = L.bolt.where(), k = 1 - Math.exp(-dt * 2.5), nx = look.x + (w.x - look.x) * k, ny = look.y + (w.y - look.y) * k;
+      const dx = nx - look.x, dy = ny - look.y; look.x = nx; look.y = ny;
+      camera.position.x += dx; camera.position.y += dy; controls.target.x += dx; controls.target.y += dy;
+      sun.position.set(look.x + SUN_DIR.x * 20, look.y + SUN_DIR.y * 20, SUN_DIR.z * 20); sun.target.position.set(look.x, look.y, 0);
+    }
+    function newYard(seed) {
+      L.reset(seed); seen = 0; ticker.length = 0; $("ticker").innerHTML = "";
+      $("log").innerHTML = '<li class="muted">A new yard: Bolt has not seen any of it yet.</li>';
+      $("seedLine").textContent = `Seed ${seed}`; setAuto(false); resetView();
+    }
+
+    // ---------- driving: the phone, this screen's joystick, keyboard and game controller ----------
+    const joy = joystick($("joy"));
+    const keys = new Set();
+    let localSeq = 0, remoteSeq = null, remoteMode = null, remoteHeld = false, remoteRtt = null, lastLocal = -1;
+    const setAuto = (on) => { if (!L) return; L.setMode(on ? "auto" : "manual"); $("bAuto").setAttribute("aria-pressed", String(on)); };
+    const skill = (name) => { if (!L) return; setAuto(false); L.pilot.skill(name); };   // a skill takes the controls back
+    for (const b of $("skills").querySelectorAll("button")) b.addEventListener("click", () => skill(b.dataset.skill));
+    $("bAuto").addEventListener("click", () => setAuto(L && L.mode !== "auto"));
+    $("bStop").addEventListener("click", () => skill("stand"));
+    $("bNew").addEventListener("click", () => { if (L) newYard(Date.now() % 1000000); });
+    const typing = (e) => e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA");
+    window.addEventListener("keydown", (e) => {
+      if (typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(k)) { keys.add(k); if (k.startsWith("arrow")) e.preventDefault(); }
+      else if (k === " ") { e.preventDefault(); skill("stand"); }
+      else if (k === "m") setAuto(L && L.mode !== "auto");
+      else if ("1234567".includes(k) && k.length === 1) skill(["walk", "trot", "canter", "sit", "lie", "stand", "jump"][+k - 1]);
+    });
+    window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
+    window.addEventListener("blur", () => keys.clear());
+    const padPrev = [];
+    function gamepad() {
+      const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+      const g = pads[0]; if (!g) return null;
+      const dz = (v) => (Math.abs(v) < 0.15 ? 0 : v);
+      const press = (i) => { const p = !!(g.buttons[i] && g.buttons[i].pressed), was = padPrev[i]; padPrev[i] = p; return p && !was; };
+      const map = { 0: "jump", 1: "sit", 2: "lie", 3: "stand", 4: "walk", 5: "trot", 7: "canter", 8: "stand" };
+      for (const [i, s] of Object.entries(map)) if (press(+i)) skill(s);
+      if (press(9)) setAuto(L && L.mode !== "auto");
+      return { x: dz(g.axes[0] || 0), y: -dz(g.axes[1] || 0) };
+    }
+    // one look at all the inputs: the local stick wins while it is used, else the phone, else a still heartbeat
+    function inputs(now) {
+      let vx = 0, turn = 0, local = false;
+      const fast = keys.has("shift") ? 1.0 : 0.65;
+      if (keys.has("w") || keys.has("arrowup")) { vx = fast; local = true; }
+      if (keys.has("s") || keys.has("arrowdown")) { vx = -1; local = true; }
+      if (keys.has("a") || keys.has("arrowleft")) { turn += 0.8; local = true; }
+      if (keys.has("d") || keys.has("arrowright")) { turn -= 0.8; local = true; }
+      if (joy.held) { vx = joy.y; turn = -joy.x; local = true; }
+      const g = gamepad(); if (g && (g.x || g.y)) { vx = g.y; turn = -g.x; local = true; }
+      if (local) { lastLocal = now; remoteHeld = false; if (L.mode === "auto" && (vx > 0.2 || Math.abs(turn) > 0.3)) setAuto(false); }
+      // the phone
+      const p = latest(others("remote"));
+      if (p && p.presence.cmd && Date.now() - p.updatedAt < 3000) {
+        const c = p.presence.cmd; remoteRtt = p.presence.rtt;
+        if (c.seq !== remoteSeq) {
+          remoteSeq = c.seq;
+          if (remoteMode !== null && c.mode !== remoteMode) setAuto(c.mode === "auto");
+          remoteMode = c.mode;
+          if (!local) { remoteHeld = true; L.pilot.receive(c, now); }
+          else if (c.skill && c.skill.seq !== L.pilot.skillSeq) L.pilot.receive({ ...c, vx, turn }, now);
+          room.presence({ ack: { seq: c.seq, t: c.t } }).catch(() => {});
+        }
+      } else remoteRtt = null;
+      if (local) L.pilot.receive({ mode: L.mode, vx, turn, seq: ++localSeq, t: Date.now() }, now);
+      else if (!remoteHeld) L.pilot.receive({ mode: L.mode, vx: 0, turn: 0, seq: ++localSeq, t: Date.now() }, now);   // standing by: keep the dead-man for the phone
+    }
+
+    // ---------- what Bolt sees: its own map, around it, north up ----------
+    const mapEl = $("map"), mctx = mapEl.getContext("2d"), VIEW = 24;
+    let mapImg = null, mapAt = 0;
+    function drawMap() {
+      const M = L.map, w = L.bolt.where(), n = Math.round(VIEW / M.cell), dpr = Math.min(2, window.devicePixelRatio || 1);
+      const size = Math.round(mapEl.clientWidth * dpr) || 360;
+      if (mapEl.width !== size) { mapEl.width = mapEl.height = size; }
+      if (!mapImg || mapImg.width !== n) mapImg = new ImageData(n, n);
+      const col = (v) => { const c = new THREE.Color(v || "#888"); return [c.r * 255, c.g * 255, c.b * 255]; };
+      const cU = col(css("--map-unknown")), cF = col(css("--map-free")), cW = col(css("--map-wall")), cR = col(css("--map-road")), cH = col(css("--accent"));
+      const x0 = w.x - VIEW / 2, y0 = w.y - VIEW / 2, D = mapImg.data;
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        const id = M.idx(x0 + (i + 0.5) * M.cell, y0 + (n - 1 - j + 0.5) * M.cell);
+        const c = id < 0 || !M.seen[id] ? cU : M.road[id] ? cR : M.occ[id] > 0.5 ? (M.hk[id] >= 0 ? cH : cW) : M.occ[id] < -0.3 ? cF : cU;
+        const k = 4 * (j * n + i); D[k] = c[0]; D[k + 1] = c[1]; D[k + 2] = c[2]; D[k + 3] = 255;
+      }
+      const off = drawMap.off || (drawMap.off = document.createElement("canvas")); off.width = off.height = n;
+      off.getContext("2d").putImageData(mapImg, 0, 0);
+      mctx.imageSmoothingEnabled = false; mctx.drawImage(off, 0, 0, size, size);
+      const S = size / VIEW, px = (x) => (x - x0) * S, py = (y) => size - (y - y0) * S;
+      // the latest scan, the path it is following, the hurdles it estimated, and Bolt
+      mctx.strokeStyle = css("--map-ray"); mctx.lineWidth = 1 * dpr; mctx.beginPath();
+      for (const h of L.scanner.last) { if (!h || h.kind === -1 || h.el < -0.1) continue; mctx.moveTo(px(h.o[0]), py(h.o[1])); mctx.lineTo(px(h.x), py(h.y)); }
+      mctx.stroke();
+      const T = L.auto.task;
+      if (T && T.path && (L.mode === "auto" || L.pilot.assist)) { mctx.strokeStyle = css("--good"); mctx.lineWidth = 2 * dpr; mctx.setLineDash([4 * dpr, 3 * dpr]); mctx.beginPath(); T.path.forEach((p, i) => (i ? mctx.lineTo(px(p[0]), py(p[1])) : mctx.moveTo(px(p[0]), py(p[1])))); mctx.stroke(); mctx.setLineDash([]); }
+      mctx.font = `500 ${11 * dpr}px IBM Plex Mono, monospace`; mctx.fillStyle = css("--ink");
+      for (const k of M.hurdles.keys()) {
+        const e = M.hurdle(k); if (!e) continue;
+        const ux = Math.cos(e.line), uy = Math.sin(e.line), hw = e.width / 2;
+        mctx.strokeStyle = css("--accent"); mctx.lineWidth = 3 * dpr; mctx.beginPath(); mctx.moveTo(px(e.at[0] - ux * hw), py(e.at[1] - uy * hw)); mctx.lineTo(px(e.at[0] + ux * hw), py(e.at[1] + uy * hw)); mctx.stroke();
+        mctx.fillText(e.h ? `${Math.round(e.h * 100)} cm` : "? cm", px(e.at[0]) + 6 * dpr, py(e.at[1]) - 6 * dpr);
+      }
+      const a = w.yaw, bx = px(w.x), by = py(w.y), r = 9 * dpr;
+      mctx.fillStyle = css("--accent"); mctx.strokeStyle = css("--panel"); mctx.lineWidth = 2 * dpr; mctx.beginPath();
+      mctx.moveTo(bx + r * Math.cos(a), by - r * Math.sin(a)); mctx.lineTo(bx + r * Math.cos(a + 2.5), by - r * Math.sin(a + 2.5)); mctx.lineTo(bx + r * Math.cos(a - 2.5), by - r * Math.sin(a - 2.5)); mctx.closePath(); mctx.fill(); mctx.stroke();
+      // how much it has mapped, and what it found
+      let known = 0; for (let i = 0; i < M.seen.length; i++) known += M.seen[i];
+      const H = [...M.hurdles.keys()].map((k) => M.hurdle(k)).filter(Boolean);
+      $("found").innerHTML = "";
+      const line = (t) => { const s = document.createElement("span"); s.textContent = t; $("found").append(s); };
+      line(`Mapped: ${Math.round(known * M.cell * M.cell)} m² · scans: ${L.scanner.sweeps}`);
+      line(H.length ? `Hurdles found: ${H.map((e) => (e.h ? `${Math.round(e.h * 100)} cm` : "height not seen yet")).join(", ")}` : "Hurdles found: none yet");
+      const S2 = L.auto.stats; line(`Jumps clear: ${S2.clean} of ${S2.jumps} · kerb stops: ${S2.kerbStops}`);
+    }
+    function drawRays() {
+      rayLines.visible = $("showRays").checked;
+      if (!rayLines.visible) return;
+      const last = L.scanner.last;
+      for (let i = 0; i < RAYS; i++) {
+        const h = last[i], k = 6 * i;
+        if (!h) { rayPos.fill(0, k, k + 6); continue; }
+        const e = h.kind === -1 ? [h.o[0] + h.v[0] * 10, h.o[1] + h.v[1] * 10, h.o[2] + h.v[2] * 10] : [h.x, h.y, h.z];
+        rayPos[k] = h.o[0]; rayPos[k + 1] = h.o[1]; rayPos[k + 2] = h.o[2]; rayPos[k + 3] = e[0]; rayPos[k + 4] = e[1]; rayPos[k + 5] = e[2];
+      }
+      rayGeo.attributes.position.needsUpdate = true;
+    }
+    const SHOWB = { gpu: "dog-motion brain (GPU, 360M)", g18: "canter brain (18g)", posture: "posture brain", walk12: "walk brain (sharp turns)", jump: "jump brain (59M)", getup: "self-righting brain" };
+    function hud() {
+      const b = L.body;
+      $("hMode").textContent = L.mode === "auto" ? "auto self mode" : L.pilot.assist ? "jump assist" : "manual";
+      $("hMode").className = `mode ${L.mode === "auto" || L.pilot.assist ? "auto" : ""}`;
+      $("hDoing").textContent = L.doing();
+      $("hBrain").textContent = `brain: ${SHOWB[b.brain()] || b.brain()}`;
+      $("hSpeed").textContent = `${b.speed.toFixed(1)} m/s`;
+      $("hFalls").textContent = b.falls;
+      $("hDelay").textContent = remoteRtt != null ? `${remoteRtt} ms` : "–";
+      $("hRate").textContent = `${rate.v.toFixed(2)}×`;
+      $("bAuto").setAttribute("aria-pressed", String(L.mode === "auto"));
+      for (const btn of $("skills").querySelectorAll("button")) btn.setAttribute("aria-pressed", String(L.mode === "manual" && (L.pilot.cruise === btn.dataset.skill || L.pilot.sticky === btn.dataset.skill)));
+      const peers = others("remote").filter((p) => Date.now() - p.updatedAt < 3000);
+      if (!room) pill($("linkPill"), "phone link not available here", "off");
+      else if (!room.connected()) pill($("linkPill"), "reconnecting…", "warn");
+      else if (peers.length) pill($("linkPill"), `phone remote linked${remoteRtt != null ? ` · ${remoteRtt} ms round trip` : ""}`, "ok");
+      else pill($("linkPill"), "waiting for a phone", "warn");
+    }
+    let lastStatus = 0;
+    function sendStatus(now) {
+      if (!room || now - lastStatus < 0.2) return;
+      lastStatus = now; room.presence({ role: "bolt", st: L.status() }).catch(() => {});
+    }
+
+    async function boot() {
+      try {
+        const [l, r, m, b, gpu, g18, j16, cl, h3] = await Promise.all([import("./live.js"), import("./remote.js"), import("./mujoco/mujoco.js"),
+          fetch("data/bolt_run.json").then((x) => x.json()), fetch("data/dog_gpu360.json").then((x) => x.json()), fetch("data/dog_18g.json").then((x) => x.json()),
+          fetch("data/jump.json").then((x) => x.json()), fetch("data/dog_clips.json").then((x) => x.json()), import("./hurdles3d.js")]);
+        lib = r; bundle = b;
+        const seed = Number(q.get("seed")) || (Date.now() % 1000000);
+        L = new lib.RemoteLife(l, await m.default(), bundle, { gpu, g18, jump: j16 }, cl, seed);
+        drawHurdles = h3.makeHurdles(THREE, scene, L.bolt, mesh, lin);
+        buildDog(bundle.geoms);
+        newYard(seed);
+      } catch (e) { console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; return; }
+      $("loading").hidden = true;
+      roomReady.then((rm) => { if (!rm) { $("linkHelp").textContent = "The phone remote needs this page opened in Claude while signed in (the live room isn't available in this view). Everything else works here: drive with the joystick, keyboard or a game controller."; } });
+    }
+
+    function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+    new ResizeObserver(resize).observe(stageEl);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rate = { sim: 0, wall: 0, v: 1 }, BUDGET = 35;
+    let last = performance.now(), acc = 0, slow = 0, quality = 3, grassMesh = world.children.find((o) => o.isInstancedMesh && o.count > 1000);
+    function lowerQuality() {
+      quality--;
+      if (quality === 2) renderer.setPixelRatio(1);
+      if (quality === 1) { sun.castShadow = false; if (grassMesh) grassMesh.visible = false; }
+      if (quality === 0) renderer.setPixelRatio(0.6);
+      resize();
+    }
+    function tick(t) {
+      const wall = (t - last) / 1000, dt = Math.min(0.25, wall); last = t;
+      if (wall > 0.055 && quality > 0) { if ((slow += wall) > 3) { slow = 0; lowerQuality(); } } else slow = Math.max(0, slow - wall * 0.5);
+      if (L) {
+        const now = t / 1000;
+        inputs(now);
+        acc += dt;
+        let n = 0; const dtc = L.bolt.dt, t0 = performance.now();
+        while (acc >= dtc && performance.now() - t0 < BUDGET) { L.step(now); acc -= dtc; n++; }
+        if (acc > 0.1) acc = 0.1;
+        rate.sim += n * dtc; rate.wall += wall; if (rate.wall > 2) { rate.v = rate.sim / rate.wall; rate.sim = 0; rate.wall = 0; }
+        while (seen < L.log.length) log(L.log[seen++]);
+        if (t > bannerUntil) $("banner").classList.remove("show");
+        drawBolt(); drawHurdles(); drawRays(); follow(dt); hud(); sendStatus(now);
+        if (t - mapAt > 200) { mapAt = t; drawMap(); }
+        const s = t / 1000, m = L.body.mode;
+        if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (["walk", "trot", "canter", "ctrot", "pace", "sharp"].includes(m) ? 11 : m === "lie" ? 2 : 5));
+        eyes.forEach((e) => (e.scale.z = m === "lie" && L.auto.task && L.auto.task.name === "nap" ? 0.15 : (s % 3.7) < 0.12 ? 0.12 : 1));
+      }
+      if (!reduced) { breeze.value = t / 1000; for (const c of window.__clouds || []) { c.position.x += c.userData.drift * dt; if (c.position.x > 260) c.position.x = -260; } }
+      controls.update(); renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+    resize(); requestAnimationFrame(tick); boot();
+    window.__remote = () => L;   // for checks
+  }
+})();
+</script>

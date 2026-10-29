@@ -86,3 +86,38 @@ Bundle and page (from `train/`; S = the scratchpad):
 Headless: `node gaitlab/agilityrun_test.mjs <mujoco.js> $S/agilityrun/site/data 6 1,2,3` (a scripted handler runs
 each level) and `... 8 drill` (each command in turn on an empty stretch). The page takes `?level=2`, `?demo`
 (the scripted handler plays) and `?speed=4` for tests.
+
+## Bolt Remote (drive it from a phone, or Auto self mode)
+
+`remote.js` + `remote_template.html` (simulation). The body is Bolt's Day Out's (`doglife.js` DogBody, the same
+brains). New: a head-mounted depth scanner (279 rays cast with MuJoCo's `mj_ray`, 5 sweeps a second; the hit geom
+comes back through the bindings' `IntBuffer`, a plain `Int32Array` is not written back), Bolt's own 25 cm occupancy
+map built from it (free / solid / road / hurdle, unknown until seen), hurdle estimates from the points seen on them,
+A* on the map plus an open-heading steer, a bumper and a kerb reflex. **Auto self mode** (`AutoMind`) explores,
+sniffs, trots, gets the zoomies, naps, watches the road and jumps hurdles using only that map, never `YARD`.
+**Manual** (`Pilot`): joystick speed and turn, Walk/Trot/Canter cruise, Sit/Lie/Stand, Jump (Bolt takes a hurdle
+it can see ahead, then hands back), a 0.5 s dead-man stop and a speed-aware collision guard.
+The page has two roles on one URL: the Bolt screen (the simulation; keyboard, on-screen joystick, game controller)
+and the remote (`#remote`, auto-picked on phones). They link through the artifact `room` capability (declare
+`capabilities: {room: {}}`): the remote's presence carries the command (absolute state: mode, vx, turn, skill+seq,
+seq, t), the Bolt screen's presence carries its status and an ack of the last command, so the phone measures the
+round trip. Simplified: Bolt's position is the simulator's (perfect odometry); the kerb has no height in this
+physics, so a 1 mm non-colliding road layer lets the scanner tell road from sidewalk; invisible walls mark the edge
+of the simulated world (the floor ends at +-20 m).
+
+Page (S = the scratchpad; data and mujoco/ are Bolt's Day Out's):
+
+    mkdir -p $S/remote/site && cp gaitlab/remote_template.html $S/remote/template.html && python gaitlab/build_pages.py $S remote
+    cp gaitlab/{live,doglife,game,imitate,hurdles3d,remote}.js $S/remote/site/ && cp -r $S/doglife/site/{data,mujoco} $S/remote/site/
+
+Headless (from `train/gaitlab`, D = the site data folder):
+
+    QUIET=1 node remote_test.mjs <mujoco.js> $D auto 240 <seed>   # Auto self mode from an empty map
+    QUIET=1 node remote_test.mjs <mujoco.js> $D remote <seed>      # dead-man, 20 mode switches, wall and kerb guard
+
+29 Oct, seeds 1-8 x 240 s (simulation): jumps 18 of 18 clean (bar up, all paws past the REAL bar line, no fall),
+0 road crossings, 4 kerb stops, 3 bump episodes (10.6 s touching in 32 min), 7 falls / 7 got up alone, 93% of the
+yard mapped (mean), hurdles within 3 cm and bar heights within 1 cm (4 of 16 sightings had no bar height yet).
+Remote, seeds 1-3 (identical): dead-man noticed 0.52 s after the last command, standing 3.06 s later from a
+1.8 m/s trot; 60 Auto/manual switches, 0 falls; flat out at the house the guard stopped it 1.15 m short of the
+porch; walking at the road the nose stopped 0.58 m short of the kerb. Each result line is in `remote_results.json`.
