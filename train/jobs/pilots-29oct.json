@@ -186,27 +186,6 @@
    "done_when": {
     "log_contains": "^done:"
    }
-  },
-  {
-   "name": "realbody",
-   "cmd": [
-    "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/venv/bin/python",
-    "-u",
-    "research/realbody_stress.py",
-    "mastermind/export_v8g/student.pt",
-    "--teachers",
-    "v8g",
-    "--n",
-    "20",
-    "--workers",
-    "1",
-    "--out",
-    "research/results/realbody_v8g.json"
-   ],
-   "log": "runs/realbody_v8g.log",
-   "done_when": {
-    "file": "research/results/realbody_v8g.json"
-   }
   }
  ]
 }

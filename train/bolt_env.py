@@ -234,6 +234,27 @@ def apply_shove(qvel, R, speed, spin, side):
     return qvel.at[0:3].add(dv).at[3:6].add(dw)
 HURDLE_ZONE = (-0.7, 1.0)   # m: high steps from 1.0 m before the bar until the body is 0.7 m past it
 
+# motor lag (ms) and lost-packet share in jump and get-up exams (fair_exam.py --motor-lag-ms/--drop); 0 = off
+EXAM_GAPS = dict(lag_ms=0.0, drop=0.0)
+
+
+def add_exam_gap_args(ap):
+    """--exam-latency-ms/--exam-lag-ms/--exam-drop: the real-body gaps every jump and get-up exam of this process uses
+    (training with delay should pick its best checkpoint with delay; 29 Oct: no-delay exams froze "best" at the start)."""
+    ap.add_argument("--exam-latency-ms", type=float, default=0.0, help="control delay (ms) in the exams")
+    ap.add_argument("--exam-lag-ms", type=float, default=0.0, help="motor lag (ms) in the exams")
+    ap.add_argument("--exam-drop", type=float, default=0.0, help="share of control packets lost in the exams")
+
+
+def set_exam_gaps(latency_ms=0.0, lag_ms=0.0, drop=0.0):
+    """Set the exam gaps of jump_env and getup_env in this process (call after the training envs are made)."""
+    import getup_env
+    import jump_env
+    jump_env.EXAM_LATENCY_MS = getup_env.EXAM_LATENCY_MS = float(latency_ms)
+    EXAM_GAPS.update(lag_ms=float(lag_ms), drop=float(drop))
+    return dict(latency_ms=float(latency_ms), lag_ms=float(lag_ms), drop=float(drop))
+
+
 class BoltEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
 
@@ -631,25 +652,42 @@ class BoltEnv(gym.Env):
 
     # ---- control delay (29 Oct, owner: "train delay into everything"): a real robot's motors get the targets sent
     # delay_sub physics steps ago. Envs set delay_sub per try (start_delay); 0 = no delay, the old behaviour.
-    delay_sub, _queue = 0, None
+    # lag_ms: first-order motor lag of the targets (mastermind/env.py's stress test); drop: share of control packets
+    # lost, the motors keeping the last target they got (29 Oct: 20 ms lag cost MasterMind 18 points, 10% loss 7).
+    delay_sub, _queue, lag_ms, drop, _lag_y, _last_exec = 0, None, 0.0, 0.0, None, None
 
-    def start_delay(self, ms):
-        """Control delay of `ms` for this try (whole 2 ms physics steps); the robot holds its first target meanwhile."""
+    def start_delay(self, ms, lag_ms=0.0, drop=0.0):
+        """Control delay of `ms` for this try (whole 2 ms physics steps); the robot holds its first target meanwhile.
+        Optional motor lag (ms) and packet loss (0..1) for the try too."""
         self.delay_sub = int(round(ms / 1000.0 / self.model.opt.timestep))
         self._queue = [self.data.ctrl.copy() for _ in range(self.delay_sub // self.frame_skip + 2)] if self.delay_sub else None
+        self.lag_ms, self.drop, self._last_exec = float(lag_ms), float(drop), None
+        self._lag_y = self.data.ctrl.copy() if lag_ms else None
 
     def _physics_step(self):
         """One control step of physics: the target just set in ctrl, or with start_delay's latency the one sent earlier
         (substep i gets the target from back control steps ago, +1 for the first `sub` substeps); ctrl keeps what was sent."""
-        if not self.delay_sub:
+        if not (self.delay_sub or self.lag_ms or self.drop):
             return physics(self.model, self.data, self.frame_skip)
         m, d = self.model, self.data
         sent = d.ctrl.copy()
-        self._queue = self._queue[1:] + [sent]
-        back, sub = divmod(self.delay_sub, self.frame_skip)
-        target, older = self._queue[-1 - back], self._queue[-2 - back]
+        got = sent
+        if self.drop and self._last_exec is not None and self.rng.random() < self.drop:
+            got = self._last_exec            # the packet was lost: the motors keep the last target they got
+        self._last_exec = got
+        if self.delay_sub:
+            self._queue = self._queue[1:] + [got]
+            back, sub = divmod(self.delay_sub, self.frame_skip)
+            target, older = self._queue[-1 - back], self._queue[-2 - back]
+        else:
+            sub, target, older = 0, got, got
+        g = 1.0 - np.exp(-m.opt.timestep / (self.lag_ms / 1000.0)) if self.lag_ms else 1.0
         for i in range(self.frame_skip):
-            d.ctrl[:] = older if i < sub else target
+            want = older if i < sub else target
+            if self.lag_ms:
+                self._lag_y = self._lag_y + g * (want - self._lag_y)
+                want = self._lag_y
+            d.ctrl[:] = want
             physics(m, d, 1)
         d.ctrl[:] = sent
 

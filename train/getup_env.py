@@ -34,6 +34,7 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
+import bolt_env
 from bolt_env import ACTION_SCALE, LIE_POSE, STANCES, BoltEnv, physics
 
 DOG = STANCES["dog"]
@@ -47,7 +48,7 @@ class GetUpEnv(BoltEnv):
     OBS = 46
 
     def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand", hard=False, motor_brake=None,
-                 latency_ms=(0.0, 0.0)):
+                 latency_ms=(0.0, 0.0), motor_lag_ms=(0.0, 0.0), drop=(0.0, 0.0)):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", skills=["stand"],
                          motor_brake=motor_brake)
         # hard=True (run "recover", from 17e): tougher falls and physics, see HARD_KINDS and _hard_physics
@@ -62,6 +63,8 @@ class GetUpEnv(BoltEnv):
         # latency_ms=(lo, hi): the motors get the targets sent that long ago, drawn per try (as imitate_env and
         # jump_env; 29 Oct: at 20 ms MasterMind's recovery stood up 16/30). Exams: EXAM_LATENCY_MS (fair_exam --latency-ms)
         self.latency_ms = tuple(latency_ms)
+        # motor_lag_ms, drop = (lo, hi): motor lag and lost control packets per try; exams use bolt_env.EXAM_GAPS
+        self.motor_lag_range, self.drop_range = tuple(motor_lag_ms), tuple(drop)
 
     def _obs(self):
         d, R = self.data, self._rotation()
@@ -192,7 +195,11 @@ class GetUpEnv(BoltEnv):
         self.t, self.last_action = 0, np.zeros(12)
         lat = EXAM_LATENCY_MS if self.exam_start is not None else (
             self.rng.uniform(*self.latency_ms) if self.latency_ms[1] > 0 else 0.0)
-        self.start_delay(lat)
+        if self.exam_start is not None:
+            lag, drop = bolt_env.EXAM_GAPS["lag_ms"], bolt_env.EXAM_GAPS["drop"]
+        else:
+            lag, drop = (self.rng.uniform(*r) if r[1] > 0 else 0.0 for r in (self.motor_lag_range, self.drop_range))
+        self.start_delay(lat, lag, drop)
         self.stood_at = None
         self.best_up = self._rotation()[2, 2]
         return self._obs(), {}

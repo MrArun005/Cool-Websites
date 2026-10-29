@@ -38,15 +38,15 @@ def main():
     ap.add_argument("--easy", action="store_true", help="recover: also the old falls and physics (17e's exam conditions)")
     ap.add_argument("--no-save", action="store_true")
     ap.add_argument("--latency-ms", type=float, default=0.0, help="fixed control delay (ms) in every try (29 Oct)")
+    ap.add_argument("--motor-lag-ms", type=float, default=0.0, help="fixed motor lag (ms) in every try")
+    ap.add_argument("--drop", type=float, default=0.0, help="share of control packets lost in every try")
     add_brake_args(ap, default=False)
     a = ap.parse_args()
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(a.motor_brake, a.brake_speed, a.brake_gain), flush=True)
     folder, out, t0 = Path(a.folder), {}, time.time()
-    if a.latency_ms:
-        import getup_env
-        import jump_env
-        jump_env.EXAM_LATENCY_MS = getup_env.EXAM_LATENCY_MS = a.latency_ms
-        out["latency_ms"] = a.latency_ms
+    if a.latency_ms or a.motor_lag_ms or a.drop:
+        from bolt_env import set_exam_gaps
+        out.update({k: v for k, v in set_exam_gaps(a.latency_ms, a.motor_lag_ms, a.drop).items() if v})
     if a.what == "jump":
         from jump_env import JumpPolicy, exam
         pol = JumpPolicy(folder)

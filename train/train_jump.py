@@ -20,7 +20,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 from jump_env import JumpEnv, JumpPolicy, exam
-from bolt_env import add_brake_args, set_motor_brake
+from bolt_env import add_brake_args, add_exam_gap_args, set_exam_gaps, set_motor_brake
 
 
 def widen(src, out):
@@ -193,9 +193,12 @@ def main():
     ap.add_argument("--handover-rate", type=float, default=0.0, help="share of training tries started from --handover-file")
     ap.add_argument("--latency-min-ms", type=float, default=0.0, help="per-try control delay drawn in [min, max] ms")
     ap.add_argument("--latency-max-ms", type=float, default=0.0, help="0: off; a real robot has ~10-20 ms")
+    ap.add_argument("--motor-lag-max-ms", type=float, default=0.0, help="per-try motor lag drawn in [0, max] ms (0: off)")
+    ap.add_argument("--drop-max", type=float, default=0.0, help="per-try share of lost control packets in [0, max] (0: off)")
     ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints and exams")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
+    add_exam_gap_args(ap)
     add_brake_args(ap, default=True)
     args = ap.parse_args()
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
@@ -207,7 +210,9 @@ def main():
                                                                                            approach_speed_min=args.approach_speed_min, run_frac=args.run_frac,
                                                                                            gait_start=args.gait_start, bar_max=args.bar_max,
                                                                                            handover_file=args.handover_file, handover_rate=args.handover_rate,
-                                                                                           latency_ms=(args.latency_min_ms, args.latency_max_ms)))
+                                                                                           latency_ms=(args.latency_min_ms, args.latency_max_ms),
+                                                                                           motor_lag_ms=(0.0, args.motor_lag_max_ms), drop=(0.0, args.drop_max)))
+    print("exam gaps:", set_exam_gaps(args.exam_latency_ms, args.exam_lag_ms, args.exam_drop), flush=True)
     if args.widen_from and not args.resume:
         args.resume = str(widen(args.widen_from, out / "widened"))
     if args.init_from and not args.resume:   # a model folder: policy.zip + vecnormalize.pkl

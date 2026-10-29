@@ -18,6 +18,7 @@ sys.path.insert(0, str(HERE.parent))
 
 import numpy as np  # noqa: E402
 
+import bolt_env  # noqa: E402
 from bolt_env import add_brake_args, set_motor_brake  # noqa: E402
 from jump_env import JumpEnv, JumpPolicy  # noqa: E402
 
@@ -29,6 +30,8 @@ def main():
     ap.add_argument("--heights", type=float, nargs="+", default=[0.20, 0.30, 0.40, 0.50])
     ap.add_argument("--max-steps", type=int, default=220)
     ap.add_argument("--latency-ms", type=float, default=0.0, help="fixed control delay (ms) for every try")
+    ap.add_argument("--motor-lag-ms", type=float, default=0.0, help="fixed motor lag (ms) for every try")
+    ap.add_argument("--drop", type=float, default=0.0, help="share of control packets lost in every try")
     ap.add_argument("--out")
     add_brake_args(ap, default=False)
     a = ap.parse_args()
@@ -36,8 +39,10 @@ def main():
     pol = JumpPolicy(a.folder)
     env = JumpEnv(randomize=False, real=True, max_steps=a.max_steps, handover_file=a.states, motor_brake=a.motor_brake)
     env.exam_latency_ms = a.latency_ms
+    bolt_env.EXAM_GAPS.update(lag_ms=a.motor_lag_ms, drop=a.drop)
     n = len(env.handover["ahead"])
-    res = dict(folder=a.folder, states=a.states, n=n, motor_brake=brake, latency_ms=a.latency_ms)
+    res = dict(folder=a.folder, states=a.states, n=n, motor_brake=brake, latency_ms=a.latency_ms, motor_lag_ms=a.motor_lag_ms,
+               drop=a.drop)
     for h in a.heights:
         wins = 0
         for k in range(n):
