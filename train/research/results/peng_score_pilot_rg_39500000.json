@@ -1,0 +1,38 @@
+{
+ "brain": "runs/pilot_rg/ck39500000",
+ "seconds": 10.0,
+ "seeds": [
+  1,
+  2
+ ],
+ "episodes": 5,
+ "clips": {
+  "trot": {
+   "peng_normalized_return": 0.731,
+   "sd": 0.004,
+   "full_episodes": 1.0,
+   "terms": {
+    "pose": 0.915,
+    "vel": 0.328,
+    "paw": 0.946,
+    "root": 0.071,
+    "root_vel": 0.574,
+    "drift_m": 3.675
+   }
+  },
+  "pace": {
+   "peng_normalized_return": 0.759,
+   "sd": 0.011,
+   "full_episodes": 1.0,
+   "terms": {
+    "pose": 0.942,
+    "vel": 0.458,
+    "paw": 0.959,
+    "root": 0.123,
+    "root_vel": 0.545,
+    "drift_m": 4.207
+   }
+  }
+ },
+ "command": "python research/peng_score.py runs/pilot_rg/ck39500000 --clips trot pace --seconds 10 --seeds 1 2 --episodes 5 --out research/results/peng_score_pilot_rg_39500000.json"
+}
