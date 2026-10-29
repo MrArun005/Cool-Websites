@@ -65,7 +65,13 @@ from teachers import imitate_brain, imitate_policy, teacher_set  # noqa: E402
 # policies to hardware: noise_scales dof_pos 0.01 rad, dof_vel 1.5 rad/s, ang_vel 0.2 rad/s, gravity 0.05, lin_vel 0.1 m/s).
 # Base height has no sensor on a real robot (it needs a state estimator); 0.02 m is our assumption, not a spec.
 NOISE = dict(grav=0.05, gyro=0.2, linvel=0.1, height=0.02, qpos=0.01, qvel=1.5)
-REAL_OFF = dict(noise=0.0, delay=0.0, lag=0.0, gain=1.0)
+REAL_OFF = dict(noise=0.0, delay=0.0, lag=0.0, gain=1.0,
+                # more real-body gaps (29 Oct, all off by default): constant per-try biases of what a real robot
+                # estimates rather than measures (IMU tilt rad, gyro rad/s, body speed m/s, body height m), joint
+                # encoder rounding (rad), the chance a control packet is lost (the motors keep the last target),
+                # payload as a share of the body mass, and foot grip as a multiple of the floor friction
+                imu_bias=0.0, gyro_bias=0.0, vel_bias=0.0, height_bias=0.0, quant=0.0, drop=0.0,
+                payload=0.0, friction=1.0)
 
 COMMANDS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "stand", "jump"]
 OBS = 84
@@ -148,6 +154,7 @@ class Master:
         self.hurdle_on = False
         self.rec = None           # the recovery in progress: dict(phase, calm, n)
         self.fallen = False
+        self._real_body()
         self.land_left = 0
         self.im.limit = 10 ** 9
         r, m = self.real, self.w.model
@@ -308,7 +315,33 @@ class Master:
             x[9] += k * NOISE["height"] * u(1)[0]
             x[10:22] += k * NOISE["qpos"] * u(12)
             x[22:34] += k * NOISE["qvel"] * 0.1 * u(12)
+        r = self.real
+        if r["imu_bias"] or r["gyro_bias"] or r["vel_bias"] or r["height_bias"]:
+            B = self._bias
+            x[0:3] += B["grav"]
+            x[3:6] += B["gyro"] * 0.25
+            x[6:9] += B["vel"]
+            x[9] += B["height"]
+        if r["quant"]:   # joint encoders report in steps
+            x[10:22] = np.round(x[10:22] / r["quant"]) * r["quant"]
         return x.astype(np.float32)
+
+    def _real_body(self):
+        """Per try: draw the constant sensor biases, and apply payload and foot grip (the stress test's real body)."""
+        r, m = self.real, self.w.model
+        brng = np.random.default_rng(int(self.rng.integers(1 << 31)))
+        sgn = lambda n: brng.choice([-1.0, 1.0], n) * brng.uniform(0.5, 1.0, n)  # noqa: E731
+        self._bias = dict(grav=r["imu_bias"] * sgn(3), gyro=r["gyro_bias"] * sgn(3), vel=r["vel_bias"] * sgn(3),
+                          height=r["height_bias"] * float(sgn(1)[0]))
+        self._last_exec = None
+        if not hasattr(self, "_mass0"):
+            self._mass0, self._fric0 = m.body_mass.copy(), m.geom_friction[:, 0].copy()
+        if not self.b.randomize:   # randomized tries re-draw mass and grip at every start; fixed ones restore them
+            m.body_mass[:], m.geom_friction[:, 0] = self._mass0, self._fric0
+        if r["payload"]:
+            m.body_mass[self.w.torso] += r["payload"] * float(np.sum(self._mass0))
+        if r["friction"] != 1.0:
+            m.geom_friction[:, 0] = m.geom_friction[:, 0] * r["friction"]
 
     def ctrl_of(self, u):
         return np.clip(DOG + self.full * np.clip(u, -1, 1), self.lo, self.hi)
@@ -321,6 +354,9 @@ class Master:
             a = np.clip(np.asarray(pol.act(obs_fn()), dtype=float), -1, 1)
             ctrl = np.clip(base + scale * a, self.lo, self.hi)
         ctrl = np.clip(np.asarray(ctrl, dtype=float), self.lo, self.hi)
+        if self.real["drop"] and self._last_exec is not None and self._nrng.random() < self.real["drop"]:
+            ctrl = self._last_exec       # the packet was lost: the motors keep the last target they got
+        self._last_exec = ctrl
         sent = ctrl                      # what the brain sent (its "previous action" input)
         if self.real["delay"]:           # stress test: the motors get the targets sent `delay` s ago
             self._queue.append(ctrl)

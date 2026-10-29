@@ -89,6 +89,14 @@ if __name__ == "__main__":
     ap.add_argument("--latency-ms", type=float, default=0.0, help="action delay in ms (a multiple of the 2 ms physics step; 20 ms = one control step)")
     ap.add_argument("--motor-lag-ms", type=float, default=0.0, help="first-order lag (time constant, ms) of the joint targets")
     ap.add_argument("--gain-scale", type=float, default=1.0, help="PD gains kp and kv x this (on top of the kp randomization)")
+    ap.add_argument("--imu-bias", type=float, default=0.0, help="constant tilt bias of the gravity reading, up to this (rad), per try")
+    ap.add_argument("--gyro-bias", type=float, default=0.0, help="constant gyro bias up to this (rad/s), per try")
+    ap.add_argument("--vel-bias", type=float, default=0.0, help="constant body-speed estimate bias up to this (m/s), per try")
+    ap.add_argument("--height-bias", type=float, default=0.0, help="constant body-height estimate bias up to this (m), per try")
+    ap.add_argument("--quant", type=float, default=0.0, help="joint encoder step (rad)")
+    ap.add_argument("--drop", type=float, default=0.0, help="chance a control packet is lost per step")
+    ap.add_argument("--payload", type=float, default=0.0, help="extra load on the body, share of total mass")
+    ap.add_argument("--friction", type=float, default=1.0, help="foot grip, multiple of the floor friction")
     bolt_env.add_brake_args(ap, default=False)
     a = ap.parse_args()
     over = json.loads(a.over)
@@ -97,7 +105,9 @@ if __name__ == "__main__":
     step_ms = m.w.model.opt.timestep * 1000
     if abs(round(a.latency_ms / step_ms) * step_ms - a.latency_ms) > 1e-6:
         ap.error(f"--latency-ms must be a multiple of the {step_ms:g} ms physics step")
-    m.real.update(noise=a.obs_noise, delay=a.latency_ms / 1000, lag=a.motor_lag_ms / 1000, gain=a.gain_scale)
+    m.real.update(noise=a.obs_noise, delay=a.latency_ms / 1000, lag=a.motor_lag_ms / 1000, gain=a.gain_scale,
+                  imu_bias=a.imu_bias, gyro_bias=a.gyro_bias, vel_bias=a.vel_bias, height_bias=a.height_bias,
+                  quant=a.quant, drop=a.drop, payload=a.payload, friction=a.friction)
     brain = None if a.brain == "teacher" else Student(a.brain, m)
     t0 = time.time()
     res = dict(brain=a.brain, teachers=a.teachers, over=over, imitate=a.imitate, n=a.n, seed=a.seed)
