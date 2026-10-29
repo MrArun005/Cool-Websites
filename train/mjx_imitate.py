@@ -239,7 +239,7 @@ class MjxImitate:
                  latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"],
                  terrain_cm=TERRAIN_ARGS["cm"], terrain_clips=TERRAIN_ARGS["clips"], terrain_spread=TERRAIN_ARGS["spread"],
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"], push_speed=PUSH["speed"],
-                 push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"]):
+                 push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"], root_global=0.0):
         from brax.envs.base import State
         self.State = State
         xml = (HERE / "bolt.xml").read_text()
@@ -260,6 +260,9 @@ class MjxImitate:
         m.opt.iterations, m.opt.ls_iterations = iterations, ls_iterations
         self.mx = mjx.put_model(m)
         self.randomize, self.switch_rate = randomize, switch_rate
+        # root_global (0..1, as ImitateEnv): blend of our two root terms with Peng 2020's global ones against the reference
+        # root integrated since the try began (info gp, gyaw, ginit; set at the try's first step); 0 = not computed
+        self.root_global = float(root_global)
         self.weights = dict(WEIGHTS, **(weights or {}))
         self.names = list(clips or ALL_CLIPS)
         T = clip_tables(self.names, clip_dir)
@@ -447,6 +450,29 @@ class MjxImitate:
                      root=jp.exp(-20 * e_h ** 2 - 10 * tilt ** 2), root_vel=jp.exp(-2 * e_v - 0.2 * e_w))
         return terms, dict(height_err=e_h, tilt=tilt)
 
+    def global_root_terms(self, d, info):
+        """Peng 2020 Eq. 8-9 against the reference root integrated since the try began (ImitateEnv._global_root_terms):
+        the root starts where the body is at the try's first step, then follows the clip's body velocity and yaw rate
+        turned by the reference heading (clip switches carry on from where it is). Returns (g_root, g_vel, info)."""
+        R = d.xmat[self.torso]
+        on = info["ginit"] > 0
+        p0 = jp.where(on, info["gp"], d.qpos[:2])
+        yaw0 = jp.where(on, info["gyaw"], jp.arctan2(R[1, 0], R[0, 0]))
+        u, _, vt = jp.linalg.svd(self.ref(info, "tilt"))
+        tilt = u @ vt
+        rz = lambda a: jp.array([[jp.cos(a), -jp.sin(a), 0.0], [jp.sin(a), jp.cos(a), 0.0], [0.0, 0.0, 1.0]])
+        R_ref = rz(yaw0) @ tilt
+        v_ref, w_ref = R_ref @ self.ref(info, "v_body"), R_ref @ self.ref(info, "w_body")
+        p = p0 + v_ref[:2] * self.dt
+        yaw = yaw0 + w_ref[2] * self.dt
+        R_ref = rz(yaw) @ tilt
+        h = d.qpos[2] if self.terrain is None else d.qpos[2] - self.ground_z(d)
+        dx2 = jp.sum((p - d.qpos[:2]) ** 2) + (self.ref(info, "height") - h) ** 2
+        ang = jp.arccos(jp.clip((jp.trace(R_ref.T @ R) - 1) / 2, -1.0, 1.0))
+        g_root = jp.exp(-20 * dx2 - 10 * ang ** 2)
+        g_vel = jp.exp(-2 * jp.sum((v_ref - d.qvel[0:3]) ** 2) - 0.2 * jp.sum((w_ref - R @ d.qvel[3:6]) ** 2))
+        return g_root, g_vel, dict(info, gp=p.astype(jp.float32), gyaw=jp.float32(yaw), ginit=jp.int32(1))
+
     @staticmethod
     def contact(d):
         return d._impl.contact if hasattr(d, "_impl") and hasattr(d._impl, "contact") else d.contact
@@ -506,6 +532,8 @@ class MjxImitate:
                     last_action=jp.zeros(12), trunc=jp.float32(0.0))
         if self.transition_weight:
             info["swt"] = jp.int32(-10 ** 6)   # step of the last mid-try switch (none yet)
+        if self.root_global:   # the reference root: set from the body at the try's first step (ImitateEnv._global_root_terms)
+            info.update(gp=jp.zeros(2, jp.float32), gyaw=jp.float32(0.0), ginit=jp.int32(0))
         if self.real_on:   # latency in physics substeps, drawn per try
             ms = jax.random.uniform(k_lat, minval=self.latency_ms[0], maxval=self.latency_ms[1]) if self.latency_ms[1] > 0 else jp.float32(0.0)
             info["dsub"] = jp.round(ms / 1000.0 / self.sub_dt).astype(jp.int32)
@@ -686,6 +714,10 @@ class MjxImitate:
             if self.transition_weight:
                 info["swt"] = jp.where(go, info["t"], info["swt"])
         terms, err = self.tracking(d, info)
+        if self.root_global:   # Peng's global root terms blended in (ImitateEnv.step)
+            g_root, g_vel, info = self.global_root_terms(d, info)
+            rg = self.root_global
+            terms = dict(terms, root=(1 - rg) * terms["root"] + rg * g_root, root_vel=(1 - rg) * terms["root_vel"] + rg * g_vel)
         reward = sum(self.weights[k] * v for k, v in terms.items())
         floor_ok = self.ref(info, "height") < 0.3     # sitting and lying: the body may rest on the floor
         high = jp.abs(err["height_err"]) > 0.15
@@ -802,7 +834,8 @@ def train(args):
                           obs_noise=args.obs_noise, motor_lag_ms=args.motor_lag_ms, terrain_cm=cm, terrain_clips=args.terrain_clips,
                           terrain_spread=args.terrain_spread, terrain_seed=args.terrain_seed, push_interval=args.push_interval,
                           push_prob=args.push_prob, push_speed=args.push_speed, push_spin=args.push_spin,
-                          motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain)
+                          motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain,
+                          root_global=args.root_global)
 
     phases = curriculum(args.terrain_cm, args.terrain_at, args.steps)
     hidden = W["hidden"] if W else (512, 256)
@@ -921,6 +954,8 @@ def main():
     t.add_argument("--motor-brake", action=argparse.BooleanOptionalAction, default=True,
                    help="motor braking above --brake-speed (bolt_env back-EMF model); default on for training")
     t.add_argument("--brake-speed", type=float, default=BRAKE["speed"], help="rad/s where braking starts (default %(default)s, the drive cutoff)")
+    t.add_argument("--root-global", type=float, default=0.0,
+                   help="0..1 blend toward Peng 2020's global root terms (heading and path), as train_imitate.py; 0 = our terms")
     t.add_argument("--brake-gain", type=float, default=BRAKE["gain"], help="braking N·m per rad/s above --brake-speed (default %(default)s)")
     args = ap.parse_args()
     if args.cmd == "warm":

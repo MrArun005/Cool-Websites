@@ -94,7 +94,7 @@ def main():
                      ("--terrain-cm", dict(type=float, nargs="+")), ("--terrain-at", dict(type=float, nargs="+")),
                      ("--terrain-clips", dict(nargs="+")), ("--terrain-spread", dict(type=float)), ("--terrain-seed", dict(type=int)),
                      ("--push-interval", dict(type=float)), ("--push-prob", dict(type=float)), ("--push-speed", dict(type=float)),
-                     ("--push-spin", dict(type=float)),
+                     ("--push-spin", dict(type=float)), ("--root-global", dict(type=float)),
                      ("--brake-speed", dict(type=float)), ("--brake-gain", dict(type=float))]:
         ap.add_argument(flag, **kw, help="imitate: passed to mjx_imitate.py train (default: its own)")
     ap.add_argument("--motor-brake", action=argparse.BooleanOptionalAction, help="imitate: passed on (default: mjx_imitate's, on)")

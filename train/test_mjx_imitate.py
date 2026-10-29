@@ -23,6 +23,10 @@ identical states and queues, and the noise's bounds.
 Rough terrain and pushes: the same field, xml and ground heights; the same start on the field, inputs and one control
 step on it (paws and shins on the bumps); the same shove.
 
+Peng's global root terms (root_global > 0): the two terms, the new reference root and its start at a try's first step
+on identical states and reference roots, tries with a forced clip switch; alone with
+    <cpu python> test_mjx_imitate.py dump-root-global <cases.pkl>   then   <jax python> test_mjx_imitate.py check-root-global <cases.pkl>
+
 Unit tests (CPU stack; landing and moving starts keep the 75-input layout, rate 0 leaves the env as it was):
     <cpu python> -m unittest test_mjx_imitate
 """
@@ -816,6 +820,83 @@ def check_landing(M, C):
     print(f"[landing reset+step] obs {st.obs.shape} -> {st2.obs.shape}, landing state {int(st.info['land'])}, finite {bool(jp.all(jp.isfinite(st2.obs)))}")
 
 
+def dump_root_global(pol, rng):
+    """Tries with root_global=1 (Peng's global root terms), a forced clip switch mid-try in some (check_root_global):
+    per step the reference root before and after, and the two terms recomputed on up-to-date kinematics."""
+    import mujoco
+    from imitate_env import ALL_CLIPS, ImitateEnv
+    clips = [c for c in ALL_CLIPS if c != "getup"]
+    env = ImitateEnv(randomize=False, clips=clips, slots=8, root_global=1.0)
+    steps = []
+    for k in range(8):
+        name = ("trot", "pace", "walk", "canter", "turn_left", "turn_right", "trot", "walk")[k]
+        env.exam_start = (name, float(rng.uniform(0, env.clips[name].length)))
+        obs, _ = env.reset(seed=1900 + k)
+        for t in range(40):
+            if k % 2 and t == 20:   # a forced switch: the reference root carries on (ImitateEnv does not restart it)
+                env._switch_to(env.clips["trot" if name != "trot" else "walk"])
+            ref = getattr(env, "_ref_root", None)
+            pre = None if ref is None or ref[2] != env._try_id else (ref[0].copy(), float(ref[1]))
+            a = np.clip(pol.act(obs) + rng.normal(0, 0.1, 12), -1, 1)
+            obs, r, fell, done, info = env.step(a)
+            post = (env._ref_root[0].copy(), float(env._ref_root[1]))
+            d2 = mujoco.MjData(env.model)
+            d2.qpos[:], d2.qvel[:], d2.ctrl[:] = env.data.qpos, env.data.qvel, env.data.ctrl
+            mujoco.mj_forward(env.model, d2)
+            d, env.data = env.data, d2
+            saved = env._ref_root
+            env._ref_root = None if pre is None else [pre[0].copy(), pre[1], env._try_id]
+            f_root, f_vel = env._global_root_terms()
+            f_post = (env._ref_root[0].copy(), float(env._ref_root[1]))
+            env._ref_root, env.data = saved, d
+            steps.append(dict(clip=ALL_CLIPS.index(env.clip.name), tau0=env.tau0, t=env.t, qpos=env.data.qpos.copy(), qvel=env.data.qvel.copy(),
+                              pre=pre, post=post, f_post=f_post, f_root=float(f_root), f_vel=float(f_vel),
+                              r_root=info["r_root"], r_root_vel=info["r_root_vel"]))
+            if fell or done:
+                break
+    return dict(steps=steps, clips=clips)
+
+
+def check_root_global(M, C):
+    """Peng's global root terms on identical states and reference roots: MjxImitate.global_root_terms against
+    ImitateEnv._global_root_terms (the terms, the new reference root, and its start at a try's first step)."""
+    import jax
+    import jax.numpy as jp
+    from mujoco import mjx
+    env = M.MjxImitate(randomize=False, switch_rate=0.0, clips=C["clips"], root_global=1.0)
+
+    @jax.jit
+    def terms(qpos, qvel, info):
+        d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel))
+        g, v, info = env.global_root_terms(d, info)
+        return g, v, info["gp"], info["gyaw"]
+
+    dr, dv, dp, dy, n_first, n_sw = [], [], [], [], 0, 0
+    prev = None
+    for s in C["steps"]:
+        first = s["pre"] is None
+        n_first += first
+        n_sw += prev is not None and not first and s["clip"] != prev
+        prev = s["clip"]
+        gp0, gy0 = (np.zeros(2), 0.0) if first else s["pre"]
+        info = dict(clip=jp.int32(env.names.index(M.ALL_CLIPS[s["clip"]])), tau0=jp.float32(s["tau0"]), t=jp.int32(s["t"]),
+                    gp=jp.array(gp0, jp.float32), gyaw=jp.float32(gy0), ginit=jp.int32(0 if first else 1))
+        g, v, gp, gy = terms(jp.array(s["qpos"], jp.float32), jp.array(s["qvel"], jp.float32), info)
+        dr.append(abs(float(g) - s["f_root"]))
+        dv.append(abs(float(v) - s["f_vel"]))
+        dp.append(np.abs(np.asarray(gp) - s["f_post"][0]).max())
+        dy.append(abs(float(gy) - s["f_post"][1]))
+    print(f"[root global] {len(dr)} steps ({n_first} try starts, {n_sw} switches): root |diff| max {max(dr):.1e}, root_vel |diff| max {max(dv):.1e}; "
+          f"reference root position |diff| max {max(dp):.1e} m, heading {max(dy):.1e} rad")
+    st = jax.jit(env.reset)(jax.random.PRNGKey(3))
+    step = jax.jit(env.step)
+    for _ in range(3):
+        st = step(st, jp.zeros(12))
+    print(f"[root global reset+step] finite obs {bool(jp.all(jp.isfinite(st.obs)))}, reward {float(st.reward):.3f}, "
+          f"reference root set {int(st.info['ginit'])}, r_root {float(st.metrics['r_root']):.3f}")
+    return max(dr), max(dv), max(dp), max(dy)
+
+
 def dump(zip_path, warm_path, out):
     import mujoco
     from imitate_env import ALL_CLIPS, ImitateEnv, ImitatePolicy
@@ -881,7 +962,8 @@ def dump(zip_path, warm_path, out):
     Path(out).write_bytes(pickle.dumps(dict(starts=starts, steps=steps, switches=switches, obs=obs_set, acts=acts, landing=dump_landing(pol, rng),
                                             moving=dump_moving(pol, rng), brake=dump_brake(pol, rng),
                                             transition=dump_transition(pol, rng), real=dump_real(pol, rng),
-                                            terrain=dump_terrain(pol, rng), shove=dump_shove(rng))))
+                                            terrain=dump_terrain(pol, rng), shove=dump_shove(rng),
+                                            root_global=dump_root_global(pol8(), rng))))
     print(f"{len(starts)} starts, {len(steps)} steps, {len(switches)} switches -> {out}")
 
 
@@ -977,6 +1059,8 @@ def check(warm_path, cases):
         check_terrain(M, C["terrain"])
     if "shove" in C:
         check_shove(M, C["shove"])
+    if "root_global" in C:
+        check_root_global(M, C["root_global"])
     # 5. warm-started Brax policy vs ImitatePolicy.act
     W = pickle.loads(Path(warm_path).read_bytes())
     nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(75, 12)
@@ -988,5 +1072,17 @@ def check(warm_path, cases):
     print(f"[warm start] critic on them: {v.min():.2f} .. {v.max():.2f} (SB3 normalized-return units)")
 
 
+def pol8():
+    """The 8-slot brain the heading pilot started from (run 18g 35.5M), for the root-global tries."""
+    from imitate_env import ImitatePolicy
+    return ImitatePolicy(HERE.parent / "models" / "bolt-dog-canter-switching-18g-35.5M", "policy.zip", "vecnormalize.pkl")
+
+
 if __name__ == "__main__":
-    dump(*sys.argv[2:5]) if sys.argv[1] == "dump" else check(*sys.argv[2:4])
+    if sys.argv[1] == "dump-root-global":       # <cpu python> test_mjx_imitate.py dump-root-global <cases.pkl>
+        Path(sys.argv[2]).write_bytes(pickle.dumps(dict(root_global=dump_root_global(pol8(), np.random.default_rng(0)))))
+    elif sys.argv[1] == "check-root-global":    # <jax python> test_mjx_imitate.py check-root-global <cases.pkl>
+        import mjx_imitate
+        check_root_global(mjx_imitate, pickle.loads(Path(sys.argv[2]).read_bytes())["root_global"])
+    else:
+        dump(*sys.argv[2:5]) if sys.argv[1] == "dump" else check(*sys.argv[2:4])
