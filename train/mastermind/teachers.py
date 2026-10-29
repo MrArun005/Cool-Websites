@@ -37,6 +37,8 @@ def imitate_brain(which="18e"):
         return MODELS / "bolt-dog-canter-switching-18g-35.5M", "policy.zip", "vecnormalize.pkl"
     if which == "18d":   # run 18d's best (24.5M): all 9 clips, no switch training; sit 95%, lie 94%, getup 92%
         return MODELS / "bolt-dog-getup-18d-24.5M", "policy.zip", "vecnormalize.pkl"
+    if which == "c38":   # canter pilot 38.0M (29 Oct): canter at 77% of the dog's speed, 8-slot like 18g35
+        return MODELS / "bolt-dog-canter-speed-38M", "policy.zip", "vecnormalize.pkl"
     if which == "18g":   # run 18g's newest best (canter switching), fetched into $IMITATE18G
         return Path(os.environ.get("IMITATE18G", MODELS / "bolt-dog-canter-switching-18g")), "policy.zip", "vecnormalize.pkl"
     if which == "r4":
@@ -113,6 +115,8 @@ SETS["v7s"] = dict(SETS["v6s"], land_hold=0.6, jump=MODELS / "bolt-dog-jump-hand
 SETS["v8g"] = dict(SETS["v7s"], clips={c: "gpu3" for c in ("walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie")})
 # v9j (29 Oct): v8g with the jump brain trained on real hand-overs for 12 h on Kaggle (jump-handover 74M: held-out
 # hand-overs 87/86/91/90% at 20-50 cm vs 84/90/87/73% for 59M)
+# v7c (29 Oct): v7s with the faster canter candidate (canter-speed 38M) for the canter clip
+SETS["v7c"] = dict(SETS["v7s"], clips=dict(SETS["v7s"]["clips"], canter="c38"))
 SETS["v9j"] = dict(SETS["v8g"], jump=MODELS / "bolt-dog-jump-handover-74M")
 
 
