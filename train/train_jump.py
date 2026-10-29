@@ -189,6 +189,8 @@ def main():
     ap.add_argument("--select-seed", type=int, default=5000, help="mid-stride exam first seed (default 5000, as the still-legs exam)")
     ap.add_argument("--no-midstride-log", action="store_true",
                     help="skip the mid-stride exam (it runs at every checkpoint whenever a speed is known, to log its score)")
+    ap.add_argument("--handover-file", help="real hand-over states (research/record_handover.py) to start tries from")
+    ap.add_argument("--handover-rate", type=float, default=0.0, help="share of training tries started from --handover-file")
     ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints and exams")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
@@ -201,7 +203,8 @@ def main():
     venv = make_vec_env(JumpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(real=args.real, approach=tuple(args.approach), max_steps=args.max_steps,
                                                                                            approach_speed=args.approach_speed,
                                                                                            approach_speed_min=args.approach_speed_min, run_frac=args.run_frac,
-                                                                                           gait_start=args.gait_start, bar_max=args.bar_max))
+                                                                                           gait_start=args.gait_start, bar_max=args.bar_max,
+                                                                                           handover_file=args.handover_file, handover_rate=args.handover_rate))
     if args.widen_from and not args.resume:
         args.resume = str(widen(args.widen_from, out / "widened"))
     if args.init_from and not args.resume:   # a model folder: policy.zip + vecnormalize.pkl

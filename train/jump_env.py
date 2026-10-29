@@ -58,12 +58,18 @@ class JumpEnv(BoltEnv):
     OBS = 49   # 51 with real=True
 
     def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0,
-                 approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50, motor_brake=None, under_margin=0.0):
+                 approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50, motor_brake=None, under_margin=0.0,
+                 handover_file=None, handover_rate=0.0):
         # under_margin (m): the body's centre must be at least bar height + this when it crosses the bar's line, or
         # Bolt went UNDER the bar (28 Oct: bars of 60-75 cm are higher than Bolt's back, and "all paws past the bar"
         # counted running under a 70 cm bar as a clean jump). 0 = centre above the bar top; a trunk that crosses
         # lower than that either hits the bar or passes beneath it. Going under ends the try as a failure.
         self.under_margin = under_margin
+        # handover_file: real trot -> jump hand-over states recorded in MasterMind's world (research/record_handover.py);
+        # handover_rate of the training tries start from one of them (body state as recorded, the bar where it was,
+        # a practice height), instead of the synthetic mid-stride pose. Exams: exam_handover = a state index.
+        self.handover = dict(np.load(handover_file)) if handover_file else None
+        self.handover_rate, self.exam_handover = handover_rate, None
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
                          hurdles="real" if real else True, skills=["stand"], motor_brake=motor_brake)
         self.real = real
@@ -183,6 +189,10 @@ class JumpEnv(BoltEnv):
         for _ in range(25):  # settle into the dog stance on the motors
             physics(m, d, self.frame_skip)
         exam = self.exam_bar is not None
+        ho = self.exam_handover if exam else (
+            int(self.rng.integers(len(self.handover["ahead"]))) if self.handover is not None and self.rng.random() < self.handover_rate else None)
+        if ho is not None:
+            return self._handover_start(ho)
         v0 = self.exam_speed if exam else (
             self.rng.uniform(self.approach_speed_min, self.approach_speed) if self.approach_speed and self.rng.random() < self.run_frac else 0.0)
         if v0 and ((exam and self.exam_gait) or (not exam and self.gait_start and self.rng.random() < self.gait_start)):
@@ -197,6 +207,17 @@ class JumpEnv(BoltEnv):
             R = self._rotation()
             d.qvel[0:2] = v0 * R[:2, 0] / np.linalg.norm(R[:2, 0])
         self.t, self.last_action = 0, np.zeros(12)
+        self.start_try()
+        return self._obs(), {}
+
+    def _handover_start(self, k):
+        """Start from recorded hand-over k: Bolt's body as MasterMind handed it over, the bar where it stood then."""
+        H, d = self.handover, self.data
+        d.qpos[2:19], d.qvel[0:18], d.ctrl[:] = H["qpos"][k], H["qvel"][k], H["ctrl"][k]
+        mujoco.mj_forward(self.model, d)
+        h = self.exam_bar[1] if self.exam_bar is not None else self._bar_height()
+        self.place_real(float(H["ahead"][k]), h, float(H["heading_err"][k]), float(H["off_line"][k]))
+        self.t, self.last_action = 0, np.clip((d.ctrl - DOG) / ACTION_SCALE, -1, 1)
         self.start_try()
         return self._obs(), {}
 
