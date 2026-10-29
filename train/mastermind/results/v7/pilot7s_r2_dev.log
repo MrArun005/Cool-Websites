@@ -1,0 +1,34 @@
+{'track_walk': 0.908, 'fall_walk': 0.0, 'speed_walk': 0.87, 'track_trot': 0.887, 'fall_trot': 0.0, 'speed_trot': 0.89, 'track_pace': 0.907, 'fall_pace': 0.0, 'speed_pace': 0.87, 'track_canter': 0.68, 'fall_canter': 0.0, 'speed_canter': 0.65, 'track_turn_left': 0.89, 'fall_turn_left': 0.0, 'speed_turn_left': 0.24, 'track_turn_right': 0.888, 'fall_turn_right': 0.0, 'speed_turn_right': 0.34, 'track_sit': 0.957, 'fall_sit': 0.0, 'track_lie': 0.866, 'fall_lie': 0.0}
+gaits: done (40 s)
+rest: done (77 s)
+rest_still: done (113 s)
+jump20: done (129 s)
+jump30: done (146 s)
+jump40: done (164 s)
+shove: done (188 s)
+jump50: done (207 s)
+walk->trot                          30/30    100%    0
+trot->canter                        30/30    100%    0
+canter->trot                        27/30     90%    0
+trot->walk                          25/27     93%    3
+walk->sit                           30/30    100%    0
+walk->sit [pose reached]            27/30     90%    0
+sit->lie                            27/30     90%    0
+sit->lie [pose reached]             27/30     90%    0
+lie->stand (posture)                27/27    100%    3
+still: still->sit                   30/30    100%    0
+still: still->sit [pose reached]    30/30    100%    0
+still: sit->lie                     30/30    100%    0
+still: sit->lie [pose reached]      30/30    100%    0
+still: lie->stand (posture)         30/30    100%    0
+trot->jump 20 cm                    22/30     73%    0
+jump 20 cm->(canter)->trot          27/27    100%    3
+trot->jump 30 cm                    22/30     73%    0
+jump 30 cm->(canter)->trot          30/30    100%    0
+trot->jump 40 cm                    17/30     57%    0
+jump 40 cm->(canter)->trot          24/24    100%    6
+shove -> fall                       30/30    100%    0
+fall -> recover (stood up)          28/30     93%    0
+recover -> walk                     28/28    100%    2
+trot->jump 50 cm                    15/30     50%    0
+jump 50 cm->(canter)->trot          24/24    100%    6
