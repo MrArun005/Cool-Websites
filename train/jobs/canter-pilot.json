@@ -1,0 +1,75 @@
+{
+ "name": "canter-pilot",
+ "workdir": "..",
+ "env": {
+  "MUJOCO_GL": "osmesa",
+  "OMP_NUM_THREADS": "1"
+ },
+ "check_every": 30,
+ "jobs": [
+  {
+   "name": "canter",
+   "cmd": [
+    "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/venv/bin/python",
+    "-u",
+    "train_imitate.py",
+    "--name",
+    "pilot_canter",
+    "--resume",
+    "runs/pilot_canter/checkpoints/policy_35500000_steps.zip",
+    "--clips",
+    "trot",
+    "canter",
+    "--switch-rate",
+    "0.3",
+    "--slots",
+    "8",
+    "--root-vel-weight",
+    "0.3",
+    "--lr",
+    "1e-4",
+    "--exam-every",
+    "500000",
+    "--steps",
+    "38000000",
+    "--envs",
+    "3",
+    "--threads",
+    "1"
+   ],
+   "resume_cmd": [
+    "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/venv/bin/python",
+    "-u",
+    "train_imitate.py",
+    "--name",
+    "pilot_canter",
+    "--resume",
+    "{latest}",
+    "--clips",
+    "trot",
+    "canter",
+    "--switch-rate",
+    "0.3",
+    "--slots",
+    "8",
+    "--root-vel-weight",
+    "0.3",
+    "--lr",
+    "1e-4",
+    "--exam-every",
+    "500000",
+    "--steps",
+    "38000000",
+    "--envs",
+    "3",
+    "--threads",
+    "1"
+   ],
+   "latest": "runs/pilot_canter/checkpoints/policy_*_steps.zip",
+   "log": "runs/pilot_canter.log",
+   "done_when": {
+    "log_contains": "^done:"
+   }
+  }
+ ]
+}
