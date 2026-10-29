@@ -1,0 +1,17 @@
+gaits: done (40 s)
+rest: done (79 s)
+rest_still: done (112 s)
+walk->trot                          30/30    100%    0
+trot->canter                        30/30    100%    0
+canter->trot                        27/30     90%    0
+trot->walk                          27/27    100%    3
+walk->sit                           30/30    100%    0
+walk->sit [pose reached]            24/30     80%    0
+sit->lie                            24/30     80%    0
+sit->lie [pose reached]             24/30     80%    0
+lie->stand (posture)                24/24    100%    6
+still: still->sit                   30/30    100%    0
+still: still->sit [pose reached]    30/30    100%    0
+still: sit->lie                     30/30    100%    0
+still: sit->lie [pose reached]      30/30    100%    0
+still: lie->stand (posture)         30/30    100%    0
