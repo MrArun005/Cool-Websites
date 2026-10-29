@@ -113,6 +113,10 @@ Do not claim to beat a specialist at its speciality unless the same test says so
    lost packets, motor lag, PD gain error, weaker motors, payload, slippery floor); any issue that costs more than a
    few points goes into training (domain randomization) before the brain counts as finished. Inputs a real robot
    cannot measure (body speed, body height) are treated as estimates with bias. Public claims stay "in simulation".
+0g. (29 Oct, owner) Targets are floors, not finish lines: "95% is also not enough for mastermind". Keep pushing every
+   skill toward 99% (switching) and never call a brain "best" or stop while a gap remains. Rule for every run: "train,
+   get the results; if it doesn't work leave it; if it works hand over what actually works". Tell the owner each result
+   as it lands, good or bad, in plain words.
 0c. (28 Oct, owner delegated these calls "best for our reputation in the real world"):
    - Body = 33.5 N·m A1 motors (420 W, 21 rad/s rated, drive fades to 0 at 25 rad/s).
    - --motor-brake: brake starts at 25 rad/s (the drive cutoff, so fade and brake don't overlap), gain 3.5 N·m·s/rad (motor-constant estimate, the stricter choice). ON for all new training; exams default OFF for old brains; brains trained with the brake are examined with it ON, and their reports show both.
