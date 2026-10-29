@@ -91,6 +91,7 @@ def main():
     ap.add_argument("--threads", type=int, default=2, help="torch threads")
     ap.add_argument("--root-vel-weight", type=float, help="reward weight of body velocity tracking (default 0.1, "
                     "DeepMimic); raise it if the exam's speed_ stays low while tracking is good")
+    ap.add_argument("--root-global", type=float, default=0.0, help="0..1 blend toward Peng 2020's global root terms (heading and path); 0 = our terms")
     add_brake_args(ap, default=True)
     args = ap.parse_args()
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
@@ -98,7 +99,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(args.threads)
     venv = make_vec_env(ImitateEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(
-        clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None))
+        clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None, root_global=args.root_global))
     if args.resume:
         ck = Path(args.resume)
         venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)

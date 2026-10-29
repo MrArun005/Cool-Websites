@@ -233,10 +233,15 @@ class ImitateEnv(BoltEnv):
                  latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"],
                  terrain_cm=TERRAIN_ARGS["cm"], terrain_clips=TERRAIN_ARGS["clips"], terrain_spread=TERRAIN_ARGS["spread"],
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"],
-                 push_speed=PUSH["speed"], push_spin=PUSH["spin"], motor_brake=None):
+                 push_speed=PUSH["speed"], push_spin=PUSH["spin"], motor_brake=None, root_global=0.0):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
                          skills=["stand"], motor_brake=motor_brake, terrain_cm=terrain_cm, terrain_seed=terrain_seed)
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
+        # root_global (0..1): blend of our two root terms (height + tilt, body-frame velocity) with Peng et al. 2020's
+        # Eq. 8-9 (GLOBAL root position, full rotation incl. heading, global velocity), the reference root integrated
+        # from the try's start (research/peng_score.py; 29 Oct: Bolt drifts ~10 m off the trot's path in 10 s, root 0.09).
+        # The inputs are unchanged, so the brain cannot see its drift; it can learn to turn and run at the clip's rates.
+        self.root_global = root_global
         self.switch_rate = switch_rate   # chance per second of switching to a following clip mid-try (training only)
         self.OBS = 66 + slots
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
@@ -344,6 +349,7 @@ class ImitateEnv(BoltEnv):
         return obs.astype(np.float32)
 
     def reset(self, seed=None, options=None):
+        self._try_id = getattr(self, "_try_id", 0) + 1
         gym.Env.reset(self, seed=seed)
         if seed is not None:
             self.rng = self.np_random
@@ -498,6 +504,10 @@ class ImitateEnv(BoltEnv):
         if self.t == self.land_switch_at and self.clip.name != self.landing_then:   # a landing start's bridge is over:
             self._switch_to(self.clips[self.landing_then])                         # on in landing_then (test_skills' trot)
         terms, err = self.tracking()
+        if self.root_global:
+            g_root, g_vel = self._global_root_terms()
+            terms["root"] = (1 - self.root_global) * terms["root"] + self.root_global * g_root
+            terms["root_vel"] = (1 - self.root_global) * terms["root_vel"] + self.root_global * g_vel
         reward = sum(self.weights[k] * v for k, v in terms.items())
         pose = None
         if self.pose_clip is not None:   # a moving-start command: paid per step in the pose once reached in time
@@ -521,6 +531,27 @@ class ImitateEnv(BoltEnv):
             info.update(transition=float(trans or 0.0), since_switch=None if self.switch_t is None else self.t - self.switch_t)
         return self._obs(), float(reward), bool(fell), bool(done and not fell), info
 
+
+    def _global_root_terms(self):
+        """Peng 2020 Eq. 8-9 against the reference root integrated since the try began (started by _start_ref_root)."""
+        d = self.data
+        if getattr(self, "_ref_root", None) is None or self._ref_root[2] != self._try_id:
+            R = self._rotation()
+            self._ref_root = [d.qpos[:2].copy(), float(np.arctan2(R[1, 0], R[0, 0])), self._try_id]
+        u, _, vt = np.linalg.svd(self.ref("tilt"))
+        tilt = u @ vt
+        R_ref = _rotz(self._ref_root[1]) @ tilt
+        v_ref, w_ref = R_ref @ self.ref("v_body"), R_ref @ self.ref("w_body")
+        self._ref_root[0] = self._ref_root[0] + v_ref[:2] * self.dt
+        self._ref_root[1] += float(w_ref[2]) * self.dt
+        R_ref = _rotz(self._ref_root[1]) @ tilt
+        R = self._rotation()
+        h = d.qpos[2] if self.terrain is None else d.qpos[2] - self.ground_z()
+        dx2 = float(np.sum((self._ref_root[0] - d.qpos[:2]) ** 2) + (self.ref("height") - h) ** 2)
+        ang = float(np.arccos(np.clip((np.trace(R_ref.T @ R) - 1) / 2, -1, 1)))
+        g_root = np.exp(-20 * dx2 - 10 * ang ** 2)
+        g_vel = np.exp(-2 * np.sum((v_ref - d.qvel[0:3]) ** 2) - 0.2 * np.sum((w_ref - R @ d.qvel[3:6]) ** 2))
+        return g_root, g_vel
 
     def _maybe_switch(self):
         """Now and then hand over to a clip that may follow this one (NEXT), as a dog changes what it does."""
