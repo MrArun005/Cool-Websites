@@ -59,7 +59,7 @@ class JumpEnv(BoltEnv):
 
     def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0,
                  approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50, motor_brake=None, under_margin=0.0,
-                 handover_file=None, handover_rate=0.0):
+                 handover_file=None, handover_rate=0.0, latency_ms=(0.0, 0.0)):
         # under_margin (m): the body's centre must be at least bar height + this when it crosses the bar's line, or
         # Bolt went UNDER the bar (28 Oct: bars of 60-75 cm are higher than Bolt's back, and "all paws past the bar"
         # counted running under a 70 cm bar as a clean jump). 0 = centre above the bar top; a trunk that crosses
@@ -70,6 +70,10 @@ class JumpEnv(BoltEnv):
         # a practice height), instead of the synthetic mid-stride pose. Exams: exam_handover = a state index.
         self.handover = dict(np.load(handover_file)) if handover_file else None
         self.handover_rate, self.exam_handover = handover_rate, None
+        # latency_ms=(lo, hi): the motors get the targets sent that long ago, drawn per try (imitate_env's real-robot
+        # gap; 29 Oct: at 20 ms MasterMind's teacher chain jumps 0-1/30, the jump brain was never trained with it).
+        # exam_latency_ms: a fixed latency for exams.
+        self.latency_ms, self.exam_latency_ms, self.delay_sub, self._queue = tuple(latency_ms), None, 0, None
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
                          hurdles="real" if real else True, skills=["stand"], motor_brake=motor_brake)
         self.real = real
@@ -208,6 +212,7 @@ class JumpEnv(BoltEnv):
             d.qvel[0:2] = v0 * R[:2, 0] / np.linalg.norm(R[:2, 0])
         self.t, self.last_action = 0, np.zeros(12)
         self.start_try()
+        self._start_latency()
         return self._obs(), {}
 
     def _handover_start(self, k):
@@ -219,7 +224,27 @@ class JumpEnv(BoltEnv):
         self.place_real(float(H["ahead"][k]), h, float(H["heading_err"][k]), float(H["off_line"][k]))
         self.t, self.last_action = 0, np.clip((d.ctrl - DOG) / ACTION_SCALE, -1, 1)
         self.start_try()
+        self._start_latency()
         return self._obs(), {}
+
+    def _start_latency(self):
+        lat = self.exam_latency_ms if self.exam_latency_ms is not None else (
+            self.rng.uniform(*self.latency_ms) if self.latency_ms[1] > 0 else 0.0)
+        self.delay_sub = int(round(lat / 1000.0 / self.model.opt.timestep))
+        if self.delay_sub:
+            self._queue = [self.data.ctrl.copy() for _ in range(self.delay_sub // self.frame_skip + 2)]
+
+    def _delayed_physics(self):
+        """One control step with latency (imitate_env._delayed_physics, no motor lag)."""
+        m, d = self.model, self.data
+        sent = d.ctrl.copy()
+        self._queue = self._queue[1:] + [sent]
+        back, sub = divmod(self.delay_sub, self.frame_skip)
+        target, older = self._queue[-1 - back], self._queue[-2 - back]
+        for i in range(self.frame_skip):
+            d.ctrl[:] = older if i < sub else target
+            physics(m, d, 1)
+        d.ctrl[:] = sent
 
     def start_try(self):
         """The per-try bookkeeping, for reset and for brains handed the jump mid-run (skills.Bolt, MasterMind)."""
@@ -258,7 +283,10 @@ class JumpEnv(BoltEnv):
     def step(self, action):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
         self.data.ctrl[:] = np.clip(DOG + ACTION_SCALE * a, self.lo, self.hi)  # the full motor range
-        physics(self.model, self.data, self.frame_skip)
+        if self.delay_sub:
+            self._delayed_physics()
+        else:
+            physics(self.model, self.data, self.frame_skip)
         self.t += 1
         self.env_steps += 1
         d, R = self.data, self._rotation()

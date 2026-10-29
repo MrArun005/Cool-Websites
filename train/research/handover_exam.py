@@ -28,14 +28,16 @@ def main():
     ap.add_argument("--states", required=True)
     ap.add_argument("--heights", type=float, nargs="+", default=[0.20, 0.30, 0.40, 0.50])
     ap.add_argument("--max-steps", type=int, default=220)
+    ap.add_argument("--latency-ms", type=float, default=0.0, help="fixed control delay (ms) for every try")
     ap.add_argument("--out")
     add_brake_args(ap, default=False)
     a = ap.parse_args()
     brake = set_motor_brake(a.motor_brake, a.brake_speed, a.brake_gain)
     pol = JumpPolicy(a.folder)
     env = JumpEnv(randomize=False, real=True, max_steps=a.max_steps, handover_file=a.states, motor_brake=a.motor_brake)
+    env.exam_latency_ms = a.latency_ms
     n = len(env.handover["ahead"])
-    res = dict(folder=a.folder, states=a.states, n=n, motor_brake=brake)
+    res = dict(folder=a.folder, states=a.states, n=n, motor_brake=brake, latency_ms=a.latency_ms)
     for h in a.heights:
         wins = 0
         for k in range(n):

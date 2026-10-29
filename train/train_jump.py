@@ -191,6 +191,8 @@ def main():
                     help="skip the mid-stride exam (it runs at every checkpoint whenever a speed is known, to log its score)")
     ap.add_argument("--handover-file", help="real hand-over states (research/record_handover.py) to start tries from")
     ap.add_argument("--handover-rate", type=float, default=0.0, help="share of training tries started from --handover-file")
+    ap.add_argument("--latency-min-ms", type=float, default=0.0, help="per-try control delay drawn in [min, max] ms")
+    ap.add_argument("--latency-max-ms", type=float, default=0.0, help="0: off; a real robot has ~10-20 ms")
     ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints and exams")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
@@ -204,7 +206,8 @@ def main():
                                                                                            approach_speed=args.approach_speed,
                                                                                            approach_speed_min=args.approach_speed_min, run_frac=args.run_frac,
                                                                                            gait_start=args.gait_start, bar_max=args.bar_max,
-                                                                                           handover_file=args.handover_file, handover_rate=args.handover_rate))
+                                                                                           handover_file=args.handover_file, handover_rate=args.handover_rate,
+                                                                                           latency_ms=(args.latency_min_ms, args.latency_max_ms)))
     if args.widen_from and not args.resume:
         args.resume = str(widen(args.widen_from, out / "widened"))
     if args.init_from and not args.resume:   # a model folder: policy.zip + vecnormalize.pkl
