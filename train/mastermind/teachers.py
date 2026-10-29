@@ -102,6 +102,10 @@ SETS["v6"] = dict(SETS["v5"], clips=dict(SETS["v5"]["clips"], sit="gpu3", lie="g
 # gait; instead of the canter bridge. Default 0 (the bridge).
 SETS["v6h"] = dict(SETS["v6"], land_hold=0.6)
 SETS["v6h1"] = dict(SETS["v6"], land_hold=1.0)
+# v7p (29 Oct): v6h with the jump brain from the local hand-over pilot (runs/pilot_ho, 59.2M: held-out real hand-overs
+# 84/90/87/73% at 20-50 cm vs 55M 81/77/61/31%); a dev-seed check before the Kaggle jump-handover run lands.
+SETS["v7p"] = dict(SETS["v6h"], jump=MODELS / "bolt-dog-jump-handover-59M")
+SETS["v7"] = SETS["v7p"]
 
 
 def teacher_set(name="v2", **over):
