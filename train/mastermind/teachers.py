@@ -106,6 +106,8 @@ SETS["v6h1"] = dict(SETS["v6"], land_hold=1.0)
 # 84/90/87/73% at 20-50 cm vs 55M 81/77/61/31%); a dev-seed check before the Kaggle jump-handover run lands.
 SETS["v7p"] = dict(SETS["v6h"], jump=MODELS / "bolt-dog-jump-handover-59M")
 SETS["v7"] = SETS["v7p"]
+# v7s: v7 with the canter back on 18g (v7's student lost canter look: tracking 0.695 -> 0.548 with gpu3 as teacher)
+SETS["v7s"] = dict(SETS["v6s"], land_hold=0.6, jump=MODELS / "bolt-dog-jump-handover-59M")
 
 
 def teacher_set(name="v2", **over):
