@@ -107,6 +107,12 @@ Do not claim to beat a specialist at its speciality unless the same test says so
    - Every launch states in its commit message what result makes it a win and what makes it a loss.
    - Order of work: the furthest-off owner target first (now: switches between skills, 88% vs 95%), then the
      deliverables (4K video, LinkedIn by Friday), then stretch goals (60 cm).
+0f. (29 Oct) Ready for a real body, though we only have simulation (owner: "whatever issues, latency or devices a
+   physical body has, we should be ready for all of it"). Every brain is tested on research/realbody_stress.py
+   (one real-robot issue at a time: control delay, sensor noise, IMU/gyro/speed/height estimate biases, encoder steps,
+   lost packets, motor lag, PD gain error, weaker motors, payload, slippery floor); any issue that costs more than a
+   few points goes into training (domain randomization) before the brain counts as finished. Inputs a real robot
+   cannot measure (body speed, body height) are treated as estimates with bias. Public claims stay "in simulation".
 0c. (28 Oct, owner delegated these calls "best for our reputation in the real world"):
    - Body = 33.5 N·m A1 motors (420 W, 21 rad/s rated, drive fades to 0 at 25 rad/s).
    - --motor-brake: brake starts at 25 rad/s (the drive cutoff, so fade and brake don't overlap), gain 3.5 N·m·s/rad (motor-constant estimate, the stricter choice). ON for all new training; exams default OFF for old brains; brains trained with the brake are examined with it ON, and their reports show both.
