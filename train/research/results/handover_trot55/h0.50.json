@@ -1,0 +1,691 @@
+{
+ "args": {
+  "height": 0.5,
+  "n": 30,
+  "seed": 1000,
+  "jump": "../models/bolt-dog-jump-trot-55M",
+  "imitate_steps": 15000000,
+  "exam_start": false,
+  "exam_dist": 1.5,
+  "exam_speed": 2.0,
+  "exam_gait": false,
+  "out": "research/results/handover_trot55/h0.50.json"
+ },
+ "jump_from": 1.1,
+ "clean": 13,
+ "tries": 30,
+ "handover": {
+  "dist": {
+   "min": 1.068,
+   "mean": 1.081,
+   "max": 1.098
+  },
+  "speed_fwd": {
+   "min": 1.51,
+   "mean": 1.665,
+   "max": 1.84
+  },
+  "speed_along_jump": {
+   "min": 1.51,
+   "mean": 1.664,
+   "max": 1.83
+  },
+  "heading_err_deg": {
+   "min": -3.3,
+   "mean": 0.6,
+   "max": 7.0
+  },
+  "off_line": {
+   "min": 0.007,
+   "mean": 0.044,
+   "max": 0.074
+  },
+  "height": {
+   "min": 0.358,
+   "mean": 0.373,
+   "max": 0.398
+  },
+  "joint_speed_rms": {
+   "min": 3.07,
+   "mean": 4.569,
+   "max": 5.78
+  },
+  "paws_down": {
+   "min": 1,
+   "mean": 1.9,
+   "max": 3
+  }
+ },
+ "all": [
+  {
+   "seed": 1000,
+   "placed_at": 1.761,
+   "reached": true,
+   "clean": false,
+   "cleared": false,
+   "touched": true,
+   "dropped": true,
+   "landed": false,
+   "fell": false,
+   "handover": {
+    "dist": 1.092,
+    "speed_fwd": 1.74,
+    "speed_along_jump": 1.71,
+    "heading_err_deg": -1.4,
+    "off_line": 0.041,
+    "height": 0.378,
+    "joint_speed_rms": 4.05,
+    "paws_down": 1
+   }
+  },
+  {
+   "seed": 1037,
+   "placed_at": 1.661,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.092,
+    "speed_fwd": 1.73,
+    "speed_along_jump": 1.74,
+    "heading_err_deg": -1.9,
+    "off_line": 0.05,
+    "height": 0.38,
+    "joint_speed_rms": 4.77,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1074,
+   "placed_at": 2.0,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.071,
+    "speed_fwd": 1.62,
+    "speed_along_jump": 1.63,
+    "heading_err_deg": -0.2,
+    "off_line": 0.06,
+    "height": 0.395,
+    "joint_speed_rms": 5.09,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1111,
+   "placed_at": 1.93,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.083,
+    "speed_fwd": 1.73,
+    "speed_along_jump": 1.73,
+    "heading_err_deg": -1.0,
+    "off_line": 0.061,
+    "height": 0.366,
+    "joint_speed_rms": 3.57,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1148,
+   "placed_at": 1.977,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.074,
+    "speed_fwd": 1.63,
+    "speed_along_jump": 1.63,
+    "heading_err_deg": 1.5,
+    "off_line": 0.036,
+    "height": 0.381,
+    "joint_speed_rms": 4.72,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1185,
+   "placed_at": 1.86,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": false,
+   "fell": true,
+   "handover": {
+    "dist": 1.084,
+    "speed_fwd": 1.84,
+    "speed_along_jump": 1.83,
+    "heading_err_deg": -2.1,
+    "off_line": 0.074,
+    "height": 0.369,
+    "joint_speed_rms": 4.33,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1222,
+   "placed_at": 1.521,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.096,
+    "speed_fwd": 1.63,
+    "speed_along_jump": 1.63,
+    "heading_err_deg": 3.4,
+    "off_line": 0.028,
+    "height": 0.358,
+    "joint_speed_rms": 4.73,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1259,
+   "placed_at": 1.502,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.087,
+    "speed_fwd": 1.53,
+    "speed_along_jump": 1.53,
+    "heading_err_deg": 2.1,
+    "off_line": 0.033,
+    "height": 0.36,
+    "joint_speed_rms": 4.78,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1296,
+   "placed_at": 1.618,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.088,
+    "speed_fwd": 1.67,
+    "speed_along_jump": 1.68,
+    "heading_err_deg": 1.8,
+    "off_line": 0.04,
+    "height": 0.368,
+    "joint_speed_rms": 3.31,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1333,
+   "placed_at": 1.704,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.073,
+    "speed_fwd": 1.7,
+    "speed_along_jump": 1.7,
+    "heading_err_deg": 2.5,
+    "off_line": 0.007,
+    "height": 0.398,
+    "joint_speed_rms": 4.97,
+    "paws_down": 1
+   }
+  },
+  {
+   "seed": 1370,
+   "placed_at": 1.587,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.09,
+    "speed_fwd": 1.72,
+    "speed_along_jump": 1.72,
+    "heading_err_deg": 3.8,
+    "off_line": 0.031,
+    "height": 0.358,
+    "joint_speed_rms": 3.96,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1407,
+   "placed_at": 1.79,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.073,
+    "speed_fwd": 1.53,
+    "speed_along_jump": 1.53,
+    "heading_err_deg": -1.7,
+    "off_line": 0.055,
+    "height": 0.367,
+    "joint_speed_rms": 4.74,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1444,
+   "placed_at": 1.587,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.069,
+    "speed_fwd": 1.67,
+    "speed_along_jump": 1.68,
+    "heading_err_deg": 3.5,
+    "off_line": 0.054,
+    "height": 0.363,
+    "joint_speed_rms": 3.94,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1481,
+   "placed_at": 1.811,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.072,
+    "speed_fwd": 1.54,
+    "speed_along_jump": 1.53,
+    "heading_err_deg": 0.3,
+    "off_line": 0.055,
+    "height": 0.363,
+    "joint_speed_rms": 4.46,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1518,
+   "placed_at": 1.662,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.089,
+    "speed_fwd": 1.68,
+    "speed_along_jump": 1.68,
+    "heading_err_deg": 0.2,
+    "off_line": 0.027,
+    "height": 0.379,
+    "joint_speed_rms": 4.3,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1555,
+   "placed_at": 1.817,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.098,
+    "speed_fwd": 1.51,
+    "speed_along_jump": 1.51,
+    "heading_err_deg": 3.6,
+    "off_line": 0.033,
+    "height": 0.362,
+    "joint_speed_rms": 4.57,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1592,
+   "placed_at": 1.743,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.088,
+    "speed_fwd": 1.72,
+    "speed_along_jump": 1.71,
+    "heading_err_deg": 0.6,
+    "off_line": 0.026,
+    "height": 0.392,
+    "joint_speed_rms": 5.48,
+    "paws_down": 1
+   }
+  },
+  {
+   "seed": 1629,
+   "placed_at": 1.525,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.082,
+    "speed_fwd": 1.7,
+    "speed_along_jump": 1.71,
+    "heading_err_deg": 7.0,
+    "off_line": 0.035,
+    "height": 0.359,
+    "joint_speed_rms": 5.04,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1666,
+   "placed_at": 1.602,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.089,
+    "speed_fwd": 1.75,
+    "speed_along_jump": 1.76,
+    "heading_err_deg": -0.1,
+    "off_line": 0.044,
+    "height": 0.359,
+    "joint_speed_rms": 4.03,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1703,
+   "placed_at": 1.955,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.068,
+    "speed_fwd": 1.64,
+    "speed_along_jump": 1.64,
+    "heading_err_deg": -0.4,
+    "off_line": 0.068,
+    "height": 0.372,
+    "joint_speed_rms": 4.38,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1740,
+   "placed_at": 1.705,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.076,
+    "speed_fwd": 1.69,
+    "speed_along_jump": 1.69,
+    "heading_err_deg": -2.2,
+    "off_line": 0.047,
+    "height": 0.394,
+    "joint_speed_rms": 5.42,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1777,
+   "placed_at": 1.841,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.07,
+    "speed_fwd": 1.69,
+    "speed_along_jump": 1.69,
+    "heading_err_deg": -0.8,
+    "off_line": 0.052,
+    "height": 0.361,
+    "joint_speed_rms": 5.19,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1814,
+   "placed_at": 1.772,
+   "reached": true,
+   "clean": false,
+   "cleared": false,
+   "touched": true,
+   "dropped": true,
+   "landed": false,
+   "fell": false,
+   "handover": {
+    "dist": 1.077,
+    "speed_fwd": 1.61,
+    "speed_along_jump": 1.6,
+    "heading_err_deg": 0.1,
+    "off_line": 0.046,
+    "height": 0.368,
+    "joint_speed_rms": 5.63,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1851,
+   "placed_at": 1.591,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.097,
+    "speed_fwd": 1.66,
+    "speed_along_jump": 1.67,
+    "heading_err_deg": 2.4,
+    "off_line": 0.044,
+    "height": 0.361,
+    "joint_speed_rms": 3.65,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1888,
+   "placed_at": 1.754,
+   "reached": true,
+   "clean": false,
+   "cleared": true,
+   "touched": true,
+   "dropped": true,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.071,
+    "speed_fwd": 1.63,
+    "speed_along_jump": 1.62,
+    "heading_err_deg": 0.5,
+    "off_line": 0.041,
+    "height": 0.379,
+    "joint_speed_rms": 5.78,
+    "paws_down": 1
+   }
+  },
+  {
+   "seed": 1925,
+   "placed_at": 1.681,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.083,
+    "speed_fwd": 1.72,
+    "speed_along_jump": 1.72,
+    "heading_err_deg": -1.2,
+    "off_line": 0.031,
+    "height": 0.39,
+    "joint_speed_rms": 5.23,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 1962,
+   "placed_at": 1.573,
+   "reached": true,
+   "clean": false,
+   "cleared": false,
+   "touched": true,
+   "dropped": true,
+   "landed": false,
+   "fell": false,
+   "handover": {
+    "dist": 1.071,
+    "speed_fwd": 1.82,
+    "speed_along_jump": 1.82,
+    "heading_err_deg": 2.8,
+    "off_line": 0.033,
+    "height": 0.36,
+    "joint_speed_rms": 3.07,
+    "paws_down": 3
+   }
+  },
+  {
+   "seed": 1999,
+   "placed_at": 1.791,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.083,
+    "speed_fwd": 1.55,
+    "speed_along_jump": 1.55,
+    "heading_err_deg": 0.9,
+    "off_line": 0.045,
+    "height": 0.369,
+    "joint_speed_rms": 4.61,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 2036,
+   "placed_at": 1.987,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.09,
+    "speed_fwd": 1.65,
+    "speed_along_jump": 1.65,
+    "heading_err_deg": -2.7,
+    "off_line": 0.07,
+    "height": 0.385,
+    "joint_speed_rms": 4.71,
+    "paws_down": 2
+   }
+  },
+  {
+   "seed": 2073,
+   "placed_at": 1.991,
+   "reached": true,
+   "clean": true,
+   "cleared": true,
+   "touched": false,
+   "dropped": false,
+   "landed": true,
+   "fell": false,
+   "handover": {
+    "dist": 1.068,
+    "speed_fwd": 1.64,
+    "speed_along_jump": 1.64,
+    "heading_err_deg": -3.3,
+    "off_line": 0.058,
+    "height": 0.385,
+    "joint_speed_rms": 4.55,
+    "paws_down": 2
+   }
+  }
+ ]
+}
