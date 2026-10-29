@@ -132,6 +132,23 @@ JOBS = {
               "--exam2", "1.7", "1.1"],
         finals=[["jump", "--speeds", "1.5", "1.7", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
                  "--max-steps", "220", "--motor-brake"]]),
+    "jump-gaps": dict(
+        # 29 Oct: every real-body gap that hurt the jump (realbody_stress: delay 20 ms, motor lag 20 ms; lost packets)
+        # drawn per try, from the hand-over brain 59M, on both hand-over sets (v6h and v8g trots). The in-training exams
+        # run with 20 ms delay so best/ is picked under delay. Verdict: handover_exam on handover_states_v8g_test.npz at
+        # --latency-ms 20 and at 0 (59M: 0 ms 85/90/85/70%, 20 ms ~0%), then the teacher chain.
+        name="jumpgaps", script="train_jump.py", start="../models/bolt-dog-jump-handover-59M",
+        args=["--real", "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "0.8", "2.0", "--approach-speed", "2.4", "--approach-speed-min", "1.2", "--run-frac", "0.85",
+              "--gait-start", "0.7", "--bar-start", "0.30", "--bar-max", "0.65",
+              "--handover-file", "research/results/handover_states_mix.npz", "--handover-rate", "0.7",
+              "--latency-min-ms", "0", "--latency-max-ms", "30", "--motor-lag-max-ms", "25", "--drop-max", "0.1",
+              "--exam-latency-ms", "20",
+              "--exam-speed", "1.5", "--exam-dist", "1.1", "--exam-heights", "0.30", "0.40", "0.50"],
+        finals=[["jump", "--speeds", "1.5", "1.7", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake", "--latency-ms", "20"],
+                ["jump", "--speeds", "1.5", "1.7", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake"]]),
     "jump-delay": dict(
         # owner 29 Oct: "train delay into everything". At 20 ms the jump brain cleared 0/100 real hand-overs; a local
         # pilot with 0-30 ms delay moved it to 8/100 (30 cm) after 0.5M steps. Win: held-out real hand-overs at
