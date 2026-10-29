@@ -75,6 +75,22 @@ JOBS = {
                  "--max-steps", "220", "--motor-brake"],
                 ["jump", "--speeds", "1.7", "--dist", "1.1", "--heights", "0.40", "0.50", "--gait",
                  "--max-steps", "220", "--motor-brake"]]),
+    "jump-run60b": dict(
+        # run60's lesson (research/results/jump_run60/VERDICT.md): its bar never left 55 cm and it lost the trot
+        # hand-over. Mix the old short approaches with the long run-ups and start the bar at 40 cm; best/ picked on
+        # 60 cm from a long run-up AND the trot hand-over.
+        name="jumprun60b", script="train_jump.py", start="../models/bolt-dog-jump-trot-55M",
+        args=["--real", "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "0.8", "4.0", "--approach-speed", "3.2", "--approach-speed-min", "1.2", "--run-frac", "0.9",
+              "--gait-start", "0.7", "--bar-start", "0.40", "--bar-max", "0.75",
+              "--exam-speed", "2.5", "--exam-dist", "3.0", "--exam-heights", "0.50", "0.60", "0.70",
+              "--exam2", "1.7", "1.1",
+              "--select", "midstride", "--select-speed", "2.5", "--select-dist", "2.0",
+              "--select-heights", "0.50", "0.55", "0.60"],
+        finals=[["jump", "--speeds", "2.0", "2.5", "3.0", "--dist", "3.0", "--heights", "0.50", "0.60", "0.70", "--gait",
+                 "--max-steps", "220", "--motor-brake"],
+                ["jump", "--speeds", "1.7", "--dist", "1.1", "--heights", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake"]]),
     "recover": dict(
         name="recover", script="train_getup.py", start="../models/bolt-dog-selfright-17e-16.5M",
         args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015"],
