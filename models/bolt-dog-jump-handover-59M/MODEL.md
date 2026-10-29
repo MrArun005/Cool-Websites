@@ -33,3 +33,14 @@ synthetic mid-stride start at 1.5 m/s 40/50 cm 60/13% (55M: 83/57%). Real hand-o
 Day Out give it, so this brain is the MasterMind jump teacher; the Kaggle jump-handover run (29 Oct) may replace it.
 
 Load with `jump_env.JumpPolicy(folder, "policy.zip", "vecnormalize.pkl")`.
+
+## In Bolt's Day Out (browser physics, every task a jump, 4 runs x 240 s, seeds 1-4, the jump brain lands Bolt)
+
+    cd train/gaitlab && JUMP=jump.json LAND=land node doglife_jumptest.mjs <mujoco.js> <data folder> <seed> 240
+
+| jump brain | jumps | clean | bar down | falls |
+|---|---|---|---|---|
+| this brain | 29 | 29 | 0 | 6 (1 in a jump) |
+| jump-trot 55M | 29 | 23 | 4 | 7 |
+
+Bolt's Day Out uses this brain since 29 Oct. Per-run lines: exams/dayout_jumptest.txt.

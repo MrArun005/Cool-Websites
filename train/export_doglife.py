@@ -6,7 +6,7 @@ Writes into the folder:
     dog_gpu360.json   the GPU dog-motion brain (models/bolt-dog-imitate-gpu-360M/params.pkl, 9 clip slots) as a
                       live.js Brain: normalizer (mean, var = std^2, eps 0, clip 10) + ELU layers, base64 float32
     dog_18g.json      the canter-switching brain (run 18g at 35.5M, SB3, 8 slots), for canter and canter -> trot
-    jump_trot.json    the jump brain trained from a trot (Kaggle run jump-trot at 55.04M, from 16i; 51 inputs; clock t / 200)
+    jump.json         the jump brain that practised from real hand-overs (models/bolt-dog-jump-handover-59M; 51 inputs; clock t / 200)
     dog_clips.json    all 9 reference clips (walk trot pace canter turn_left turn_right sit lie getup) + constants
 --reference: Python's ImitateEnv (fixed physics) run with the GPU brain, every step's inputs and action, for
 gaitlab/doglife_brain_test.mjs (the browser brain on Python's inputs must give Python's actions).
@@ -49,7 +49,7 @@ def main():
     spec, policy = gpu_brain(MODELS / "bolt-dog-imitate-gpu-360M" / "params.pkl")
     dump("dog_gpu360.json", dict(spec, source="bolt-dog-imitate-gpu-360M"))
     dump("dog_18g.json", dict(brain(MODELS / "bolt-dog-canter-switching-18g-35.5M"), source="bolt-dog-canter-switching-18g-35.5M"))
-    dump("jump_trot.json", dict(brain(MODELS / "bolt-dog-jump-trot-55M"), source="bolt-dog-jump-trot-55M", jump_steps=200))
+    dump("jump.json", dict(brain(MODELS / "bolt-dog-jump-handover-59M"), source="bolt-dog-jump-handover-59M", jump_steps=200))
     env = ImitateEnv(randomize=False, clips=ALL_CLIPS)
     constants = dict(dt=env.dt, frame_skip=env.frame_skip, dog_pose=DOG.tolist(), action_scale=ACTION_SCALE.tolist(),
                      slots=len(ALL_CLIPS), all_clips=ALL_CLIPS, hold=HOLD, next={k: list(v) for k, v in NEXT.items()},

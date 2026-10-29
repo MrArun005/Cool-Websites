@@ -11,7 +11,7 @@
 //            canter, and canter -> trot           canter-switching brain (run 18g, 35.5M: canter->trot 93%)
 //            sharp turns at a walk                run 12 walk brain (turns up to ~1.4 rad/s)
 //            standing still, sniffing             posture brain
-//            jumping a hurdle                     jump brain trained from a trot (jump-trot 55M, from 16i), handed over 1.1 m out
+//            jumping a hurdle                     jump brain that practised from real hand-overs (jump-handover 59M), handed over 1.1 m out
 //            after a fall                         self-righting brain (run 17e) + posture brain (game.js GetUp)
 //   Mind   what a dog does next: wander and sniff, trot about, zoomies, sit, nap, jump, fetch, come when
 //          called, and never step off the kerb.
@@ -98,7 +98,7 @@ export let LANDING = "land";   // after a jump: "land" (the jump brain stops Bol
 export function setLanding(l) { LANDING = l; }
 export const BRAIN_NAMES = {
   gpu: "GPU dog-motion brain (360M steps)", g18: "canter-switching brain (run 18g)", posture: "posture brain",
-  walk12: "run 12 walk brain (sharp turns)", jump: "jump brain trained from a trot (55M)", getup: "self-righting brain (run 17e) + posture brain",
+  walk12: "run 12 walk brain (sharp turns)", jump: "jump brain (real hand-overs, 59M)", getup: "self-righting brain (run 17e) + posture brain",
 };
 
 export class DogBody {
