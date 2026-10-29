@@ -1,0 +1,18 @@
+{
+ "folder": "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/hoexam/ck70000000",
+ "states": "research/results/handover_states_dev.npz",
+ "n": 100,
+ "motor_brake": [
+  true,
+  25.0,
+  3.5
+ ],
+ "latency_ms": 0.0,
+ "motor_lag_ms": 0.0,
+ "drop": 0.0,
+ "jump_20": 0.86,
+ "jump_30": 0.9,
+ "jump_40": 0.9,
+ "jump_50": 0.86,
+ "command": "python research/handover_exam.py /tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/hoexam/ck70000000 --states research/results/handover_states_dev.npz --heights 0.20 0.30 0.40 0.50 --motor-brake --out /tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/hoexam/dev_ck70000000.json"
+}

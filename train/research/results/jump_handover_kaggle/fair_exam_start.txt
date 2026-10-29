@@ -1,0 +1,35 @@
+fair_exam.py jump ../models/bolt-dog-jump-trot-55M --speeds 1.5 2.0 --dist 1.5 --heights 0.40 0.50 0.60 --gait --max-steps 220 --motor-brake --episodes 30 --no-save
+motor brake (on, rad/s, N·m per rad/s): (True, 25.0, 3.5)
+jump exam: 30 tries per height, seed 9000, max steps 220 (4.4 s), bar 1.5 m away, heights [0.4, 0.5, 0.6]
+v15 {'jump_40': 1.0, 'jump_50': 0.9666666666666667, 'jump_60': 0.0}
+v15_gait {'jump_40': 0.8333333333333334, 'jump_50': 0.5666666666666667, 'jump_60': 0.2}
+v20 {'jump_40': 1.0, 'jump_50': 1.0, 'jump_60': 0.16666666666666666}
+v20_gait {'jump_40': 0.5333333333333333, 'jump_50': 0.36666666666666664, 'jump_60': 0.2}
+{
+ "v15_jump_40": 1.0,
+ "v15_jump_50": 0.9666666666666667,
+ "v15_jump_60": 0.0,
+ "v15_gait_jump_40": 0.8333333333333334,
+ "v15_gait_jump_50": 0.5666666666666667,
+ "v15_gait_jump_60": 0.2,
+ "v20_jump_40": 1.0,
+ "v20_jump_50": 1.0,
+ "v20_jump_60": 0.16666666666666666,
+ "v20_gait_jump_40": 0.5333333333333333,
+ "v20_gait_jump_50": 0.36666666666666664,
+ "v20_gait_jump_60": 0.2,
+ "max_steps": 220,
+ "dist": 1.5,
+ "motor_brake": {
+  "on": true,
+  "speed": 25.0,
+  "gain": 3.5
+ },
+ "episodes": 30,
+ "seed": 9000,
+ "minutes": 3.3
+}
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
