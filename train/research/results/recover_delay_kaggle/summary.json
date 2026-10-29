@@ -1,0 +1,80 @@
+{
+ "hours": 10.74,
+ "exit_code": 0,
+ "latest": "/tmp/bolt/train/runs/recoverdelay/checkpoints/policy_51144992_steps.zip",
+ "config": {
+  "pip": [
+   "numpy>=2",
+   "mujoco==3.17.0",
+   "stable-baselines3==2.9.0",
+   "gymnasium==1.4.0"
+  ],
+  "tar": "bolt-train.pack",
+  "script": "train_getup.py",
+  "name": "recoverdelay",
+  "start": "../models/bolt-dog-selfright-17e-16.5M",
+  "args": [
+   "--goal",
+   "selfright",
+   "--hard",
+   "--full-exam",
+   "--lr",
+   "1e-4",
+   "--target-kl",
+   "0.015",
+   "--latency-min-ms",
+   "0",
+   "--latency-max-ms",
+   "30",
+   "--exam-episodes",
+   "15"
+  ],
+  "steps": 400000000,
+  "envs": 8,
+  "every": 1000000,
+  "train_h": 10.6,
+  "hard_h": 11.6,
+  "attempts": 3,
+  "finals": [
+   [
+    "recover",
+    "--latency-ms",
+    "20"
+   ],
+   [
+    "recover"
+   ]
+  ],
+  "final_episodes": 30
+ },
+ "best": {
+  "steps": 28000000,
+  "exam": {
+   "stood_side": 1.0,
+   "tsec_side": 1.62,
+   "stood_back": 1.0,
+   "tsec_back": 1.34,
+   "stood_tipped": 0.9333333333333333,
+   "tsec_tipped": 1.44,
+   "stood_shoved": 0.9333333333333333,
+   "tsec_shoved": 2.16,
+   "stood_dropped": 0.8666666666666667,
+   "tsec_dropped": 2.04,
+   "stood_ice": 1.0,
+   "tsec_ice": 2.72,
+   "right_up_side": 1.0,
+   "right_secs_side": 0.72,
+   "right_up_back": 1.0,
+   "right_secs_back": 0.74,
+   "right_up_tipped": 1.0,
+   "right_secs_tipped": 0.86,
+   "right_up_shoved": 1.0,
+   "right_secs_shoved": 1.28,
+   "right_up_dropped": 1.0,
+   "right_secs_dropped": 1.32,
+   "right_up_ice": 1.0,
+   "right_secs_ice": 2.18
+  },
+  "score": 0.9517822222222223
+ }
+}

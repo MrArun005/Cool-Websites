@@ -1,0 +1,38 @@
+motor brake (on, rad/s, N·m per rad/s): (True, 25.0, 3.5)
+full recovery, tough falls: {'stood_side': 0.8333333333333334, 'tsec_side': 1.52, 'stood_back': 0.8666666666666667, 'tsec_back': 1.43, 'stood_tipped': 0.9, 'tsec_tipped': 1.8, 'stood_shoved': 0.8666666666666667, 'tsec_shoved': 2.1, 'stood_dropped': 0.7666666666666667, 'tsec_dropped': 2.02, 'stood_ice': 1.0, 'tsec_ice': 2.27}
+self-righting alone, tough falls: {'up_side': 1.0, 'secs_side': 0.78, 'up_back': 1.0, 'secs_back': 0.79, 'up_tipped': 1.0, 'secs_tipped': 0.92, 'up_shoved': 1.0, 'secs_shoved': 1.23, 'up_dropped': 1.0, 'secs_dropped': 1.32, 'up_ice': 1.0, 'secs_ice': 1.58}
+{
+ "full_stood_side": 0.8333333333333334,
+ "full_tsec_side": 1.52,
+ "full_stood_back": 0.8666666666666667,
+ "full_tsec_back": 1.43,
+ "full_stood_tipped": 0.9,
+ "full_tsec_tipped": 1.8,
+ "full_stood_shoved": 0.8666666666666667,
+ "full_tsec_shoved": 2.1,
+ "full_stood_dropped": 0.7666666666666667,
+ "full_tsec_dropped": 2.02,
+ "full_stood_ice": 1.0,
+ "full_tsec_ice": 2.27,
+ "right_up_side": 1.0,
+ "right_secs_side": 0.78,
+ "right_up_back": 1.0,
+ "right_secs_back": 0.79,
+ "right_up_tipped": 1.0,
+ "right_secs_tipped": 0.92,
+ "right_up_shoved": 1.0,
+ "right_secs_shoved": 1.23,
+ "right_up_dropped": 1.0,
+ "right_secs_dropped": 1.32,
+ "right_up_ice": 1.0,
+ "right_secs_ice": 1.58,
+ "full_stood_mean": 0.8722222222222222,
+ "motor_brake": {
+  "on": true,
+  "speed": 25.0,
+  "gain": 3.5
+ },
+ "episodes": 30,
+ "seed": 9000,
+ "minutes": 3.1
+}
