@@ -117,6 +117,9 @@ class Master:
         self.w, self.im, self.sr = b.world, b.im, b.sr
         if Path(ts["jump"]) != JUMP:
             b.jumper = JumpPolicy(ts["jump"])
+        if ts.get("righter"):   # a self-righting brain other than skills.SELFRIGHT (17e)
+            from getup_env import GetUpPolicy
+            b.righter = GetUpPolicy(ts["righter"])
         self.w.max_steps = ts["jump_steps"]   # the jump brain's clock input is t / its try length
         self.canter = imitate_policy(ts["canter"]) if ts["canter"] else None
         self.land = imitate_policy(ts["land"]) if ts["land"] else None

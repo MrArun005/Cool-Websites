@@ -117,6 +117,10 @@ SETS["v8g"] = dict(SETS["v7s"], clips={c: "gpu3" for c in ("walk", "trot", "pace
 # hand-overs 87/86/91/90% at 20-50 cm vs 84/90/87/73% for 59M)
 # v7c (29 Oct): v7s with the faster canter candidate (canter-speed 38M) for the canter clip
 SETS["v7c"] = dict(SETS["v7s"], clips=dict(SETS["v7s"]["clips"], canter="c38"))
+# 30 Oct: the new recovery (recover-delay 30M: stood up 87.3% / 74.5% at 0 / 20 ms vs 17e 81.7 / 63.7) and the
+# delay-proof jump (jump-delay 76M: hand-overs at 20 ms 85/92/86/67% vs 59M 7/2/1/0)
+SETS["v10n"] = dict(SETS["v7c"], righter=MODELS / "bolt-dog-recover-delay-30M")
+SETS["v10d"] = dict(SETS["v8g"], righter=MODELS / "bolt-dog-recover-delay-30M", jump=MODELS / "bolt-dog-jump-delay-76M")
 SETS["v9j"] = dict(SETS["v8g"], jump=MODELS / "bolt-dog-jump-handover-74M")
 
 
