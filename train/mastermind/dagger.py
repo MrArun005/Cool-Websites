@@ -32,6 +32,11 @@ HANDLER = {"v3": dict(jump_h=(0.15, 0.55), jump_ahead=(1.5, 2.2),
 HANDLER["v4"] = HANDLER["v3"]
 
 
+# real-body gap settings (argparse dests) that switch per-try drawing on when nonzero
+GAPS = ("latency_max_ms", "obs_noise", "motor_lag_max_ms", "drop_max", "payload_max", "vel_bias_max", "imu_bias_max",
+        "gyro_bias_max", "height_bias_max")
+
+
 def pick(rng, weights):
     k = list(weights)
     p = np.array([weights[x] for x in k], float)
@@ -98,10 +103,16 @@ def collect(args):
         ep_seed += 1
         h = Handler(rng, **hkw)
         clip, tau = h.first()
-        if real["latency_max_ms"] > 0 or real["obs_noise"] > 0:   # real-robot gaps, drawn per try (as mjx_imitate)
+        if any(real[k] for k in GAPS) or real["friction_min"] < 1.0 or real["friction_max"] > 1.0:
+            # real-robot gaps, drawn per try (as mjx_imitate; 29 Oct: research/realbody_stress.py names the ones
+            # that cost MasterMind points: delay, motor lag, payload, lost packets, grip, speed estimate)
             dt_ms = m.w.model.opt.timestep * 1000
             ms = round(rng.uniform(real["latency_min_ms"], real["latency_max_ms"]) / dt_ms) * dt_ms
-            m.real.update(delay=ms / 1000, noise=real["obs_noise"] * rng.uniform(0.0, 1.0))
+            u = lambda k: real[k] * rng.uniform(0.0, 1.0)   # noqa: E731
+            m.real.update(delay=ms / 1000, noise=u("obs_noise"), lag=u("motor_lag_max_ms") / 1000, drop=u("drop_max"),
+                          payload=u("payload_max"), friction=rng.uniform(real["friction_min"], real["friction_max"]),
+                          vel_bias=u("vel_bias_max"), imu_bias=u("imu_bias_max"), gyro_bias=u("gyro_bias_max"),
+                          height_bias=u("height_bias_max"))
         m.start(clip, tau=tau, seed=ep_seed)
         stats["tries"] += 1
         cmd, left = clip, int(rng.uniform(1.0, 3.0) / m.dt)
@@ -201,8 +212,20 @@ def main():
     ap.add_argument("--latency-min-ms", type=float, default=0.0, help="per-try action delay drawn from [min, max] ms (0: off)")
     ap.add_argument("--latency-max-ms", type=float, default=0.0, help="the real robot's control delay is ~10-20 ms")
     ap.add_argument("--obs-noise", type=float, default=0.0, help="sensor noise, multiple of env.NOISE, drawn per try in [0, x]")
+    # more real-body gaps, each drawn per try in [0, max] (env.REAL_OFF; realbody_stress.py levels: lag 20 ms, drop 0.1,
+    # payload 0.2, grip x0.5, speed estimate 0.2 m/s, IMU 0.05 rad, gyro 0.1 rad/s, height 0.03 m)
+    ap.add_argument("--motor-lag-max-ms", type=float, default=0.0, help="first-order motor lag (ms)")
+    ap.add_argument("--drop-max", type=float, default=0.0, help="share of control packets lost")
+    ap.add_argument("--payload-max", type=float, default=0.0, help="payload as a share of the body mass")
+    ap.add_argument("--friction-min", type=float, default=1.0, help="foot grip multiple, drawn in [min, max]")
+    ap.add_argument("--friction-max", type=float, default=1.0)
+    ap.add_argument("--vel-bias-max", type=float, default=0.0, help="body speed estimate bias (m/s)")
+    ap.add_argument("--imu-bias-max", type=float, default=0.0, help="IMU tilt bias (rad)")
+    ap.add_argument("--gyro-bias-max", type=float, default=0.0, help="gyro bias (rad/s)")
+    ap.add_argument("--height-bias-max", type=float, default=0.0, help="body height estimate bias (m)")
     a = ap.parse_args()
-    real = dict(latency_min_ms=a.latency_min_ms, latency_max_ms=a.latency_max_ms, obs_noise=a.obs_noise)
+    real = dict(latency_min_ms=a.latency_min_ms, latency_max_ms=a.latency_max_ms, obs_noise=a.obs_noise,
+                friction_min=a.friction_min, friction_max=a.friction_max, **{k: getattr(a, k) for k in GAPS[2:]})
     import torch
     torch.set_num_threads(a.workers)
     from env import Master
