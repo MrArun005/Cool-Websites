@@ -108,6 +108,9 @@ SETS["v7p"] = dict(SETS["v6h"], jump=MODELS / "bolt-dog-jump-handover-59M")
 SETS["v7"] = SETS["v7p"]
 # v7s: v7 with the canter back on 18g (v7's student lost canter look: tracking 0.695 -> 0.548 with gpu3 as teacher)
 SETS["v7s"] = dict(SETS["v6s"], land_hold=0.6, jump=MODELS / "bolt-dog-jump-handover-59M")
+# v8g (29 Oct): delay-proof teachers for a latency-trained MasterMind: gpu3 (trained with 0-40 ms delay) for every
+# dog-motion clip; the rest as v7s. Checked in the teacher chain at 20 ms before any DAgger run.
+SETS["v8g"] = dict(SETS["v7s"], clips={c: "gpu3" for c in ("walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie")})
 
 
 def teacher_set(name="v2", **over):

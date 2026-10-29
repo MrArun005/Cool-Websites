@@ -80,7 +80,7 @@ class Handler:
 
 def collect(args):
     """One worker: `steps` labelled states. Returns dict(obs, label, info)."""
-    (wid, seed, steps, student_path, beta, noise, imitate, teachers, over) = args
+    (wid, seed, steps, student_path, beta, noise, imitate, teachers, over, real) = args
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     import torch
     torch.set_num_threads(1)
@@ -98,6 +98,10 @@ def collect(args):
         ep_seed += 1
         h = Handler(rng, **hkw)
         clip, tau = h.first()
+        if real["latency_max_ms"] > 0 or real["obs_noise"] > 0:   # real-robot gaps, drawn per try (as mjx_imitate)
+            dt_ms = m.w.model.opt.timestep * 1000
+            ms = round(rng.uniform(real["latency_min_ms"], real["latency_max_ms"]) / dt_ms) * dt_ms
+            m.real.update(delay=ms / 1000, noise=real["obs_noise"] * rng.uniform(0.0, 1.0))
         m.start(clip, tau=tau, seed=ep_seed)
         stats["tries"] += 1
         cmd, left = clip, int(rng.uniform(1.0, 3.0) / m.dt)
@@ -194,7 +198,11 @@ def main():
     ap.add_argument("--init-student", help="start the network from this student.pt (weights and input normalizer) "
                     "instead of a fresh one (v4: the v3 student)")
     ap.add_argument("--beta-floor", type=float, default=0.0, help="teacher share of the executed actions never below this")
+    ap.add_argument("--latency-min-ms", type=float, default=0.0, help="per-try action delay drawn from [min, max] ms (0: off)")
+    ap.add_argument("--latency-max-ms", type=float, default=0.0, help="the real robot's control delay is ~10-20 ms")
+    ap.add_argument("--obs-noise", type=float, default=0.0, help="sensor noise, multiple of env.NOISE, drawn per try in [0, x]")
     a = ap.parse_args()
+    real = dict(latency_min_ms=a.latency_min_ms, latency_max_ms=a.latency_max_ms, obs_noise=a.obs_noise)
     import torch
     torch.set_num_threads(a.workers)
     from env import Master
@@ -252,7 +260,7 @@ def main():
         beta = 1.0 if rnd == 0 else max(a.beta_floor, 0.5 - 0.15 * (rnd - 1))
         noise = a.noise if rnd == 0 else 0.0
         per = steps // a.workers
-        jobs = [(w, a.seed * 100 + rnd * 10 + w, per, str(student) if rnd > 0 else None, beta, noise, a.imitate, a.teachers, over)
+        jobs = [(w, a.seed * 100 + rnd * 10 + w, per, str(student) if rnd > 0 else None, beta, noise, a.imitate, a.teachers, over, real)
                 for w in range(a.workers)]
         with ctx.Pool(a.workers) as pool:
             res = pool.map(collect, jobs)

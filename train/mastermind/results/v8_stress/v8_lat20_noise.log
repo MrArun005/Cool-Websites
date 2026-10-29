@@ -1,0 +1,33 @@
+gaits: done (76 s)
+rest: done (117 s)
+rest_still: done (153 s)
+jump20: done (185 s)
+jump30: done (222 s)
+jump40: done (256 s)
+shove: done (287 s)
+jump50: done (321 s)
+walk->trot                          10/19     53%   11
+trot->canter                         1/6      17%   24
+canter->trot                         0/0        -   30
+trot->walk                           0/0        -   30
+walk->sit                           23/24     96%    6
+walk->sit [pose reached]            23/24     96%    6
+sit->lie                            23/23    100%    7
+sit->lie [pose reached]             23/23    100%    7
+lie->stand (posture)                23/23    100%    7
+still: still->sit                   30/30    100%    0
+still: still->sit [pose reached]    30/30    100%    0
+still: sit->lie                     30/30    100%    0
+still: sit->lie [pose reached]      30/30    100%    0
+still: lie->stand (posture)         29/30     97%    0
+trot->jump 20 cm                     1/14      7%   16
+jump 20 cm->(canter)->trot           1/2      50%   28
+trot->jump 30 cm                     1/14      7%   16
+jump 30 cm->(canter)->trot           2/3      67%   27
+trot->jump 40 cm                     0/14      0%   16
+jump 40 cm->(canter)->trot           0/1       0%   29
+shove -> fall                       26/26    100%    4
+fall -> recover (stood up)          18/26     69%    4
+recover -> walk                     12/18     67%   12
+trot->jump 50 cm                     0/14      0%   16
+jump 50 cm->(canter)->trot           1/1     100%   29
