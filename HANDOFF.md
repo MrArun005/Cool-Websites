@@ -117,6 +117,12 @@ Do not claim to beat a specialist at its speciality unless the same test says so
    skill toward 99% (switching) and never call a brain "best" or stop while a gap remains. Rule for every run: "train,
    get the results; if it doesn't work leave it; if it works hand over what actually works". Tell the owner each result
    as it lands, good or bad, in plain words.
+0h. (29 Oct, owner delegated: "you make better decision") Canter on the A1 body is capped by motor speed (joints at
+   23.5-26 rad/s vs the 25 rad/s fade; research/results/canter_limit/NOTE.md). Decision: the A1 body stays the main body
+   (every brain is trained on it). Canter is pushed as far as A1 allows (root-velocity-weighted pilot; a Kaggle 12 h run
+   only if it passes canter >= 0.72 at >= 75% of the dog's speed with no falls). Reports give canter both ways: tracking
+   against the dog's 3.37 m/s and the speed Bolt actually reaches. A Go2-class body (faster motors) is a separate track
+   after the current jump/recovery work lands, so it cannot set back the A1 brains.
 0c. (28 Oct, owner delegated these calls "best for our reputation in the real world"):
    - Body = 33.5 N·m A1 motors (420 W, 21 rad/s rated, drive fades to 0 at 25 rad/s).
    - --motor-brake: brake starts at 25 rad/s (the drive cutoff, so fade and brake don't overlap), gain 3.5 N·m·s/rad (motor-constant estimate, the stricter choice). ON for all new training; exams default OFF for old brains; brains trained with the brake are examined with it ON, and their reports show both.
