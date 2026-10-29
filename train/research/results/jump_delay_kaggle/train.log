@@ -1,0 +1,55 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+motor brake (on, rad/s, N·m per rad/s): (True, 25.0, 3.5)
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+resuming from ../models/bolt-dog-jump-handover-59M/policy.zip at 59,190,488 steps, learning rate 0.0001, target kl 0.015, 16384 samples per update
+motor brake in the training envs (on, rad/s, N·m per rad/s): (True, 25.0, 3.5)
+best/ picked on the still exam; mid-stride exam: {'speed': 1.7, 'dist': 1.1, 'heights': (0.3, 0.4, 0.5), 'episodes': 10, 'seed': 5000}
+checkpoint 59190488 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.9, 'strict_40': 0.7, 'strict_50': 1.0, 'mid_v17_30': 1.0, 'mid_v17_40': 1.0, 'mid_v17_50': 1.0, 'mid_mean': 1.0} (practice bars now 30 cm)
+checkpoint 59190488 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 1.00 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+new best at 59190488: score 1.00
+checkpoint 60000000 ready: {'jump_30': 0.9, 'jump_40': 1.0, 'jump_50': 0.9, 'strict_30': 0.9, 'strict_40': 0.8, 'strict_50': 0.6, 'mid_v17_30': 1.0, 'mid_v17_40': 1.0, 'mid_v17_50': 0.9, 'mid_mean': 0.9666666666666667} (practice bars now 30 cm)
+checkpoint 60000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.97 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.93; selecting on still
+checkpoint 61000000 ready: {'jump_30': 1.0, 'jump_40': 0.6, 'jump_50': 0.3, 'strict_30': 0.9, 'strict_40': 0.7, 'strict_50': 0.4, 'mid_v17_30': 1.0, 'mid_v17_40': 0.8, 'mid_v17_50': 1.0, 'mid_mean': 0.9333333333333332} (practice bars now 30 cm)
+checkpoint 61000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.93 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.63; selecting on still
+checkpoint 62000000 ready: {'jump_30': 1.0, 'jump_40': 0.9, 'jump_50': 0.4, 'strict_30': 0.6, 'strict_40': 0.3, 'strict_50': 0.2, 'mid_v17_30': 1.0, 'mid_v17_40': 0.9, 'mid_v17_50': 0.6, 'mid_mean': 0.8333333333333334} (practice bars now 30 cm)
+checkpoint 62000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.83 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.77; selecting on still
+checkpoint 63000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 0.8, 'strict_30': 0.9, 'strict_40': 0.6, 'strict_50': 0.1, 'mid_v17_30': 1.0, 'mid_v17_40': 0.9, 'mid_v17_50': 0.9, 'mid_mean': 0.9333333333333332} (practice bars now 30 cm)
+checkpoint 63000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.93 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.93; selecting on still
+checkpoint 64000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 0.7, 'strict_30': 0.9, 'strict_40': 0.7, 'strict_50': 0.4, 'mid_v17_30': 0.9, 'mid_v17_40': 0.9, 'mid_v17_50': 0.9, 'mid_mean': 0.9} (practice bars now 30 cm)
+checkpoint 64000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.90 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.90; selecting on still
+checkpoint 65000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 0.6, 'strict_30': 0.9, 'strict_40': 0.9, 'strict_50': 0.9, 'mid_v17_30': 1.0, 'mid_v17_40': 1.0, 'mid_v17_50': 0.9, 'mid_mean': 0.9666666666666667} (practice bars now 30 cm)
+checkpoint 65000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.97 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.87; selecting on still
+checkpoint 66000000 ready: {'jump_30': 0.9, 'jump_40': 1.0, 'jump_50': 0.5, 'strict_30': 1.0, 'strict_40': 1.0, 'strict_50': 0.4, 'mid_v17_30': 1.0, 'mid_v17_40': 0.9, 'mid_v17_50': 0.8, 'mid_mean': 0.9} (practice bars now 30 cm)
+checkpoint 66000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.90 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.80; selecting on still
+checkpoint 67000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 0.7, 'strict_30': 0.8, 'strict_40': 1.0, 'strict_50': 0.6, 'mid_v17_30': 0.7, 'mid_v17_40': 1.0, 'mid_v17_50': 0.9, 'mid_mean': 0.8666666666666667} (practice bars now 30 cm)
+checkpoint 67000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.87 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.90; selecting on still
+checkpoint 68000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 1.0, 'strict_40': 0.8, 'strict_50': 0.2, 'mid_v17_30': 0.7, 'mid_v17_40': 0.9, 'mid_v17_50': 0.9, 'mid_mean': 0.8333333333333334} (practice bars now 30 cm)
+checkpoint 68000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.83 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+checkpoint 69000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 0.9, 'strict_30': 0.9, 'strict_40': 0.6, 'strict_50': 0.1, 'mid_v17_30': 0.9, 'mid_v17_40': 0.9, 'mid_v17_50': 0.9, 'mid_mean': 0.9} (practice bars now 30 cm)
+checkpoint 69000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.90 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.97; selecting on still
+checkpoint 70000000 ready: {'jump_30': 0.9, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.8, 'strict_40': 0.8, 'strict_50': 0.5, 'mid_v17_30': 0.7, 'mid_v17_40': 1.0, 'mid_v17_50': 0.8, 'mid_mean': 0.8333333333333334} (practice bars now 30 cm)
+checkpoint 70000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.83 mean over (0.3, 0.4, 0.5) m; still-legs mean 0.97; selecting on still
+checkpoint 71000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.7, 'strict_40': 0.7, 'strict_50': 0.2, 'mid_v17_30': 0.9, 'mid_v17_40': 0.9, 'mid_v17_50': 0.8, 'mid_mean': 0.8666666666666667} (practice bars now 30 cm)
+checkpoint 71000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.87 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+checkpoint 72000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.5, 'strict_40': 0.7, 'strict_50': 0.6, 'mid_v17_30': 1.0, 'mid_v17_40': 1.0, 'mid_v17_50': 0.7, 'mid_mean': 0.9} (practice bars now 30 cm)
+checkpoint 72000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.90 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+checkpoint 73000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.7, 'strict_40': 0.8, 'strict_50': 0.8, 'mid_v17_30': 0.8, 'mid_v17_40': 1.0, 'mid_v17_50': 0.6, 'mid_mean': 0.7999999999999999} (practice bars now 30 cm)
+checkpoint 73000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.80 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+checkpoint 74000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.5, 'strict_40': 0.7, 'strict_50': 0.6, 'mid_v17_30': 1.0, 'mid_v17_40': 0.9, 'mid_v17_50': 0.6, 'mid_mean': 0.8333333333333334} (practice bars now 30 cm)
+checkpoint 74000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.83 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+checkpoint 75000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.8, 'strict_40': 0.8, 'strict_50': 0.7, 'mid_v17_30': 1.0, 'mid_v17_40': 0.9, 'mid_v17_50': 0.7, 'mid_mean': 0.8666666666666667} (practice bars now 30 cm)
+checkpoint 75000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.87 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+checkpoint 76000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.5, 'strict_40': 0.8, 'strict_50': 0.6, 'mid_v17_30': 0.8, 'mid_v17_40': 0.9, 'mid_v17_50': 0.7, 'mid_mean': 0.7999999999999999} (practice bars now 30 cm)
+checkpoint 76000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.80 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+checkpoint 77000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.5, 'strict_40': 0.6, 'strict_50': 0.7, 'mid_v17_30': 0.9, 'mid_v17_40': 1.0, 'mid_v17_50': 0.6, 'mid_mean': 0.8333333333333334} (practice bars now 30 cm)
+checkpoint 77000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.83 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+checkpoint 78000000 ready: {'jump_30': 1.0, 'jump_40': 1.0, 'jump_50': 1.0, 'strict_30': 0.6, 'strict_40': 0.9, 'strict_50': 0.8, 'mid_v17_30': 0.8, 'mid_v17_40': 1.0, 'mid_v17_50': 0.8, 'mid_mean': 0.8666666666666667} (practice bars now 30 cm)
+checkpoint 78000000 mid-stride: 1.7 m/s from 1.1 m, legs mid-stride, 0.87 mean over (0.3, 0.4, 0.5) m; still-legs mean 1.00; selecting on still
+time guard: stopping at 78100840 steps after the time budget
+done: 78,100,840 steps in 635.3 min -> /tmp/bolt/train/runs/jumpdelay
