@@ -38,7 +38,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -171,6 +171,15 @@ JOBS = {
         args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015",
               "--latency-min-ms", "0", "--latency-max-ms", "30"],
         finals=[["recover", "--latency-ms", "20"], ["recover"]]),
+    "recover-gaps": dict(
+        # 30 Oct: recover-delay 30M stood up 87.3% / 74.5% (0 / 20 ms, 180 tries) vs 17e 81.7 / 63.7. Next: every real-body
+        # gap that matters (delay 0-30 ms, motor lag 0-25 ms, 10% lost packets), exams at 20 ms so best/ is picked under
+        # delay, the motor brake (as trained). Win: >= 85% stood up at 20 ms, not below 30M without delay.
+        name="recovergaps", script="train_getup.py", start="../models/bolt-dog-recover-delay-30M",
+        args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015",
+              "--latency-min-ms", "0", "--latency-max-ms", "30", "--motor-lag-max-ms", "25", "--drop-max", "0.1",
+              "--exam-latency-ms", "20"],
+        finals=[["recover", "--latency-ms", "20", "--motor-brake"], ["recover", "--motor-brake"]]),
     "recover": dict(
         name="recover", script="train_getup.py", start="../models/bolt-dog-selfright-17e-16.5M",
         args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015"],
