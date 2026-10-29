@@ -38,7 +38,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -104,6 +104,28 @@ JOBS = {
               "--exam2", "2.0", "1.5"],
         finals=[["jump", "--speeds", "1.5", "2.0", "--dist", "1.5", "--heights", "0.40", "0.50", "0.60", "--gait",
                  "--max-steps", "220", "--motor-brake"]]),
+    "jump-delay": dict(
+        # owner 29 Oct: "train delay into everything". At 20 ms the jump brain cleared 0/100 real hand-overs; a local
+        # pilot with 0-30 ms delay moved it to 8/100 (30 cm) after 0.5M steps. Win: held-out real hand-overs at
+        # 20 ms 30/40 cm >= 70/60%, without delay not below 85/80% (now 90/87%).
+        name="jumpdelay", script="train_jump.py", start="../models/bolt-dog-jump-handover-59M",
+        args=["--real", "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "0.8", "2.0", "--approach-speed", "2.4", "--approach-speed-min", "1.2", "--run-frac", "0.85",
+              "--gait-start", "0.7", "--bar-start", "0.30", "--bar-max", "0.65",
+              "--handover-file", "research/results/handover_states.npz", "--handover-rate", "0.6",
+              "--latency-min-ms", "0", "--latency-max-ms", "30",
+              "--exam-speed", "1.7", "--exam-dist", "1.1", "--exam-heights", "0.30", "0.40", "0.50"],
+        finals=[["jump", "--speeds", "1.5", "2.0", "--dist", "1.5", "--heights", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake", "--latency-ms", "20"],
+                ["jump", "--speeds", "1.5", "2.0", "--dist", "1.5", "--heights", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake"]]),
+    "recover-delay": dict(
+        # 17e stood up ~85% without delay, ~68% at 20 ms (fair_exam recover, 10 tries per fall, seed 9000).
+        # Win: at 20 ms >= 85% stood up, without delay not below 17e.
+        name="recoverdelay", script="train_getup.py", start="../models/bolt-dog-selfright-17e-16.5M",
+        args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015",
+              "--latency-min-ms", "0", "--latency-max-ms", "30"],
+        finals=[["recover", "--latency-ms", "20"], ["recover"]]),
     "recover": dict(
         name="recover", script="train_getup.py", start="../models/bolt-dog-selfright-17e-16.5M",
         args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015"],

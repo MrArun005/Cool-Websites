@@ -37,10 +37,16 @@ def main():
     ap.add_argument("--strict", action="store_true", help="jump: also the old strict test (randomized physics, askew)")
     ap.add_argument("--easy", action="store_true", help="recover: also the old falls and physics (17e's exam conditions)")
     ap.add_argument("--no-save", action="store_true")
+    ap.add_argument("--latency-ms", type=float, default=0.0, help="fixed control delay (ms) in every try (29 Oct)")
     add_brake_args(ap, default=False)
     a = ap.parse_args()
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(a.motor_brake, a.brake_speed, a.brake_gain), flush=True)
     folder, out, t0 = Path(a.folder), {}, time.time()
+    if a.latency_ms:
+        import getup_env
+        import jump_env
+        jump_env.EXAM_LATENCY_MS = getup_env.EXAM_LATENCY_MS = a.latency_ms
+        out["latency_ms"] = a.latency_ms
     if a.what == "jump":
         from jump_env import JumpPolicy, exam
         pol = JumpPolicy(folder)

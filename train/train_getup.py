@@ -94,13 +94,16 @@ def main():
     ap.add_argument("--n-steps", type=int, help="steps per env per update (default 2048 / the saved one)")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
+    ap.add_argument("--latency-min-ms", type=float, default=0.0, help="per-try control delay drawn in [min, max] ms")
+    ap.add_argument("--latency-max-ms", type=float, default=0.0, help="0: off; a real robot has ~10-20 ms")
     add_brake_args(ap, default=True)
     args = ap.parse_args()
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(2)
-    venv = make_vec_env(GetUpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(goal=args.goal, hard=args.hard))
+    venv = make_vec_env(GetUpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(goal=args.goal, hard=args.hard,
+                                                                                            latency_ms=(args.latency_min_ms, args.latency_max_ms)))
     over = {k: v for k, v in dict(learning_rate=args.lr, target_kl=args.target_kl, n_steps=args.n_steps).items() if v is not None}
     if args.init_from and not args.resume:
         src = Path(args.init_from)

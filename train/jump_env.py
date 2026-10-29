@@ -54,6 +54,9 @@ from bolt_env import ACTION_SCALE, STANCES, BoltEnv, physics
 DOG = STANCES["dog"]
 
 
+EXAM_LATENCY_MS = 0.0   # fixed control delay (ms) for exams (fair_exam.py --latency-ms)
+
+
 class JumpEnv(BoltEnv):
     OBS = 49   # 51 with real=True
 
@@ -73,7 +76,7 @@ class JumpEnv(BoltEnv):
         # latency_ms=(lo, hi): the motors get the targets sent that long ago, drawn per try (imitate_env's real-robot
         # gap; 29 Oct: at 20 ms MasterMind's teacher chain jumps 0-1/30, the jump brain was never trained with it).
         # exam_latency_ms: a fixed latency for exams.
-        self.latency_ms, self.exam_latency_ms, self.delay_sub, self._queue = tuple(latency_ms), None, 0, None
+        self.latency_ms, self.exam_latency_ms, self.delay_sub, self._queue = tuple(latency_ms), EXAM_LATENCY_MS or None, 0, None
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
                          hurdles="real" if real else True, skills=["stand"], motor_brake=motor_brake)
         self.real = real

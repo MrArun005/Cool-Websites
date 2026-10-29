@@ -629,10 +629,34 @@ class BoltEnv(gym.Env):
         self.forced_command = forced
         self._switch(walk)
 
+    # ---- control delay (29 Oct, owner: "train delay into everything"): a real robot's motors get the targets sent
+    # delay_sub physics steps ago. Envs set delay_sub per try (start_delay); 0 = no delay, the old behaviour.
+    delay_sub, _queue = 0, None
+
+    def start_delay(self, ms):
+        """Control delay of `ms` for this try (whole 2 ms physics steps); the robot holds its first target meanwhile."""
+        self.delay_sub = int(round(ms / 1000.0 / self.model.opt.timestep))
+        self._queue = [self.data.ctrl.copy() for _ in range(self.delay_sub // self.frame_skip + 2)] if self.delay_sub else None
+
+    def _physics_step(self):
+        """One control step of physics: the target just set in ctrl, or with start_delay's latency the one sent earlier
+        (substep i gets the target from back control steps ago, +1 for the first `sub` substeps); ctrl keeps what was sent."""
+        if not self.delay_sub:
+            return physics(self.model, self.data, self.frame_skip)
+        m, d = self.model, self.data
+        sent = d.ctrl.copy()
+        self._queue = self._queue[1:] + [sent]
+        back, sub = divmod(self.delay_sub, self.frame_skip)
+        target, older = self._queue[-1 - back], self._queue[-2 - back]
+        for i in range(self.frame_skip):
+            d.ctrl[:] = older if i < sub else target
+            physics(m, d, 1)
+        d.ctrl[:] = sent
+
     def step(self, action):
         action = np.clip(np.asarray(action, dtype=float), -1, 1)
         self.data.ctrl[:] = np.clip(self.base_pose() + self.action_scale() * action, self.lo, self.hi)
-        physics(self.model, self.data, self.frame_skip)
+        self._physics_step()
         self.t += 1
         self.env_steps += 1
         if self.speed_control:

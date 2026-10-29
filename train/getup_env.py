@@ -40,10 +40,14 @@ DOG = STANCES["dog"]
 STAND_HEIGHT = 0.43
 
 
+EXAM_LATENCY_MS = 0.0   # fixed control delay (ms) in exams (fair_exam.py --latency-ms)
+
+
 class GetUpEnv(BoltEnv):
     OBS = 46
 
-    def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand", hard=False, motor_brake=None):
+    def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand", hard=False, motor_brake=None,
+                 latency_ms=(0.0, 0.0)):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", skills=["stand"],
                          motor_brake=motor_brake)
         # hard=True (run "recover", from 17e): tougher falls and physics, see HARD_KINDS and _hard_physics
@@ -55,6 +59,9 @@ class GetUpEnv(BoltEnv):
         self.scale = np.maximum(self.hi - DOG, DOG - self.lo) if goal == "selfright" else ACTION_SCALE
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.exam_start = None   # "side", "back", "tipped" or "standing": exams set it; training draws it
+        # latency_ms=(lo, hi): the motors get the targets sent that long ago, drawn per try (as imitate_env and
+        # jump_env; 29 Oct: at 20 ms MasterMind's recovery stood up 16/30). Exams: EXAM_LATENCY_MS (fair_exam --latency-ms)
+        self.latency_ms = tuple(latency_ms)
 
     def _obs(self):
         d, R = self.data, self._rotation()
@@ -183,6 +190,9 @@ class GetUpEnv(BoltEnv):
     def _begin(self, kind):
         self.kind = kind
         self.t, self.last_action = 0, np.zeros(12)
+        lat = EXAM_LATENCY_MS if self.exam_start is not None else (
+            self.rng.uniform(*self.latency_ms) if self.latency_ms[1] > 0 else 0.0)
+        self.start_delay(lat)
         self.stood_at = None
         self.best_up = self._rotation()[2, 2]
         return self._obs(), {}
@@ -192,7 +202,7 @@ class GetUpEnv(BoltEnv):
         self.data.ctrl[:] = np.clip(DOG + self.scale * a, self.lo, self.hi)   # the full motor range
         if self.shove_at is not None and self.t == self.shove_at:   # knocked again while getting up
             self._shove(self.rng.uniform(0.5, 2.0), self.rng.uniform(1.0, 5.0))
-        physics(self.model, self.data, self.frame_skip)
+        self._physics_step()
         self.t += 1
         self.env_steps += 1
         d, R = self.data, self._rotation()
