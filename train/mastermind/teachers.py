@@ -47,13 +47,14 @@ def imitate_brain(which="18e"):
 
 
 GPU360 = MODELS / "bolt-dog-imitate-gpu-360M" / "params.pkl"   # Kaggle GPU brain (MJX PPO, 360M steps, 9 clips)
+GPU3 = MODELS / "bolt-dog-imitate-gpu3-617M" / "params.pkl"     # run gpu3: delay-proof, sits/lies from a trot (29 Oct)
 
 
 def imitate_policy(which):
-    """A loaded dog-motion brain (act(obs) on the ImitateEnv observation): any imitate_brain() name, or 'gpu360'."""
-    if which == "gpu360":
+    """A loaded dog-motion brain (act(obs) on the ImitateEnv observation): any imitate_brain() name, 'gpu360' or 'gpu3'."""
+    if which in ("gpu360", "gpu3"):
         from mjx_imitate import MjxImitatePolicy
-        return MjxImitatePolicy(GPU360)
+        return MjxImitatePolicy(GPU360 if which == "gpu360" else GPU3)
     from imitate_env import ImitatePolicy
     return ImitatePolicy(*imitate_brain(which))
 
@@ -92,6 +93,11 @@ SETS["v4b"] = SETS["v4gpu_all"] = dict(SETS["v4"], clips={c: "gpu360" for c in (
 # v5 (28 Oct): v4 with the jump brain trained from a trot (models/bolt-dog-jump-trot-55M, Kaggle jump-trot, re-picked
 # on the mid-stride hand-over: fair mid-stride 1.5 m/s 40/50 cm 92/65% vs 16i 17/5%). Same hand-over and clock.
 SETS["v5"] = dict(SETS["v4"], jump=MODELS / "bolt-dog-jump-trot-55M")
+# v6 candidates (29 Oct): gpu3 (sit/lie from a walk or trot 100%, trained on the canter->trot change) where the v5
+# teacher chain fails most (walk->sit / sit->lie 80%, canter->trot 87%); compared on dev seeds 20000.
+SETS["v6s"] = dict(SETS["v5"], clips=dict(SETS["v5"]["clips"], sit="gpu3", lie="gpu3"))
+SETS["v6c"] = dict(SETS["v5"], clips=dict(SETS["v5"]["clips"], canter="gpu3"))
+SETS["v6"] = dict(SETS["v5"], clips=dict(SETS["v5"]["clips"], sit="gpu3", lie="gpu3", canter="gpu3"))
 
 
 def teacher_set(name="v2", **over):
