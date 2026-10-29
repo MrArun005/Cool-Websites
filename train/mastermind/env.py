@@ -393,10 +393,16 @@ class Master:
                     if self.land is not None:
                         self.land_left = int(round(self.ts["land_s"] / self.dt))
                     j["phase"], j["bridge"] = "bridge", 0
-                    if self.bridge > 0:
+                    if self.ts.get("land_hold", 0) > 0:   # the jump brain lands Bolt itself (Bolt's Day Out: landing falls 12 -> 1)
+                        j["phase"] = "hold"
+                    elif self.bridge > 0:
                         self._to_clip("canter")
                     else:   # no bridge: straight back to the gait
                         self._end_jump(out)
+            elif j["phase"] == "hold":   # still the jump brain, slowing Bolt down, for land_hold s; then the gait
+                j["bridge"] += 1
+                if j["bridge"] >= int(round(self.ts["land_hold"] / self.dt)):
+                    self._end_jump(out)
             elif j["phase"] == "bridge":
                 j["bridge"] += 1
                 if j["bridge"] >= int(round(self.bridge / self.dt)):

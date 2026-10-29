@@ -98,6 +98,10 @@ SETS["v5"] = dict(SETS["v4"], jump=MODELS / "bolt-dog-jump-trot-55M")
 SETS["v6s"] = dict(SETS["v5"], clips=dict(SETS["v5"]["clips"], sit="gpu3", lie="gpu3"))
 SETS["v6c"] = dict(SETS["v5"], clips=dict(SETS["v5"]["clips"], canter="gpu3"))
 SETS["v6"] = dict(SETS["v5"], clips=dict(SETS["v5"]["clips"], sit="gpu3", lie="gpu3", canter="gpu3"))
+# land_hold: s the jump brain keeps control after landing (it slows Bolt down, as Bolt's Day Out's "land"), then the
+# gait; instead of the canter bridge. Default 0 (the bridge).
+SETS["v6h"] = dict(SETS["v6"], land_hold=0.6)
+SETS["v6h1"] = dict(SETS["v6"], land_hold=1.0)
 
 
 def teacher_set(name="v2", **over):

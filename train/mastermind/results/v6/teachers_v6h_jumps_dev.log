@@ -1,0 +1,12 @@
+jump20: done (16 s)
+jump30: done (33 s)
+jump40: done (50 s)
+jump50: done (67 s)
+trot->jump 20 cm                    23/30     77%    0
+jump 20 cm->(canter)->trot          29/29    100%    1
+trot->jump 30 cm                    22/30     73%    0
+jump 30 cm->(canter)->trot          30/30    100%    0
+trot->jump 40 cm                    19/30     63%    0
+jump 40 cm->(canter)->trot          26/27     96%    3
+trot->jump 50 cm                    11/30     37%    0
+jump 50 cm->(canter)->trot          23/23    100%    7
