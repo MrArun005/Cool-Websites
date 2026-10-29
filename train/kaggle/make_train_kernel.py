@@ -220,6 +220,26 @@ env = dict(os.environ, OMP_NUM_THREADS="1", PYTHONUNBUFFERED="1")
 env.pop("MUJOCO_GL", None)   # no rendering
 
 
+# chunked runs (owner 30 Oct: short pieces, each continuing the last): copy the previous piece's newest checkpoint
+# and best/ from its kernel output (kernel_sources mounts it under the input folder) before training resumes
+if CFG.get("resume_kernel"):
+    prev = sorted(glob.glob(str(INP / "**" / "runs" / CFG["name"] / "checkpoints" / "policy_*_steps.zip"), recursive=True),
+                  key=lambda c: int(Path(c).stem.split("_")[1]))
+    prev = [c for c in prev if os.path.exists(c.replace("policy_", "policy_vecnormalize_", 1)[:-4] + ".pkl")]
+    assert prev, f"no checkpoint of {CFG['name']} under {INP} (resume_kernel {CFG['resume_kernel']})"
+    (RUN / "checkpoints").mkdir(parents=True, exist_ok=True)
+    c = prev[-1]
+    for f in (c, c.replace("policy_", "policy_vecnormalize_", 1)[:-4] + ".pkl"):
+        shutil.copy(f, RUN / "checkpoints" / Path(f).name)
+    pb = Path(c).parent.parent / "best"
+    if pb.is_dir() and not (RUN / "best").exists():
+        shutil.copytree(pb, RUN / "best")
+    for f in ("train.log",):
+        if (Path(c).parent.parent / f).exists() and not (RUN / f).exists():
+            shutil.copy(Path(c).parent.parent / f, RUN / f)
+    say(f"continuing piece from {CFG['resume_kernel']}: {Path(c).name}")
+
+
 def latest():
     cks = glob.glob(str(RUN / "checkpoints" / "policy_*_steps.zip"))
     cks = [c for c in cks if os.path.exists(c.replace("policy_", "policy_vecnormalize_", 1)[:-4] + ".pkl")]
@@ -308,13 +328,14 @@ def build_kernel(a):
         args += ["--exam-episodes", str(a.exam_episodes)]
     cfg = dict(pip=PIP, tar=TAR, script=job["script"], name=job["name"], start=job["start"], args=args,
                steps=a.steps, envs=a.envs, every=a.every or 1_000_000,
-               train_h=a.train_h, hard_h=a.hard_h, attempts=3, finals=job["finals"], final_episodes=a.final_episodes)
+               train_h=a.train_h, hard_h=a.hard_h, attempts=3, resume_kernel=a.resume_kernel, finals=job["finals"], final_episodes=a.final_episodes)
     (out / "kernel.py").write_text(KERNEL.replace("@CFG@", repr(cfg)))
     slug = a.slug or f"bolt-{a.job}"
     (out / "kernel-metadata.json").write_text(json.dumps(dict(
         id=f"{a.user}/{slug}", title=slug, code_file="kernel.py", language="python", kernel_type="script",
         is_private=True, enable_gpu=False, enable_tpu=False, enable_internet=True,
-        dataset_sources=[f"{a.user}/{a.dataset}"], competition_sources=[], kernel_sources=[]), indent=1))
+        dataset_sources=[f"{a.user}/{a.dataset}"], competition_sources=[],
+        kernel_sources=[f"{a.user}/{a.resume_kernel}"] if a.resume_kernel else []), indent=1))
     print(f"kernel in {out}: push with  kaggle kernels push -p {out}")
 
 
@@ -334,6 +355,8 @@ def main():
     ap.add_argument("--final-episodes", type=int, default=30, help="tries per test in the final fair exams")
     ap.add_argument("--train-h", type=float, default=10.6, help="training ends (time guard) this long after the start")
     ap.add_argument("--hard-h", type=float, default=11.6, help="kill anything still running at this time")
+    ap.add_argument("--resume-kernel", help="continue from this kernel's output (its newest checkpoint and best/): "
+                    "the next piece of a chunked run, e.g. --train-h 3.5 --hard-h 4.2 --slug bolt-<job>-p2")
     a = ap.parse_args()
     build_data(a) if a.what == "data" else build_kernel(a)
 

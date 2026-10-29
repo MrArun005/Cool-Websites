@@ -123,6 +123,11 @@ Do not claim to beat a specialist at its speciality unless the same test says so
    only if it passes canter >= 0.72 at >= 75% of the dog's speed with no falls). Reports give canter both ways: tracking
    against the dog's 3.37 m/s and the speed Bolt actually reaches. A Go2-class body (faster motors) is a separate track
    after the current jump/recovery work lands, so it cannot set back the A1 brains.
+0i. (30 Oct, owner delegated) Kaggle runs go in pieces: a new idea gets a 1-2 h pilot; one that passes runs as 3.5 h
+   pieces, each continuing the last (make_train_kernel.py kernel --job J --train-h 3.5 --hard-h 4.2 --slug bolt-J-pN
+   --resume-kernel bolt-J-p(N-1)); after each piece download, test, decide. Stop after two pieces in a row with no
+   gain (in-training exams are 10 tries: one noisy piece is not a verdict). MasterMind DAgger runs stay whole (their
+   data set does not carry over between pieces).
 0c. (28 Oct, owner delegated these calls "best for our reputation in the real world"):
    - Body = 33.5 N·m A1 motors (420 W, 21 rad/s rated, drive fades to 0 at 25 rad/s).
    - --motor-brake: brake starts at 25 rad/s (the drive cutoff, so fade and brake don't overlap), gain 3.5 N·m·s/rad (motor-constant estimate, the stricter choice). ON for all new training; exams default OFF for old brains; brains trained with the brake are examined with it ON, and their reports show both.
