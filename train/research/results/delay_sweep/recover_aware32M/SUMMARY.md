@@ -12,3 +12,6 @@ fair_exam recover --episodes 30 --seed 9000 --motor-brake (180 tries per row), m
 
 Worst +5.0, average -0.9: not better on both -> not used (flat piece 1). In-run exam (20 ms +-8): start 83.3%, best 32M 82.2%.
 Like recover-dyndelay (69.7 / 48.9), recovery under delay sits at ~70% average whatever the recipe so far.
+
+Piece 2 (Kaggle bolt-recover-delayaware-p2, 34-41M): in-run exam (20 ms +-8) 73-83%, best 41M 83.3% = the start's
+83.3%. Second flat piece -> the delay-input recovery line ends; 30M stays.
