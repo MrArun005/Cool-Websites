@@ -2,10 +2,22 @@
 
 A 12 kg simulated quadruped with real Unitree A1 motor limits (torque, power, joint speed), trained with reinforcement learning (PPO) in MuJoCo and MuJoCo MJX: 4,096 parallel robots on free Colab and Kaggle GPUs. Nine learned gaits and postures (walk, trot, pace, turn, sit, lie, get up) score 91–97% on seeded exams with zero falls; a canter runs at ~2 m/s; a run-up jump clears 40 cm; self-righting from any fall takes under a second. Every trained policy ships in [`models/`](models/) with a model card, exam results and the command that produced them.
 
-## Target robot: Unitree Go2 EDU (decided 30 Oct 2026)
+## Target robots: Unitree Go2 EDU and DEEP Robotics Lite3 (decided 30 Oct 2026)
 
-Bolt's brains will be retrained for, and first run on, a **Unitree Go2 EDU**. Until that robot runs them, every result in
-this repo is **in simulation**.
+Bolt's brains will be retrained for, and first run on, two real quadrupeds from two makers: a **Unitree Go2 EDU** (first)
+and a **DEEP Robotics Lite3** (second). One code path, a body option per robot, separate brains and separate results per
+body. Until a robot runs them, every result in this repo is **in simulation**.
+
+| Why Lite3 as the second | |
+|---|---|
+| A different maker | not tied to one vendor's SDK or hardware |
+| Official sim models | DEEP Robotics publishes Lite3 URDF and MJCF (github.com/DeepRoboticsLab, URDF_model) |
+| Real-robot path | official RL sim-to-sim / sim-to-real code (Lite3_rl_deploy) and a low-level C++ MotionSDK; used in published learned-locomotion work deployed onboard at 50 Hz |
+| Size class | a ~12-DoF small quadruped like Go2, so the same dog clips and brains fit after retargeting |
+
+Licence of the Lite3 model files is checked before they are copied in; nothing of it is in the repo yet.
+
+### Unitree Go2 EDU
 
 | Why Go2 | |
 |---|---|
