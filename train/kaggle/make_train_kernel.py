@@ -105,6 +105,17 @@ JOBS = {
               "--select-heights", "0.50", "0.55", "0.60"],
         finals=[["jump", "--speeds", "2.0", "2.5", "3.0", "--dist", "3.0", "--heights", "0.50", "0.60", "--gait",
                  "--max-steps", "220", "--motor-brake"]]),
+    "steer-pilot2": dict(
+        # 30 Oct: steer-pilot (weight 0.15, +-1 rad/s) learned no steering in 4.4M steps (steer_mean 0.12-0.16 vs 0.15
+        # at the start; trot/canter tracking kept, canter 0.715 -> 0.728 at 85% speed). The pose and paw terms (0.7 of the
+        # reward) pay for the straight reference legs, so turning costs more than it earns. Steer term weight 0.6 and
+        # the global root terms (the reference path turns with the command, so drifting off it costs too); commands
+        # +-0.8 rad/s on most tries. Win: steer_mean >= 0.6, trot >= 0.85, canter >= 0.69, no falls.
+        name="steer2", script="train_imitate.py", start="../models/bolt-dog-canter-speed-38M",
+        args=["--slots", "8", "--clips", "trot", "canter", "--switch-rate", "0.3", "--lr", "1e-4",
+              "--root-vel-weight", "0.6", "--steer-max", "0.8", "--steer-share", "0.8", "--steer-weight", "0.6",
+              "--root-global", "0.5"],
+        finals=[]),
     "jump-runup90": dict(
         # 30 Oct, owner: every category 90+. runup 88M: 50 cm from 3 m at 2.0/2.5/3.0 m/s 57/63/17% (flat after 88M).
         # Narrow it to the speeds that work (1.8-2.6 m/s, no 3 m/s) and to 50 cm first (practice bars 45-58 cm), so
