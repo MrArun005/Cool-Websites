@@ -1,0 +1,34 @@
+{'track_walk': 0.91, 'fall_walk': 0.0, 'speed_walk': 0.87, 'track_trot': 0.89, 'fall_trot': 0.0, 'speed_trot': 0.89, 'track_pace': 0.905, 'fall_pace': 0.0, 'speed_pace': 0.87, 'track_canter': 0.714, 'fall_canter': 0.0, 'speed_canter': 0.77, 'track_turn_left': 0.89, 'fall_turn_left': 0.0, 'speed_turn_left': 0.27, 'track_turn_right': 0.888, 'fall_turn_right': 0.0, 'speed_turn_right': 0.4, 'track_sit': 0.958, 'fall_sit': 0.0, 'track_lie': 0.89, 'fall_lie': 0.0}
+gaits: done (56 s)
+rest: done (107 s)
+rest_still: done (147 s)
+jump20: done (168 s)
+jump30: done (188 s)
+jump40: done (209 s)
+shove: done (243 s)
+jump50: done (268 s)
+walk->trot                          30/30    100%    0
+trot->canter                        30/30    100%    0
+canter->trot                        22/30     73%    0
+trot->walk                          22/22    100%    8
+walk->sit                           30/30    100%    0
+walk->sit [pose reached]            29/30     97%    0
+sit->lie                            29/29    100%    1
+sit->lie [pose reached]             29/29    100%    1
+lie->stand (posture)                29/29    100%    1
+still: still->sit                   30/30    100%    0
+still: still->sit [pose reached]    30/30    100%    0
+still: sit->lie                     30/30    100%    0
+still: sit->lie [pose reached]      30/30    100%    0
+still: lie->stand (posture)         30/30    100%    0
+trot->jump 20 cm                    25/30     83%    0
+jump 20 cm->(canter)->trot          29/29    100%    1
+trot->jump 30 cm                    27/30     90%    0
+jump 30 cm->(canter)->trot          30/30    100%    0
+trot->jump 40 cm                    27/30     90%    0
+jump 40 cm->(canter)->trot          30/30    100%    0
+shove -> fall                       30/30    100%    0
+fall -> recover (stood up)          29/30     97%    0
+recover -> walk                     29/29    100%    1
+trot->jump 50 cm                    18/30     60%    0
+jump 50 cm->(canter)->trot          26/26    100%    4
