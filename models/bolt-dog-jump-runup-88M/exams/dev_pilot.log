@@ -1,0 +1,26 @@
+motor brake (on, rad/s, N·m per rad/s): (True, 25.0, 3.5)
+jump exam: 20 tries per height, seed 7000, max steps 220 (4.4 s), bar 3.0 m away, heights [0.5, 0.6]
+v20 {'jump_50': 0.05, 'jump_60': 0.0}
+v20_gait {'jump_50': 0.55, 'jump_60': 0.1}
+v25 {'jump_50': 0.05, 'jump_60': 0.0}
+v25_gait {'jump_50': 0.5, 'jump_60': 0.05}
+{
+ "v20_jump_50": 0.05,
+ "v20_jump_60": 0.0,
+ "v20_gait_jump_50": 0.55,
+ "v20_gait_jump_60": 0.1,
+ "v25_jump_50": 0.05,
+ "v25_jump_60": 0.0,
+ "v25_gait_jump_50": 0.5,
+ "v25_gait_jump_60": 0.05,
+ "max_steps": 220,
+ "dist": 3.0,
+ "motor_brake": {
+  "on": true,
+  "speed": 25.0,
+  "gain": 3.5
+ },
+ "episodes": 20,
+ "seed": 7000,
+ "minutes": 1.9
+}
