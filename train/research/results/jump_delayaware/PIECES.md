@@ -10,3 +10,9 @@ Pilot (Kaggle bolt-jump-delayaware-p1, 2 h, 80.5M -> 83.7M; jump-dyndelay2's rec
 | 82M (delay input) | 49 | 78 | 77 | 71 | 42 | 60/63/55/31 | 58 / 31 |
 
 A tie, not a win (flat piece 1 of 2). Only 3.2M steps; piece 2 (3.5 h) decides.
+
+## Piece 2 (Kaggle bolt-jump-delayaware-p2, 3.5 h, 83.7M -> 89.6M): flat -> the delay-input jump line ends
+
+Delayed hand-overs at 20 ms +-8 (96 states), cleared at 30/40/50 cm: 85M 73/58/26, 86M 75/60/30, 88M 78/65/36,
+89.6M 75/57/23 vs 80.5M 80/73/47. Below 80.5M at every height; two flat pieces in a row (HANDOFF 0i). 80.5M stays.
+The measured-delay input did not help the jump brain in 9M steps of PPO.
