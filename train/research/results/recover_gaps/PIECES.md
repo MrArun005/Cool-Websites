@@ -10,3 +10,7 @@ Piece 1 (bolt-recover-gaps-p1, 3.5 h, 30M -> 37.3M). Dev seed 7000 at 20 ms (15 
 | piece 1 36M | 78.8% | 71.0% | 72.2% |
 
 Not better -> not used. One flat piece: piece 2 (bolt-recover-gaps-p2) continues; a second flat piece ends the recipe.
+
+Piece 2 (bolt-recover-gaps-p2, 3.5 h, 37.3M -> 46M). Dev seed 7000 at 20 ms, stood up: 38M 70.0%, 39M 71.1%, 40M 74.4%,
+41M 65.6%, 42M 71.1%, 43M 74.4%, 44M 65.6%, 45M 72.2%, 46M 70.0% vs recover-delay 30M 75.7%. Second flat piece ->
+recipe ended (HANDOFF 0i); recover-delay 30M stays. The slot went to recover-dyndelay (0-40 ms, per-step jitter, spikes).
