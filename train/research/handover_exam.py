@@ -39,7 +39,8 @@ def main():
     a = ap.parse_args()
     brake = set_motor_brake(a.motor_brake, a.brake_speed, a.brake_gain)
     pol = JumpPolicy(a.folder)
-    env = JumpEnv(randomize=False, real=True, max_steps=a.max_steps, handover_file=a.states, motor_brake=a.motor_brake)
+    env = JumpEnv(randomize=False, real=True, max_steps=a.max_steps, handover_file=a.states, motor_brake=a.motor_brake,
+                  delay_input=pol.delay_input)
     env.exam_latency_ms = a.latency_ms
     bolt_env.EXAM_GAPS.update(lag_ms=a.motor_lag_ms, drop=a.drop, jitter_ms=a.jitter_ms, spike_p=a.spike_p)
     n = len(env.handover["ahead"])

@@ -23,15 +23,17 @@ from jump_env import JumpEnv, JumpPolicy, exam
 from bolt_env import add_brake_args, add_exam_gap_args, set_exam_gaps, set_motor_brake
 
 
-def widen(src, out):
+def widen(src, out, delay_input=False):
     """A 49-input jump brain -> 51 inputs for the real hurdle (run 16): the two new inputs (heading error,
-    distance off the line) start with zero weights and a neutral normalizer, so it jumps exactly as before."""
+    distance off the line) start with zero weights and a neutral normalizer, so it jumps exactly as before.
+    delay_input (30 Oct): also -> 52, the measured delay (from a 49- or 51-input brain), the same way."""
     import numpy as np
     from stable_baselines3.common.vec_env import DummyVecEnv
     src, out = Path(src), Path(out)
     out.mkdir(parents=True, exist_ok=True)
     old = PPO.load(src / "policy.zip", device="cpu")
-    env = DummyVecEnv([lambda: JumpEnv(real=True)])
+    env = DummyVecEnv([lambda: JumpEnv(real=True, delay_input=delay_input)])
+    n0 = old.observation_space.shape[0]
     new = PPO("MlpPolicy", env, device="cpu", policy_kwargs=old.policy_kwargs, n_steps=old.n_steps,
               batch_size=old.batch_size, n_epochs=old.n_epochs, gamma=old.gamma, gae_lambda=old.gae_lambda,
               clip_range=old.clip_range, ent_coef=old.ent_coef, max_grad_norm=old.max_grad_norm, target_kl=old.target_kl)
@@ -44,12 +46,13 @@ def widen(src, out):
     new.policy.load_state_dict(widened)
     new.num_timesteps = old.num_timesteps
     new.save(out / "policy_{}_steps.zip".format(old.num_timesteps))
-    norm = VecNormalize.load(str(src / "vecnormalize.pkl"), DummyVecEnv([lambda: JumpEnv()]))
-    norm.obs_rms.mean = np.concatenate([norm.obs_rms.mean, np.zeros(2)])
-    norm.obs_rms.var = np.concatenate([norm.obs_rms.var, np.ones(2)])
+    norm = VecNormalize.load(str(src / "vecnormalize.pkl"), DummyVecEnv([lambda: JumpEnv(real=n0 in (51, 52), delay_input=n0 == 52)]))
+    extra = env.observation_space.shape[0] - n0
+    norm.obs_rms.mean = np.concatenate([norm.obs_rms.mean, np.zeros(extra)])
+    norm.obs_rms.var = np.concatenate([norm.obs_rms.var, np.ones(extra)])
     norm.observation_space = env.observation_space
     norm.save(str(out / "policy_vecnormalize_{}_steps.pkl".format(old.num_timesteps)))
-    print(f"widened {src} (49 -> 51 inputs, {old.num_timesteps:,} steps) -> {out}", flush=True)
+    print(f"widened {src} ({n0} -> {env.observation_space.shape[0]} inputs, {old.num_timesteps:,} steps) -> {out}", flush=True)
     return out / "policy_{}_steps.zip".format(old.num_timesteps)
 
 
@@ -163,7 +166,9 @@ def main():
     ap.add_argument("--target-kl", type=float, default=0.03)
     ap.add_argument("--n-steps", type=int, default=512, help="steps per env per update (x envs = samples per update)")
     ap.add_argument("--real", action="store_true", help="the real hurdle (hurdle.py) and heading inputs: run 16 on")
-    ap.add_argument("--widen-from", help="a 49-input jump brain folder to start from (with --real)")
+    ap.add_argument("--widen-from", help="a jump brain folder with fewer inputs to start from (with --real; "
+                    "49 -> 51, or -> 52 with --delay-input)")
+    ap.add_argument("--delay-input", action="store_true", help="the measured delay as one more input (30 Oct; with --real)")
     ap.add_argument("--approach", type=float, nargs=2, default=[0.45, 0.65], help="bar distance at the start (m), run 16i: 1.5 3.0")
     ap.add_argument("--max-steps", type=int, default=100, help="steps per try (50 per second); a run-up needs ~200")
     ap.add_argument("--approach-speed", type=float, default=0.0, help="half the tries start running at the bar, 1 m/s up to this (run 16i: 3)")
@@ -214,10 +219,11 @@ def main():
                                                                                            handover_file=args.handover_file, handover_rate=args.handover_rate,
                                                                                            latency_ms=(args.latency_min_ms, args.latency_max_ms),
                                                                                            motor_lag_ms=(0.0, args.motor_lag_max_ms), drop=(0.0, args.drop_max),
-                                                                                           latency_jitter_ms=args.latency_jitter_ms, latency_spike_p=args.latency_spike_p))
+                                                                                           latency_jitter_ms=args.latency_jitter_ms, latency_spike_p=args.latency_spike_p,
+                                                                                           delay_input=args.delay_input))
     print("exam gaps:", set_exam_gaps(args.exam_latency_ms, args.exam_lag_ms, args.exam_drop, args.exam_jitter_ms, args.exam_spike_p), flush=True)
     if args.widen_from and not args.resume:
-        args.resume = str(widen(args.widen_from, out / "widened"))
+        args.resume = str(widen(args.widen_from, out / "widened", args.delay_input))
     if args.init_from and not args.resume:   # a model folder: policy.zip + vecnormalize.pkl
         args.resume = str(Path(args.init_from) / "policy.zip")
         stats = Path(args.init_from) / "vecnormalize.pkl"

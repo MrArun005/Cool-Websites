@@ -255,6 +255,7 @@ class Bolt:
         self.skill = "jump"
         info = {}
         for _ in range(150):
+            w.delay_input = getattr(self.jumper, "delay_input", False)   # a delay-aware jump brain reads the measured delay
             _, _, _, _, info = w.step(self.jumper.act(w._obs()))
             if self._after_step("jump"):
                 out.update(fell=True, cleared=w.cleared, touched=w.touched, dropped=w.dropped)

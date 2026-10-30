@@ -38,7 +38,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -184,6 +184,32 @@ JOBS = {
               "--exam-speed", "1.5", "--exam-dist", "1.1", "--exam-heights", "0.30", "0.40", "0.50"],
         finals=[["jump", "--speeds", "1.5", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
                  "--max-steps", "220", "--motor-brake", "--latency-ms", "20", "--jitter-ms", "8"]]),
+    "jump-delayaware": dict(
+        # 30 Oct, owner: "any delay should be recognised by robot and act accordingly". jump-dyndelay2's exact recipe
+        # (the control arm, running alongside) plus one input: the delay Bolt measures (packet timestamps, +-2 ms clock
+        # error; bolt_env.measured_delay_ms). From jump-gaps 80.5M widened 51 -> 52 inputs (the new input starts at
+        # zero weight: 73/96 at 40 cm, 20 ms +-8, the same as 80.5M). Win: delay_sweep average and worst both above
+        # 80.5M's (58% / 34%) and above jump-dyndelay2's, and 0 ms not below 80.5M's 45%.
+        name="jumpaware", script="train_jump.py", start="../models/bolt-dog-jump-gaps-80.5M",
+        args=["--real", "--delay-input", "--widen-from", "../models/bolt-dog-jump-gaps-80.5M",
+              "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "0.8", "2.0", "--approach-speed", "2.4", "--approach-speed-min", "1.2", "--run-frac", "0.85",
+              "--gait-start", "0.7", "--bar-start", "0.30", "--bar-max", "0.65",
+              "--handover-file", "research/results/handover_states_mix2.npz", "--handover-rate", "0.75",
+              "--latency-min-ms", "0", "--latency-max-ms", "40", "--latency-jitter-ms", "10", "--latency-spike-p", "0.03",
+              "--motor-lag-max-ms", "25", "--drop-max", "0.1",
+              "--exam-latency-ms", "20", "--exam-jitter-ms", "8",
+              "--exam-speed", "1.5", "--exam-dist", "1.1", "--exam-heights", "0.30", "0.40", "0.50"],
+        finals=[["jump", "--speeds", "1.5", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake", "--latency-ms", "20", "--jitter-ms", "8"]]),
+    "steer-pilot": dict(
+        # 30 Oct, Bolt Run: Bolt cannot turn at a trot (steering exam: 38M follows a turn command 0.15 of 1). From
+        # canter-speed 38M (its recipe: trot + canter, switches 0.3/s, body-velocity weight 0.6, lr 1e-4) plus a
+        # yaw-rate command of +-1 rad/s. Win: steer_mean >= 0.6 with trot tracking >= 0.85, canter >= 0.69, no falls.
+        name="steer", script="train_imitate.py", start="../models/bolt-dog-canter-speed-38M",
+        args=["--slots", "8", "--clips", "trot", "canter", "--switch-rate", "0.3", "--lr", "1e-4",
+              "--root-vel-weight", "0.6", "--steer-max", "1.0"],
+        finals=[]),
     "jump-delay": dict(
         # owner 29 Oct: "train delay into everything". At 20 ms the jump brain cleared 0/100 real hand-overs; a local
         # pilot with 0-30 ms delay moved it to 8/100 (30 cm) after 0.5M steps. Win: held-out real hand-overs at

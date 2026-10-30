@@ -64,7 +64,7 @@ class JumpEnv(BoltEnv):
     def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0,
                  approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50, motor_brake=None, under_margin=0.0,
                  handover_file=None, handover_rate=0.0, latency_ms=(0.0, 0.0), motor_lag_ms=(0.0, 0.0), drop=(0.0, 0.0),
-                 latency_jitter_ms=0.0, latency_spike_p=0.0):
+                 latency_jitter_ms=0.0, latency_spike_p=0.0, delay_input=False):
         # under_margin (m): the body's centre must be at least bar height + this when it crosses the bar's line, or
         # Bolt went UNDER the bar (28 Oct: bars of 60-75 cm are higher than Bolt's back, and "all paws past the bar"
         # counted running under a 70 cm bar as a clean jump). 0 = centre above the bar top; a trunk that crosses
@@ -88,7 +88,10 @@ class JumpEnv(BoltEnv):
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
                          hurdles="real" if real else True, skills=["stand"], motor_brake=motor_brake)
         self.real = real
-        self.OBS = 51 if real else 49
+        # delay_input (30 Oct): one more input, the delay Bolt measures (bolt_env measured_delay_ms / 40 ms), so a brain
+        # can act on the delay it has instead of one compromise for all delays
+        self.delay_input = delay_input
+        self.OBS = (51 if real else 49) + bool(delay_input)
         if real:
             import hurdle
             self.bar_geom = self.model.geom("bar0").id
@@ -179,7 +182,8 @@ class JumpEnv(BoltEnv):
             R.T @ np.array([0, 0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3], [d.qpos[2]],
             d.qpos[7:19] - DOG, d.qvel[6:18] * 0.1, self.last_action,
             [self.hurdle_ahead(), self.hurdle_h, self.t / self.max_steps],
-        ] + ([[np.sin(self.heading_error()), self.off_line()]] if self.real else []))
+        ] + ([[np.sin(self.heading_error()), self.off_line()]] if self.real else [])
+          + ([[self.measured_delay_ms() / 40.0]] if self.delay_input else []))
         if self.randomize:
             obs += self.rng.normal(0, 0.01, obs.shape)
         return obs.astype(np.float32)
@@ -369,8 +373,10 @@ class JumpPolicy:
         from pathlib import Path
         run_dir = Path(run_dir)
         self.model = PPO.load(run_dir / zip_name, device="cpu")
-        self.real = self.model.observation_space.shape[0] == 51   # run 16 on: the real hurdle
-        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: JumpEnv(real=self.real)]))
+        n = self.model.observation_space.shape[0]
+        self.real = n in (51, 52)                    # run 16 on: the real hurdle
+        self.delay_input = n == 52                   # 30 Oct on: the measured delay as an input
+        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: JumpEnv(real=self.real, delay_input=self.delay_input)]))
         self.norm.training = False
 
     def act(self, obs):
@@ -391,7 +397,8 @@ def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=
     out = {}
     real = getattr(policy, "real", False)
     for strict in ((False, True) if strict_too else (False,)):
-        env = JumpEnv(randomize=strict, real=real, max_steps=max_steps, motor_brake=motor_brake)
+        env = JumpEnv(randomize=strict, real=real, max_steps=max_steps, motor_brake=motor_brake,
+                      delay_input=getattr(policy, "delay_input", False))
         env.exam_speed, env.exam_gait = speed, gait
         for h in heights:
             wins = 0

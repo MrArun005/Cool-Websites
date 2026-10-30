@@ -676,7 +676,17 @@ class BoltEnv(gym.Env):
         self._queue = [self.data.ctrl.copy() for _ in range(longest // self.frame_skip + 3)] if dynamic else None
         self._k, self._lastk = 0, None
         self.lag_ms, self.drop, self._last_exec = float(lag_ms), float(drop), None
+        # what the robot itself measures of the delay (30 Oct, owner: "any delay should be recognised"): packet
+        # timestamps averaged over ~5 control steps, with a per-try clock error of +-2 ms (measured_delay_ms())
+        # (drawn from a generator seeded off the env's, so every other random draw stays exactly as before)
+        st = self.rng.bit_generator.state["state"]
+        self._meas_bias = float(np.random.default_rng((st["state"] if isinstance(st, dict) else int(st)) % 2 ** 63).uniform(-2.0, 2.0))
+        self.delay_meas = self.delay_sub * ts * 1000.0 + self._meas_bias
         self._lag_y = self.data.ctrl.copy() if lag_ms else None
+
+    def measured_delay_ms(self):
+        """The control delay as the robot measures it (ms): start_delay's estimate, following the delay step to step."""
+        return max(0.0, float(getattr(self, "delay_meas", 0.0)))
 
     def _delay_now(self):
         """This control step's delay in physics substeps (the try's delay, jitter and any spike)."""
@@ -707,6 +717,7 @@ class BoltEnv(gym.Env):
         if self._queue is not None:
             self._queue = self._queue[1:] + [got]          # _queue[-1] was sent at control step k (now)
             dsub, n, fs = self._delay_now(), len(self._queue), self.frame_skip
+            self.delay_meas += 0.2 * (dsub * m.opt.timestep * 1000.0 + self._meas_bias - self.delay_meas)
             for i in range(fs):
                 k = (self._k * fs + i - dsub) // fs          # newest control step whose target has arrived by now
                 if self._lastk is not None:
