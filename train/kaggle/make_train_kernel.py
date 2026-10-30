@@ -149,6 +149,25 @@ JOBS = {
                  "--max-steps", "220", "--motor-brake", "--latency-ms", "20"],
                 ["jump", "--speeds", "1.5", "1.7", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
                  "--max-steps", "220", "--motor-brake"]]),
+    "jump-dyndelay": dict(
+        # owner 30 Oct: "delay should be a dynamic value". The delay sweep (research/results/delay_sweep/) showed every jump
+        # brain is good only near the delays it trained on (93M: 0 ms; delay 76M: 10-20 ms; jump-gaps: 20-30 ms, worst 27%).
+        # One brain for all of it: delay 0-40 ms per try, wobbling +- up to 10 ms per step, spikes, motor lag, lost
+        # packets; continues jump-gaps (same run folder) via --resume-kernel. Judge with research/delay_sweep.py: worst and
+        # average over 0-40 ms steady and jittered (jump-gaps 76.8M: worst 27%, average 53%; delay 76M: 8% / 53%).
+        name="jumpgaps", script="train_jump.py", start="../models/bolt-dog-jump-handover-59M",
+        args=["--real", "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "0.8", "2.0", "--approach-speed", "2.4", "--approach-speed-min", "1.2", "--run-frac", "0.85",
+              "--gait-start", "0.7", "--bar-start", "0.30", "--bar-max", "0.65",
+              "--handover-file", "research/results/handover_states_mix.npz", "--handover-rate", "0.7",
+              "--latency-min-ms", "0", "--latency-max-ms", "40", "--latency-jitter-ms", "10", "--latency-spike-p", "0.03",
+              "--motor-lag-max-ms", "25", "--drop-max", "0.1",
+              "--exam-latency-ms", "20", "--exam-jitter-ms", "8",
+              "--exam-speed", "1.5", "--exam-dist", "1.1", "--exam-heights", "0.30", "0.40", "0.50"],
+        finals=[["jump", "--speeds", "1.5", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake", "--latency-ms", "20", "--jitter-ms", "8"],
+                ["jump", "--speeds", "1.5", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake"]]),
     "jump-delay": dict(
         # owner 29 Oct: "train delay into everything". At 20 ms the jump brain cleared 0/100 real hand-overs; a local
         # pilot with 0-30 ms delay moved it to 8/100 (30 cm) after 0.5M steps. Win: held-out real hand-overs at
