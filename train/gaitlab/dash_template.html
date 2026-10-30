@@ -1,0 +1,679 @@
+<meta charset="utf-8">
+<title>Bolt Dash</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+  /* Layout: the game fills the first screen (HUD, start card and game-over card on top of the 3D), the touch pad
+     under it, then a short "what is real here". The stage has its own sunset palette in both themes; the page
+     around it uses the Gait Lab's tokens. */
+  :root { --sky-a: #241f55; --sky-b: #7b3b86; --sky-c: #e8677a; --sky-d: #ffb37c; --hud-ink: #fff8ee; --hud-bg: rgba(20, 16, 44, 0.55);
+    --gold: #ffc93c; --hot: #ff2e88; --danger: #ff4d5e; }
+  .wrap { gap: 18px; padding-block: 16px 48px; }
+  .top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+  .top h1 { font: 900 clamp(1.4rem, 3.4vw, 2rem)/1 var(--display); letter-spacing: -0.02em; }
+  .top p { font-size: 0.86rem; color: var(--muted); }
+  .stage { position: relative; width: 100%; aspect-ratio: auto; border: 0; height: min(72vh, 640px); min-height: 360px; border-radius: 18px; overflow: hidden;
+    background: linear-gradient(var(--sky-a) 0%, var(--sky-b) 26%, var(--sky-c) 44%, var(--sky-d) 58%, var(--sky-d) 100%);
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; isolation: isolate; }
+  .stage > canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stage canvas.fx { pointer-events: none; z-index: 1; }
+  .vignette { position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0; transition: opacity 0.25s;
+    background: radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(255, 40, 70, 0.55) 100%); }
+  .flash { position: absolute; inset: 0; pointer-events: none; z-index: 1; background: #fff; opacity: 0; }
+  /* HUD */
+  .hud { position: absolute; z-index: 2; pointer-events: none; color: var(--hud-ink); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); }
+  .hud.score { left: 14px; top: 12px; display: grid; gap: 2px; }
+  .hud.score b { font: 900 clamp(1.8rem, 5vw, 2.6rem)/1 var(--display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .hud.score span, .hud.right span, .chase .lbl { font: 600 0.68rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; }
+  .hud.score .mult { justify-self: start; font: 900 0.95rem/1 var(--display); letter-spacing: 0; opacity: 1; padding: 3px 8px; border-radius: 8px; background: var(--hot); color: #fff; text-shadow: none; }
+  .hud.score .mult.bump { animation: bump 0.4s ease-out; }
+  @keyframes bump { 40% { transform: scale(1.35); } }
+  .hud.right { right: 14px; top: 12px; display: grid; justify-items: end; gap: 4px; }
+  .hud.right b { font: 800 1.35rem/1 var(--display); font-variant-numeric: tabular-nums; }
+  .hud.right .treat { display: flex; align-items: center; gap: 6px; color: var(--gold); }
+  .hud.right .treat svg { width: 22px; height: 22px; }
+  .chase { position: absolute; z-index: 2; left: 50%; top: 14px; transform: translateX(-50%); width: min(34%, 260px); display: grid; gap: 5px; pointer-events: none; text-align: center; color: var(--hud-ink); }
+  .chase .track { position: relative; height: 10px; border-radius: 999px; background: var(--hud-bg); border: 1px solid rgba(255, 255, 255, 0.35); }
+  .chase .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: linear-gradient(90deg, var(--danger), var(--gold) 55%, #6ff0c0); }
+  .chase .dot { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #fff; border: 3px solid var(--hot); box-shadow: 0 0 10px rgba(255, 46, 136, 0.8); transition: left 0.12s linear; }
+  .chase.close .lbl { justify-self: center; color: #fff; background: var(--danger); padding: 3px 8px; border-radius: 6px; text-shadow: none; animation: blink 0.5s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+  .tag { position: absolute; z-index: 2; left: 12px; bottom: 12px; font: 600 0.62rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; background: var(--hud-bg); color: var(--hud-ink); pointer-events: none; }
+  .speed { position: absolute; z-index: 2; right: 14px; bottom: 10px; text-align: right; color: var(--hud-ink); pointer-events: none; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); }
+  .speed b { font: 800 1.25rem/1 var(--display); font-variant-numeric: tabular-nums; }
+  .speed span { font: 600 0.62rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; }
+  .pops { position: absolute; z-index: 2; left: 0; right: 0; top: 30%; display: grid; justify-items: center; gap: 4px; pointer-events: none; }
+  .pop { font: 900 clamp(1.1rem, 3.6vw, 1.9rem)/1 var(--display); color: #fff; padding: 6px 14px; border-radius: 10px; letter-spacing: 0.02em; animation: pop 0.9s ease-out forwards; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); }
+  .pop.good { background: rgba(31, 168, 120, 0.9); } .pop.bad { background: rgba(232, 48, 74, 0.92); } .pop.gold { background: rgba(255, 170, 30, 0.92); } .pop.info { background: rgba(40, 34, 90, 0.85); }
+  @keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 15% { transform: scale(1.08); opacity: 1; } 30% { transform: scale(1); } 80% { opacity: 1; } 100% { transform: translateY(-24px); opacity: 0; } }
+  /* cards: start, pause, game over, loading */
+  .card { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; padding: 16px; background: rgba(18, 12, 40, 0.42); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+  .card[hidden] { display: none; }
+  .card .box { width: min(100%, 420px); max-height: 100%; overflow: auto; display: grid; gap: 12px; padding: 20px 22px; border-radius: 18px; text-align: center;
+    background: rgba(22, 17, 52, 0.88); color: #fff8ee; border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  .card h2 { font: 900 clamp(2rem, 7vw, 3rem)/0.95 var(--display); letter-spacing: -0.02em; }
+  .card h2 em { font-style: normal; color: var(--gold); }
+  .card p { margin: 0 auto; font-size: 0.92rem; color: #e6dcf5; }
+  .how { display: grid; gap: 7px; text-align: left; font-size: 0.88rem; list-style: none; padding: 0; margin: 0; }
+  .how li { display: grid; grid-template-columns: 7.2em 1fr; gap: 10px; align-items: center; }
+  .how kbd, .keys kbd { font: 600 0.72rem var(--mono); border: 1px solid rgba(255, 255, 255, 0.4); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; background: rgba(255, 255, 255, 0.08); color: #fff; }
+  .how .k { display: flex; gap: 4px; flex-wrap: wrap; }
+  .go { font: 900 1.25rem/1 var(--display); letter-spacing: 0.02em; padding: 15px 22px; min-height: 54px; border-radius: 14px; border: 0; cursor: pointer;
+    background: linear-gradient(180deg, #ff5aa0, var(--hot)); color: #fff; box-shadow: 0 6px 0 #a3134f, 0 10px 24px rgba(255, 46, 136, 0.45); }
+  .go:active { transform: translateY(3px); box-shadow: 0 3px 0 #a3134f; }
+  .go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .go[disabled] { opacity: 0.6; cursor: default; }
+  .best { font: 600 0.82rem var(--mono); color: var(--gold); }
+  .fine { font-size: 0.74rem !important; color: #bfb3d6 !important; }
+  .big { font: 900 clamp(2.6rem, 10vw, 3.8rem)/1 var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
+  .newbest { display: inline-block; justify-self: center; font: 800 0.8rem var(--mono); letter-spacing: 0.12em; padding: 4px 10px; border-radius: 999px; background: var(--gold); color: #2a1a00; }
+  .grid4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .grid4 div { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.07); text-align: left; }
+  .grid4 span { font: 600 0.62rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: #bfb3d6; }
+  .grid4 b { font: 800 1.1rem var(--display); font-variant-numeric: tabular-nums; }
+  .loadtxt { font: 500 0.9rem var(--mono); color: #fff; }
+  .bar { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.15); overflow: hidden; } .bar i { display: block; height: 100%; width: 5%; background: var(--gold); transition: width 0.3s; }
+  /* the pad under the stage (touch and mouse), and the keys */
+  .pad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .pad button { min-height: 56px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 800 1.3rem var(--display); cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; display: grid; place-items: center; gap: 0; }
+  .pad button small { font: 500 0.66rem var(--mono); color: var(--muted); }
+  .pad button:active { background: var(--accent-soft); border-color: var(--accent); }
+  .pad button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pad .hop { background: var(--accent); color: #fff; border-color: var(--accent); } .pad .hop small { color: rgba(255, 255, 255, 0.85); }
+  .bar2 { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
+  .keys { font: 400 0.78rem/1.6 var(--mono); color: var(--muted); }
+  .keys kbd { color: var(--ink); border-color: var(--line); background: var(--panel); }
+  .btns { display: flex; gap: 8px; }
+  .btns button { font: 600 0.8rem var(--mono); padding: 8px 12px; min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .real { display: grid; gap: 10px; }
+  .real ul { display: grid; gap: 6px; padding-left: 1.1em; margin: 0; }
+  .real li { max-width: 82ch; font-size: 0.9rem; }
+  .tests { font: 400 0.78rem/1.55 var(--mono); color: var(--muted); max-width: 100ch; }
+  footer { font: 400 0.76rem/1.5 var(--mono); color: var(--muted); display: grid; gap: 3px; }
+  @media (max-width: 600px) {
+    .wrap { padding-top: 10px; gap: 12px; }
+    .top p { display: none; }
+    .stage { height: calc(100svh - 190px); min-height: 420px; max-height: 760px; border-radius: 14px; }
+    .hud.score { left: 10px; top: 10px; } .hud.right { right: 10px; top: 10px; }
+    .chase { top: auto; bottom: 40px; width: 62%; }
+    .speed { bottom: 8px; right: 10px; } .tag { left: 8px; bottom: 10px; }
+    .how li { grid-template-columns: 6.4em 1fr; }
+    .keys { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .pop { animation-duration: 1.2s; } .chase.close .lbl { animation: none; } .vignette { transition: none; } }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <h1>Bolt Dash</h1>
+    <p>An arcade chase with Bolt the robot dog, running live in MuJoCo physics in this browser (simulation).</p>
+  </div>
+
+  <section class="stage" id="stage" aria-label="The run: Bolt on a three-lane track at sunset, the dog-catcher behind">
+    <canvas class="fx" id="fx" aria-hidden="true"></canvas>
+    <div class="vignette" id="vig"></div>
+    <div class="flash" id="flash"></div>
+    <div class="hud score"><span>Score</span><b id="hScore">0</b><span class="mult" id="hMult" hidden>×1</span><span id="hBest">Best –</span></div>
+    <div class="chase" id="chase" aria-hidden="true"><span class="lbl" id="chaseLbl">Catcher</span><div class="track"><div class="fill" id="chaseFill"></div><div class="dot" id="chaseDot"></div></div></div>
+    <div class="hud right"><span class="treat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.2 4.5a2.6 2.6 0 0 0-2 4.3 2.6 2.6 0 0 0 1.6 4.3l2.4-.2 6.6 6.6-.2 2.4a2.6 2.6 0 0 0 4.3 1.6 2.6 2.6 0 0 0 4.3-2 2.6 2.6 0 0 0-3.9-2.2l-1 .1-6.6-6.6.1-1A2.6 2.6 0 0 0 9.6 7a2.6 2.6 0 0 0-3.4-2.5z" transform="scale(.82) translate(1 -1)"/></svg><b id="hTreats">0</b></span><span id="hDist">0 m</span></div>
+    <div class="pops" id="pops" aria-live="polite"></div>
+    <span class="tag">Simulation · steering assisted</span>
+    <div class="speed" aria-hidden="true"><b id="hSpeed">0.0</b> <span>m/s</span></div>
+
+    <div class="card" id="cLoad"><div class="box"><h2>Bolt <em>Dash</em></h2><p class="loadtxt" id="loadText">Loading the physics and Bolt's brains (about 15 MB)…</p><div class="bar"><i id="loadBar"></i></div></div></div>
+    <div class="card" id="cStart" hidden>
+      <div class="box" role="dialog" aria-labelledby="startTitle">
+        <h2 id="startTitle">Bolt <em>Dash</em></h2>
+        <p>The dog-catcher is after Bolt. Dodge the crates and barrels, hop the bars, grab the treats. Every crash lets the catcher close in.</p>
+        <ul class="how">
+          <li><span class="k"><kbd>←</kbd><kbd>→</kbd><kbd>A</kbd><kbd>D</kbd></span><span>change lane · swipe left / right</span></li>
+          <li><span class="k"><kbd>↑</kbd><kbd>Space</kbd><kbd>W</kbd></span><span>hop a bar · swipe up or tap</span></li>
+          <li><span class="k"><kbd>↓</kbd><kbd>S</kbd></span><span>drop fast from a hop · swipe down</span></li>
+        </ul>
+        <button class="go" type="button" id="goBtn">Run! <small style="font:600 .7rem var(--mono);opacity:.8">Space</small></button>
+        <span class="best" id="startBest"></span>
+        <p class="fine">Bolt's legs are its trained gait brain in real physics; a guide force steers it between lanes and lifts the hop (arcade assist).</p>
+      </div>
+    </div>
+    <div class="card" id="cPause" hidden><div class="box"><h2>Paused</h2><button class="go" type="button" id="resumeBtn">Keep running</button></div></div>
+    <div class="card" id="cOver" hidden>
+      <div class="box" role="dialog" aria-labelledby="overTitle">
+        <h2 id="overTitle">Caught!</h2>
+        <div class="big" id="oScore">0</div>
+        <span class="newbest" id="oNew" hidden>New best</span>
+        <span class="best" id="oBest"></span>
+        <div class="grid4">
+          <div><span>Distance</span><b id="oDist">–</b></div>
+          <div><span>Treats</span><b id="oTreats">–</b></div>
+          <div><span>Clean hops</span><b id="oBars">–</b></div>
+          <div><span>Crashes</span><b id="oCrash">–</b></div>
+        </div>
+        <button class="go" type="button" id="againBtn">Run again <small style="font:600 .7rem var(--mono);opacity:.8">Space</small></button>
+      </div>
+    </div>
+  </section>
+
+  <div class="pad" role="group" aria-label="Controls">
+    <button type="button" id="bLeft" aria-label="Left lane">◀<small>left</small></button>
+    <button type="button" id="bHop" class="hop" aria-label="Hop">▲<small>hop</small></button>
+    <button type="button" id="bDown" aria-label="Drop">▼<small>drop</small></button>
+    <button type="button" id="bRight" aria-label="Right lane">▶<small>right</small></button>
+  </div>
+  <div class="bar2">
+    <p class="keys"><kbd>←</kbd><kbd>→</kbd> lane · <kbd>↑</kbd>/<kbd>Space</kbd> hop · <kbd>↓</kbd> drop · <kbd>P</kbd> pause · <kbd>M</kbd> sound</p>
+    <div class="btns"><button type="button" id="bSound" aria-pressed="true">Sound on</button><button type="button" id="bPause">Pause</button></div>
+  </div>
+
+  <section class="panel real" aria-labelledby="realTitle">
+    <h2 id="realTitle">What is real here (simulation)</h2>
+    <ul>
+      <li><b>Bolt's body and legs are physics.</b> MuJoCo runs in this page, with the motor limits used in training. Every leg motor command comes from Bolt's trained dog-motion brains, 50 times a simulated second: the trot, then the canter brain once the pace is high. Feet push, slip and land for real, and if Bolt falls, its self-righting brain gets it up.</li>
+      <li><b>Steering and the hop are assisted.</b> Those brains learned to run straight, not to dodge. So the lane you pick does not go through them: a guide force on Bolt's body pulls it onto the lane, a torque holds its heading and keeps it level, a forward force holds the run speed, and a hop is an upward kick with some lift while in the air. The brains do not steer here.</li>
+      <li><b>Obstacles are solid.</b> Crates, barrels, barriers and bars are free bodies with real mass; hit one and it goes flying and Bolt stumbles. A bar drops at the slightest touch. Treats and the dog-catcher are drawn only (no bodies in the physics); the catcher closes in whenever Bolt is slower than the pace (a crash costs 1.8 m, a knocked bar 1 m).</li>
+      <li><b>The pace rises.</b> The speed asked goes from 1.7 to 2.7 m/s over the first 320 m, and the page runs the simulated clock up to 1.35 times real time.</li>
+    </ul>
+    <p class="tests" id="tests">Headless checks (train/gaitlab/dash_test.mjs, simulation, 30 Oct; real runs through this page's code, pressing only left, right, hop and drop). An autoplayer that sees the rows ahead, 6 runs of 5 minutes: never caught, 640–644 m each, 1–3 crashes, 33–37 of 39–42 bars cleared, 0 falls. A human-like player (reacts 0.25 s after something comes into view, hops a little early or late, now and then late or in the wrong lane), 6 runs: caught after 117–161 s at 211–312 m, 2–6 crashes. A player who presses nothing: caught after 13–24 s. Key to visible motion: a lane change moves Bolt 5 cm in 60 ms of simulated time and puts it in the new lane in 340 ms; a hop lifts it 3 cm in 20 ms. One control step (brains, guide and 10 physics steps) costs about 2.3 ms in Chromium, about 3.3 ms per 60 Hz frame at the fastest clock.</p>
+  </section>
+
+  <footer>
+    <span>Simulation: Bolt is a simulated robot; no real robot is involved. Dog motion capture data: CC BY-NC 4.0.</span>
+    <span>Your best score is kept in this browser only.</span>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+{{SCENE_JS}}
+
+  // ---------- the look: a sunset boulevard. Dark asphalt, red and white kerbs, lamp posts, hills, a low sun ----------
+  const PHONE = Math.min(window.innerWidth, window.innerHeight) < 600 || (navigator.hardwareConcurrency || 8) <= 4;
+  controls.enabled = false; floor.visible = false;
+  camera.near = 0.08; camera.far = 220; camera.fov = 60; camera.updateProjectionMatrix();
+  renderer.toneMappingExposure = 1.0;
+  const HAZE = "#f39a7e";
+  scene.fog = new THREE.Fog(lin(HAZE), 18, 95);
+  scene.environment = null;
+  scene.children.filter((o) => o.isHemisphereLight).forEach((h) => { h.color = lin("#b9a6ff"); h.groundColor = lin("#3a2a3a"); h.intensity = 0.95; });
+  sun.color = lin("#ffd2a6"); sun.intensity = 2.3; sun.shadow.mapSize.set(PHONE ? 1024 : 2048, PHONE ? 1024 : 2048); sun.shadow.bias = -0.0006;
+  setReach(PHONE ? 3.5 : 4.5);
+  const SUN_DIR = new THREE.Vector3(-0.55, 0.45, 0.7).normalize();   // from behind Bolt, low: long shadows ahead
+  const rim = new THREE.DirectionalLight(lin("#ff8fb0"), 0.9); rim.position.set(10, -3, 3); scene.add(rim, rim.target);   // the sunset ahead, a pink rim
+  function canvasTex(w, h, draw, repeat) {
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    draw(c.getContext("2d"), w, h);
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 8;
+    if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+    return t;
+  }
+  let seedR = 4242; const R = () => ((seedR = (seedR * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const speckle = (g, w, h, n, colors, size = [1, 2]) => { for (let i = 0; i < n; i++) { g.fillStyle = colors[(R() * colors.length) | 0]; const s = size[0] + R() * (size[1] - size[0]); g.fillRect(R() * w, R() * h, s, s); } };
+  const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.8, ...extra });
+  const glow = (hex, k = 1.5) => new THREE.MeshStandardMaterial({ color: lin(hex), emissive: lin(hex), emissiveIntensity: k, roughness: 0.5 });
+  // ground and track: long planes moved in whole tiles, so their textures stay put on the ground
+  const LANE = 0.8, HALF = 1.4, TILE = 4, SNAP = 8;
+  const field = new THREE.Mesh(new THREE.PlaneGeometry(240, 120), new THREE.MeshStandardMaterial({ roughness: 1, map: canvasTex(256, 256, (g, w, h) => {
+    // mown stripes across the track, 2 m each: they rush past and say how fast Bolt goes
+    g.fillStyle = "#4e7c3c"; g.fillRect(0, 0, w / 2, h); g.fillStyle = "#5e8f48"; g.fillRect(w / 2, 0, w / 2, h);
+    speckle(g, w, h, 4000, ["rgba(40,70,30,0.5)", "rgba(110,150,80,0.4)", "rgba(60,95,45,0.5)"], [1, 3]);
+  }, [240 / TILE, 120 / TILE]) }));
+  field.receiveShadow = true; scene.add(field);
+  const asphalt = canvasTex(256, 512, (g, w, h) => {
+    g.fillStyle = "#30303f"; g.fillRect(0, 0, w, h); speckle(g, w, h, 9000, ["#2a2a37", "#383848", "#25252f", "#41414f"], [1, 2]);
+    // lane lines: dashes between lanes (v across the track: 2*HALF m over h px)
+    for (const y of [-LANE / 2, LANE / 2]) { const v = h * (1 - (y + HALF) / (2 * HALF)); g.fillStyle = "rgba(255,246,230,0.9)"; for (let x = 0; x < w; x += 128) g.fillRect(x, v - 3, 70, 6); }
+    // edge lines
+    for (const y of [-HALF + 0.08, HALF - 0.08]) { const v = h * (1 - (y + HALF) / (2 * HALF)); g.fillStyle = "rgba(255,210,90,0.95)"; g.fillRect(0, v - 3, w, 6); }
+  }, [240 / TILE, 1]);
+  const track = new THREE.Mesh(new THREE.PlaneGeometry(240, 2 * HALF), new THREE.MeshStandardMaterial({ roughness: 0.9, map: asphalt }));
+  track.receiveShadow = true; scene.add(track);
+  const kerbTex = canvasTex(128, 16, (g, w, h) => { g.fillStyle = "#f2efe8"; g.fillRect(0, 0, w, h); g.fillStyle = "#e3263f"; g.fillRect(0, 0, w / 2, h); }, [240 / 1.0, 1]);
+  const kerbs = [1, -1].map((s) => { const k = mesh(new THREE.BoxGeometry(240, 0.22, 0.05), new THREE.MeshStandardMaterial({ map: kerbTex, roughness: 0.6 })); k.userData.s = s; scene.add(k); return k; });
+  // lamp posts both sides every 6 m, re-used as Bolt runs
+  const posts = [], postM = std("#2b2440", { metalness: 0.5, roughness: 0.4 }), lampM = glow("#ffe2a8", 2.2);
+  for (let i = 0; i < 24; i++) {
+    const p = new THREE.Group(), s = i % 2 ? 1 : -1;
+    p.add(mesh(new THREE.CylinderGeometry(0.04, 0.06, 2.6, 8), postM, [0, 0, 1.3], [Math.PI / 2, 0, 0]));
+    p.add(mesh(new THREE.BoxGeometry(0.06, 0.6, 0.05), postM, [0, -s * 0.28, 2.58]));
+    p.add(mesh(new THREE.BoxGeometry(0.16, 0.24, 0.06), lampM, [0, -s * 0.52, 2.53]));
+    p.userData = { s, slot: i >> 1 }; scene.add(p); posts.push(p);
+  }
+  // trees: round, low-poly, in a few warm-lit greens
+  const trees = [], leaf = ["#2f6a4a", "#3d7a50", "#285c44", "#4a8a5a"].map((c) => std(c, { flatShading: true })), trunkM = std("#5a3d3a", { roughness: 1 });
+  for (let i = 0; i < 30; i++) {
+    const t = new THREE.Group(), h = 2.4 + R() * 2.4;
+    t.add(mesh(new THREE.CylinderGeometry(0.1, 0.15, h * 0.5, 7), trunkM, [0, 0, h * 0.25], [Math.PI / 2, 0, 0]));
+    for (let j = 0; j < 3; j++) t.add(mesh(new THREE.IcosahedronGeometry(h * (0.22 + 0.07 * R()), 1), leaf[(R() * 4) | 0], [(R() - 0.5) * h * 0.3, (R() - 0.5) * h * 0.3, h * (0.6 + 0.12 * R())]));
+    t.userData = { s: i % 2 ? 1 : -1, off: 3.2 + R() * 10, slot: i >> 1, jit: R() * 4 };
+    scene.add(t); trees.push(t);
+  }
+  // far away, moving with the camera: hills in two layers and a striped sun on the horizon
+  const far = new THREE.Group(); scene.add(far);
+  function hills(color, dist, height, seed) {
+    seedR = seed; const pts = [], n = 60, w = 260;
+    for (let i = 0; i <= n; i++) pts.push(new THREE.Vector2(-w / 2 + (w * i) / n, height * (0.35 + 0.65 * Math.abs(Math.sin(i * 0.37 + R() * 0.8)) * (0.6 + 0.4 * R()))));
+    const shape = new THREE.Shape([new THREE.Vector2(-w / 2, -5), ...pts, new THREE.Vector2(w / 2, -5)]);
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: lin(color), fog: false }));
+    m.rotation.set(Math.PI / 2, -Math.PI / 2, 0); m.position.set(dist, 0, 0); far.add(m); return m;
+  }
+  const sunTex = canvasTex(256, 256, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#fff3b0"); gr.addColorStop(0.55, "#ffb347"); gr.addColorStop(1, "#ff5f7e");
+    g.fillStyle = gr; g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 2, 0, 2 * Math.PI); g.fill();
+    g.globalCompositeOperation = "destination-out"; for (let k = 0; k < 6; k++) { const y = h * (0.56 + k * 0.075); g.fillRect(0, y, w, 3 + k * 2.2); }
+  });
+  const sunDisc = new THREE.Mesh(new THREE.PlaneGeometry(46, 46), new THREE.MeshBasicMaterial({ map: sunTex, transparent: true, fog: false, depthWrite: false }));
+  sunDisc.rotation.set(Math.PI / 2, -Math.PI / 2, 0); sunDisc.position.set(200, 0, 12); far.add(sunDisc);
+  hills("#8a4a86", 185, 22, 7); hills("#5b3470", 165, 15, 11);
+  seedR = 99;
+  function placeScenery(x) {
+    const s = Math.floor(x / SNAP) * SNAP;
+    field.position.set(s + 70, 0, -0.012); track.position.set(s + 70, 0, 0.002);
+    for (const k of kerbs) k.position.set(s + 70, k.userData.s * (HALF + 0.11), 0.025);
+    for (const p of posts) { const u = p.userData, sp = 6, n = 12; let px = Math.floor((x - 6) / (n * sp)) * n * sp + u.slot * sp + (u.s > 0 ? 0 : sp / 2); if (px < x - 6) px += n * sp; p.position.set(px, u.s * (HALF + 0.45), 0); }
+    for (const t of trees) { const u = t.userData, sp = 7, n = 15; let tx = Math.floor((x - 10) / (n * sp)) * n * sp + u.slot * sp + u.jit + (u.s > 0 ? 0 : sp / 2); if (tx < x - 10) tx += n * sp; t.position.set(tx, u.s * (HALF + 1.2 + u.off), 0); }
+    far.position.set(camera.position.x, 0, 0);
+  }
+
+  // ---------- the solid things, drawn where the physics has them ----------
+  const crateTex = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = "#ffb627"; g.fillRect(0, 0, w, h);
+    for (let y = 8; y < h; y += 30) { g.fillStyle = "#e89a12"; g.fillRect(0, y, w, 4); }
+    g.strokeStyle = "#8a4b06"; g.lineWidth = 12; g.strokeRect(6, 6, w - 12, h - 12); g.lineWidth = 9; g.beginPath(); g.moveTo(10, 10); g.lineTo(w - 10, h - 10); g.stroke();
+  });
+  const barrelTex = canvasTex(64, 128, (g, w, h) => { g.fillStyle = "#14b8a6"; g.fillRect(0, 0, w, h); g.fillStyle = "#f7f4ea"; g.fillRect(0, 26, w, 14); g.fillRect(0, 88, w, 14); g.fillStyle = "#0e8f81"; g.fillRect(0, 0, w, 5); g.fillRect(0, h - 5, w, 5); });
+  const chevTex = canvasTex(256, 128, (g, w, h) => { g.fillStyle = "#f7f4ea"; g.fillRect(0, 0, w, h); g.fillStyle = "#ff3b54"; for (let x = -h; x < w + h; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 32, 0); g.lineTo(x + 32 + h, h); g.lineTo(x + h, h); g.fill(); } });
+  const barTex = canvasTex(256, 16, (g, w, h) => { for (let x = 0; x < w; x += 32) { g.fillStyle = (x / 32) % 2 ? "#fff6fb" : "#ff2e88"; g.fillRect(x, 0, 32, h); } }, [8, 1]);
+  function itemMesh(o) {
+    const [a, b, c] = o.size, gr = new THREE.Group();
+    if (o.kind === "crate") gr.add(mesh(new THREE.BoxGeometry(2 * a, 2 * b, 2 * c), new THREE.MeshStandardMaterial({ map: crateTex, roughness: 0.75 })));
+    else if (o.kind === "barrel") {
+      gr.add(mesh(new THREE.CylinderGeometry(a, a, 2 * b, 20), new THREE.MeshStandardMaterial({ map: barrelTex, roughness: 0.45, metalness: 0.2 }), null, [Math.PI / 2, 0, 0]));
+      gr.add(mesh(new THREE.CylinderGeometry(a * 0.98, a * 0.98, 0.012, 20), std("#0b6d63"), [0, 0, b], [Math.PI / 2, 0, 0]));
+    } else if (o.kind === "barrier") {
+      const ch = new THREE.MeshStandardMaterial({ map: chevTex, roughness: 0.6 });
+      gr.add(mesh(new THREE.BoxGeometry(2 * a, 2 * b, 2 * c), [std("#f7f4ea"), std("#f7f4ea"), ch, ch, std("#f7f4ea"), std("#f7f4ea")]));
+      for (const s of [1, -1]) gr.add(mesh(new THREE.SphereGeometry(0.035, 12, 8), glow("#ffb020", 2.4), [0, s * (b - 0.05), c + 0.03]));
+    } else if (o.kind === "bar") {
+      gr.add(mesh(new THREE.CylinderGeometry(1.5 * a, 1.5 * a, 2 * b, 12), new THREE.MeshStandardMaterial({ map: barTex, roughness: 0.35, emissive: lin("#ff2e88"), emissiveIntensity: 0.45 })));   // along y: the cylinder's own axis (drawn a little thicker than the physics' 2.2 cm, to read from afar)
+    }
+    gr.visible = false; scene.add(gr); return gr;
+  }
+  // a bar's stands at the track edges (drawn only: the bar rests on nothing in the physics)
+  const standM = std("#f4f1ff", { roughness: 0.4 }), standGlow = glow("#ff2e88", 2.0);
+  const hopTex = canvasTex(256, 512, (g, w, h) => {
+    g.fillStyle = "rgba(255,46,136,0.9)";
+    for (const x0 of [30, 120]) for (const yc of [h / 6, h / 2, 5 * h / 6]) { g.beginPath(); g.moveTo(x0, yc - 60); g.lineTo(x0 + 60, yc); g.lineTo(x0, yc + 60); g.lineTo(x0 + 26, yc); g.fill(); }
+  });
+  const stands = Array.from({ length: 4 }, () => {
+    const g = new THREE.Group();
+    for (const s of [1, -1]) { g.add(mesh(new THREE.BoxGeometry(0.06, 0.06, 0.6), standM, [0, s * (HALF + 0.05), 0.3])); g.add(mesh(new THREE.BoxGeometry(0.08, 0.08, 0.04), standGlow, [0, s * (HALF + 0.05), 0.62])); g.add(mesh(new THREE.BoxGeometry(0.3, 0.12, 0.03), standM, [0, s * (HALF + 0.05), 0.015])); }
+    // "hop here": chevrons on the road in front of the bar
+    const chev = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2 * HALF - 0.2), new THREE.MeshBasicMaterial({ map: hopTex, transparent: true, depthWrite: false, opacity: 0.85 }));
+    chev.position.set(-1.6, 0, 0.004); g.add(chev);
+    g.visible = false; scene.add(g); return g;
+  });
+
+  // ---------- treats: golden bones, spinning (drawn only) ----------
+  const boneM = new THREE.MeshStandardMaterial({ color: lin("#ffd04a"), emissive: lin("#ff9f1a"), emissiveIntensity: 0.55, roughness: 0.3, metalness: 0.3 });
+  const boneGeo = (() => {
+    const parts = [new THREE.CylinderGeometry(0.028, 0.028, 0.2, 10)];
+    for (const y of [0.1, -0.1]) for (const x of [0.03, -0.03]) { const s = new THREE.SphereGeometry(0.042, 12, 8); s.translate(x, y, 0); parts.push(s); }
+    const g = new THREE.BufferGeometry(), pos = [], nor = [], idx = []; let base = 0;
+    for (const p of parts) { const ni = p.index ? p.index.array : null; pos.push(...p.attributes.position.array); nor.push(...p.attributes.normal.array); if (ni) for (const i of ni) idx.push(i + base); base += p.attributes.position.count; }
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3)); g.setIndex(idx); return g;
+  })();
+  const bones = Array.from({ length: 60 }, () => { const m = new THREE.Mesh(boneGeo, boneM); m.castShadow = true; m.visible = false; scene.add(m); return m; });
+  // sparks when a treat is picked up or something is hit
+  const sparkGeo = new THREE.BufferGeometry(), SPARKS = 160, sp = new Float32Array(SPARKS * 3), spv = new Float32Array(SPARKS * 3), spLife = new Float32Array(SPARKS), spCol = new Float32Array(SPARKS * 3);
+  sparkGeo.setAttribute("position", new THREE.BufferAttribute(sp, 3)); sparkGeo.setAttribute("color", new THREE.BufferAttribute(spCol, 3));
+  const sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({ size: 0.05, vertexColors: true, transparent: true, depthWrite: false }));
+  sparks.frustumCulled = false; scene.add(sparks);
+  let spNext = 0;
+  function burst(x, y, z, hex, n = 14, speed = 1.6) {
+    const c = new THREE.Color(hex);
+    for (let k = 0; k < n; k++) {
+      const i = spNext = (spNext + 1) % SPARKS, a = R() * 2 * Math.PI, e = R() * 1.2;
+      sp.set([x, y, z], 3 * i); spv.set([speed * Math.cos(a) * Math.cos(e) + 1.0, speed * Math.sin(a) * Math.cos(e), speed * Math.sin(e) + 0.8], 3 * i);
+      spCol.set([c.r, c.g, c.b], 3 * i); spLife[i] = 0.5 + 0.3 * R();
+    }
+  }
+  function moveSparks(dt) {
+    for (let i = 0; i < SPARKS; i++) {
+      if (spLife[i] <= 0) { sp[3 * i + 2] = -10; continue; }
+      spLife[i] -= dt; spv[3 * i + 2] -= 6 * dt;
+      for (let k = 0; k < 3; k++) sp[3 * i + k] += spv[3 * i + k] * dt;
+    }
+    sparkGeo.attributes.position.needsUpdate = true; sparkGeo.attributes.color.needsUpdate = true;
+  }
+
+  // ---------- the dog-catcher: a person with a net, drawn only (no body in the physics) ----------
+  const catcher = (() => {
+    const g = new THREE.Group(), coat = std("#2f5fd0", { roughness: 0.6 }), pants = std("#22232c"), skin = std("#e0b48f"), cap = std("#ffcc33"), pole = std("#8a6a45");
+    const legL = new THREE.Group(), legR = new THREE.Group(), armL = new THREE.Group(), armR = new THREE.Group();
+    for (const [leg, y] of [[legL, 0.11], [legR, -0.11]]) { leg.position.set(0, y, 0.9); leg.add(mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.88, 10), pants, [0, 0, -0.44], [Math.PI / 2, 0, 0])); leg.add(mesh(new THREE.BoxGeometry(0.26, 0.11, 0.08), std("#111"), [0.06, 0, -0.9])); g.add(leg); }
+    g.add(mesh(new THREE.CylinderGeometry(0.21, 0.18, 0.62, 14), coat, [0, 0, 1.2], [Math.PI / 2, 0, 0]));
+    g.add(mesh(new THREE.BoxGeometry(0.02, 0.3, 0.06), glow("#d8ff3a", 0.6), [0.2, 0, 1.12]));   // a hi-vis stripe
+    g.add(mesh(new THREE.SphereGeometry(0.13, 18, 14), skin, [0, 0, 1.66]));
+    g.add(mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 18), cap, [0, 0, 1.76], [Math.PI / 2, 0, 0]));
+    g.add(mesh(new THREE.BoxGeometry(0.16, 0.22, 0.02), cap, [0.12, 0, 1.73]));
+    for (const [arm, y] of [[armL, 0.25], [armR, -0.25]]) { arm.position.set(0, y, 1.45); arm.add(mesh(new THREE.CylinderGeometry(0.05, 0.045, 0.6, 10), coat, [0, 0, -0.3], [Math.PI / 2, 0, 0])); g.add(arm); }
+    const net = new THREE.Group(); net.position.set(0.15, -0.25, 1.2); net.rotation.y = -1.0;
+    net.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 8), pole, [0, 0, 0.8], [Math.PI / 2, 0, 0]));
+    net.add(mesh(new THREE.TorusGeometry(0.25, 0.02, 8, 24), std("#d9d9d9", { metalness: 0.6, roughness: 0.3 }), [0, 0, 1.85], [0, Math.PI / 2, 0]));
+    net.add(mesh(new THREE.ConeGeometry(0.24, 0.45, 16, 1, true), new THREE.MeshStandardMaterial({ color: lin("#f0f0e8"), transparent: true, opacity: 0.55, side: THREE.DoubleSide, wireframe: true }), [0.22, 0, 1.85], [0, 0, Math.PI / 2]));
+    g.add(net); scene.add(g);
+    g.userData = { legL, legR, armL, armR, phase: 0, net };
+    return g;
+  })();
+
+  // ---------- Bolt: the Gait Lab body on the simulator's frames, drawn between the last two physics steps ----------
+  let parts = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp, p0: new THREE.Vector3(), p1: new THREE.Vector3(), q0: new THREE.Quaternion(), q1: new THREE.Quaternion() }; }).filter((p) => p.obj);
+  }
+  const m4b = new THREE.Matrix4();
+  function snap(first) {   // after a physics step: the pose it ends in becomes the newest
+    const d = L.bolt.data, xp = d.geom_xpos, xm = d.geom_xmat;
+    for (const pt of parts) {
+      const i = pt.g.id, k = 9 * i;
+      pt.p0.copy(pt.p1); pt.q0.copy(pt.q1);
+      m4b.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.p1.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.q1.setFromRotationMatrix(m4b);
+      if (first) { pt.p0.copy(pt.p1); pt.q0.copy(pt.q1); }
+    }
+  }
+  function drawBolt(u) { for (const pt of parts) { pt.obj.position.lerpVectors(pt.p0, pt.p1, u); THREE.Quaternion.slerp(pt.q0, pt.q1, pt.obj.quaternion, u); } }
+  const boltAt = new THREE.Vector3();
+  function torsoAt(u) { const t = parts.find((p) => p.g.part === "torso"); return t ? boltAt.lerpVectors(t.p0, t.p1, u) : boltAt; }
+
+  // ---------- sound: a few synthesized blips (WebAudio), off with M ----------
+  const SOUND_KEY = "boltDash.sound";
+  let ac = null, soundOn = (() => { try { return localStorage.getItem(SOUND_KEY) !== "off"; } catch (e) { return true; } })();
+  function audio() { if (!ac && soundOn) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } if (ac && ac.state === "suspended") ac.resume(); return soundOn ? ac : null; }
+  function tone(f0, f1, dur, type = "sine", vol = 0.12, delay = 0) {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function thud() {
+    const a = audio(); if (!a) return;
+    const n = a.sampleRate * 0.25, buf = a.createBuffer(1, n, a.sampleRate), ch = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+    const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(); s.buffer = buf; f.type = "lowpass"; f.frequency.value = 900; g.gain.value = 0.5;
+    s.connect(f).connect(g).connect(a.destination); s.start(); tone(140, 50, 0.25, "sine", 0.35);
+  }
+  const SFX = {
+    treat: () => tone(988, 1480, 0.08, "square", 0.05), hop: () => tone(300, 720, 0.16, "triangle", 0.12),
+    clean: () => { tone(660, 660, 0.09, "square", 0.06); tone(990, 990, 0.14, "square", 0.06, 0.08); }, crash: thud,
+    knock: () => tone(520, 200, 0.18, "sawtooth", 0.07), caught: () => { tone(440, 110, 0.7, "sawtooth", 0.1); }, go: () => tone(523, 1046, 0.2, "triangle", 0.12),
+    edge: () => tone(160, 120, 0.06, "square", 0.04),
+  };
+  function setSound(on) { soundOn = on; try { localStorage.setItem(SOUND_KEY, on ? "on" : "off"); } catch (e) {} $("bSound").textContent = on ? "Sound on" : "Sound off"; $("bSound").setAttribute("aria-pressed", on ? "true" : "false"); if (on) audio(); }
+  $("bSound").addEventListener("click", () => setSound(!soundOn)); setSound(soundOn);
+
+  // ---------- the game ----------
+  let L = null, items = [], paused = false, overAt = null, acc = 0, shake = 0, flashA = 0, best = 0, gapShown = 6;
+  const q = new URLSearchParams(location.search);
+  const BEST_KEY = "boltDash.best";
+  const getBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || null; } catch (e) { return null; } };
+  const setBest = (v) => { try { localStorage.setItem(BEST_KEY, JSON.stringify(v)); } catch (e) {} };
+  function pop(text, kind = "info") {
+    const el = document.createElement("div"); el.className = `pop ${kind}`; el.textContent = text;
+    const box = $("pops"); box.append(el); while (box.children.length > 3) box.firstChild.remove();
+    setTimeout(() => el.remove(), 950);
+  }
+  const show = (id) => { for (const c of ["cLoad", "cStart", "cPause", "cOver"]) $(c).hidden = c !== id; if (id) setTimeout(() => { const b = $(id).querySelector("button"); b && b.focus({ preventScroll: true }); }, 30); };
+  function showBest() { const b = getBest(); best = b ? b.score : 0; $("hBest").textContent = b ? `Best ${b.score}` : "Best –"; $("startBest").textContent = b ? `Best: ${b.score} · ${b.dist} m` : ""; }
+  function newRun(seed) {
+    L.reset(seed); overAt = null; paused = false; acc = 0; gapShown = L.gap;
+    for (const m of items) m.visible = false;
+    snap(true); resetView(); showBest(); show("cStart");
+  }
+  function go() {
+    if (!L) return;
+    audio();
+    if (L.phase === "ready") { show(null); L.start(); pop("Go!", "info"); SFX.go(); }
+    else if (L.phase === "caught" && overAt !== null && performance.now() - overAt > 600) { newRun(Date.now() % 1000000); show(null); L.start(); pop("Go!", "info"); SFX.go(); }
+    else if (paused) pause(false);
+  }
+  function pause(on = !paused) {
+    if (!L || L.phase !== "run") return;
+    paused = on; $("bPause").textContent = on ? "Resume" : "Pause";
+    show(on ? "cPause" : null);
+  }
+  function gameOver() {
+    const S = L.stats, score = L.score(), dist = Math.floor(L.dist), b = getBest();
+    $("oScore").textContent = score; $("oDist").textContent = `${dist} m`; $("oTreats").textContent = S.treats; $("oBars").textContent = `${S.bars}`; $("oCrash").textContent = S.crashes;
+    const isNew = !b || score > b.score;
+    $("oNew").hidden = !isNew; $("oBest").textContent = isNew ? (b ? `previous best ${b.score}` : "your first run") : `best ${b.score}`;
+    if (isNew) setBest({ score, dist, treats: S.treats });
+    show("cOver");
+  }
+  $("goBtn").addEventListener("click", go); $("againBtn").addEventListener("click", go); $("resumeBtn").addEventListener("click", () => pause(false));
+  $("bPause").addEventListener("click", () => pause());
+  document.addEventListener("visibilitychange", () => { if (document.hidden) pause(true); });
+
+  // ---------- controls: keys, the pad, swipes and taps on the picture ----------
+  const act = {
+    left: () => L && !paused && L.left(), right: () => L && !paused && L.right(),
+    hop: () => L && !paused && L.jump(), down: () => L && !paused && L.down(),
+  };
+  window.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || !L) return;
+    const k = e.key.toLowerCase();
+    if (["arrowleft", "arrowright", "arrowup", "arrowdown", " "].includes(k)) e.preventDefault();
+    if (e.repeat) return;
+    if (k === "m") return setSound(!soundOn);
+    if (L.phase !== "run" || paused) { if (k === "enter" || k === " " || k === "arrowup" || k === "w") { e.preventDefault(); go(); } return; }
+    if (k === "p" || k === "escape") return pause();
+    if (k === "arrowleft" || k === "a") act.left();
+    else if (k === "arrowright" || k === "d") act.right();
+    else if (k === "arrowup" || k === "w" || k === " ") act.hop();
+    else if (k === "arrowdown" || k === "s") act.down();
+  });
+  const tap = (id, f) => {
+    const el = $(id);
+    el.addEventListener("pointerdown", (e) => { e.preventDefault(); if (L && L.phase !== "run") return go(); f(); });
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); f(); } });
+  };
+  tap("bLeft", act.left); tap("bRight", act.right); tap("bHop", act.hop); tap("bDown", act.down);
+  // swipes act as soon as the finger has moved 22 px (not on release): that is what makes a phone feel quick
+  {
+    const st = stageEl; let s = null;
+    st.addEventListener("pointerdown", (e) => { if (e.target.closest(".card")) return; s = { x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now(), done: false }; });
+    st.addEventListener("pointermove", (e) => {
+      if (!s || e.pointerId !== s.id || s.done) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (Math.hypot(dx, dy) < 22) return;
+      s.done = true;
+      if (Math.abs(dx) > Math.abs(dy)) (dx < 0 ? act.left : act.right)();
+      else (dy < 0 ? act.hop : act.down)();
+    });
+    st.addEventListener("pointerup", (e) => { if (s && !s.done && e.pointerId === s.id && performance.now() - s.t < 300) { if (L && L.phase === "run") act.hop(); } s = null; });
+    st.addEventListener("pointercancel", () => { s = null; });
+  }
+
+  // ---------- camera: low and close behind Bolt, leaning into dodges, wider as the pace rises ----------
+  const cam = { x: 0, y: 0, z: 1, roll: 0, back: 2.3, fov: 60 };
+  function resetView() { const w = L.bolt.where(); cam.x = w.x; cam.y = w.y * 0.6; cam.roll = 0; cam.back = 2.3; follow(1, 1); }
+  function follow(dt, u) {
+    const p = torsoAt(u), s = L.status(), tall = camera.aspect < 0.9, vis = s.speed * s.clock;
+    const k = 1 - Math.exp(-dt * 9), ky = 1 - Math.exp(-dt * 7);
+    cam.x = p.x; cam.y += (0.6 * p.y - cam.y) * ky;
+    // pulled back as the catcher closes in (from 3.5 m), until the catcher is 2 m in front of the camera: in the picture
+    const base = (tall ? 2.7 : 2.25) + 0.12 * vis, near = clamp((3.5 - s.gap) / 1.5, 0, 1);
+    const wantBack = base + (Math.max(base, Math.max(0.6, s.gap) + 2.2) - base) * near;
+    cam.back += (wantBack - cam.back) * (1 - Math.exp(-dt * 2.5));
+    const fov = (tall ? 68 : 58) + clamp((vis - 1.6) * 5, 0, 12);
+    if (Math.abs(fov - camera.fov) > 0.05) { camera.fov += (fov - camera.fov) * (1 - Math.exp(-dt * 2)); camera.updateProjectionMatrix(); }
+    const hz = (tall ? 1.75 : 1.2) + 0.25 * clamp(p.z - 0.33, 0, 0.5) + 0.25 * near;
+    const sx = shake > 0 ? (R() - 0.5) * shake * 0.12 : 0, sz = shake > 0 ? (R() - 0.5) * shake * 0.1 : 0;
+    camera.position.set(cam.x - cam.back + sx, cam.y + sx, hz + sz);
+    const vy = L.bolt.data.qvel[1];
+    cam.roll += (clamp(-vy * 0.035, -0.06, 0.06) - cam.roll) * k;
+    camera.up.set(0, Math.sin(cam.roll), Math.cos(cam.roll));
+    camera.lookAt(cam.x + (tall ? 2.8 : 3.6), cam.y * 0.9 + 0.1 * p.y, 0.15 + 0.4 * clamp(p.z - 0.33, 0, 0.5));
+    sun.position.set(p.x + SUN_DIR.x * 12, p.y + SUN_DIR.y * 12, SUN_DIR.z * 12); sun.target.position.set(p.x + 1.5, p.y, 0);
+    rim.position.set(p.x + 10, p.y - 3, 3); rim.target.position.set(p.x, p.y, 0.2);
+  }
+
+  // ---------- speed lines: streaks from the middle of the picture, stronger the faster the run looks ----------
+  const fx = $("fx"), g2 = fx.getContext("2d"), streaks = Array.from({ length: 46 }, () => ({ a: R() * 2 * Math.PI, r: R(), v: 0.6 + R() * 0.8, w: 0.6 + R() * 1.4 }));
+  function drawStreaks(dt, strength) {
+    const w = fx.width, h = fx.height; g2.clearRect(0, 0, w, h);
+    if (strength <= 0.01 || reduced) return;
+    const cx = w / 2, cy = h * 0.42, rmax = Math.hypot(w, h) * 0.6;
+    g2.lineCap = "round";
+    for (const s of streaks) {
+      s.r += dt * s.v * (0.8 + 2.2 * strength); if (s.r > 1) { s.r = 0.25 + R() * 0.2; s.a = R() * 2 * Math.PI; }
+      const r0 = rmax * s.r, r1 = r0 + rmax * 0.12 * (0.5 + strength);
+      const c = Math.cos(s.a), sn = Math.sin(s.a);
+      g2.strokeStyle = `rgba(255,248,235,${(0.05 + 0.3 * strength) * s.r})`; g2.lineWidth = s.w * (fx.width / 900 + 0.6);
+      g2.beginPath(); g2.moveTo(cx + c * r0, cy + sn * r0 * 0.75); g2.lineTo(cx + c * r1, cy + sn * r1 * 0.75); g2.stroke();
+    }
+  }
+
+  // ---------- HUD ----------
+  function hud() {
+    const s = L.status();
+    $("hScore").textContent = s.score;
+    const hm = $("hMult"); hm.hidden = s.mult <= 1; if (hm.textContent !== `×${s.mult}`) { hm.textContent = `×${s.mult}`; hm.classList.remove("bump"); void hm.offsetWidth; hm.classList.add("bump"); } $("hTreats").textContent = s.stats.treats; $("hDist").textContent = `${Math.floor(s.dist)} m`;
+    $("hSpeed").textContent = (s.speed * s.clock).toFixed(1);
+    gapShown += (s.gap - gapShown) * 0.25;
+    const frac = clamp((gapShown - 0.5) / 5.5, 0, 1);
+    $("chaseFill").style.width = `${Math.round(100 * frac)}%`; $("chaseDot").style.left = `${(100 * frac).toFixed(1)}%`;
+    const close = s.phase === "run" && s.gap < 2.6;
+    $("chase").classList.toggle("close", close); $("chaseLbl").textContent = close ? "Catcher close!" : "Catcher";
+    $("vig").style.opacity = s.phase === "caught" ? 0.9 : close ? clamp((2.6 - s.gap) / 2, 0.2, 0.85) : 0;
+    if (s.score > best && best > 0 && !hud.beat && s.phase === "run") { hud.beat = true; pop("New best!", "gold"); }
+    if (s.phase === "ready") hud.beat = false;
+  }
+
+  // ---------- drawing the world from the physics ----------
+  function drawItems() {
+    const d = L.bolt.data; let si = 0;
+    L.items.forEach((o, i) => {
+      const m = items[i]; m.visible = !!o.at; if (!o.at) return;
+      const p = d.xpos, qq = d.xquat, a = 3 * o.body, b = 4 * o.body;
+      m.position.set(p[a], p[a + 1], p[a + 2]); m.quaternion.set(qq[b + 1], qq[b + 2], qq[b + 3], qq[b]);
+    });
+    for (const row of L.rows) if (row.kind === "bar" && si < stands.length) { const st = stands[si++]; st.visible = true; st.position.set(row.x, 0, 0); }
+    for (; si < stands.length; si++) stands[si].visible = false;
+  }
+  function drawTreats(t) {
+    let k = 0;
+    for (const tr of L.treats) {
+      if (k >= bones.length) break;
+      if (tr.got) { if (!tr.burst) { tr.burst = true; burst(tr.x, tr.y, tr.z + 0.05, "#ffd04a", 10, 1.4); } continue; }
+      const m = bones[k++]; m.visible = true;
+      m.position.set(tr.x, tr.y, tr.z + 0.04 * Math.sin(t * 3 + tr.x));
+      m.rotation.set(0.5, 0, t * 3 + tr.x);
+    }
+    for (; k < bones.length; k++) bones[k].visible = false;
+  }
+  function drawCatcher(dt, u) {
+    const p = torsoAt(u), cu = catcher.userData, run = L.phase === "run", v = run ? L.speedWanted() : L.phase === "caught" ? 0.4 : 0;
+    const off = camera.aspect < 0.9 ? 0.5 : 0.85, cy = p.y > 0.3 ? p.y - off : p.y < -0.3 ? p.y + off : off;   // beside Bolt, so the camera sees past
+    cu.y = cu.y === undefined ? cy : cu.y + (cy - cu.y) * (1 - Math.exp(-dt * 2));
+    const gap = L.phase === "caught" ? 0.7 : Math.max(0.6, gapShown);
+    catcher.position.set(p.x - gap - 0.2, cu.y, 0);
+    cu.phase += dt * (2 + 4.2 * v) * L.clock();
+    const sw = Math.min(0.8, 0.45 * v) * Math.sin(cu.phase);
+    cu.legL.rotation.y = sw; cu.legR.rotation.y = -sw; cu.armL.rotation.y = -sw * 0.8; cu.armR.rotation.y = 0.6 + sw * 0.3;
+    cu.net.rotation.y = L.phase === "caught" ? -0.2 : -1.0 + 0.25 * Math.sin(cu.phase * 0.5);
+    catcher.position.z = Math.abs(Math.sin(cu.phase)) * 0.05 * v;
+  }
+  function events() {
+    for (const e of L.events.splice(0)) {
+      const p = L.bolt.data.qpos;
+      if (e.type === "treat") SFX.treat();
+      else if (e.type === "hop") { SFX.hop(); burst(p[0] - 0.2, p[1], 0.02, "#f4e6ff", 8, 0.9); }
+      else if (e.type === "land") burst(p[0], p[1], 0.02, "#f4e6ff", 6, 0.7);
+      else if (e.type === "clean") { SFX.clean(); pop(`Clean hop +25`, "good"); }
+      else if (e.type === "knock") { SFX.knock(); pop("Bar down!", "bad"); shake = 0.6; }
+      else if (e.type === "crash") { SFX.crash(); pop("Crash!", "bad"); shake = 1.2; flashA = 0.35; burst(p[0] + 0.4, p[1], 0.3, "#ffb627", 18, 2.2); if (navigator.vibrate) navigator.vibrate(60); }
+      else if (e.type === "fall") pop("Bolt fell! Getting up…", "bad");
+      else if (e.type === "up") pop("Up again!", "good");
+      else if (e.type === "edge") SFX.edge();
+      else if (e.type === "mult") { if (e.mult > 1) { pop(`Streak ×${e.mult}`, "gold"); tone(523, 523, 0.08, "square", 0.05); tone(784, 784, 0.12, "square", 0.05, 0.07); tone(1046, 1046, 0.16, "square", 0.05, 0.14); } }
+      else if (e.type === "caught") { SFX.caught(); pop("Caught!", "bad"); }
+    }
+  }
+
+  async function boot() {
+    const bar = (f) => { $("loadBar").style.width = `${Math.round(100 * f)}%`; };
+    try {
+      let done = 0; const N = 7, step = (x) => { bar(++done / N); return x; };
+      const [l, dmod, m, b, gpu, g18, cl] = await Promise.all([import("./live.js").then(step), import("./dash.js").then(step), import("./mujoco/mujoco.js").then(step),
+        fetch("data/bolt_run.json").then((x) => x.json()).then(step), fetch("data/dog_gpu360.json").then((x) => x.json()).then(step), fetch("data/dog_18g.json").then((x) => x.json()).then(step),
+        fetch("data/dog_clips.json").then((x) => x.json()).then(step)]);
+      $("loadText").textContent = "Starting the physics…";
+      const seed = Number(q.get("seed")) || (Date.now() % 1000000);
+      L = new dmod.Dash(l, await m.default(), b, { gpu, g18 }, cl, seed);
+      window.__dash = dmod;
+      items = L.items.map(itemMesh);
+      buildDog(L.geoms);
+      newRun(seed);
+    } catch (e) { console.error(e); $("loadText").textContent = "The simulator couldn't start in this browser."; return; }
+  }
+
+  function resize() {
+    const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix();
+    const pr = Math.min(window.devicePixelRatio || 1, 2); fx.width = Math.round(r.width * pr * 0.5); fx.height = Math.round(r.height * pr * 0.5);
+  }
+  new ResizeObserver(resize).observe(stageEl);
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const BUDGET = 28;   // ms of physics per frame at most: a slow machine runs slow motion rather than freezing
+  let last = performance.now(), slow = 0, quality = 3;
+  const frameMs = [], physMs = []; window.__frames = frameMs; window.__phys = physMs;   // for checks: frame times, physics ms per frame
+  function lowerQuality() {
+    quality--;
+    if (quality === 2) renderer.setPixelRatio(1);
+    if (quality === 1) sun.castShadow = false;
+    if (quality === 0) renderer.setPixelRatio(0.7);
+    resize();
+  }
+  function tick(t) {
+    const wall = (t - last) / 1000, dt = Math.min(0.1, wall); last = t;
+    frameMs.push(wall * 1000); if (frameMs.length > 600) frameMs.shift();
+    if (wall > 0.045 && quality > 0) { if ((slow += wall) > 3) { slow = 0; lowerQuality(); } } else slow = Math.max(0, slow - wall * 0.5);
+    let u = 1;
+    if (L) {
+      const dtc = L.bolt.dt;
+      if (!paused) {
+        acc += dt * L.clock();
+        const t0 = performance.now();
+        while (acc >= dtc && performance.now() - t0 < BUDGET) { L.step(); snap(); acc -= dtc; }
+        physMs.push(performance.now() - t0); if (physMs.length > 600) physMs.shift();
+        if (acc > dtc) acc = dtc;
+        u = clamp(acc / dtc, 0, 1);
+      } else u = 1;
+      // the picture is drawn between the last two physics poses: smooth at any frame rate, at most one step behind
+      events();
+      if (L.phase === "caught" && overAt === null) { overAt = performance.now(); setTimeout(gameOver, 1100); }
+      drawBolt(u); drawItems(); drawTreats(t / 1000); drawCatcher(paused ? 0 : dt, u); moveSparks(paused ? 0 : dt);
+      follow(dt, u); placeScenery(camera.position.x); hud();
+      shake = Math.max(0, shake - dt * 3); flashA = Math.max(0, flashA - dt * 2.5); $("flash").style.opacity = flashA.toFixed(2);
+      const s = L.status();
+      drawStreaks(dt, L.phase === "run" && !paused ? clamp((s.speed * s.clock - 1.5) / 2.2, 0, 1) : 0);
+      if (tail && !reduced) tail.rotation.z = 0.4 * Math.sin((t / 1000) * 12);
+      eyes.forEach((e) => (e.scale.z = ((t / 1000) % 3.7) < 0.12 ? 0.12 : 1));
+    }
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  resize(); requestAnimationFrame(tick); boot();
+  window.__run = () => L;   // for checks
+})();
+</script>

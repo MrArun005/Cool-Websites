@@ -121,3 +121,21 @@ yard mapped (mean), hurdles within 3 cm and bar heights within 1 cm (4 of 16 sig
 Remote, seeds 1-3 (identical): dead-man noticed 0.52 s after the last command, standing 3.06 s later from a
 1.8 m/s trot; 60 Auto/manual switches, 0 falls; flat out at the house the guard stopped it 1.15 m short of the
 porch; walking at the road the nose stopped 0.58 m short of the kerb. Each result line is in `remote_results.json`.
+
+## Bolt Dash (arcade rebuild of Bolt Run)
+
+`dash.js` + `dash_template.html` (simulation). Same body and brains as Bolt Run (doglife.js DogBody: dog-motion trot,
+canter brain at higher pace, self-righting after a fall), but arcade-first: three 0.8 m lanes, crates, barrels and
+barriers to dodge, bars to hop, treats, a streak multiplier, a rising pace, the dog-catcher closing in on every crash.
+**Steering and the hop are assisted** (said on the page): a guide in every physics step pulls Bolt's bodies onto the
+chosen lane (a mass-proportional force field), holds heading and level (torques on the torso), holds the run speed
+(a forward force, at most 4 m/s^2), and a hop is an upward kick plus 45% lift in the air. The legs stay the brains'.
+Obstacles are free bodies floating with gravcomp until touched (no contacts while still); treats and the catcher are
+drawn only. The bundle's agility hurdles are stripped from the model (Dash renumbers the drawing list's geom ids).
+
+    mkdir -p $S/dash/site/data && cp gaitlab/dash_template.html $S/dash/template.html && python gaitlab/build_pages.py $S dash
+    cp gaitlab/{live,doglife,game,imitate,dash}.js $S/dash/site/ && cp -r $S/run/site/mujoco $S/dash/site/
+    cp $S/run/site/data/{bolt_run,dog_gpu360,dog_18g,dog_clips}.json $S/dash/site/data/
+
+Headless (from `train/gaitlab`, D = the site folder): `node dash_test.mjs $D/mujoco/mujoco.js $D/data auto|human|idle 300 1,2,3,4`
+(real runs, player inputs only) and `... latency` (key to visible motion).
