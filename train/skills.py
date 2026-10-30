@@ -284,6 +284,7 @@ class Bolt:
         env.t, env.last_action, env.best_up, env.stood_at, env.kind = 0, np.zeros(12), env._rotation()[2, 2], None, "fall"
         self.skill, calm = "recover", 0
         for _ in range(200):
+            env.delay_input = getattr(self.righter, "delay_input", False)   # a delay-aware recovery reads the measured delay
             _, _, _, _, info = env.step(self.righter.act(env._obs()))
             self._after_step("self-righting")
             calm = calm + 1 if info["standing"] else 0

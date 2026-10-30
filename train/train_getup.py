@@ -77,6 +77,38 @@ class Examiner(BaseCallback):
             print(f"new best at {n}: score {score:.2f}", flush=True)
 
 
+
+def widen(src, out):
+    """A 46-input recovery brain -> 47 inputs (the measured delay): the new input starts with zero weights and a
+    neutral normalizer, so it acts exactly as before (train_jump.widen's recipe)."""
+    import numpy as np
+    from stable_baselines3.common.vec_env import DummyVecEnv
+    src, out = Path(src), Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    old = PPO.load(src / "policy.zip", device="cpu")
+    env = DummyVecEnv([lambda: GetUpEnv(delay_input=True)])
+    new = PPO("MlpPolicy", env, device="cpu", policy_kwargs=old.policy_kwargs, n_steps=old.n_steps,
+              batch_size=old.batch_size, n_epochs=old.n_epochs, gamma=old.gamma, gae_lambda=old.gae_lambda,
+              clip_range=old.clip_range, ent_coef=old.ent_coef, max_grad_norm=old.max_grad_norm, target_kl=old.target_kl)
+    state, widened = old.policy.state_dict(), {}
+    for k, v in new.policy.state_dict().items():
+        w = state[k]
+        if w.shape != v.shape:   # a first layer: the new input's column starts at zero
+            w = torch.cat([w, torch.zeros(w.shape[0], v.shape[1] - w.shape[1])], dim=1)
+        widened[k] = w
+    new.policy.load_state_dict(widened)
+    new.num_timesteps = old.num_timesteps
+    n = old.num_timesteps
+    new.save(out / f"policy_{n}_steps.zip")
+    norm = VecNormalize.load(str(src / "vecnormalize.pkl"), DummyVecEnv([lambda: GetUpEnv()]))
+    norm.obs_rms.mean = np.concatenate([norm.obs_rms.mean, np.zeros(1)])
+    norm.obs_rms.var = np.concatenate([norm.obs_rms.var, np.ones(1)])
+    norm.observation_space = env.observation_space
+    norm.save(str(out / f"policy_vecnormalize_{n}_steps.pkl"))
+    print(f"widened {src} (46 -> 47 inputs, {n:,} steps) -> {out}", flush=True)
+    return out / f"policy_{n}_steps.zip"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", default="getup")
@@ -85,6 +117,9 @@ def main():
     ap.add_argument("--resume")
     ap.add_argument("--goal", default="stand", choices=["stand", "selfright"])
     ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints (each is tested and shown live)")
+    ap.add_argument("--delay-input", action="store_true", help="the measured delay as one more input (30 Oct)")
+    ap.add_argument("--widen-from", help="a 46-input recovery brain folder to start from with --delay-input (the new "
+                    "input's weights start at zero, so it acts exactly as before)")
     ap.add_argument("--init-from", help="a model folder (policy.zip + vecnormalize.pkl) to fine-tune, e.g. ../models/bolt-dog-selfright-17e-16.5M")
     ap.add_argument("--hard", action="store_true", help="run 'recover': tougher falls (kicks, drops, ice, a second kick) and wider physics")
     ap.add_argument("--full-exam", action="store_true", help="examine the whole recovery (self-right, tuck, stand) from the tough falls")
@@ -110,9 +145,12 @@ def main():
     venv = make_vec_env(GetUpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(goal=args.goal, hard=args.hard,
                                                                                             latency_ms=(args.latency_min_ms, args.latency_max_ms),
                                                                                             motor_lag_ms=(0.0, args.motor_lag_max_ms), drop=(0.0, args.drop_max),
-                                                                                           latency_jitter_ms=args.latency_jitter_ms, latency_spike_p=args.latency_spike_p))
+                                                                                           latency_jitter_ms=args.latency_jitter_ms, latency_spike_p=args.latency_spike_p,
+                                                                                           delay_input=args.delay_input))
     print("exam gaps:", set_exam_gaps(args.exam_latency_ms, args.exam_lag_ms, args.exam_drop, args.exam_jitter_ms, args.exam_spike_p), flush=True)
     over = {k: v for k, v in dict(learning_rate=args.lr, target_kl=args.target_kl, n_steps=args.n_steps).items() if v is not None}
+    if args.widen_from and not args.resume:   # 46 -> 47 inputs, saved as a checkpoint to resume from
+        args.resume = str(widen(args.widen_from, out / "widened"))
     if args.init_from and not args.resume:
         src = Path(args.init_from)
         venv = VecNormalize.load(str(src / "vecnormalize.pkl"), venv)

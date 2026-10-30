@@ -182,10 +182,11 @@ class JumpEnv(BoltEnv):
             R.T @ np.array([0, 0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3], [d.qpos[2]],
             d.qpos[7:19] - DOG, d.qvel[6:18] * 0.1, self.last_action,
             [self.hurdle_ahead(), self.hurdle_h, self.t / self.max_steps],
-        ] + ([[np.sin(self.heading_error()), self.off_line()]] if self.real else [])
-          + ([[self.measured_delay_ms() / 40.0]] if self.delay_input else []))
+        ] + ([[np.sin(self.heading_error()), self.off_line()]] if self.real else []))
         if self.randomize:
             obs += self.rng.normal(0, 0.01, obs.shape)
+        if self.delay_input:   # after the sensor noise (it has its own clock error), so the random stream is as before
+            obs = np.append(obs, self.measured_delay_ms() / 40.0)
         return obs.astype(np.float32)
 
     def reset(self, seed=None, options=None):

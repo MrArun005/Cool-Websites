@@ -49,7 +49,10 @@ class GetUpEnv(BoltEnv):
 
     def __init__(self, randomize=True, seed=None, max_steps=200, goal="stand", hard=False, motor_brake=None,
                  latency_ms=(0.0, 0.0), motor_lag_ms=(0.0, 0.0), drop=(0.0, 0.0),
-                 latency_jitter_ms=0.0, latency_spike_p=0.0):
+                 latency_jitter_ms=0.0, latency_spike_p=0.0, delay_input=False):
+        # delay_input (30 Oct, as jump_env): one more input, the delay Bolt measures (bolt_env measured_delay_ms / 40 ms)
+        self.delay_input = delay_input
+        self.OBS = 46 + bool(delay_input)
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog", skills=["stand"],
                          motor_brake=motor_brake)
         # hard=True (run "recover", from 17e): tougher falls and physics, see HARD_KINDS and _hard_physics
@@ -78,6 +81,8 @@ class GetUpEnv(BoltEnv):
         ])
         if self.randomize:
             obs += self.rng.normal(0, 0.01, obs.shape)
+        if self.delay_input:   # after the sensor noise (it has its own clock error), so the random stream is as before
+            obs = np.append(obs, self.measured_delay_ms() / 40.0)
         return obs.astype(np.float32)
 
     def _fallen_pose(self, kind):
@@ -262,7 +267,8 @@ class GetUpPolicy:
         from pathlib import Path
         run_dir = Path(run_dir)
         self.model = PPO.load(run_dir / zip_name, device="cpu")
-        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: GetUpEnv()]))
+        self.delay_input = self.model.observation_space.shape[0] == 47   # 30 Oct on: the measured delay as an input
+        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: GetUpEnv(delay_input=self.delay_input)]))
         self.norm.training = False
 
     def act(self, obs):
@@ -274,7 +280,8 @@ def exam(policy, episodes=10, seed=7000, kinds=("side", "back", "tipped", "stand
     """From each kind of fall: standing (upright, at height) at the end of the 4 s, and the median time it
     took to first stand up."""
     out = {}
-    env = GetUpEnv(randomize=True, goal=goal, hard=hard, motor_brake=motor_brake)   # motor_brake None: process default
+    env = GetUpEnv(randomize=True, goal=goal, hard=hard, motor_brake=motor_brake,   # motor_brake None: process default
+                   delay_input=getattr(policy, "delay_input", False))
     for kind in kinds:
         wins, times = 0, []
         for k in range(episodes):
@@ -343,7 +350,8 @@ def exam_full(righter, episodes=10, seed=7000, kinds=EXAM_KINDS, hard=True, moto
     the same fixed seeds for every brain, no second kick), stood_<kind>: share of tries standing at the end;
     tsec_<kind>: median seconds from the hand-over to first standing (self-right + tuck + stand)."""
     out = {}
-    env = GetUpEnv(randomize=True, goal="selfright", hard=hard, motor_brake=motor_brake)   # motor_brake None: process default
+    env = GetUpEnv(randomize=True, goal="selfright", hard=hard, motor_brake=motor_brake,   # motor_brake None: process default
+                   delay_input=getattr(righter, "delay_input", False))
     for kind in kinds:
         wins, times = 0, []
         for k in range(episodes):

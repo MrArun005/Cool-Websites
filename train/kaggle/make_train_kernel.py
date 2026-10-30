@@ -250,6 +250,16 @@ JOBS = {
               "--latency-min-ms", "0", "--latency-max-ms", "40", "--latency-jitter-ms", "10", "--latency-spike-p", "0.03",
               "--motor-lag-max-ms", "25", "--drop-max", "0.1", "--exam-latency-ms", "20", "--exam-jitter-ms", "8"],
         finals=[["recover", "--latency-ms", "20", "--jitter-ms", "8", "--motor-brake"], ["recover", "--motor-brake"]]),
+    "recover-delayaware": dict(
+        # 30 Oct: recover-dyndelay's exact recipe plus the measured delay as input 47 (as jump-delayaware), from
+        # recover-delay 30M widened 46 -> 47 (zero-weight column: the same exam results as 30M). Judge with the
+        # recovery sweep at 0/10/20/30/40 ms (+ jitter): average and worst must beat 30M (70.8 / 46.7) and recover-dyndelay.
+        name="recoveraware", script="train_getup.py", start="../models/bolt-dog-recover-delay-30M",
+        args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015",
+              "--delay-input", "--widen-from", "../models/bolt-dog-recover-delay-30M",
+              "--latency-min-ms", "0", "--latency-max-ms", "40", "--latency-jitter-ms", "10", "--latency-spike-p", "0.03",
+              "--motor-lag-max-ms", "25", "--drop-max", "0.1", "--exam-latency-ms", "20", "--exam-jitter-ms", "8"],
+        finals=[["recover", "--latency-ms", "20", "--jitter-ms", "8", "--motor-brake"], ["recover", "--motor-brake"]]),
     "recover": dict(
         name="recover", script="train_getup.py", start="../models/bolt-dog-selfright-17e-16.5M",
         args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015"],
