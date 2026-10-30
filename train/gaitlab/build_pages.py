@@ -8,6 +8,9 @@ Bolt Run (run): copy run_template.html to <scratchpad>/run/template.html; the si
 imitate.js hurdles3d.js run.js, mujoco/ and data/ (the same as Bolt Remote, with run.js in place of remote.js).
 Bolt Dash (dash): copy dash_template.html to <scratchpad>/dash/template.html; the site folder needs live.js doglife.js
 game.js imitate.js dash.js, mujoco/ and data/bolt_run.json dog_gpu360.json dog_18g.json dog_clips.json (no jump brain).
+Bolt Companion (companion): copy companion_template.html to <scratchpad>/companion/template.html; the site folder needs
+live.js doglife.js game.js imitate.js companion.js companion_mind.js, ../../pet/js/brain.js, mujoco/ and the same data/
+files as Bolt Dash.
 """
 import sys, re, os
 S = sys.argv[1]

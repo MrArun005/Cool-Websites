@@ -1,0 +1,746 @@
+<meta charset="utf-8">
+<title>Bolt Companion</title>
+<meta name="description" content="Talk to Bolt, a simulated robot dog with a warm, playful personality. Its mind runs entirely in your browser, and it acts out its replies with a MuJoCo physics body.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+  /* Layout: a living-room stage with Bolt (3D, physics) next to the conversation; under them the dance deck,
+     the settings (voice, memory, local model) and "what is real here". The room has its own palette (day or
+     evening, by the viewer's clock); everything else uses the Gait Lab tokens. */
+  :root { --you: #e8eefc; --bolt: #fdeee2; --room-a: #f7efe3; --room-b: #e9dcc8; --hud-ink: #2d241b; --hud-bg: rgba(255, 252, 246, 0.86);
+    --learned: #2f8a4c; --assisted: #b7791f; --drawn: #6d6a73; --safe-bg: #fff4ec; --safe-line: #f0b48a; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --you: #1f2a40; --bolt: #3a2617; --room-a: #2a2230; --room-b: #171319; --hud-ink: #f6eee4; --hud-bg: rgba(28, 23, 32, 0.82);
+    --learned: #63c27f; --assisted: #e2b04a; --drawn: #a9a5b0; --safe-bg: #2c1d14; --safe-line: #7a4a2a; } }
+  :root[data-theme="dark"] { --you: #1f2a40; --bolt: #3a2617; --room-a: #2a2230; --room-b: #171319; --hud-ink: #f6eee4; --hud-bg: rgba(28, 23, 32, 0.82);
+    --learned: #63c27f; --assisted: #e2b04a; --drawn: #a9a5b0; --safe-bg: #2c1d14; --safe-line: #7a4a2a; }
+  html, body { margin: 0; overflow-x: hidden; }
+  .wrap { gap: 18px; padding-block: 16px 48px; }
+  .top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+  .top h1 { font: 900 clamp(1.5rem, 3.6vw, 2.1rem)/1 var(--display); letter-spacing: -0.02em; }
+  .top p { font-size: 0.88rem; color: var(--muted); max-width: 62ch; }
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 14px; align-items: stretch; }
+  .room { position: relative; height: min(70vh, 620px); min-height: 360px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line);
+    background: linear-gradient(var(--room-a), var(--room-b)); isolation: isolate; aspect-ratio: auto; }
+  .room > canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  .hud { position: absolute; z-index: 2; pointer-events: none; color: var(--hud-ink); }
+  .bubble { position: absolute; z-index: 3; max-width: min(320px, 72%); transform: translate(-50%, calc(-100% - 14px)); background: var(--hud-bg); color: var(--hud-ink);
+    border: 1px solid var(--line); border-radius: 16px; padding: 9px 13px; font-size: 0.93rem; line-height: 1.4; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden;
+    opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  .bubble.show { opacity: 1; }
+  .bubble.tail::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 12px; height: 12px; margin-left: -6px; background: inherit; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg); }
+  .bubble .dots i { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: currentColor; opacity: 0.35; animation: dot 1s infinite; }
+  .bubble .dots i:nth-child(2) { animation-delay: 0.15s; } .bubble .dots i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes dot { 40% { opacity: 1; transform: translateY(-3px); } }
+  .guess { left: 12px; top: 12px; pointer-events: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; max-width: calc(100% - 24px);
+    background: var(--hud-bg); border: 1px solid var(--line); border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 0.82rem; }
+  .guess[hidden] { display: none; }
+  .guess b { font-weight: 600; }
+  .guess button, .fix button { font: 500 0.76rem var(--body); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 4px 9px; cursor: pointer; min-height: 30px; }
+  .fix { left: 12px; top: 52px; pointer-events: auto; display: flex; flex-wrap: wrap; gap: 5px; max-width: calc(100% - 24px); }
+  .fix[hidden] { display: none; }
+  .move { right: 12px; bottom: 12px; display: flex; gap: 6px; align-items: center; background: var(--hud-bg); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; font: 500 0.76rem var(--mono); }
+  .move[hidden] { display: none; }
+  .kind { font: 600 0.62rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 6px; border-radius: 6px; color: #fff; }
+  .kind.learned { background: var(--learned); } .kind.assisted { background: var(--assisted); } .kind.drawn { background: var(--drawn); }
+  .tag { left: 12px; bottom: 12px; font: 600 0.62rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 8px; border-radius: 6px; background: var(--hud-bg); border: 1px solid var(--line); }
+  .beat { right: 12px; top: 12px; display: flex; align-items: center; gap: 8px; background: var(--hud-bg); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; font: 500 0.76rem var(--mono); }
+  .beat[hidden] { display: none; }
+  .beat i { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); opacity: 0.25; transition: opacity 0.08s; }
+  .beat i.on { opacity: 1; }
+  .loading { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; text-align: center; padding: 16px; color: var(--hud-ink); font: 500 0.9rem var(--mono); pointer-events: none; }
+  .loading[hidden] { display: none; }
+  /* the conversation */
+  .talk { display: flex; flex-direction: column; min-height: 0; height: min(70vh, 620px); min-height: 360px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .chat { flex: 1; min-height: 120px; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 8px; overscroll-behavior: contain; }
+  .msg { max-width: 88%; padding: 8px 12px; border-radius: 16px; font-size: 0.94rem; line-height: 1.45; overflow-wrap: anywhere; }
+  .msg.you { align-self: flex-end; background: var(--you); border-bottom-right-radius: 5px; }
+  .msg.bolt { align-self: flex-start; background: var(--bolt); border-bottom-left-radius: 5px; }
+  .msg.sys { align-self: center; color: var(--muted); font-size: 0.78rem; text-align: center; max-width: 95%; }
+  .msg .meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 5px; font: 500 0.68rem var(--mono); color: var(--muted); }
+  .msg .meta button { font: 500 0.7rem var(--body); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 2px 8px; cursor: pointer; min-height: 26px; }
+  .msg .meta button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .say { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); align-items: center; }
+  .say input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .round { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+  .round svg { width: 20px; height: 20px; }
+  .round.send { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .round.listening { background: var(--bad); border-color: var(--bad); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
+  .round[hidden] { display: none; }
+  .round:focus-visible, .say input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .talk .chips { padding: 0 10px 10px; gap: 6px; }
+  .safety { display: grid; gap: 8px; padding: 14px 16px; border-radius: 14px; background: var(--safe-bg); border: 1px solid var(--safe-line); }
+  .safety[hidden] { display: none; }
+  .safety ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; font-size: 0.9rem; }
+  .safety a { color: var(--accent); }
+  /* dance deck and settings */
+  .deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .pbtn { font: 600 0.85rem var(--body); padding: 9px 14px; min-height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .pbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pbtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  .pbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .note { font-size: 0.8rem; color: var(--muted); max-width: 70ch; }
+  .set { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; align-items: center; font-size: 0.88rem; }
+  .set select, .set input[type="text"], .set input[type="url"] { font: inherit; font-size: 16px; min-width: 0; width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .set input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .facts { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }
+  .facts li { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 0.86rem; padding: 5px 8px; border-radius: 8px; background: var(--bg); }
+  .facts li button { font: 500 0.72rem var(--body); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 2px 8px; cursor: pointer; min-height: 28px; }
+  details.panel summary { cursor: pointer; font: 700 1rem var(--display); }
+  details.panel[open] summary { margin-bottom: 4px; }
+  .real ul { display: grid; gap: 6px; padding-left: 1.1em; margin: 0; }
+  .real li { max-width: 86ch; font-size: 0.9rem; }
+  .tests { font: 400 0.78rem/1.55 var(--mono); color: var(--muted); max-width: 100ch; }
+  footer { font: 400 0.76rem/1.5 var(--mono); color: var(--muted); display: grid; gap: 3px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media (max-width: 860px) {
+    .main { grid-template-columns: minmax(0, 1fr); }
+    .room { height: 46svh; min-height: 300px; }
+    .talk { height: auto; min-height: 0; }
+    .chat { max-height: 42svh; min-height: 160px; }
+  }
+  @media (max-width: 600px) { .wrap { padding-top: 10px; gap: 12px; } .top p { font-size: 0.82rem; }
+    .tag { left: auto; right: 12px; bottom: auto; top: 12px; } .beat { top: 46px; } .guess { max-width: calc(100% - 140px); } }
+  @media (prefers-reduced-motion: reduce) { .bubble .dots i, .round.listening { animation: none; } }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <h1>Bolt Companion</h1>
+    <p>Talk to Bolt, a robot dog in a physics simulation. Its mind runs in this page, on your device: nothing you say leaves it.</p>
+  </div>
+
+  <div class="main">
+    <section class="room" id="stage" aria-label="Bolt in a living room (3D simulation). Drag to look around.">
+      <div class="bubble" id="bubble" aria-hidden="true"></div>
+      <div class="hud guess" id="guess" hidden><span>Bolt's guess: <b id="guessLabel"></b></span><button type="button" id="guessFix">Not quite</button></div>
+      <div class="hud fix" id="fix" hidden role="group" aria-label="How are you feeling?"></div>
+      <div class="hud beat" id="beatHud" hidden><i id="beatDot"></i><span id="beatTxt">112 bpm</span></div>
+      <div class="hud move" id="moveHud" hidden><span id="moveName">sit</span><span class="kind learned" id="moveKind">learned</span></div>
+      <span class="hud tag">Simulation · in-house mind</span>
+      <div class="loading" id="loading">Loading Bolt's body and brains (about 15 MB)…</div>
+    </section>
+
+    <section class="talk" aria-label="Conversation">
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="chips" id="chips"></div>
+      <form class="say" id="sayForm" autocomplete="off">
+        <button type="button" class="round" id="mic" hidden aria-label="Hold to talk" title="Voice input (turn it on in Settings)"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12z"/></svg></button>
+        <label class="sr" for="sayInput">Say something to Bolt</label>
+        <input id="sayInput" placeholder="Say something to Bolt…" maxlength="500" enterkeyhint="send">
+        <button type="submit" class="round send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 20.5 21 12 3 3.5 3 10l12 2-12 2z"/></svg></button>
+      </form>
+    </section>
+  </div>
+
+  <section class="safety" id="safety" hidden aria-labelledby="safetyTitle">
+    <h2 id="safetyTitle">You deserve real support right now</h2>
+    <p>Bolt is a simulated robot, not a counsellor. Please reach out to someone you trust, or to people trained to help, any time of day:</p>
+    <ul id="safetyLines"></ul>
+    <p class="note">If you might hurt yourself or you're in danger, call your local emergency number now.</p>
+  </section>
+
+  <div class="deck">
+    <section class="panel" aria-labelledby="danceTitle">
+      <h2 id="danceTitle">Dance</h2>
+      <p class="note">Bolt dances on the beat: its own tune, a song file of yours (the beats are found in this page), or music from the room through your microphone.</p>
+      <div class="row">
+        <button type="button" class="pbtn primary" id="dTune">Bolt's tune</button>
+        <button type="button" class="pbtn" id="dFile">Your music…</button>
+        <button type="button" class="pbtn" id="dMic">Microphone</button>
+        <button type="button" class="pbtn" id="dStop" disabled>Stop</button>
+        <input type="file" id="fileIn" accept="audio/*" hidden>
+      </div>
+      <p class="note" id="danceNote">Moves on the beat: bounces, wiggles, a play bow, twirls and head tilts. Most are assisted (see below); it ends with a learned sit.</p>
+    </section>
+
+    <details class="panel" id="settings">
+      <summary>Voice, memory and settings</summary>
+      <div class="set">
+        <label for="vOn">Bolt speaks</label><input type="checkbox" id="vOn" checked>
+        <label for="vSel">Voice</label><select id="vSel"></select>
+        <label for="vPitch">Pitch</label><input type="range" id="vPitch" min="0.6" max="2" step="0.05" value="1.3">
+        <label for="vRate">Speed</label><input type="range" id="vRate" min="0.6" max="1.6" step="0.05" value="1.05">
+        <label for="vOnline">Online voices</label><input type="checkbox" id="vOnline">
+      </div>
+      <p class="note" id="voiceNote">Bolt uses voices built into your device. Some browsers also offer online voices that send the text to the browser maker to be spoken; those stay off unless you tick “Online voices”.</p>
+      <div class="set">
+        <label for="micOn">Voice input</label><input type="checkbox" id="micOn">
+        <label for="micLocal" id="micLocalL" hidden>On this device only</label><input type="checkbox" id="micLocal" checked hidden>
+      </div>
+      <p class="note" id="micNote">Off by default. Checking…</p>
+      <h3>What Bolt remembers</h3>
+      <p class="note" id="memNote">Kept only in this browser on this device.</p>
+      <ul class="facts" id="facts"></ul>
+      <div class="row">
+        <label class="note" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="memOn" checked> Remember things between visits</label>
+        <button type="button" class="pbtn" id="forget">Forget everything</button>
+      </div>
+      <h3>Local language model (advanced, off)</h3>
+      <p class="note">If you run an open-weight model on this computer (for example a llama.cpp server, or any OpenAI-compatible server), Bolt can use it with the same personality and safety rules. Only localhost addresses are accepted, so nothing leaves your machine. The safety replies always come from Bolt's in-house mind. Some hosts block a published page from reaching localhost; then Bolt keeps using its in-house mind.</p>
+      <div class="set">
+        <label for="lmOn">Use it</label><input type="checkbox" id="lmOn">
+        <label for="lmUrl">Address</label><input type="url" id="lmUrl" value="http://localhost:8080" spellcheck="false">
+        <label for="lmKind">Kind</label><select id="lmKind"><option value="openai">OpenAI-compatible (/v1/chat/completions)</option><option value="llama">llama.cpp (/completion)</option></select>
+      </div>
+      <p class="note" id="lmNote"></p>
+    </details>
+  </div>
+
+  <section class="panel real" aria-labelledby="realTitle">
+    <h2 id="realTitle">What is real here (simulation)</h2>
+    <ul>
+      <li><b>The body is physics.</b> MuJoCo runs in this page with the motor limits used in training. Bolt's trained brains move every leg 50 times a simulated second. <b>Learned</b> (the brains do it all): stand, sit, lie down, get up, walk, come closer, turns, spin (the sharp-turn walk brain, a full circle) and zoomies (trot out, walk back). If Bolt falls, its self-righting brain gets it up.</li>
+      <li><b>Assisted</b> (the posture brain holds the legs; a guide in the physics makes the move, as in Bolt Dash): hop and happy bounce (an upward kick on the body plus a little lift in the air), wiggle (a twist torque), play bow (a nose-down torque, about 25°), twirl (a hop with a twist). The brains never learned these.</li>
+      <li><b>Drawn only</b> (no physics): head tilt, nod, ears, tail wag, the eyes and the mood lights. The simulated dog has no head, ear or tail joints.</li>
+      <li><b>The mind is rules, written by hand</b>, running in this page: it reads your words (feelings with negation and intensity, sarcasm cues, emoji, punctuation, the time of day), plans a tone, and picks lines, jokes and moves. Its guess about how you feel can be wrong; tap “Not quite” to correct it. It is not a language model and it does not understand everything. It is a robot, not a therapist.</li>
+      <li><b>Dance</b>: Bolt's tune has known beats; for your music the beats are found in this page from the decoded file; the microphone mode follows onsets live. Moves start on the beat; the physics adds at most one control step (20 ms).</li>
+    </ul>
+    <p class="tests" id="tests">Headless checks (train/gaitlab/companion_test.mjs, simulation, 30 Oct). Body: every move from standing, 0 falls; the play bow dips the nose 0.38 rad, a hop lifts the body 19 cm. Stress test: 600 replies in 4 runs, about 40% of them arriving mid-move, 52 simulated minutes: 11 falls (mostly braking out of a walk when a new reply cut in), every one got up by itself. Dance at 100, 112 and 128 bpm, 12 runs of 30 s: moves show 0–60 ms after the beat (kicks within one 20 ms step), 1 fall. Beats: synthetic drum tracks from 84 to 160 bpm found within 3 ms; Bolt's tune, rendered and analysed in the browser, within 3 ms. Mind: 98 checks: crisis words and idioms (“this joke is killing me” is not a crisis), no jokes in grief or crisis, sarcasm, negation, memory across reloads, 2,211 broken or cut-off model replies never break the page.</p>
+  </section>
+
+  <section class="panel real" aria-labelledby="privTitle">
+    <h2 id="privTitle">Privacy</h2>
+    <ul>
+      <li>Everything Bolt hears, reads and remembers stays on this device. Memory (your name, a few things you share, recent chat, which jokes you liked) is kept in this browser's storage; untick “Remember things” or press “Forget everything” at any time.</li>
+      <li>Voice: speaking uses voices on your device unless you allow online voices. <b>Voice input is off by default</b>: many browsers send speech recognition audio to the browser maker's servers (Chrome sends it to Google). Bolt uses on-device recognition where the browser offers it and tells you which one you have.</li>
+      <li>Music and the microphone for dancing are analysed in memory, live, and never stored or sent. No camera is used.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Simulation: Bolt is a simulated robot; no real robot is involved. Dog motion capture data: CC BY-NC 4.0.</span>
+    <span>Bolt is not a substitute for people or professional help.</span>
+  </footer>
+</div>
+
+<script src="brain.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+  const store = (() => { try { const s = window.localStorage; s.getItem("probe"); return s; } catch (e) { return null; } })();
+  const pref = (k, d) => { try { const v = store && store.getItem("boltCompanion." + k); return v === null || v === undefined ? d : JSON.parse(v); } catch (e) { return d; } };
+  const setPref = (k, v) => { try { store && store.setItem("boltCompanion." + k, JSON.stringify(v)); } catch (e) {} };
+  const q = new URLSearchParams(location.search);
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- the conversation works before the 3D does ----------
+  const chat = $("chat");
+  function addMsg(who, text, extra = {}) {
+    const el = document.createElement("div"); el.className = "msg " + who;
+    const p = document.createElement("div"); p.textContent = text; el.append(p);
+    if (extra.meta) el.append(extra.meta);
+    chat.append(el); chat.scrollTop = chat.scrollHeight;
+    while (chat.children.length > 120) chat.firstChild.remove();
+    return el;
+  }
+
+{{SCENE_JS}}
+
+  // ---------- the room: a warm corner of a living room, day or evening by the viewer's clock ----------
+  const PHONE = Math.min(window.innerWidth, window.innerHeight) < 600 || (navigator.hardwareConcurrency || 8) <= 4;
+  floor.visible = false;
+  camera.near = 0.05; camera.far = 40; camera.fov = 42; camera.updateProjectionMatrix();
+  controls.minDistance = 0.8; controls.maxDistance = 4.5; controls.maxPolarAngle = 1.45; controls.enablePan = false;
+  setReach(2.2);
+  const hourNow = () => (q.has("hour") ? Number(q.get("hour")) : new Date().getHours());
+  const dark = () => document.documentElement.dataset.theme === "dark" || (document.documentElement.dataset.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const evening = () => { const h = hourNow(); return dark() || h >= 19 || h < 7; };
+  const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.85, ...extra });
+  function canvasTex(w, h, draw, repeat) {
+    const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h);
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 8;
+    if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+    return t;
+  }
+  let seedR = 7; const R = () => ((seedR = (seedR * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const room = new THREE.Group(); scene.add(room);
+  const wood = canvasTex(512, 512, (g, w, h) => {
+    for (let i = 0; i < 8; i++) { const y = (i * h) / 8; g.fillStyle = ["#c79a6b", "#bf9161", "#cfa676", "#c39563"][i % 4]; g.fillRect(0, y, w, h / 8);
+      for (let k = 0; k < 40; k++) { g.strokeStyle = `rgba(90,55,25,${0.05 + R() * 0.08})`; g.beginPath(); const yy = y + R() * h / 8; g.moveTo(0, yy); g.bezierCurveTo(w / 3, yy + R() * 4 - 2, (2 * w) / 3, yy + R() * 4 - 2, w, yy); g.stroke(); }
+      g.fillStyle = "rgba(60,35,15,0.35)"; g.fillRect(0, y, w, 2); g.fillRect((i * 173) % w, y, 2, h / 8); }
+  }, [4, 4]);
+  const floorM = std("#ffffff", { map: wood, roughness: 0.55 });
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), floorM); ground.receiveShadow = true; room.add(ground);
+  const rug = new THREE.Mesh(new THREE.CircleGeometry(1.25, 64), std("#d86f52", { map: canvasTex(256, 256, (g, w, h) => { g.fillStyle = "#e4dccd"; g.fillRect(0, 0, w, h); g.strokeStyle = "#c95d43"; for (let r = 20; r < w / 2; r += 18) { g.lineWidth = r % 36 ? 5 : 9; g.beginPath(); g.arc(w / 2, h / 2, r, 0, 7); g.stroke(); } }), roughness: 1 }));
+  rug.position.set(0.1, 0, 0.003); rug.receiveShadow = true; room.add(rug);
+  const wallM = std("#efe6d8", { roughness: 0.95 });
+  const wall1 = new THREE.Mesh(new THREE.PlaneGeometry(14, 3), wallM); wall1.rotation.set(Math.PI / 2, Math.PI / 2, 0); wall1.position.set(-3.2, 0, 1.5); wall1.receiveShadow = true; room.add(wall1);
+  const wall2 = new THREE.Mesh(new THREE.PlaneGeometry(14, 3), wallM); wall2.rotation.set(Math.PI / 2, 0, 0); wall2.position.set(0, 3.4, 1.5); wall2.receiveShadow = true; room.add(wall2);
+  const skirting = std("#d9cbb6");
+  room.add(mesh(new THREE.BoxGeometry(0.03, 14, 0.12), skirting, [-3.18, 0, 0.06]), mesh(new THREE.BoxGeometry(14, 0.03, 0.12), skirting, [0, 3.38, 0.06]));
+  // a window on the back wall: sky by day, a night sky with a moon in the evening
+  const winM = new THREE.MeshBasicMaterial({ color: 0xffffff }); const win = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.1), winM);
+  win.rotation.set(Math.PI / 2, Math.PI / 2, 0); win.position.set(-3.19, -0.9, 1.45); room.add(win);
+  const frameM = std("#f8f4ee"); for (const [w, h, y, z] of [[0.06, 1.62, -0.9, 2.02], [0.06, 1.62, -0.9, 0.88], [0.06, 0.05, -1.68, 1.45], [0.06, 0.05, -0.12, 1.45], [0.06, 0.04, -0.9, 1.45]]) room.add(mesh(new THREE.BoxGeometry(0.05, h, w === 0.06 && h > 1 ? 0.06 : 1.16), frameM, [-3.17, y, z]));
+  // a sofa against the side wall, a lamp, a plant and Bolt's bed
+  const sofaM = std("#4d6b8a", { roughness: 0.95 }), cushM = std("#6a88a6", { roughness: 0.95 });
+  const sofa = new THREE.Group(); sofa.position.set(-1.2, 2.85, 0); room.add(sofa);
+  sofa.add(mesh(new THREE.BoxGeometry(2.1, 0.8, 0.42), sofaM, [0, 0, 0.21]), mesh(new THREE.BoxGeometry(2.1, 0.22, 0.85), sofaM, [0, 0.3, 0.42]));
+  for (const x of [-1.0, 1.0]) sofa.add(mesh(new THREE.BoxGeometry(0.2, 0.8, 0.62), sofaM, [x, 0, 0.31]));
+  for (const x of [-0.45, 0.45]) sofa.add(mesh(new THREE.BoxGeometry(0.86, 0.66, 0.12), cushM, [x, -0.06, 0.48]));
+  sofa.add(mesh(new THREE.BoxGeometry(0.34, 0.12, 0.3), std("#e9b44c"), [-0.6, 0.12, 0.66], [0.2, 0, 0.3]));
+  const lamp = new THREE.Group(); lamp.position.set(-2.6, 2.7, 0); room.add(lamp);
+  lamp.add(mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.03, 24), std("#2b2b2b"), [0, 0, 0.015], [Math.PI / 2, 0, 0]), mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.5, 12), std("#2b2b2b"), [0, 0, 0.77], [Math.PI / 2, 0, 0]));
+  const shadeM = new THREE.MeshStandardMaterial({ color: lin("#f6e3c0"), emissive: lin("#ffcf8a"), emissiveIntensity: 0, roughness: 0.9, side: THREE.DoubleSide });
+  lamp.add(mesh(new THREE.CylinderGeometry(0.17, 0.26, 0.3, 32, 1, true), shadeM, [0, 0, 1.6], [Math.PI / 2, 0, 0]));
+  const lampLight = new THREE.PointLight(lin("#ffbf73"), 0, 7, 1.6); lampLight.position.set(-2.6, 2.7, 1.5); room.add(lampLight);
+  const plant = new THREE.Group(); plant.position.set(-2.7, -2.4, 0); room.add(plant);
+  plant.add(mesh(new THREE.CylinderGeometry(0.17, 0.13, 0.36, 24), std("#c2603f"), [0, 0, 0.18], [Math.PI / 2, 0, 0]));
+  for (let i = 0; i < 9; i++) { const a = (i / 9) * Math.PI * 2, l = mesh(new THREE.SphereGeometry(0.12, 12, 8), std(i % 2 ? "#4f8a4b" : "#3f7a3f"), [Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0.55 + (i % 3) * 0.12]); l.scale.set(0.55, 0.55, 1.6); l.rotation.set(Math.sin(a) * 0.5, -Math.cos(a) * 0.5, 0); plant.add(l); }
+  const bed = new THREE.Group(); bed.position.set(-1.7, -1.2, 0); room.add(bed);
+  const bedRing = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.09, 16, 48), std("#8d6e9e", { roughness: 1 })); bedRing.position.z = 0.09; bedRing.castShadow = bedRing.receiveShadow = true; bed.add(bedRing);
+  bed.add(mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 40), std("#b79ac4", { roughness: 1 }), [0, 0, 0.03], [Math.PI / 2, 0, 0]));
+  const ball = mesh(new THREE.SphereGeometry(0.035, 20, 14), std("#d7f04a", { roughness: 0.7 }), [0.9, -0.7, 0.035]); room.add(ball);
+  const hemi = scene.children.find((o) => o.isHemisphereLight);
+  function light() {
+    const eve = evening();
+    if (eve) {
+      winM.map = canvasTex(256, 192, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#0b1030"); gr.addColorStop(1, "#283668"); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = "#fffbe8"; for (let i = 0; i < 40; i++) g.fillRect(R() * w, R() * h * 0.8, 1.2, 1.2); g.beginPath(); g.arc(w * 0.72, h * 0.3, 16, 0, 7); g.fill(); g.fillStyle = "#283668"; g.beginPath(); g.arc(w * 0.75, h * 0.27, 14, 0, 7); g.fill(); });
+      sun.color = lin("#a9b8ff"); sun.intensity = 0.35; hemi.intensity = 0.25; hemi.color = lin("#ffd9b0"); lampLight.intensity = 2.4; shadeM.emissiveIntensity = 1.6; renderer.toneMappingExposure = 1.05;
+      wallM.color = lin("#b09a82"); floorM.color = lin("#a98f78");
+    } else {
+      winM.map = canvasTex(256, 192, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#8fc4f2"); gr.addColorStop(1, "#e6f3ff"); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = "#ffffff"; for (const [x, y, r] of [[60, 70, 18], [82, 64, 22], [104, 72, 16], [180, 110, 14], [198, 104, 18]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); } g.fillStyle = "#7fb37a"; g.fillRect(0, h * 0.82, w, h); });
+      sun.color = lin("#fff1dc"); sun.intensity = 1.5; hemi.intensity = 0.55; hemi.color = lin("#ffffff"); lampLight.intensity = 0; shadeM.emissiveIntensity = 0; renderer.toneMappingExposure = 1.0;
+      wallM.color = lin("#efe6d8"); floorM.color = lin("#ffffff");
+    }
+    winM.map.needsUpdate = true; winM.needsUpdate = true;
+  }
+  light();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", light);
+  new MutationObserver(light).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // ---------- Bolt: the Gait Lab body on the simulator's frames, plus the drawn expression ----------
+  let parts = [], head = null, ears = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp, p0: new THREE.Vector3(), p1: new THREE.Vector3(), q0: new THREE.Quaternion(), q1: new THREE.Quaternion() }; }).filter((p) => p.obj);
+    head = parts.find((p) => p.g.part === "head"); ears = head ? head.obj.children.filter((c) => c.isGroup) : [];
+    ears.forEach((e) => (e.userData.rx = e.rotation.x));
+  }
+  const m4b = new THREE.Matrix4();
+  function snap(first) {
+    const d = P.bolt.data, xp = d.geom_xpos, xm = d.geom_xmat;
+    for (const pt of parts) {
+      const i = pt.g.id, k = 9 * i;
+      pt.p0.copy(pt.p1); pt.q0.copy(pt.q1);
+      m4b.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.p1.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.q1.setFromRotationMatrix(m4b);
+      if (first) { pt.p0.copy(pt.p1); pt.q0.copy(pt.q1); }
+    }
+  }
+  const qTilt = new THREE.Quaternion(), eTilt = new THREE.Euler();
+  const MOOD = { happy: "#ff9a2e", excited: "#ffd23a", playful: "#ff6fb0", silly: "#b58cff", proud: "#ffc93c", curious: "#5fd3ff", calm: "#5fe0b8", caring: "#ff8fa3", sad: "#5a7cff", sleepy: "#7a83b8", worried: "#9fa8ff" };
+  const ledNow = new THREE.Color("#ff7a1a");
+  function drawBolt(u, t, dt) {
+    for (const pt of parts) { pt.obj.position.lerpVectors(pt.p0, pt.p1, u); pt.obj.quaternion.slerpQuaternions(pt.q0, pt.q1, u); }
+    const L = P.look;
+    // drawn only: the head turns about its own frame (tilt = roll, nod = pitch); the snout follows the head's turn
+    const thinking = state.thinking ? 0.25 * Math.sin(t * 2.2) + 0.18 : 0;
+    const tilt = L.tilt + thinking, nod = L.nod + (["sad", "sleepy"].includes(L.emotion) ? 0.12 : 0);
+    if (head && (Math.abs(tilt) > 1e-3 || Math.abs(nod) > 1e-3)) {
+      eTilt.set(tilt, nod, 0); qTilt.setFromEuler(eTilt);
+      const hq = head.obj.quaternion.clone(), W = hq.clone().multiply(qTilt).multiply(hq.clone().invert());   // the tilt, in world terms
+      head.obj.quaternion.premultiply(W);
+      for (const sn of parts) if (sn.g.part === "snout" || sn.g.part === "eyeL" || sn.g.part === "eyeR") {
+        const off = sn.obj.position.clone().sub(head.obj.position).applyQuaternion(W); sn.obj.position.copy(head.obj.position).add(off); sn.obj.quaternion.premultiply(W);
+      }
+    }
+    ears.forEach((e) => { e.rotation.y = -0.15 + 0.9 * L.ears; });
+    if (tail) { const amp = reduced ? 0.15 : 0.12 + 0.55 * L.wag, f = 4 + 10 * L.wag; tail.rotation.z = amp * Math.sin(t * f); tail.rotation.y = -0.5 * (1 - L.wag) * (L.emotion === "sad" ? 1 : 0.3); }
+    const blink = (t % 4.1) < 0.12, happyEyes = ["happy", "excited", "proud", "playful", "silly"].includes(L.emotion);
+    eyes.forEach((e) => { e.scale.z = blink ? 0.12 : happyEyes ? 0.55 : L.emotion === "sleepy" ? 0.35 : 1; });
+    ledNow.lerp(lin(MOOD[L.emotion] || "#ff7a1a"), 1 - Math.exp(-dt * 3)); M.led.color.copy(ledNow); M.led.emissive.copy(ledNow);
+  }
+  const boltAt = new THREE.Vector3();
+  function torsoAt(u) { const t = parts.find((p) => p.g.part === "torso"); return t ? boltAt.lerpVectors(t.p0, t.p1, u) : boltAt.set(0, 0, 0.35); }
+  function headAt() { return head ? head.obj.position : torsoAt(1); }
+
+  // ---------- voice out (speechSynthesis; device voices unless online ones are allowed) ----------
+  const synth = window.speechSynthesis || null;
+  const vs = { on: pref("voiceOn", true), pitch: pref("pitch", 1.3), rate: pref("rate", 1.05), online: pref("online", false), name: pref("voice", "") };
+  let voices = [];
+  function rankVoice(v) {
+    let s = 0;
+    if (/^en/i.test(v.lang)) s += 10; if (/en[-_](US|GB|AU|IE|CA)/i.test(v.lang)) s += 2;
+    if (/natural|neural|enhanced|premium|wavenet/i.test(v.name)) s += 6;
+    if (/samantha|daniel|karen|moira|tessa|aria|jenny|guy|libby|sonia|ava|allison|serena|google/i.test(v.name)) s += 3;
+    if (/compact|espeak|robot/i.test(v.name)) s -= 4;
+    if (v.localService) s += 1;
+    return s;
+  }
+  function loadVoices() {
+    if (!synth) return;
+    voices = synth.getVoices().filter((v) => vs.online || v.localService !== false).sort((a, b) => rankVoice(b) - rankVoice(a));
+    const sel = $("vSel"); sel.textContent = "";
+    for (const v of voices) { const o = document.createElement("option"); o.value = v.name; o.textContent = `${v.name} (${v.lang})${v.localService === false ? " · online" : ""}`; sel.append(o); }
+    if (!voices.length) { const o = document.createElement("option"); o.textContent = vs.online ? "No voices in this browser" : "No device voices (try Online voices)"; sel.append(o); }
+    if (vs.name && voices.some((v) => v.name === vs.name)) sel.value = vs.name;
+  }
+  function voice() { return voices.find((v) => v.name === $("vSel").value) || voices[0] || null; }
+  if (synth) { loadVoices(); synth.addEventListener && synth.addEventListener("voiceschanged", loadVoices); }
+  else { $("vOn").checked = false; $("vOn").disabled = true; $("voiceNote").textContent = "This browser has no speech output; Bolt's words appear in the bubble."; }
+  $("vOn").checked = vs.on && !!synth; $("vPitch").value = vs.pitch; $("vRate").value = vs.rate; $("vOnline").checked = vs.online;
+  $("vOn").addEventListener("change", (e) => { vs.on = e.target.checked; setPref("voiceOn", vs.on); if (!vs.on && synth) synth.cancel(); });
+  $("vPitch").addEventListener("input", (e) => { vs.pitch = +e.target.value; setPref("pitch", vs.pitch); });
+  $("vRate").addEventListener("input", (e) => { vs.rate = +e.target.value; setPref("rate", vs.rate); });
+  $("vOnline").addEventListener("change", (e) => { vs.online = e.target.checked; setPref("online", vs.online); loadVoices(); });
+  $("vSel").addEventListener("change", (e) => { vs.name = e.target.value; setPref("voice", vs.name); speak("Woof! This is my voice now.", "happy"); });
+  // a friendly dog-robot voice, shaded by the mood of the line
+  const TONE = { excited: [0.15, 0.1], happy: [0.08, 0.04], playful: [0.12, 0.06], silly: [0.18, 0.05], proud: [0.08, 0.03], curious: [0.05, 0], calm: [-0.08, -0.08], caring: [-0.12, -0.12], sad: [-0.2, -0.16], sleepy: [-0.2, -0.2], worried: [-0.05, -0.05] };
+  let bubbleTimer = 0;
+  function bubble(text, secs) {
+    const b = $("bubble"); b.textContent = text; b.classList.add("show");
+    clearTimeout(bubbleTimer); if (secs) bubbleTimer = setTimeout(() => b.classList.remove("show"), secs * 1000);
+  }
+  function thinkingBubble() { const b = $("bubble"); b.innerHTML = '<span class="dots" aria-label="Bolt is thinking"><i></i><i></i><i></i></span>'; b.classList.add("show"); clearTimeout(bubbleTimer); }
+  let speaking = false;
+  function speak(text, emotion = "happy") {
+    const spoken = text.replace(/\*[^*]*\*/g, " ").replace(/\s+/g, " ").trim(), est = Math.max(1.5, text.split(/\s+/).length * 0.38);
+    bubble(text, est + 2.5);
+    if (!vs.on || !synth || !spoken || !voices.length) return;
+    try {
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(spoken), [dp, dr] = TONE[emotion] || [0, 0];
+      const v = voice(); if (v) { u.voice = v; u.lang = v.lang; }
+      u.pitch = clamp(vs.pitch + dp, 0.1, 2); u.rate = clamp(vs.rate + dr, 0.5, 2);
+      u.onstart = () => (speaking = true); u.onend = u.onerror = () => (speaking = false);
+      synth.speak(u);
+    } catch (e) { speaking = false; }
+  }
+
+  // ---------- state, and the mind (loaded first: talking works before the physics is ready) ----------
+  const state = { thinking: false, ctl: null, posture: "standing", lastJokeEl: null, speechRate: null };
+  let C = null, MIND = null, mind = null, P = null;
+  const CHIPS = [["Hi Bolt!", "Hi Bolt!"], ["Rough day", "I had a really rough day"], ["Tell me a joke", "Tell me a joke"], ["Let's dance!", "Let's dance!"], ["Do a trick", "Do a trick"], ["I'm bored", "I'm bored"], ["Good boy!", "Good boy!"], ["Are you real?", "Are you real?"]];
+  for (const [label, text] of CHIPS) { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.addEventListener("click", () => send(text)); $("chips").append(b); }
+
+  function feelingChip(f) {
+    if (!f) { $("guess").hidden = true; $("fix").hidden = true; return; }
+    $("guessLabel").textContent = f.label; $("guess").hidden = false;
+  }
+  const FIX = ["fine", "happy", "excited", "sad", "stressed", "tired", "angry", "lonely", "anxious"];
+  $("guessFix").addEventListener("click", () => {
+    const box = $("fix"); box.textContent = ""; box.hidden = !box.hidden;
+    for (const f of FIX) { const b = document.createElement("button"); b.type = "button"; b.textContent = f; b.addEventListener("click", () => { box.hidden = true; send(f === "fine" ? "I'm fine actually" : `Actually I feel ${f}`, { correction: true }); }); box.append(b); }
+  });
+
+  function memoryPanel() {
+    if (!mind) return;
+    const mem = mind.memory, ul = $("facts"); ul.textContent = "";
+    const items = [...(mem.name ? [{ text: `name: ${mem.name}`, name: true }] : []), ...mem.data.facts];
+    if (!items.length) { const li = document.createElement("li"); li.textContent = "Nothing yet. Tell Bolt your name, or something you love."; ul.append(li); }
+    for (const f of items) {
+      const li = document.createElement("li"), s = document.createElement("span"), b = document.createElement("button");
+      s.textContent = f.text; b.type = "button"; b.textContent = "Forget";
+      b.addEventListener("click", () => { if (f.name) { mem.data.name = null; mem.save(); } else mem.remove(f.text); memoryPanel(); });
+      li.append(s, b); ul.append(li);
+    }
+    $("memOn").checked = mem.data.remember;
+    $("memNote").textContent = store ? "Kept only in this browser on this device." : "This browser blocks storage, so Bolt forgets everything when you leave.";
+  }
+  $("memOn").addEventListener("change", (e) => { mind && mind.memory.setRemember(e.target.checked); });
+  $("forget").addEventListener("click", () => { if (!mind || !confirm("Forget your name and everything you've told Bolt?")) return; mind.memory.forget(); memoryPanel(); addMsg("sys", "Bolt's memory is wiped."); });
+
+  async function send(text, opts = {}) {
+    text = String(text || "").trim();
+    if (!text || !mind) return;
+    addMsg("you", text);
+    if (state.ctl) state.ctl.abort();
+    const ctl = (state.ctl = new AbortController());
+    state.thinking = true; thinkingBubble();
+    if (P) P.drawn.push({ id: "head_tilt", t0: P.t, secs: 1.2 });
+    const t0 = performance.now();
+    let r;
+    try { r = await mind.reply(text, { hour: hourNow(), posture: P ? P.posture() : "standing", speechRate: state.speechRate }, ctl.signal); }
+    catch (e) { if (ctl.signal.aborted) return; console.error(e); r = { say: "*confused beep* Something went wrong in my head. Try again?", emotion: "curious", actions: ["head_tilt"], source: "in-house" }; }
+    state.speechRate = null;
+    // a short, natural beat before answering (the in-house mind is instant)
+    const wait = Math.max(0, (r.source === "in-house" ? 380 : 0) - (performance.now() - t0));
+    if (wait) await new Promise((res) => setTimeout(res, wait));
+    if (ctl.signal.aborted) return;
+    state.thinking = false;
+    r.ms = Math.round(performance.now() - t0);
+    respond(r, opts);
+  }
+  function respond(r) {
+    const meta = document.createElement("div"); meta.className = "meta";
+    if (r.joke) {
+      const id = r.jokeId;
+      for (const [label, up] of [["Funny", true], ["Not funny", false]]) {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", () => { mind.memory.rate(id, up); meta.querySelectorAll("button").forEach((x) => { x.disabled = true; x.setAttribute("aria-pressed", x === b ? "true" : "false"); }); });
+        meta.append(b);
+      }
+    }
+    if (r.source === "local model") { const s = document.createElement("span"); s.textContent = "local model"; meta.append(s); }
+    addMsg("bolt", r.say, { meta: meta.children.length ? meta : null });
+    if (r.note) addMsg("sys", r.note);
+    feelingChip(r.feeling);
+    $("safety").hidden = r.safety !== "crisis" && $("safety").hidden;
+    if (r.safety === "crisis") { $("safety").hidden = false; }
+    if (P) {
+      P.look.emotion = r.emotion || "happy";
+      if (r.stop) { stopDance(); P.stop(); }
+      const acts = (r.actions || []).filter((a) => a !== "dance");
+      if (acts.length) P.perform(acts);
+      if (r.startDance || (r.actions || []).includes("dance")) setTimeout(() => startDance("tune"), 600);
+    }
+    speak(r.say, r.emotion);
+    memoryPanel();
+    window.__last = r;
+  }
+  $("sayForm").addEventListener("submit", (e) => { e.preventDefault(); const v = $("sayInput").value; $("sayInput").value = ""; send(v); });
+
+  // ---------- voice in: off by default; on-device recognition where the browser has it ----------
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const mic = $("mic"); let rec = null, listening = false, heardAt = 0;
+  // On-device recognition is a newer option (processLocally). Its availability query is not called here: it
+  // crashed a headless Chromium build in testing, so Bolt only sets the option and reports what happens.
+  const canLocal = !!(Rec && Rec.prototype && "processLocally" in Rec.prototype);
+  const localOnly = () => canLocal && $("micLocal").checked;
+  function micNote() {
+    $("micNote").textContent = !Rec ? "This browser has no speech recognition. Typing always works."
+      : localOnly() ? "Off by default. With “On this device only”, the browser recognises your speech on this device; if it can't, Bolt tells you and nothing is sent."
+      : "Off by default. In this browser, speech recognition may send your audio to the browser maker's servers to be turned into text (Chrome sends it to Google). Bolt never stores it. Turn it on only if you are fine with that; typing always works.";
+  }
+  function checkRec() {
+    if (!Rec) { $("micOn").disabled = true; micNote(); return; }
+    $("micLocal").hidden = $("micLocalL").hidden = !canLocal; micNote();
+    $("micLocal").addEventListener("change", () => { micNote(); if (rec) { try { rec.abort(); } catch (e) {} rec = null; if ($("micOn").checked) setupRec(); } });
+  }
+  function setupRec() {
+    rec = new Rec(); rec.lang = "en-US"; rec.interimResults = true; rec.maxAlternatives = 1;
+    try { if (canLocal) rec.processLocally = localOnly(); } catch (e) {}
+    rec.onspeechstart = () => { heardAt = performance.now(); };
+    rec.onresult = (e) => {
+      const res = e.results[e.results.length - 1], text = res[0].transcript;
+      $("sayInput").value = text;
+      if (res.isFinal) {
+        const secs = (performance.now() - (heardAt || performance.now())) / 1000, wps = text.split(/\s+/).length / Math.max(0.5, secs);
+        state.speechRate = wps > 3.3 ? "fast" : wps < 1.6 ? "slowly" : null;   // words per second: a hint of tone, nothing stored
+        $("sayInput").value = ""; send(text);
+      }
+    };
+    rec.onend = () => { listening = false; mic.classList.remove("listening"); };
+    rec.onerror = (e) => {
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      if (localOnly() && ["language-not-supported", "service-not-allowed", "network"].includes(e.error)) return addMsg("sys", "On-device speech recognition isn't ready in this browser. Typing works; or untick “On this device only” to use the browser's online recognition.");
+      addMsg("sys", `Microphone: ${e.error === "not-allowed" ? "not allowed here" : e.error}`);
+    };
+  }
+  $("micOn").addEventListener("change", (e) => {
+    mic.hidden = !e.target.checked;
+    if (e.target.checked && !rec && Rec) setupRec();
+    if (!e.target.checked && listening) rec.abort();
+  });
+  const startListen = () => { if (!rec || listening) return; try { if (synth) synth.cancel(); rec.start(); listening = true; mic.classList.add("listening"); } catch (e) {} };
+  const stopListen = () => { if (rec && listening) rec.stop(); };
+  mic.addEventListener("pointerdown", (e) => { e.preventDefault(); startListen(); });
+  mic.addEventListener("pointerup", stopListen); mic.addEventListener("pointerleave", stopListen);
+  mic.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); listening ? stopListen() : startListen(); } });
+  checkRec();
+
+  // ---------- local model settings ----------
+  const lm = { on: pref("lmOn", false), url: pref("lmUrl", "http://localhost:8080"), kind: pref("lmKind", "openai") };
+  $("lmOn").checked = lm.on; $("lmUrl").value = lm.url; $("lmKind").value = lm.kind;
+  function applyLocal() {
+    if (!mind) return;
+    const url = $("lmUrl").value.trim(), ok = MIND.isLocalUrl(url);
+    lm.on = $("lmOn").checked; lm.url = url; lm.kind = $("lmKind").value; setPref("lmOn", lm.on); setPref("lmUrl", url); setPref("lmKind", lm.kind);
+    mind.useLocal(lm.on && ok ? { url, kind: lm.kind } : null);
+    $("lmNote").textContent = !lm.on ? "Off: Bolt's in-house mind answers." : ok ? `On: Bolt asks ${url} first, and falls back to its in-house mind if it doesn't answer.` : "Only http://localhost or 127.0.0.1 addresses are allowed.";
+  }
+  for (const id of ["lmOn", "lmUrl", "lmKind"]) $(id).addEventListener("change", applyLocal);
+
+  // ---------- dance: Bolt's tune (known beats), your file (beats found here), or the microphone (live) ----------
+  let ac = null;
+  const audio = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } if (ac && ac.state === "suspended") ac.resume(); return ac; };
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  let noiseBuf = null;
+  function noise(a) { if (!noiseBuf || noiseBuf.sampleRate !== a.sampleRate) { noiseBuf = a.createBuffer(1, a.sampleRate * 0.3, a.sampleRate); const ch = noiseBuf.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; } const s = a.createBufferSource(); s.buffer = noiseBuf; return s; }
+  // schedule the tune on any AudioContext (also an OfflineAudioContext, for the beat check)
+  function scheduleTune(a, out, t0, loops = 1) {
+    const T = C.TUNE, nodes = [];
+    for (let l = 0; l < loops; l++) for (const n of T.notes) {
+      const t = t0 + l * T.length + n.t, g = a.createGain(); g.connect(out);
+      if (n.kind === "kick") { const o = a.createOscillator(); o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.14); g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22); o.connect(g); o.start(t); o.stop(t + 0.24); nodes.push(o); }
+      else if (n.kind === "snare" || n.kind === "hat") { const s = noise(a), f = a.createBiquadFilter(); f.type = n.kind === "hat" ? "highpass" : "bandpass"; f.frequency.value = n.kind === "hat" ? 7000 : 1800; g.gain.setValueAtTime(n.kind === "hat" ? 0.12 : 0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + (n.kind === "hat" ? 0.04 : 0.14)); s.connect(f).connect(g); s.start(t); s.stop(t + 0.16); nodes.push(s); }
+      else { const o = a.createOscillator(); o.type = n.kind === "bass" ? "triangle" : "square"; o.frequency.value = hz(n.midi); const v = n.kind === "bass" ? 0.32 : 0.07; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + n.dur); o.connect(g); o.start(t); o.stop(t + n.dur + 0.02); nodes.push(o); }
+    }
+    return { end: t0 + loops * T.length, nodes };
+  }
+  const dance = { on: false, kind: null, t0: 0, plan: [], k: 0, beats: [], bi: 0, end: 0, src: null, nodes: [], stream: null, an: null, tracker: null, nextLive: 0, liveK: 0, master: null };
+  const LEAD = 0.02;   // s: live (microphone) moves start this much before the predicted beat
+  function danceUI(on) { for (const id of ["dTune", "dFile", "dMic"]) $(id).disabled = on; $("dStop").disabled = !on; $("beatHud").hidden = !on; }
+  function beginDance(kind, beats, end, bpm) {
+    dance.on = true; dance.kind = kind; dance.beats = beats; dance.bi = 0; dance.end = end; dance.k = 0;
+    dance.plan = C.choreograph(beats.map((t, i) => ({ t, beat: i })), { seed: (Date.now() % 997) + 1 }).map((m) => ({ ...m, fire: m.t - (C.MOVE_LEAD[m.move] || 0) })).sort((p, q) => p.fire - q.fire);
+    $("beatTxt").textContent = bpm ? `${Math.round(bpm)} bpm` : "listening…"; danceUI(true);
+    if (P) { P.stop(); P.perform(["stand"]); P.look.emotion = "excited"; }
+  }
+  async function startDance(kind, file) {
+    if (dance.on) stopDance(true);
+    const a = audio(); if (!a) { addMsg("sys", "This browser can't play audio, so no dance music."); return; }
+    try {
+      if (kind === "tune") {
+        dance.master = a.createGain(); dance.master.gain.value = 0.6; dance.master.connect(a.destination);
+        const t0 = a.currentTime + 0.35, s = scheduleTune(a, dance.master, t0, 2);
+        dance.nodes = s.nodes; dance.t0 = t0;
+        beginDance("tune", Array.from({ length: 2 * C.TUNE.beats.length }, (_, i) => +(i * C.TUNE.beat).toFixed(4)), s.end - t0, C.TUNE.bpm);
+        $("danceNote").textContent = `Bolt's tune: ${C.TUNE.bpm} bpm, beats known exactly.`;
+      } else if (kind === "file") {
+        $("danceNote").textContent = "Reading your music and finding the beat…";
+        const buf = await a.decodeAudioData(await file.arrayBuffer());
+        const ch = buf.getChannelData(0), mono = buf.numberOfChannels > 1 ? (() => { const r = buf.getChannelData(1), m = new Float32Array(ch.length); for (let i = 0; i < ch.length; i++) m[i] = 0.5 * (ch[i] + r[i]); return m; })() : ch;
+        const found = C.beatsFromSamples(mono, buf.sampleRate);
+        if (!found.beats.length) { $("danceNote").textContent = "Bolt couldn't find a beat in that file. Try another song?"; return; }
+        dance.master = a.createGain(); dance.master.gain.value = 0.9; dance.master.connect(a.destination);
+        const src = a.createBufferSource(); src.buffer = buf; src.connect(dance.master);
+        const t0 = a.currentTime + 0.2; src.start(t0); dance.src = src; dance.t0 = t0;
+        beginDance("file", found.beats, buf.duration, found.bpm);
+        $("danceNote").textContent = `Your music: about ${Math.round(found.bpm)} bpm, beat found in this page (${found.confidence < 0.2 ? "a weak beat: Bolt is guessing" : "steady"}). Nothing is uploaded.`;
+      } else if (kind === "mic") {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+        const srcN = a.createMediaStreamSource(stream), f = a.createBiquadFilter(), an = a.createAnalyser();
+        f.type = "lowpass"; f.frequency.value = 180; an.fftSize = 1024; srcN.connect(f).connect(an);
+        Object.assign(dance, { stream, an, tracker: new C.BeatTracker(), t0: a.currentTime, nextLive: 0, liveK: 0, buf: new Float32Array(an.fftSize) });
+        beginDance("mic", [], Infinity, 0);
+        $("danceNote").textContent = "Listening for a beat through your microphone. The sound is analysed live here and never stored or sent.";
+      }
+    } catch (e) {
+      console.warn(e);
+      $("danceNote").textContent = kind === "mic" ? "The microphone isn't available here (blocked or not allowed). Bolt's tune and your files still work." : "That file couldn't be played. Try an MP3, WAV or OGG file.";
+      stopDance(true);
+    }
+  }
+  function stopDance(silent) {
+    if (!dance.on && !dance.stream) { danceUI(false); return; }
+    const wasOn = dance.on; dance.on = false;
+    try { dance.src && dance.src.stop(); } catch (e) {}
+    try { dance.master && dance.master.disconnect(); } catch (e) {}
+    for (const n of dance.nodes) { try { n.stop(); } catch (e) {} }
+    if (dance.stream) dance.stream.getTracks().forEach((t) => t.stop());
+    Object.assign(dance, { src: null, nodes: [], stream: null, an: null, master: null });
+    danceUI(false);
+    if (wasOn && !silent && P) { P.perform(["sit", "tail_wag"]); P.look.emotion = "proud"; speak(pickTada(), "proud"); }
+  }
+  const pickTada = () => ["Ta-da!", "And... sit! Thank you, thank you.", "Nailed it. Mostly."][Math.floor(Math.random() * 3)];
+  const LIVE_MOVES = ["bounce", "rest", "bounce", "wiggle", "bounce", "rest", "tilt", "twirl"];
+  function danceTick() {
+    if (!dance.on || !ac) return;
+    const now = ac.currentTime - dance.t0;
+    if (dance.kind === "mic") {
+      dance.an.getFloatTimeDomainData(dance.buf); let e = 0; for (const v of dance.buf) e += v * v; e /= dance.buf.length;
+      dance.tracker.push(now, e);
+      const nb = dance.tracker.next(now);
+      if (nb !== null && nb - now < 0.06 && nb > dance.nextLive + 0.2) {
+        dance.nextLive = nb; const mv = LIVE_MOVES[dance.liveK++ % LIVE_MOVES.length];
+        $("beatTxt").textContent = `${Math.round(dance.tracker.bpm)} bpm`; pulse();
+        if (mv !== "rest" && P) setTimeout(() => P.beatMove({ move: mv, beat: dance.liveK, accent: dance.liveK % 4 === 1 }), Math.max(0, (nb - now - LEAD) * 1000));
+      }
+      return;
+    }
+    while (dance.bi < dance.beats.length && dance.beats[dance.bi] <= now) { dance.bi++; pulse(); }
+    while (dance.k < dance.plan.length && dance.plan[dance.k].fire <= now) { if (P) P.beatMove(dance.plan[dance.k]); dance.k++; }
+    if (now > dance.end + 0.2) stopDance();
+  }
+  let pulseT = 0; function pulse() { $("beatDot").classList.add("on"); clearTimeout(pulseT); pulseT = setTimeout(() => $("beatDot").classList.remove("on"), 110); }
+  $("dTune").addEventListener("click", () => startDance("tune"));
+  $("dFile").addEventListener("click", () => $("fileIn").click());
+  $("fileIn").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; if (f) startDance("file", f); e.target.value = ""; });
+  $("dMic").addEventListener("click", () => startDance("mic"));
+  $("dStop").addEventListener("click", () => stopDance());
+
+  // ---------- the move tag: what Bolt is doing, and whether it is learned, assisted or drawn ----------
+  function moveHud() {
+    if (!P) return;
+    const c = P.cur, d = dance.on ? { id: "dance" } : c, a = d && C.ACTIONS[d.id];
+    if (!a) { $("moveHud").hidden = true; return; }
+    $("moveHud").hidden = false; $("moveName").textContent = a.label;
+    const k = dance.on ? "assisted" : a.kind; const el = $("moveKind"); el.textContent = k; el.className = "kind " + k;
+  }
+
+  // ---------- boot ----------
+  async function boot() {
+    try {
+      [C, MIND] = await Promise.all([import("./companion.js"), import("./companion_mind.js")]);
+      mind = new MIND.Mind({ storage: store, petBrain: window.PetBrain || null });
+      for (const l of MIND.HELP.lines) {
+        const li = document.createElement("li"), b = document.createElement("b"); b.textContent = l.where + ": "; li.append(b);
+        const [pre, post] = l.what.split("findahelpline.com");
+        if (post === undefined) li.append(l.what);
+        else { const ln = document.createElement("a"); ln.href = "https://findahelpline.com"; ln.target = "_blank"; ln.rel = "noopener"; ln.textContent = "findahelpline.com"; li.append(pre, ln, post); }
+        $("safetyLines").append(li);
+      }
+      applyLocal(); memoryPanel();
+      const hello = mind.memory.name ? `Welcome back, ${mind.memory.name}! I missed you. Well, I was paused, but in spirit.` : mind.memory.data.visits > 1 ? "Hey, you're back! I'm Bolt. What should I call you?" : "Hi! I'm Bolt, a robot dog. Talk to me about anything: your day, a joke, a dance. What should I call you?";
+      addMsg("bolt", hello); window.__hello = hello;
+    } catch (e) { console.error(e); addMsg("sys", "Bolt's mind couldn't start in this browser."); return; }
+    try {
+      const [l, m, b, gpu, g18, cl] = await Promise.all([import("./live.js"), import("./mujoco/mujoco.js"),
+        fetch("data/bolt_run.json").then((x) => x.json()), fetch("data/dog_gpu360.json").then((x) => x.json()), fetch("data/dog_18g.json").then((x) => x.json()), fetch("data/dog_clips.json").then((x) => x.json())]);
+      $("loading").textContent = "Starting the physics…";
+      P = new C.Pet(l, await m.default(), b, { gpu, g18 }, cl);
+      buildDog(P.geoms); snap(true); $("loading").hidden = true;
+      P.perform(["tail_wag"]);
+    } catch (e) { console.error(e); $("loading").textContent = "The physics couldn't start in this browser, but Bolt can still talk."; }
+  }
+
+  // ---------- camera: orbit around Bolt, following it softly ----------
+  const camOff = new THREE.Vector3(2.35, 0.95, 0.9), look = new THREE.Vector3(0, 0, 0.3);
+  camera.position.copy(camOff); controls.target.copy(look); controls.update();
+  function follow(dt, u) {
+    const p = torsoAt(u), k = 1 - Math.exp(-dt * 2.2);
+    const want = new THREE.Vector3(p.x, p.y, 0.3), d = want.sub(controls.target).multiplyScalar(k);
+    controls.target.add(d); camera.position.add(d); controls.update();
+    sun.position.set(controls.target.x + 3, controls.target.y - 2, 5); sun.target.position.copy(controls.target);
+    if (P) { const c = camera.position, h = P.home; let vx = c.x, vy = c.y; const r = Math.hypot(vx - h[0], vy - h[1]); if (r > 2.4) { vx = h[0] + (vx - h[0]) * 2.4 / r; vy = h[1] + (vy - h[1]) * 2.4 / r; } P.viewer = [vx, vy]; }
+  }
+  function placeBubble() {
+    const b = $("bubble"); if (!b.classList.contains("show")) return;
+    const v = headAt().clone(); v.z += 0.16; v.project(camera);
+    const r = stageEl.getBoundingClientRect(), w = b.offsetWidth;
+    const x = clamp((v.x * 0.5 + 0.5) * r.width, w / 2 + 8, r.width - w / 2 - 8), y = clamp((-v.y * 0.5 + 0.5) * r.height, b.offsetHeight + 62, r.height - 10);
+    b.style.left = x + "px"; b.style.top = y + "px";
+  }
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stageEl);
+  if (PHONE) { renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); sun.shadow.mapSize.set(1024, 1024); }
+
+  const BUDGET = 24; let last = performance.now(), acc = 0;
+  const frameMs = [], physMs = []; window.__frames = frameMs; window.__phys = physMs;
+  function tick(t) {
+    const wall = (t - last) / 1000, dt = Math.min(0.1, wall); last = t;
+    frameMs.push(wall * 1000); if (frameMs.length > 600) frameMs.shift();
+    let u = 1;
+    danceTick();
+    if (P) {
+      const h = P.bolt.dt; acc += dt;
+      const t0 = performance.now();
+      while (acc >= h && performance.now() - t0 < BUDGET) { P.step(); snap(); acc -= h; }
+      physMs.push(performance.now() - t0); if (physMs.length > 600) physMs.shift();
+      if (acc > h) acc = h;
+      u = clamp(acc / h, 0, 1);
+      for (const e of P.events.splice(0)) { if (e.type === "fall") addMsg("sys", "Bolt fell over (simulation). Its self-righting brain is getting it up."); }
+      drawBolt(u, t / 1000, dt); moveHud();
+      follow(dt, u);
+    }
+    placeBubble();
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  resize(); requestAnimationFrame(tick); boot();
+  if (!q.has("hour") && (hourNow() >= 23 || hourNow() < 5)) document.documentElement.style.setProperty("--room-a", "#221c2a");
+  window.__comp = { audioNow: () => (ac ? ac.currentTime : 0), get pet() { return P; }, get mind() { return mind; }, get C() { return C; }, send, startDance, stopDance, dance, scheduleTune, state };
+})();
+</script>

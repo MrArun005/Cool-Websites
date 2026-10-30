@@ -139,3 +139,30 @@ drawn only. The bundle's agility hurdles are stripped from the model (Dash renum
 
 Headless (from `train/gaitlab`, D = the site folder): `node dash_test.mjs $D/mujoco/mujoco.js $D/data auto|human|idle 300 1,2,3,4`
 (real runs, player inputs only) and `... latency` (key to visible motion).
+
+## Bolt Companion (talk to Bolt; it answers and acts it out)
+
+`companion.js` (the body, the dance) + `companion_mind.js` (the mind) + `companion_template.html` (simulation). Phase 3 of
+`pet/ROADMAP.md`, built in-house: **no outside AI service, no keys, no network.** The mind reads the words (a feelings
+lexicon with negation, intensifiers, sarcasm cues, emoji, punctuation, caps, the time of day), plans a tone (crisis /
+comfort / celebrate / playful / calm / clarify / command), and composes the reply `{say, emotion, actions, feeling,
+safety, joke, remember}`. A humour library tagged by mood and topic, with rules for when not to joke; comfort that
+reflects, makes the person feel seen and nudges toward people they trust; a fixed crisis path (help lines, "I'm a
+robot, not a counsellor"); per-viewer memory in localStorage. Trick commands still go through `pet/js/brain.js` (Phase 1),
+mapped to what this body can do. Optional, off by default: an open-weight model on the person's own machine (llama.cpp
+`/completion` or an OpenAI-compatible `/v1/chat/completions`, localhost only) with the same persona prompt (`PROMPT`) and
+JSON contract; replies go through `parseReply` + `sanitize`, the crisis path never goes through it, and any failure falls
+back to the in-house mind.
+
+The body is Bolt Dash's (DogBody, same brains). Learned: stand, sit, lie down, get up, walk, come closer, turns and spin
+(the run 12 sharp-turn brain from standing), zoomies. Assisted (a guide in the physics, said on the page): hop, happy
+bounce, wiggle, play bow (~25 deg nose down), twirl (a hop with a small twist). Drawn only: head tilt, nod, ears, tail,
+eyes, mood lights. Dance: Bolt's own tune (known beats), a song file (beats found offline, `beatsFromSamples`), or the
+microphone (`BeatTracker`, live); each move starts `MOVE_LEAD` early so it shows on the beat.
+
+    mkdir -p $S/companion/site/data && cp gaitlab/companion_template.html $S/companion/template.html && python gaitlab/build_pages.py $S companion
+    cp gaitlab/{live,doglife,game,imitate,companion,companion_mind}.js ../pet/js/brain.js $S/companion/site/
+    cp -r $S/dash/site/mujoco $S/companion/site/ && cp $S/dash/site/data/{bolt_run,dog_gpu360,dog_18g,dog_clips}.json $S/companion/site/data/
+
+Headless (from `train/gaitlab`): `node companion_test.mjs mind`, `node companion_test.mjs beats`,
+`node companion_test.mjs body <mujoco.js> <site>/data` (SEQS, SEED), `node companion_test.mjs page <url> <shots dir>` (Playwright).
