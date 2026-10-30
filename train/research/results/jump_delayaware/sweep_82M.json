@@ -1,0 +1,113 @@
+{
+ "folder": "/tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/jawaredev/b82000000",
+ "states": "research/results/handover_states_v8g_test.npz",
+ "heights": [
+  0.3,
+  0.4,
+  0.5
+ ],
+ "rows": [
+  {
+   "delay_ms": 0,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.69,
+    0.48,
+    0.31
+   ],
+   "mean": 0.493
+  },
+  {
+   "delay_ms": 10,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.97,
+    0.84,
+    0.53
+   ],
+   "mean": 0.78
+  },
+  {
+   "delay_ms": 20,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.97,
+    0.85,
+    0.48
+   ],
+   "mean": 0.767
+  },
+  {
+   "delay_ms": 30,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.91,
+    0.76,
+    0.47
+   ],
+   "mean": 0.713
+  },
+  {
+   "delay_ms": 40,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.67,
+    0.43,
+    0.17
+   ],
+   "mean": 0.423
+  },
+  {
+   "delay_ms": 10,
+   "jitter_ms": 8.0,
+   "spike_p": 0.02,
+   "per_height": [
+    0.76,
+    0.68,
+    0.35
+   ],
+   "mean": 0.597
+  },
+  {
+   "delay_ms": 20,
+   "jitter_ms": 8.0,
+   "spike_p": 0.02,
+   "per_height": [
+    0.81,
+    0.65,
+    0.42
+   ],
+   "mean": 0.627
+  },
+  {
+   "delay_ms": 30,
+   "jitter_ms": 8.0,
+   "spike_p": 0.02,
+   "per_height": [
+    0.78,
+    0.57,
+    0.29
+   ],
+   "mean": 0.547
+  },
+  {
+   "delay_ms": 40,
+   "jitter_ms": 8.0,
+   "spike_p": 0.02,
+   "per_height": [
+    0.51,
+    0.28,
+    0.14
+   ],
+   "mean": 0.31
+  }
+ ],
+ "floor": 0.31,
+ "average": 0.584,
+ "command": "python research/delay_sweep.py /tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/jawaredev/b82000000 --states research/results/handover_states_v8g_test.npz --out /tmp/claude-0/-home-user-Cool-Websites/029cd38f-3b1a-5876-9645-932075813c4a/scratchpad/jawaredev/sweep82.json"
+}
