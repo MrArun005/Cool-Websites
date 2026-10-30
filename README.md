@@ -1,5 +1,8 @@
 # Bolt: a learned robot dog, built in simulation
 
+**Created and directed by Arun Mallikarjun.** Arun set the goals, the targets and the rules, chose what to keep and what
+to drop, and owns the project. The code, training and write-ups were produced with AI assistance under his direction.
+
 A 12 kg simulated quadruped with real Unitree A1 motor limits (torque, power, joint speed), trained with reinforcement learning (PPO) in MuJoCo and MuJoCo MJX: 4,096 parallel robots on free Colab and Kaggle GPUs. Nine learned gaits and postures (walk, trot, pace, turn, sit, lie, get up) score 91–97% on seeded exams with zero falls; a canter runs at ~2 m/s; a run-up jump clears 40 cm; self-righting from any fall takes under a second. Every trained policy ships in [`models/`](models/) with a model card, exam results and the command that produced them.
 
 ## Target robots: Unitree Go2 EDU and DEEP Robotics Lite3 (decided 30 Oct 2026)
