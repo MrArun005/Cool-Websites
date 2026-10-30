@@ -128,6 +128,29 @@ Landing flags: `--landing-rate` (share of tries, default 0), `--landing-file` (d
 default 0.5), `--landing-bridge` (s of canter before the switch, default 0.6 = `skills.BRIDGE`), `--landing-then`
 (default trot). The CPU env (`imitate_env.ImitateEnv`) takes the same arguments.
 
+### Dog-motion brain on a real robot's body (Unitree Go2; CPU env only so far)
+
+The target robot is the Unitree Go2 EDU (README "Target robot"; plan: `research/real_robot_port.md`). Real robots are
+entries of a table, `robot_bodies.BODIES` (model file, joint names in our order, stance, motor torque and speed, PD
+gains, clip prefix, body-size limits, pose thresholds, folded legs); the leg kinematics are measured from the model. A
+second robot (DEEP Robotics Lite3 is planned) is added as an entry, plus its model file under `robots/`.
+
+```bash
+python robot_bodies.py go2                                     # what the entry resolves to
+PYTHONPATH=. python dogmotion/retarget_body.py --body go2 --bvh-dir <MANN bvh folder> --png /tmp/go2png   # go2_*.npz clips
+python train_imitate.py --body go2 --name go2_smoke --clips walk trot --steps 300000 --envs 2 --exam-every 100000
+BOLT_BODY=go2 python -c "from imitate_env import ImitatePolicy, exam; print(exam(ImitatePolicy('runs/go2_smoke/best'), clips=['walk', 'trot']))"
+python -m unittest test_env.Go2BodyTest
+```
+
+`--body go2` (or `BOLT_BODY=go2`) swaps the model (Menagerie Go2 with position servos, kp 40 / kd 1.0), the motor model
+(23.7 N·m and 30.1 rad/s hip/thigh, 45.43 N·m and 15.7 rad/s knee; drive fade, power and brake approximate), the stance
+(thigh 0.85, knee -1.7, ~0.30 m) and the clips (`dogmotion/clips/go2_*.npz`); inputs, outputs and reward are as
+Bolt's. Without it everything is Bolt, bit for bit. Smoke run (30 Oct, in simulation, 300k steps, walk + trot, 2 envs):
+reward per step 0.23 -> 0.64; exam at 300k: walk 0.773 / trot 0.758 tracking, no falls, 35% / 70% of the dog's pace.
+Kaggle CPU pilot from scratch, all 9 clips: `kaggle/make_train_kernel.py kernel --job go2-dog-pilot`.
+Not yet on the Go2: the GPU trainer (`mjx_imitate.py`), landing starts, terrain, hurdles, the jump/get-up envs.
+
 ### Results
 
 See the results table below, filled in from `runs/bolt/eval.json`.

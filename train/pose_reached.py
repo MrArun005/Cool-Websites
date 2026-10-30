@@ -20,9 +20,10 @@ POSE_OK = {
 CLIP_POSE = {"sit": "sit", "lie": "lie", "getup": "stand"}
 
 
-def pose_ok(name, height, pitch, up):
-    """True where the body is in pose `name` (a POSE_OK key)."""
-    c = POSE_OK[name]
+def pose_ok(name, height, pitch, up, table=None):
+    """True where the body is in pose `name` (a POSE_OK key). table: another body's thresholds in POSE_OK's form (a real
+    robot's robot_bodies entry "pose_ok"); None or "bolt": POSE_OK."""
+    c = (POSE_OK if table is None or table == "bolt" else table)[name]
     ok = True
     if "height_max" in c:
         ok = ok & (height < c["height_max"])

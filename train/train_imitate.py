@@ -2,6 +2,11 @@
 
     python train_imitate.py --name imitate18 --steps 30000000 [--resume runs/imitate18/checkpoints/policy_X_steps.zip]
     python train_imitate.py --name imitate_smoke --steps 300000 --envs 2 --exam-every 100000   # smoke test
+    python train_imitate.py --body go2 --name go2_smoke --clips walk trot --steps 300000 --envs 2 --exam-every 100000
+
+--body go2 trains the Unitree Go2 (robot_bodies.BODIES; its own clips dogmotion/clips/go2_*.npz) instead of Bolt; it sets BOLT_BODY
+for this process and its envs, so the exams and ImitatePolicy load the same body. Run a Go2 brain's exams with
+BOLT_BODY=go2 too.
 
 Writes runs/<name>/checkpoints/, runs/<name>/best/ (policy.zip, vecnormalize.pkl, best.json) and prints
 "checkpoint N ready: {...}" / "new best" lines as it goes (best = imitate_env.score: tracking x share of the
@@ -11,6 +16,7 @@ mean try length.
 """
 import argparse
 import json
+import os
 import shutil
 import time
 from pathlib import Path
@@ -24,6 +30,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 from imitate_env import ALL_CLIPS, DEFAULT_CLIPS, STEER, STEER_CLIPS, ImitateEnv, ImitatePolicy, exam, exam_steer, score
 from bolt_env import add_brake_args, set_motor_brake, set_motor_speed
+from robot_bodies import BODIES
 
 
 class Examiner(BaseCallback):
@@ -82,7 +89,9 @@ class Examiner(BaseCallback):
             best.mkdir(exist_ok=True)
             shutil.copy(ck / f"policy_{n}_steps.zip", best / "policy.zip")
             shutil.copy(ck / f"policy_vecnormalize_{n}_steps.pkl", best / "vecnormalize.pkl")
-            (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=s, clips=self.clips), indent=2))
+            body = os.environ.get("BOLT_BODY", "bolt")
+            (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=s, clips=self.clips,
+                                                            **({"body": body} if body != "bolt" else {})), indent=2))
             print(f"new best at {n}: score {s:.3f}", flush=True)
         if late:
             print(f"time guard: stopping at {n}", flush=True)
@@ -117,7 +126,17 @@ def main():
     add_brake_args(ap, default=True)
     ap.add_argument("--motor-speed", type=float, nargs=3, metavar=("RATED", "CUTOFF", "POWER"),
                     help="a faster motor drive (rad/s, rad/s, W), e.g. 30 35 700 for a Go2-class body (default: the A1's 21 25 420)")
+    ap.add_argument("--latency-ms", type=float, nargs=2, default=(0.0, 0.0), metavar=("LO", "HI"),
+                    help="control delay per try, uniform in [LO, HI] ms (ImitateEnv latency_ms; default none)")
+    ap.add_argument("--body", choices=["bolt"] + sorted(BODIES), default=os.environ.get("BOLT_BODY", "bolt"),
+                    help="the robot: bolt (default) or a real robot of robot_bodies.BODIES, e.g. go2 (the Unitree Go2: "
+                         "its own clips, motors and stance)")
     args = ap.parse_args()
+    os.environ["BOLT_BODY"] = args.body   # the training envs (subprocesses), the exams and ImitatePolicy all read it
+    if args.body != "bolt":
+        assert not args.motor_speed, "--motor-speed changes Bolt's drive; a real-robot body has its own motor model"
+        print(f"body: {args.body} (motors, brake speeds and gains: robot_bodies.BODIES; --brake-speed/--brake-gain do not apply)",
+              flush=True)
     if args.motor_speed:
         print("motor drive (rated rad/s, cutoff rad/s, W):", set_motor_speed(*args.motor_speed), flush=True)
         args.brake_speed = args.motor_speed[1]   # the brake starts where the faster drive fades out
@@ -127,7 +146,8 @@ def main():
     torch.set_num_threads(args.threads)
     venv = make_vec_env(ImitateEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(
         clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None, root_global=args.root_global, steer_max=args.steer_max,
-        steer_share=args.steer_share, steer_change=args.steer_change, steer_weight=args.steer_weight))
+        steer_share=args.steer_share, steer_change=args.steer_change, steer_weight=args.steer_weight,
+        **({"latency_ms": tuple(args.latency_ms)} if args.latency_ms[1] > 0 else {})))
     if args.init_from and not args.resume:
         src = Path(args.init_from)
         venv = VecNormalize.load(str(src / "vecnormalize.pkl"), venv)

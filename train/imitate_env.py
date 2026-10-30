@@ -103,6 +103,14 @@ Rough terrain and pushes (step 6), off by default:
 
 motor_brake: None = bolt_env's process default (off unless set; train_imitate.py turns it on), True/False for this
 env (bolt_env: back-EMF braking above the drive cutoff).
+
+Body (body="go2", or the BOLT_BODY=go2 env var; default "bolt"): a real robot from robot_bodies.BODIES (the Unitree
+Go2: Menagerie's model with position servos and the Go2's motor limits), tracking the clips retargeted onto it
+(dogmotion/clips/<clip_prefix><clip>.npz, dogmotion/retarget_body.py). The observation, action and reward layout are the
+same; the body's own stance replaces DOG (inputs 10 and 57, residual=False), and the body-size limits are the entry's
+(Go2: the body may rest on the floor below a 21 cm reference instead of 30 cm, a try ends 10.5 cm off the reference
+height instead of 15 cm; its own sit/lie/stand poses for pose_reached). Landing starts, terrain and the GPU env
+(mjx_imitate.py) are Bolt-only.
 """
 from pathlib import Path
 
@@ -185,8 +193,8 @@ def _mat(q):
 class Clip:
     """A retargeted clip, as body-relative quantities per frame (what the reward compares)."""
 
-    def __init__(self, name):
-        z = np.load(CLIP_DIR / f"{name}.npz")
+    def __init__(self, name, prefix=""):
+        z = np.load(CLIP_DIR / f"{prefix}{name}.npz")   # prefix "go2_": the clip retargeted onto the Go2
         self.name, self.loop, self.fps = name, bool(z["loop"]), float(z["fps"])
         self.n = len(z["joints"])
         self.length = self.n / self.fps
@@ -236,9 +244,17 @@ class ImitateEnv(BoltEnv):
                  terrain_cm=TERRAIN_ARGS["cm"], terrain_clips=TERRAIN_ARGS["clips"], terrain_spread=TERRAIN_ARGS["spread"],
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"],
                  push_speed=PUSH["speed"], push_spin=PUSH["spin"], motor_brake=None, root_global=0.0,
-                 steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"]):
+                 steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"],
+                 body=None):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
-                         skills=["stand"], motor_brake=motor_brake, terrain_cm=terrain_cm, terrain_seed=terrain_seed)
+                         skills=["stand"], motor_brake=motor_brake, terrain_cm=terrain_cm, terrain_seed=terrain_seed,
+                         body=body)
+        # the body's stance, clip files, size limits and poses (module docstring, "Body")
+        self.dog, prefix, self.floor_ok_h, self.lost_h, self.poses = DOG, "", 0.3, 0.15, "bolt"
+        if self.body != "bolt":
+            r = self.robot
+            self.dog, prefix, self.floor_ok_h, self.lost_h, self.poses = r.stance, r.clip_prefix, r.floor_ok, r.lost, r.pose_ok
+            assert not landing_rate, "landing starts are Bolt's (recorded from Bolt's jump brain)"
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
         # root_global (0..1): blend of our two root terms (height + tilt, body-frame velocity) with Peng et al. 2020's
         # Eq. 8-9 (GLOBAL root position, full rotation incl. heading, global velocity), the reference root integrated
@@ -255,7 +271,7 @@ class ImitateEnv(BoltEnv):
         self.OBS = 66 + slots
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
         self.clip_names = list(clips or DEFAULT_CLIPS)
-        self.clips = {n: Clip(n) for n in self.clip_names}
+        self.clips = {n: Clip(n, prefix) for n in self.clip_names}
         self.residual = residual
         self.weights = dict(WEIGHTS, **(weights or {}))   # e.g. {"root_vel": 0.25} if it keeps poses but not pace
         self.exam_start = None        # (clip name, start time s): exams set it; training draws it
@@ -298,7 +314,7 @@ class ImitateEnv(BoltEnv):
     def pose_now(self, name):
         """Is the body in pose `name` (pose_reached.POSE_OK) right now?"""
         R = self._rotation()
-        return bool(pose_ok(name, self.data.qpos[2], np.arcsin(np.clip(R[2, 0], -1, 1)), R[2, 2]))
+        return bool(pose_ok(name, self.data.qpos[2], np.arcsin(np.clip(R[2, 0], -1, 1)), R[2, 2], self.poses))
 
     # ---------- reference ----------
     def tau(self, ahead=0):
@@ -347,9 +363,9 @@ class ImitateEnv(BoltEnv):
         obs = np.concatenate([
             R.T @ np.array([0, 0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3],
             [d.qpos[2] if self.terrain is None else d.qpos[2] - self.ground_z()],
-            d.qpos[7:19] - DOG, d.qvel[6:18] * 0.1, self.last_action,
+            d.qpos[7:19] - self.dog, d.qvel[6:18] * 0.1, self.last_action,
             [np.sin(ph), np.cos(ph)], onehot,
-            self.ref("joints", 1) - DOG, [self.ref("height", 1)], self.ref("v_body", 1), [self.ref_w(1)[2]],
+            self.ref("joints", 1) - self.dog, [self.ref("height", 1)], self.ref("v_body", 1), [self.ref_w(1)[2]],
             [self.finished()],
         ])
         if self.randomize:
@@ -509,7 +525,7 @@ class ImitateEnv(BoltEnv):
 
     def step(self, action):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
-        base = self.ref("joints", 1) if self.residual else DOG
+        base = self.ref("joints", 1) if self.residual else self.dog
         self.data.ctrl[:] = np.clip(base + ACTION_SCALE * a, self.lo, self.hi)
         if self.push_steps and self.t > 0 and self.t % self.push_steps == 0 and self.rng.random() < self.push_prob:
             side = 1.0 if self.rng.random() < 0.5 else -1.0   # a push now (the switch test's shove, push-sized)
@@ -543,8 +559,8 @@ class ImitateEnv(BoltEnv):
             trans = self.transition_excess()
             reward -= self.transition_weight * trans
         self.last_action = a
-        floor_ok = self.ref("height") < 0.3     # sitting and lying: the body may rest on the floor
-        lost = (abs(err["height_err"]) > 0.15 and self.t > self.grace_steps) or err["tilt"] > 0.8   # grace: landing starts
+        floor_ok = self.ref("height") < self.floor_ok_h     # sitting and lying: the body may rest on the floor
+        lost = (abs(err["height_err"]) > self.lost_h and self.t > self.grace_steps) or err["tilt"] > 0.8   # grace: landing starts
         fell = lost or (self.body_on_floor() and not floor_ok)
         done = self.t >= self.limit
         info = dict(err, clip=self.clip.name, tau=self.tau(), fell=fell, **{f"r_{k}": float(v) for k, v in terms.items()})

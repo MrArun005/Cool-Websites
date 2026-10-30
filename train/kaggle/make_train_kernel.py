@@ -12,6 +12,10 @@ Jobs (JOBS below):
              best/ picked mid-stride at 2.5 m/s from 3 m over 55/60/65 cm.
   recover    train_getup.py from self-righting 17e-16.5M: kicks, bad landings, ice, a second kick, wider physics;
              exam = the whole recovery (self-right, tuck, stand) from those falls.
+  go2-dog-pilot  train_imitate.py --body go2 FROM SCRATCH (start None): the dog-motion brain on the Unitree Go2 body
+             (robot_bodies.py, clips dogmotion/clips/go2_*.npz). The data tar must be built from a commit that has
+             robot_bodies.py and the go2_ clips (build_data packs git HEAD; it takes every robots/*/*_nomesh.xml and
+             LICENSE, so a new body's model goes in by its file name).
 
     python kaggle/make_train_kernel.py data -o /tmp/td          # code + brains from git HEAD, one tar
     kaggle datasets create -p /tmp/td                             # later: kaggle datasets version -p /tmp/td -m new
@@ -139,6 +143,16 @@ JOBS = {
         name="canterfast", script="train_imitate.py", start="../models/bolt-dog-canter-speed-38M",
         args=["--slots", "8", "--clips", "trot", "canter", "--switch-rate", "0.3", "--lr", "1e-4",
               "--root-vel-weight", "0.6", "--motor-speed", "30", "35", "700"],
+        finals=[]),
+    "go2-dog-pilot": dict(
+        # 30 Oct: Go2 is the target robot (README "Target robot"). First dog-motion brain on the Go2 body: run 18e's
+        # recipe (all 9 clips, clip switches 0.3/s, 9-slot layout) from scratch, brake on (the Go2's per-joint brake),
+        # 0-40 ms of control delay per try (real_robot_port.md: delay in every training run), exams without delay as
+        # Bolt's. Local smoke (300k steps, walk + trot, 2 envs): the reward rose and the exam ran. Pilot win line: mean
+        # tracking >= 0.70 over walk/trot/pace/turns/sit/lie/getup with no falls (Bolt 18e at 36M: 0.83-0.93 on those).
+        name="go2dog", script="train_imitate.py", start=None,
+        args=["--body", "go2", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
+              "--switch-rate", "0.3", "--latency-ms", "0", "40"],
         finals=[]),
     "jump-handover": dict(
         # 29 Oct pilot (2M steps, local): practising from REAL MasterMind hand-overs (research/record_handover.py)
@@ -379,7 +393,7 @@ for attempt in range(CFG["attempts"]):
     ck = latest()
     cmd = [sys.executable, "-u", CFG["script"], "--name", CFG["name"], "--steps", str(CFG["steps"]),
            "--envs", str(CFG["envs"]), "--every", str(CFG["every"]), "--hours", f"{left:.3f}"] + CFG["args"]
-    cmd += ["--resume", ck] if ck else ["--init-from", CFG["start"], "--exam-first"]
+    cmd += ["--resume", ck] if ck else ["--init-from", CFG["start"], "--exam-first"] if CFG["start"] else []   # None: from scratch
     say(("resume: " if ck else "start: ") + " ".join(cmd[2:]))
     with open(RUN / "train.log", "a") as tl:
         p = subprocess.Popen(cmd, cwd=TRAIN, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -396,7 +410,7 @@ for attempt in range(CFG["attempts"]):
 # fair exams on fresh seeds (9000+): the best brain and the starting brain, the same tries
 best = RUN / "best"
 for i, final in enumerate(CFG["finals"]):
-    for tag, folder in (("best", best), ("start", Path(CFG["start"]))):
+    for tag, folder in (("best", best),) + ((("start", Path(CFG["start"])),) if CFG["start"] else ()):
         if (TRAIN / folder / "policy.zip").exists() and time.time() - T0 < CFG["hard_h"] * 3600 - 600:
             cmd = [sys.executable, "-u", "fair_exam.py"] + [final[0], str(folder)] + final[1:] + \
                   ["--episodes", str(CFG["final_episodes"]), "--no-save"]
@@ -424,6 +438,7 @@ def build_data(a):
     for f in files:
         p = Path(f)
         if (p.parent == Path("train") and p.suffix in (".py", ".xml")) or p.parent == Path("train/dogmotion/clips") or \
+           (p.parts[:2] == ("train", "robots") and (p.name.endswith("_nomesh.xml") or p.name == "LICENSE")) or \
            f in ("train/research/results/handover_states.npz", "train/research/results/handover_states_mix.npz",
                   "train/research/results/handover_states_mix2.npz") or \
            (len(p.parts) == 3 and p.parts[0] == "models" and p.parts[1] in MODELS and p.suffix in (".zip", ".pkl", ".md", ".json", ".txt")):

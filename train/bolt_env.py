@@ -79,6 +79,10 @@ MOTOR.update(brake=os.environ.get("BOLT_MOTOR_BRAKE", "0").lower() in ("1", "tru
              brake_speed=float(os.environ.get("BOLT_MOTOR_BRAKE_SPEED", MOTOR["cutoff"])),
              brake_gain=float(os.environ.get("BOLT_MOTOR_BRAKE_GAIN", BRAKE_GAIN)))
 _BRAKE = {}   # id(MjModel) -> (on, speed, gain) for envs given motor_brake explicitly; others use MOTOR's
+# Real-robot bodies (BoltEnv body="go2", BOLT_BODY=go2; robot_bodies.BODIES): id(MjModel) -> that body's own motor
+# model (robot_bodies.Body.motor: MOTOR's keys, per joint arrays), used by physics() for that model instead of MOTOR.
+# Bolt's models are never in it.
+_MOTORS = {}
 
 
 def set_motor_speed(speed, cutoff, power=None):
@@ -125,31 +129,39 @@ def add_brake_args(ap, default):
                     help=f"braking N·m per rad/s above --brake-speed (default {MOTOR['brake_gain']:.3g}, motor-constant estimate)")
 
 
-def brake_torque(qvel, speed, gain):
-    """Per joint braking torque (N·m) at joint speeds qvel (rad/s): zero up to `speed`, then against the motion."""
+def brake_torque(qvel, speed, gain, cap=None):
+    """Per joint braking torque (N·m) at joint speeds qvel (rad/s): zero up to `speed`, then against the motion,
+    at most `cap` (default MOTOR's peak torque)."""
     excess = np.maximum(np.abs(qvel) - speed, 0.0)
-    return -np.sign(qvel) * np.minimum(gain * excess, MOTOR["torque"])
+    return -np.sign(qvel) * np.minimum(gain * excess, MOTOR["torque"] if cap is None else cap)
 
 
-def motor_limits(qvel):
-    """Per joint (lo, hi) torque limits for the current joint speeds (rad/s)."""
+def motor_limits(qvel, motor=None):
+    """Per joint (lo, hi) torque limits for the current joint speeds (rad/s); motor: a body's motor model (default
+    MOTOR; a real-robot body's robot_bodies.Body.motor holds per joint arrays)."""
+    M = MOTOR if motor is None else motor
     w = np.abs(qvel)
-    drive = np.minimum(MOTOR["torque"], MOTOR["power"] / np.maximum(w, 1e-6))
-    drive *= np.clip((MOTOR["cutoff"] - w) / (MOTOR["cutoff"] - MOTOR["speed"]), 0.0, 1.0)
-    lo = np.where(qvel < 0, -drive, -MOTOR["torque"])
-    hi = np.where(qvel >= 0, drive, MOTOR["torque"])
+    drive = np.minimum(M["torque"], M["power"] / np.maximum(w, 1e-6))
+    drive *= np.clip((M["cutoff"] - w) / (M["cutoff"] - M["speed"]), 0.0, 1.0)
+    lo = np.where(qvel < 0, -drive, -M["torque"])
+    hi = np.where(qvel >= 0, drive, M["torque"])
     return lo, hi
 
 
 def physics(model, data, n):
     """n physics steps with the real-motor limits applied at every one (joints are qvel[6:18]); with the brake
-    on (brake_settings), the braking torque goes in data.qfrc_applied on the joints, also at every step."""
+    on (brake_settings), the braking torque goes in data.qfrc_applied on the joints, also at every step.
+    A model of another body (_MOTORS) uses that body's motors, and its own brake speeds and gains."""
     on, speed, gain = brake_settings(model)
+    motor = _MOTORS.get(id(model))
+    cap = None
+    if motor is not None:
+        speed, gain, cap = motor["brake_speed"], motor["brake_gain"], motor["torque"]
     for _ in range(n):
-        lo, hi = motor_limits(data.qvel[6:18])
+        lo, hi = motor_limits(data.qvel[6:18], motor)
         model.actuator_forcerange[:, 0], model.actuator_forcerange[:, 1] = lo, hi
         if on:
-            data.qfrc_applied[6:18] = brake_torque(data.qvel[6:18], speed, gain)
+            data.qfrc_applied[6:18] = brake_torque(data.qvel[6:18], speed, gain, cap)
         mujoco.mj_step(model, data)
 
 # What the built-in trot is built around (gait_generator="crouch" or "tall"). "crouch" is the
@@ -279,7 +291,7 @@ class BoltEnv(gym.Env):
     def __init__(self, randomize=True, command_period=200, max_steps=600, render_mode=None, seed=None, scale=1.0,
                  skills=None, gait_generator=False, turning=False, handover_brain=None, speed_control=False,
                  sharp_turns=False, getting_up=False, hurdles=False, motor_brake=None, terrain_cm=TERRAIN["cm"],
-                 terrain_seed=TERRAIN["seed"]):
+                 terrain_seed=TERRAIN["seed"], body=None):
         # gait_generator: while walking, the reference trot (reference_gait.py) drives the legs and the
         # brain only adds corrections on top (residual control, as in "policies modulating trajectory
         # generators"). The legs are coordinated from the first step instead of having to discover it.
@@ -301,7 +313,20 @@ class BoltEnv(gym.Env):
         # policy observes and is scored on is converted back to full-size units, so the same brain
         # can drive any size.
         self.s, self.ts = scale, np.sqrt(scale)  # length and time scale
-        if scale == 1.0 and hurdles == "real":   # a real agility hurdle: solid stands, a loose bar (hurdle.py)
+        # body: "bolt" (bolt.xml, the default) or a real robot of robot_bodies.BODIES ("go2": the Unitree Go2, Menagerie's
+        # model with position servos and its own motor model); None = the BOLT_BODY env var, else "bolt". Real-robot
+        # bodies are for the imitation env (ImitateEnv): this class's own command tasks (stand/sit/lie/walk rewards,
+        # poses, gaits) are Bolt's.
+        self.body = body or os.environ.get("BOLT_BODY", "bolt")
+        if self.body != "bolt":
+            assert scale == 1.0 and not hurdles and not terrain_cm > 0, "real-robot bodies have no scaling, hurdles or terrain yet"
+            import robot_bodies
+            import weakref
+            self.robot = robot_bodies.get(self.body)
+            self.model = mujoco.MjModel.from_xml_string(self.robot.xml())
+            _MOTORS[id(self.model)] = self.robot.motor
+            weakref.finalize(self, _MOTORS.pop, id(self.model), None)
+        elif scale == 1.0 and hurdles == "real":   # a real agility hurdle: solid stands, a loose bar (hurdle.py)
             import hurdle
             self.model = mujoco.MjModel.from_xml_string(hurdle.world_xml(MODEL.read_text(), n=1))
         elif scale == 1.0 and hurdles:  # the same robot, plus a hurdle (parked far away until placed)
@@ -322,6 +347,10 @@ class BoltEnv(gym.Env):
             _BRAKE[key] = (bool(motor_brake), MOTOR["brake_speed"], MOTOR["brake_gain"])
             weakref.finalize(self, _BRAKE.pop, key, None)
         self.motor_brake = brake_settings(self.model)
+        if id(self.model) in _MOTORS:   # another body: its own brake speeds and gains (physics())
+            mot = _MOTORS[id(self.model)]
+            self.motor_brake = (self.motor_brake[0], [round(float(v), 1) for v in mot["brake_speed"][:3]],
+                                [float(v) for v in mot["brake_gain"][:3]])   # abd, thigh, calf
         self.frame_skip = 10  # 0.002 s physics step × 10 = 50 Hz control
         self.dt = self.model.opt.timestep * self.frame_skip
         self.randomize = randomize

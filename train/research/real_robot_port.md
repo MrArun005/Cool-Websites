@@ -3,6 +3,13 @@
 Status, 2026-10-28: **a plan only, nothing retrained.** Every number below is **in simulation** and comes with the command that
 re-makes it. The robot models are the official MuJoCo Menagerie ones, copied into `train/robots/`.
 
+Update, 2026-10-30: **step 1 done for the Go2 in the CPU imitation env** (in simulation). `robot_bodies.py` holds the
+real robots as table entries (the Go2 now; DEEP Robotics Lite3 planned second), `BoltEnv/ImitateEnv(body="go2")` or
+`train_imitate.py --body go2` train on it, `dogmotion/retarget_body.py` re-retargeted the dog clips onto it
+(`dogmotion/clips/go2_*.npz`, check in `go2_check.json`), and the Kaggle CPU job `go2-dog-pilot` is defined. Choices
+made: kp 40 / kd 1.0, Menagerie's joint damping 2 kept (a generic value; see robot_bodies.py), the drive fade, power
+and brake of the Go2 motors are assumptions modelled on Bolt's A1 drive. Bolt's own results are unchanged.
+
 ## TL;DR
 
 * Bolt is **not** an A1 or a Go2. It weighs about the same (12.0 kg, A1 12.45 kg, Go2 15.2 kg) and has the same 0.2 m

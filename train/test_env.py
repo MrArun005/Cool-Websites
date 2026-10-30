@@ -470,5 +470,61 @@ class DogGaitTest(unittest.TestCase):
         self.assertEqual(sum(env.model.geom(i).name == "hurdle" for i in range(env.model.ngeom)), 0)
 
 
+class Go2BodyTest(unittest.TestCase):
+    """The Unitree Go2 body (robot_bodies.BODIES["go2"], BoltEnv/ImitateEnv body="go2")."""
+
+    def test_model_and_joint_order(self):
+        import robot_bodies
+        b = robot_bodies.get("go2")
+        env = BoltEnv(body="go2", randomize=False)
+        m = env.model
+        self.assertAlmostEqual(float(m.body_subtreemass[env.torso]), 15.206, places=2)
+        self.assertEqual([m.joint(j).name for j in range(1, 13)], b.joints)
+        self.assertEqual([m.joint(m.actuator_trnid[a, 0]).name for a in range(12)], b.joints)
+        np.testing.assert_allclose(m.actuator_ctrlrange, m.jnt_range[1:13])
+        np.testing.assert_allclose(m.actuator_gainprm[:, 0], 40.0)
+        self.assertEqual(BoltEnv(randomize=False).body, "bolt")   # the default is still Bolt
+
+    def test_kinematics_match_mujoco(self):
+        import robot_bodies
+        kin = robot_bodies.get("go2").kin
+        self.assertAlmostEqual(kin["thigh"], 0.213)
+        self.assertAlmostEqual(kin["hip_offset"], 0.0955)
+        env, rng = BoltEnv(body="go2", randomize=False), np.random.default_rng(0)
+        m, d = env.model, env.data
+        for _ in range(20):
+            q = rng.uniform(m.jnt_range[1:13, 0], m.jnt_range[1:13, 1])
+            d.qpos[:] = 0
+            d.qpos[3], d.qpos[7:19] = 1.0, q
+            mujoco.mj_kinematics(m, d)
+            paws = robot_bodies.paw_positions(kin, q)
+            np.testing.assert_allclose(paws, d.geom_xpos[env.foot_ids], atol=1e-9)
+            for i, leg in enumerate(robot_bodies.LEGS):   # IK back to the same joint angles (legs reaching down: its branch)
+                if not -0.5 < q[3 * i + 1] < 1.5:
+                    continue
+                hip = np.array([kin["abd_x"] * (1 if leg[0] == "F" else -1), kin["abd_y"] * (1 if leg[1] == "L" else -1), 0.0])
+                sol, short = robot_bodies.leg_ik(kin, paws[i] - hip, leg[1] == "L")
+                np.testing.assert_allclose(sol, q[3 * i:3 * i + 3], atol=1e-7)
+
+    def test_motor_limits_per_joint(self):
+        import robot_bodies
+        from bolt_env import motor_limits
+        motor = robot_bodies.get("go2").motor
+        lo, hi = motor_limits(np.zeros(12), motor)
+        np.testing.assert_allclose(hi, np.tile([23.7, 23.7, 45.43], 4))
+        lo, hi = motor_limits(np.tile([0.0, 36.0, 19.0], 4), motor)   # past the cutoffs: no drive, full brake
+        np.testing.assert_allclose(hi, np.tile([23.7, 0.0, 0.0], 4))
+        np.testing.assert_allclose(lo, -np.tile([23.7, 23.7, 45.43], 4))
+
+    def test_imitation_env_on_go2(self):
+        from imitate_env import ALL_CLIPS, ImitateEnv
+        env = ImitateEnv(body="go2", clips=ALL_CLIPS, randomize=False)
+        obs, _ = env.reset(seed=0)
+        self.assertEqual(obs.shape, (75,))
+        for _ in range(25):   # the reference played with no corrections keeps the Go2 up for half a second
+            obs, r, fell, done, info = env.step(np.zeros(12))
+        self.assertFalse(fell)
+        self.assertGreater(env.data.qpos[2], 0.2)
+
 if __name__ == "__main__":
     unittest.main()
