@@ -1,0 +1,472 @@
+<meta charset="utf-8">
+<title>Bolt Run</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+{{BASE_CSS}}
+  /* Layout: the run in 3D with the score, the gap to the dog-catcher and big controls under it, then how it works.
+     Same look as Bolt's Day Out and Bolt Remote. */
+{{GAME_CSS}}
+  :root { --sky-top: #8fc1ea; --sky-bottom: #dcebf5; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sky-top: #33506b; --sky-bottom: #7d95a8; } }
+  :root[data-theme="dark"] { --sky-top: #33506b; --sky-bottom: #7d95a8; }
+  .wrap { gap: 18px; }
+  .stage { aspect-ratio: 16 / 9; background: linear-gradient(var(--sky-top), var(--sky-bottom)); touch-action: none; user-select: none; -webkit-user-select: none; }
+  .stage canvas { display: block; }
+  .hud.tl b#hScore { font: 800 1.6rem/1 var(--display); color: var(--accent); font-variant-numeric: tabular-nums; }
+  .hud.tl .doing { font: 500 0.78rem/1.3 var(--mono); color: var(--muted); }
+  .sim { position: absolute; left: 10px; bottom: 10px; font: 600 0.66rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 7px; border-radius: 5px; background: var(--ink); color: var(--panel); pointer-events: none; }
+  .gauge { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: min(46%, 320px); display: grid; gap: 3px; pointer-events: none; }
+  .gauge .bar { position: relative; height: 12px; border-radius: 999px; background: color-mix(in srgb, var(--panel) 80%, transparent); border: 1px solid var(--line); overflow: hidden; }
+  .gauge .fill { position: absolute; inset: 0 auto 0 0; background: var(--good); border-radius: 999px; transition: background 0.3s; }
+  .gauge .fill.warn { background: var(--warn); } .gauge .fill.bad { background: var(--bad); }
+  .gauge span { font: 500 0.7rem var(--mono); color: var(--ink); text-align: center; text-shadow: 0 0 4px var(--panel); }
+  .banner { top: 34%; font-size: clamp(1.4rem, 5vw, 2.8rem); }
+  .result .card { gap: 12px; }
+  .result .card p { margin: 0 auto; }
+  .result .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; text-align: left; }
+  .result .stats div { display: grid; gap: 1px; padding: 8px 10px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }
+  .result .stats b { font: 700 1.15rem var(--mono); font-variant-numeric: tabular-nums; }
+  .result .best { font: 600 0.85rem var(--mono); color: var(--accent); }
+  .go { font: 800 1.15rem var(--display); padding: 12px 22px; min-height: 52px; border-radius: 12px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+  .go:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .pad { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .pad button { display: grid; place-items: center; gap: 2px; min-height: 64px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 700 1rem var(--display); cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .pad button small { font: 400 0.68rem var(--mono); color: var(--muted); }
+  .pad button .ic { font-size: 1.4rem; line-height: 1; }
+  .pad button:active, .pad button.on { background: var(--accent-soft); border-color: var(--accent); }
+  .pad button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pad button.jump { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pad button.jump small { color: color-mix(in srgb, #fff 80%, transparent); }
+  .pad button.jump.ready { box-shadow: 0 0 0 3px var(--good); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .keys { font: 400 0.76rem/1.5 var(--mono); color: var(--muted); }
+  .keys kbd { font: 500 0.72rem var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; background: var(--panel); }
+  .ticker { position: absolute; left: 10px; right: 10px; bottom: 56px; display: grid; gap: 3px; justify-items: start; pointer-events: none; }
+  .ticker span { font: 500 0.8rem var(--body); padding: 3px 9px; border-radius: 8px; background: color-mix(in srgb, var(--panel) 80%, transparent); border: 1px solid var(--line); max-width: 100%; }
+  .ticker span:not(:last-child) { opacity: 0.7; }
+  .notes { display: grid; gap: 8px; }
+  .notes li { max-width: 80ch; }
+  .tests { font: 400 0.8rem/1.5 var(--mono); color: var(--muted); }
+  footer { font: 400 0.78rem/1.5 var(--mono); color: var(--muted); display: grid; gap: 4px; }
+  @media (max-width: 560px) {
+    .wrap { gap: 12px; padding-top: 14px; }
+    .stage { aspect-ratio: 3 / 4; }
+    .hud { padding: 6px 8px; } .hud.tl { left: 6px; top: 6px; } .hud.tr { right: 6px; top: 6px; column-gap: 6px; }
+    .hud.tl b#hScore { font-size: 1.25rem; } .hud .label { font-size: 0.6rem; } .hud.tr b { font-size: 0.86rem; }
+    .gauge { width: 58%; bottom: 8px; left: auto; right: 8px; transform: none; } .sim { left: 6px; bottom: 8px; }
+    .ticker { bottom: 46px; left: 6px; right: 6px; } .ticker span { font-size: 0.72rem; } .ticker span:not(:last-child) { display: none; }
+    .pad { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .pad button { min-height: 58px; }
+    .pad .slow { order: 4; } .pad .fast { order: 5; }
+    .intro { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .gauge .fill { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="label">Bolt robot dog · simulation · a chase game</span>
+    <h1>Bolt Run</h1>
+    <p class="muted intro" style="margin:0;max-width:76ch">The dog-catcher is after Bolt. Steer between the crates, bins and posts, jump the hurdles, and keep ahead. Bolt is not animated: it runs live in this browser with MuJoCo physics and its trained brains choosing every motor command fifty times a second, so it can stumble, knock a bar or fall, and it has to get itself up.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="runTitle" style="display:grid;gap:12px">
+    <h2 id="runTitle" class="label" style="font-size:.72rem">The run, live</h2>
+    <div class="stage" id="stage" aria-label="Bolt running down the track, the dog-catcher behind">
+      <div class="loading" id="loading">Loading the physics and Bolt's brains (about 15 MB)…</div>
+      <div class="hud tl">
+        <span class="label">Score</span>
+        <b id="hScore">0</b>
+        <span class="doing" id="hDoing">–</span>
+      </div>
+      <div class="hud tr"><span class="label">Run</span><b id="hDist">0 m</b><span class="label">Speed</span><b id="hSpeed">0.0 m/s</b><span class="label">Jumps</span><b id="hJumps">0</b><span class="label">Falls</span><b id="hFalls">0</b></div>
+      <div class="ticker" id="ticker" aria-hidden="true"></div>
+      <div class="banner" id="banner" aria-live="polite"></div>
+      <div class="gauge" aria-hidden="true"><span id="gapText">catcher 6.0 m behind</span><div class="bar"><div class="fill" id="gapFill" style="width:66%"></div></div></div>
+      <span class="sim">simulation</span>
+      <div class="result" id="card">
+        <div class="card" role="dialog" aria-labelledby="cardTitle">
+          <h2 id="cardTitle">Bolt Run</h2>
+          <p class="muted" id="cardText">Keep Bolt ahead of the dog-catcher. Left and right change lane, Up jumps a hurdle when it is close, Down slows, hold Shift (or the Canter button) to canter.</p>
+          <div class="stats" id="cardStats" hidden>
+            <div><span class="label">Distance</span><b id="rDist">–</b></div>
+            <div><span class="label">Score</span><b id="rScore">–</b></div>
+            <div><span class="label">Clean jumps</span><b id="rJumps">–</b></div>
+            <div><span class="label">Falls</span><b id="rFalls">–</b></div>
+          </div>
+          <span class="best" id="cardBest"></span>
+          <button class="go" type="button" id="goBtn" disabled>Loading…</button>
+        </div>
+      </div>
+    </div>
+    <div class="pad" role="group" aria-label="Controls">
+      <button type="button" id="bLeft" aria-label="Left lane"><span class="ic">◀</span><small>left · ←</small></button>
+      <button type="button" id="bJump" class="jump" aria-label="Jump"><span class="ic">▲</span><small>jump · ↑</small></button>
+      <button type="button" id="bRight" aria-label="Right lane"><span class="ic">▶</span><small>right · →</small></button>
+      <button type="button" id="bSlow" class="slow" aria-label="Slow down (hold)"><span class="ic">▼</span><small>slow · hold ↓</small></button>
+      <button type="button" id="bFast" class="fast" aria-label="Canter (hold)"><span class="ic">»</span><small>canter · hold ⇧</small></button>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <p class="keys">Keys: <kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd> change lane, <kbd>↑</kbd>/<kbd>W</kbd> jump, hold <kbd>↓</kbd>/<kbd>S</kbd> to slow, hold <kbd>Shift</kbd> to canter, <kbd>P</kbd> pause, <kbd>Enter</kbd> start. On a phone: swipe on the picture (left, right, up to jump, down to slow), or use the buttons.</p>
+      <button class="btn" type="button" id="bPause">Pause</button>
+    </div>
+  </section>
+
+  <div class="two">
+    <section class="panel" aria-labelledby="didTitle">
+      <h2 id="didTitle">What happened</h2>
+      <ul class="log" id="log"><li class="muted">Starts as soon as the physics has loaded.</li></ul>
+    </section>
+    <section class="panel notes" aria-labelledby="howTitle">
+      <h2 id="howTitle">What is real here</h2>
+      <ul>
+        <li><b>Bolt's running is the physics.</b> MuJoCo with the Unitree A1 motor model, as in training. The trot, walk, canter and turns come from the dog-motion brains (imitating a real dog's motion capture), sharp turns from the walk brain, jumps from the jump brain, getting up from the self-righting brain. Nothing moves Bolt but its motors.</li>
+        <li><b>You choose, Bolt does.</b> Left and right pick a lane; Bolt's brains decide how to get there. A trotting Bolt cannot steer (those brains learned a straight trot), so to change lane it slows to a walk, turns, lines up and trots on again. That is why a lane change costs time.</li>
+        <li><b>Real things to hit.</b> Crates, bins, posts and the walls are solid bodies in the physics; touching them is a real contact, and it can trip Bolt. Hurdles are real agility hurdles: the bar sits loose in its cups and falls if a paw hits it. A jump scores only if the bar stays up, every paw crosses it and Bolt does not fall.</li>
+        <li><b>Jumping.</b> Up arms the jump when a bar is 1.2–4.5 m ahead and Bolt is lined up on it; at 1.1 m the jump brain takes over. It needs a trot: from a walk Bolt runs out.</li>
+        <li><b>What is made up.</b> The dog-catcher is drawn only: a figure with a speed that rises with the distance (0.75 m/s plus 0.3 m/s per 100 m, at most 1.6 m/s), never more than 9 m behind, and 2 m nearer each time Bolt runs into something. It has no body in the physics and never touches Bolt; it catches Bolt when it gets within 1 m.</li>
+      </ul>
+      <p class="tests" id="tests">Headless checks (train/gaitlab/run_test.mjs, simulation, 30 Oct). An autoplayer that sees the rows ahead, 8 runs of up to 2 minutes: 48–115 m (mean 82), caught in 7 of 8 after 49–114 s; 6 jumps, 4 clean, 3 falls (all at jumps, all got up alone), 15 run-outs (Bolt drifted off line before the bar), 5 hurdles run through, 8 bumps. A do-nothing player, 4 runs: caught every time, after 53–64 s and 50–62 m. Bolt's mean speed is about 0.95 m/s: a trot is 1.7–1.8 m/s, but every lane change or drift correction is done at a walk.</p>
+    </section>
+  </div>
+
+  <footer>
+    <span>Simulation: Bolt is a simulated robot; no real robot is involved. Dog motion capture data: CC BY-NC 4.0. Robot, brains and page built with AI assistance (Claude).</span>
+    <span>Best score is kept in this browser only.</span>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+
+{{SCENE_JS}}
+
+  // ---------- the look: daylight, a grass field, the track and its hedges ----------
+  const PHONE = Math.min(window.innerWidth, window.innerHeight) < 600 || (navigator.hardwareConcurrency || 8) <= 4;
+  controls.enabled = false;   // the camera follows Bolt
+  camera.near = 0.15; camera.far = 260; camera.fov = 50; camera.updateProjectionMatrix();
+  floor.visible = false;
+  renderer.toneMappingExposure = 0.85;
+  scene.fog = new THREE.Fog(lin("#c4d8e6"), 25, 110);
+  scene.children.filter((o) => o.isHemisphereLight).forEach((h) => { h.color = lin("#cfe6ff"); h.groundColor = lin("#5d7a3a"); h.intensity = 0.55; });
+  sun.color = lin("#fff1dc"); sun.intensity = 1.9; sun.shadow.mapSize.set(PHONE ? 1024 : 2048, PHONE ? 1024 : 2048);
+  setReach(PHONE ? 5 : 7);
+  const SUN_DIR = new THREE.Vector3(-4, -6, 11).normalize();
+  function canvasTex(w, h, draw, repeat) {
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    draw(c.getContext("2d"), w, h);
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+    if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+    return t;
+  }
+  let seedR = 4242; const R = () => ((seedR = (seedR * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const speckle = (g, w, h, n, colors, size = [1, 2]) => { for (let i = 0; i < n; i++) { g.fillStyle = colors[(R() * colors.length) | 0]; const s = size[0] + R() * (size[1] - size[0]); g.fillRect(R() * w, R() * h, s, s); } };
+  const std = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: lin(hex), roughness: 0.85, ...extra });
+  // ground and track: planes that move with Bolt in whole tiles, so their textures stay put on the ground
+  const TILE = 4, SNAP = 20;
+  const grass = new THREE.Mesh(new THREE.PlaneGeometry(240, 160), new THREE.MeshStandardMaterial({ roughness: 1, map: canvasTex(256, 256, (g, w, h) => { g.fillStyle = "#5f8f3e"; g.fillRect(0, 0, w, h); speckle(g, w, h, 9000, ["#517f33", "#6b9b47", "#4a752e", "#79a654"], [1, 3]); }, [240 / TILE, 160 / TILE]) }));
+  grass.receiveShadow = true; grass.position.z = -0.002; scene.add(grass);
+  const W = 1.85, track = new THREE.Mesh(new THREE.PlaneGeometry(240, 2 * W), new THREE.MeshStandardMaterial({ roughness: 0.95, map: canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = "#c8ad84"; g.fillRect(0, 0, w, h); speckle(g, w, h, 7000, ["#b89c72", "#d4bc95", "#a98d64", "#dcc8a6"], [1, 2]);
+    g.fillStyle = "rgba(255,255,255,0.75)";
+    for (const y of [-0.5, 0.5]) { const v = h * (1 - (y + W) / (2 * W)); for (let x = 0; x < w; x += 64) g.fillRect(x, v - 2, 36, 4); }
+  }, [240 / TILE, 1]) }));
+  track.receiveShadow = true; scene.add(track);
+  // trees along both sides, re-used as Bolt runs (scenery only, nothing solid)
+  const trees = [], leaf = ["#3e6b2a", "#4c7d32", "#365f24", "#5a8c3a"].map((c) => std(c, { flatShading: true })), trunkM = std("#5b4433", { roughness: 1 });
+  for (let i = 0; i < 28; i++) {
+    const t = new THREE.Group(), h = 3 + R() * 3;
+    t.add(mesh(new THREE.CylinderGeometry(0.12, 0.18, h * 0.45, 8), trunkM, [0, 0, h * 0.22], [Math.PI / 2, 0, 0]));
+    const pine = R() < 0.4;
+    for (let j = 0; j < (pine ? 3 : 4); j++) t.add(mesh(pine ? new THREE.ConeGeometry(h * (0.3 - j * 0.07), h * 0.35, 8) : new THREE.IcosahedronGeometry(h * (0.2 + 0.08 * R()), 1), leaf[(R() * 4) | 0], pine ? [0, 0, h * (0.45 + j * 0.18)] : [(R() - 0.5) * h * 0.3, (R() - 0.5) * h * 0.3, h * (0.55 + 0.12 * R())], pine ? [Math.PI / 2, 0, 0] : null));
+    t.userData = { side: i % 2 ? 1 : -1, off: 4 + R() * 9, slot: i >> 1 };
+    scene.add(t); trees.push(t);
+  }
+  function placeScenery(x) {
+    const s = Math.floor(x / SNAP) * SNAP;
+    grass.position.set(s + 60, 0, -0.01); track.position.set(s + 60, 0, 0.003);
+    for (const t of trees) { const u = t.userData, sp = 7, base = Math.floor((x - 20) / (14 * sp)) * 14 * sp; let tx = base + u.slot * sp + (u.side > 0 ? 0 : sp / 2); if (tx < x - 20) tx += 14 * sp; t.position.set(tx, u.side * (W + u.off), 0); }
+  }
+
+  // ---------- the solid things, drawn where the physics has them ----------
+  const crateTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = "#b9844a"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 32) { g.fillStyle = y % 64 ? "#a87640" : "#c08d52"; g.fillRect(0, y, w, 30); } g.strokeStyle = "#7b5229"; g.lineWidth = 8; g.strokeRect(4, 4, w - 8, h - 8); g.beginPath(); g.moveTo(8, 8); g.lineTo(w - 8, h - 8); g.stroke(); });
+  const hayTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = "#d9b95b"; g.fillRect(0, 0, w, h); speckle(g, w, h, 2500, ["#c9a646", "#e6cd78", "#b8963c"], [1, 4]); g.fillStyle = "#8a6d2a"; g.fillRect(0, 38, w, 5); g.fillRect(0, 86, w, 5); });
+  const hedgeTex = canvasTex(256, 64, (g, w, h) => { g.fillStyle = "#2f5a23"; g.fillRect(0, 0, w, h); speckle(g, w, h, 6000, ["#3b6d2b", "#244a1b", "#4a7d34", "#2a5220"], [2, 5]); }, [24, 1]);
+  const stripe = canvasTex(32, 128, (g, w, h) => { for (let y = 0; y < h; y += 32) { g.fillStyle = (y / 32) % 2 ? "#f4f4f0" : "#e3620b"; g.fillRect(0, y, w, 32); } });
+  function itemMesh(o) {
+    const [a, b, c] = o.size, gr = new THREE.Group();
+    if (o.kind === "crate") gr.add(mesh(new THREE.BoxGeometry(2 * a, 2 * b, 2 * c), new THREE.MeshStandardMaterial({ map: crateTex, roughness: 0.8 })));
+    else if (o.kind === "block") gr.add(mesh(new THREE.BoxGeometry(2 * a, 2 * b, 2 * c), new THREE.MeshStandardMaterial({ map: hayTex, roughness: 1 })));
+    else if (o.kind === "wall") gr.add(mesh(new THREE.BoxGeometry(2 * a, 2 * b + 0.12, 2 * c + 0.1), new THREE.MeshStandardMaterial({ map: hedgeTex, roughness: 1 }), [0, 0, 0.05]));
+    else if (o.kind === "bin") {
+      gr.add(mesh(new THREE.CylinderGeometry(a * 0.94, a, 2 * b, 24), std("#2f6b8f", { roughness: 0.5 }), null, [Math.PI / 2, 0, 0]));
+      gr.add(mesh(new THREE.CylinderGeometry(a * 1.02, a * 1.02, 0.05, 24), std("#24536f", { roughness: 0.5 }), [0, 0, b], [Math.PI / 2, 0, 0]));
+    } else if (o.kind === "post") {
+      gr.add(mesh(new THREE.CylinderGeometry(a, a, 2 * b, 16), new THREE.MeshStandardMaterial({ map: stripe, roughness: 0.6 }), null, [Math.PI / 2, 0, 0]));
+      gr.add(mesh(new THREE.CylinderGeometry(a * 2.4, a * 2.6, 0.05, 20), std("#2a2d2b"), [0, 0, -b + 0.025], [Math.PI / 2, 0, 0]));
+    }
+    scene.add(gr); return gr;
+  }
+
+  // ---------- the dog-catcher: a person with a net, drawn only (no body in the physics) ----------
+  const catcher = (() => {
+    const g = new THREE.Group(), coat = std("#3a4f7a", { roughness: 0.7 }), pants = std("#2a2d33"), skin = std("#e0b48f"), cap = std("#c4372f"), pole = std("#8a6a45");
+    const legL = new THREE.Group(), legR = new THREE.Group(), armL = new THREE.Group(), armR = new THREE.Group();
+    for (const [leg, y] of [[legL, 0.11], [legR, -0.11]]) { leg.position.set(0, y, 0.9); leg.add(mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.88, 10), pants, [0, 0, -0.44], [Math.PI / 2, 0, 0])); leg.add(mesh(new THREE.BoxGeometry(0.26, 0.11, 0.08), std("#1c1c1c"), [0.06, 0, -0.9])); g.add(leg); }
+    g.add(mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.62, 14), coat, [0, 0, 1.2], [Math.PI / 2, 0, 0]));
+    g.add(mesh(new THREE.SphereGeometry(0.13, 18, 14), skin, [0, 0, 1.66]));
+    g.add(mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 18), cap, [0, 0, 1.76], [Math.PI / 2, 0, 0]));
+    g.add(mesh(new THREE.BoxGeometry(0.16, 0.22, 0.02), cap, [0.12, 0, 1.73]));
+    for (const [arm, y] of [[armL, 0.25], [armR, -0.25]]) { arm.position.set(0, y, 1.45); arm.add(mesh(new THREE.CylinderGeometry(0.05, 0.045, 0.6, 10), coat, [0, 0, -0.3], [Math.PI / 2, 0, 0])); g.add(arm); }
+    // the net on a pole, held out in front
+    const net = new THREE.Group(); net.position.set(0.15, -0.25, 1.2); net.rotation.y = -0.9;
+    net.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 8), pole, [0, 0, 0.8], [Math.PI / 2, 0, 0]));
+    net.add(mesh(new THREE.TorusGeometry(0.25, 0.02, 8, 24), std("#c9c9c9", { metalness: 0.6, roughness: 0.3 }), [0, 0, 1.85], [0, Math.PI / 2, 0]));
+    net.add(mesh(new THREE.ConeGeometry(0.24, 0.45, 16, 1, true), new THREE.MeshStandardMaterial({ color: lin("#e8e8e0"), transparent: true, opacity: 0.5, side: THREE.DoubleSide, wireframe: true }), [0.22, 0, 1.85], [0, 0, Math.PI / 2]));
+    g.add(net); scene.add(g);
+    g.userData = { legL, legR, armL, armR, phase: 0 };
+    return g;
+  })();
+
+  // ---------- Bolt: the same body as the Gait Lab, posed from the live simulator ----------
+  let parts = [];
+  function buildDog(geoms) {
+    dog.clear(); tail = null; eyes = [];
+    parts = geoms.map((g) => { const n = partMesh(g); if (n) dog.add(n.grp); return { g, obj: n && n.grp }; });
+  }
+  const m4b = new THREE.Matrix4();
+  function drawBolt() {
+    const d = L.bolt.data, xp = d.geom_xpos, xm = d.geom_xmat;
+    for (const pt of parts) {
+      if (!pt.obj) continue;
+      const i = pt.g.id, k = 9 * i;
+      m4b.set(xm[k], xm[k + 1], xm[k + 2], 0, xm[k + 3], xm[k + 4], xm[k + 5], 0, xm[k + 6], xm[k + 7], xm[k + 8], 0, 0, 0, 0, 1);
+      pt.obj.position.set(xp[3 * i], xp[3 * i + 1], xp[3 * i + 2]); pt.obj.quaternion.setFromRotationMatrix(m4b);
+    }
+  }
+
+  // ---------- the game ----------
+  let L = null, lib = null, live = null, bundle = null, items = [], drawHurdles = () => {}, seen = 0, bannerUntil = 0, paused = false, overAt = null;
+  const q = new URLSearchParams(location.search);
+  const BEST_KEY = "boltRun.best";
+  const getBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || null; } catch (e) { return null; } };
+  const setBest = (v) => { try { localStorage.setItem(BEST_KEY, JSON.stringify(v)); } catch (e) {} };
+  function banner(text, kind) { const el = $("banner"); el.textContent = text; el.className = `banner show ${kind === "good" ? "good" : kind === "bad" ? "bad" : ""}`; bannerUntil = performance.now() + 1100; }
+  const ticker = [];
+  function log(e) {
+    const li = document.createElement("li");
+    li.innerHTML = `<time>${fmt(e.t)}</time><span class="${e.kind}"></span>`; li.lastChild.textContent = e.text;
+    const list = $("log"); if (list.firstElementChild && list.firstElementChild.classList.contains("muted")) list.innerHTML = "";
+    list.prepend(li); while (list.children.length > 120) list.lastChild.remove();
+    ticker.push(e.text); while (ticker.length > 2) ticker.shift();
+    $("ticker").innerHTML = ""; for (const t of ticker) { const s = document.createElement("span"); s.textContent = t; $("ticker").append(s); }
+    if (/^Bolt fell/.test(e.text)) banner("Fell!", "bad");
+    else if (/^Bolt got itself up/.test(e.text)) banner("Up again", "good");
+    else if (/^Bar knocked/.test(e.text)) banner("Bar down", "bad");
+  }
+  function card(kind) {
+    const c = $("card"), go = $("goBtn"), best = getBest();
+    c.hidden = false; go.disabled = false;
+    $("cardBest").textContent = best ? `Best: ${best.score} (${best.dist} m, ${best.clean} clean jumps)` : "";
+    if (kind === "ready") { $("cardTitle").textContent = "Bolt Run"; $("cardStats").hidden = true; $("cardText").hidden = false; go.textContent = "Start running"; }
+    else if (kind === "pause") { $("cardTitle").textContent = "Paused"; $("cardStats").hidden = true; $("cardText").hidden = true; go.textContent = "Keep running"; }
+    else {
+      const S = L.stats, score = L.score(), dist = Math.floor(L.dist);
+      $("cardTitle").textContent = "Caught!"; $("cardText").hidden = true; $("cardStats").hidden = false;
+      $("rDist").textContent = `${dist} m`; $("rScore").textContent = score; $("rJumps").textContent = `${S.clean} of ${S.jumps}`; $("rFalls").textContent = S.falls;
+      if (!best || score > best.score) { setBest({ score, dist, clean: S.clean }); $("cardBest").textContent = best ? `New best! (was ${best.score})` : "First run: that's your best so far"; }
+      go.textContent = "Run again";
+    }
+    setTimeout(() => go.focus({ preventScroll: true }), 30);
+  }
+  function hideCard() { $("card").hidden = true; }
+  function newRun(seed) {
+    L.reset(seed); seen = 0; ticker.length = 0; $("ticker").innerHTML = ""; overAt = null; paused = false;
+    for (const it of items) it.visible = false;
+    $("log").innerHTML = '<li class="muted">Bolt is waiting at the start.</li>';
+    resetView(); card("ready");
+  }
+  function go() {
+    if (!L) return;
+    if (L.phase === "ready") { hideCard(); L.start(); }
+    else if (L.phase === "caught") newRun(Date.now() % 1000000);
+    else if (paused) { paused = false; hideCard(); $("bPause").textContent = "Pause"; }
+  }
+  function pause(on = !paused) {
+    if (!L || L.phase !== "run") return;
+    paused = on; $("bPause").textContent = on ? "Resume" : "Pause";
+    if (on) card("pause"); else hideCard();
+  }
+  $("goBtn").addEventListener("click", go);
+  $("bPause").addEventListener("click", () => pause());
+  document.addEventListener("visibilitychange", () => { if (document.hidden) pause(true); });
+
+  // ---------- controls: keys, buttons, swipes ----------
+  const act = { left: () => L && L.steer(1), right: () => L && L.steer(-1), jump: () => L && L.jump() };
+  window.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || !L) return;
+    const k = e.key.toLowerCase();
+    if (["arrowleft", "arrowright", "arrowup", "arrowdown", " "].includes(k)) e.preventDefault();
+    if (e.repeat) return;
+    if (k === "enter" || (k === " " && L.phase !== "run")) { if (!$("card").hidden) go(); return; }
+    if (k === "p" || k === "escape") return pause();
+    if (paused) return;
+    if (k === "arrowleft" || k === "a") act.left();
+    else if (k === "arrowright" || k === "d") act.right();
+    else if (k === "arrowup" || k === "w" || k === " ") act.jump();
+    else if (k === "arrowdown" || k === "s") { L.setSlow(true); $("bSlow").classList.add("on"); }
+    else if (k === "shift") { L.setFast(true); $("bFast").classList.add("on"); }
+  });
+  window.addEventListener("keyup", (e) => {
+    if (!L) return;
+    const k = e.key.toLowerCase();
+    if (k === "arrowdown" || k === "s") { L.setSlow(false); $("bSlow").classList.remove("on"); }
+    if (k === "shift") { L.setFast(false); $("bFast").classList.remove("on"); }
+  });
+  window.addEventListener("blur", () => { if (L) { L.setSlow(false); L.setFast(false); } $("bSlow").classList.remove("on"); $("bFast").classList.remove("on"); });
+  const tap = (id, f) => $(id).addEventListener("pointerdown", (e) => { e.preventDefault(); if (!paused) f(); if (navigator.vibrate) navigator.vibrate(10); });
+  tap("bLeft", act.left); tap("bRight", act.right); tap("bJump", act.jump);
+  const hold = (id, set) => {
+    const el = $(id);
+    el.addEventListener("pointerdown", (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add("on"); L && set(true); });
+    const up = () => { el.classList.remove("on"); L && set(false); };
+    el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up); el.addEventListener("lostpointercapture", up);
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { el.classList.add("on"); L && set(true); } } });
+    el.addEventListener("keyup", (e) => { if (e.key === "Enter" || e.key === " ") up(); });
+  };
+  hold("bSlow", (on) => L.setSlow(on)); hold("bFast", (on) => L.setFast(on));
+  for (const id of ["bLeft", "bRight", "bJump"]) $(id).addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); ({ bLeft: act.left, bRight: act.right, bJump: act.jump })[id](); } });
+  // swipes on the picture: left/right lane, up jump, down slow (for 1.5 s); press and hold to canter
+  {
+    const st = stageEl; let s = null, slowT = null, holdT = null;
+    st.addEventListener("pointerdown", (e) => { if (e.target.closest(".card")) return; s = { x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now() }; holdT = setTimeout(() => { if (s && L) { s.held = true; L.setFast(true); } }, 350); });
+    st.addEventListener("pointermove", (e) => {
+      if (!s || e.pointerId !== s.id || s.done) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (Math.hypot(dx, dy) < 28) return;
+      clearTimeout(holdT); s.done = true; if (s.held && L) L.setFast(false);
+      if (!L || paused) return;
+      if (Math.abs(dx) > Math.abs(dy)) (dx < 0 ? act.left : act.right)();
+      else if (dy < 0) act.jump();
+      else { L.setSlow(true); clearTimeout(slowT); slowT = setTimeout(() => L && L.setSlow(false), 1500); }
+    });
+    const end = () => { clearTimeout(holdT); if (s && s.held && L) L.setFast(false); s = null; };
+    st.addEventListener("pointerup", end); st.addEventListener("pointercancel", end);
+  }
+
+  // ---------- camera: behind and above Bolt, smoothed, the catcher in view ----------
+  const look = { x: 0, y: 0 };
+  function resetView() { const w = L.bolt.where(); look.x = w.x; look.y = 0; look.back = 0; follow(1); }
+  function follow(dt) {
+    const w = L.bolt.where(), k = 1 - Math.exp(-dt * 3.0);
+    look.x += (w.x - look.x) * k; look.y += (0.55 * w.y - look.y) * k;
+    // pulled back far enough to keep the dog-catcher in the picture
+    const tall = camera.aspect < 1, want = clamp(L.gap() + (tall ? 3.0 : 2.4), tall ? 6.0 : 5.0, tall ? 10 : 9.5);
+    look.back = look.back ? look.back + (want - look.back) * (1 - Math.exp(-dt * 1.5)) : want;
+    const back = look.back, up = (tall ? 1.6 : 1.2) + 0.28 * back;
+    camera.position.set(look.x - back, look.y * 0.6, up);
+    camera.lookAt(look.x + (tall ? 3.2 : 4.0), look.y, 0.2);
+    sun.position.set(look.x + SUN_DIR.x * 20, look.y + SUN_DIR.y * 20, SUN_DIR.z * 20); sun.target.position.set(look.x + 2, look.y, 0);
+  }
+
+  // ---------- HUD ----------
+  const DOING = { stand: "standing", walk: "walking", turnclip: "turning", sharp: "turning sharply", brake: "slowing", trot: "trotting", ctrot: "trotting", pace: "slowing to turn", canter: "cantering", jump: "jumping!", land: "landing", settle: "steadying", bridge: "landing", fallen: "getting up", rise: "standing up" };
+  const BRAIN = { gpu: "dog-motion brain", g18: "canter brain", posture: "posture brain", walk12: "walk brain", jump: "jump brain", getup: "self-righting brain" };
+  function hud() {
+    const narrow = stageEl.clientWidth < 520, s = L.status(), gap = Math.max(0, s.gap - 1);
+    $("hScore").textContent = s.score;
+    $("hDist").textContent = `${Math.floor(s.dist)} m`;
+    $("hSpeed").textContent = `${s.speed.toFixed(1)} m/s`;
+    $("hJumps").textContent = s.stats.clean; $("hFalls").textContent = s.stats.falls;
+    $("hDoing").textContent = `${DOING[s.mode] || s.mode}${narrow ? "" : ` · ${BRAIN[s.brain] || s.brain}`}${s.armed ? " · jump armed" : ""}`;
+    const f = $("gapFill"), frac = clamp(gap / 8, 0, 1);
+    f.style.width = `${Math.round(100 * frac)}%`; f.className = `fill ${frac < 0.25 ? "bad" : frac < 0.5 ? "warn" : ""}`;
+    $("gapText").textContent = L.phase === "caught" ? "caught" : narrow ? `catcher ${s.gap.toFixed(1)} m back` : `catcher ${s.gap.toFixed(1)} m behind · ${s.chaserV.toFixed(1)} m/s`;
+    $("bJump").classList.toggle("ready", !!(s.bar && s.bar.ahead <= 4.5 && s.bar.ahead > 1.2 && !s.armed));
+  }
+
+  // ---------- drawing the world from the physics ----------
+  function drawItems() {
+    const d = L.bolt.data;
+    L.items.forEach((o, i) => {
+      const m = items[i]; m.visible = !!o.at; if (!o.at) return;
+      const p = d.mocap_pos, qq = d.mocap_quat, a = 3 * o.mocap, b = 4 * o.mocap;
+      m.position.set(p[a], p[a + 1], p[a + 2]); m.quaternion.set(qq[b + 1], qq[b + 2], qq[b + 3], qq[b]);
+    });
+  }
+  function drawCatcher(dt, t) {
+    const w = L.bolt.where(), u = catcher.userData, v = L.phase === "run" ? L.chaserV : L.phase === "caught" ? 0.3 : 0;
+    // a little to one side of Bolt's line, so the camera sees past the catcher to Bolt
+    const cy = clamp(w.y + (w.y > 0.3 ? -0.85 : 0.85), -1.3, 1.3);
+    u.y = u.y === undefined ? cy : u.y + (cy - u.y) * (1 - Math.exp(-dt * 1.5));
+    catcher.position.set(L.chaser, u.y, 0);
+    u.phase += dt * (2 + 4 * v);
+    const sw = Math.min(0.7, 0.5 * v) * Math.sin(u.phase);
+    u.legL.rotation.y = sw; u.legR.rotation.y = -sw; u.armL.rotation.y = -sw * 0.8; u.armR.rotation.y = 0.6 + sw * 0.3;
+    catcher.position.z = Math.abs(Math.sin(u.phase)) * 0.04 * v;
+  }
+
+  async function boot() {
+    try {
+      const [l, r, m, b, gpu, g18, j16, cl, h3] = await Promise.all([import("./live.js"), import("./run.js"), import("./mujoco/mujoco.js"),
+        fetch("data/bolt_run.json").then((x) => x.json()), fetch("data/dog_gpu360.json").then((x) => x.json()), fetch("data/dog_18g.json").then((x) => x.json()),
+        fetch("data/jump.json").then((x) => x.json()), fetch("data/dog_clips.json").then((x) => x.json()), import("./hurdles3d.js")]);
+      live = l; lib = r; bundle = b;
+      const seed = Number(q.get("seed")) || (Date.now() % 1000000);
+      L = new lib.RunLife(live, await m.default(), bundle, { gpu, g18, jump: j16 }, cl, seed);
+      drawHurdles = h3.makeHurdles(THREE, scene, L.bolt, mesh, lin);
+      items = L.items.map(itemMesh);
+      buildDog(bundle.geoms);
+      newRun(seed);
+    } catch (e) { console.error(e); $("loading").textContent = "The simulator couldn't start in this browser."; $("goBtn").textContent = "Couldn't load"; return; }
+    $("loading").hidden = true;
+  }
+
+  function resize() { const r = stageEl.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stageEl);
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const BUDGET = 30;
+  let last = performance.now(), acc = 0, slow = 0, quality = 3;
+  function lowerQuality() {
+    quality--;
+    if (quality === 2) renderer.setPixelRatio(1);
+    if (quality === 1) sun.castShadow = false;
+    if (quality === 0) renderer.setPixelRatio(0.6);
+    resize();
+  }
+  function tick(t) {
+    const wall = (t - last) / 1000, dt = Math.min(0.25, wall); last = t;
+    if (wall > 0.055 && quality > 0) { if ((slow += wall) > 3) { slow = 0; lowerQuality(); } } else slow = Math.max(0, slow - wall * 0.5);
+    if (L) {
+      if (!paused) {
+        acc += dt;
+        const dtc = L.bolt.dt, t0 = performance.now();
+        while (acc >= dtc && performance.now() - t0 < BUDGET) { L.step(); acc -= dtc; }
+        if (acc > 0.1) acc = 0.1;
+      }
+      while (seen < L.log.length) log(L.log[seen++]);
+      if (L.msg && L.msg.t > (L.msgShown || -1)) { L.msgShown = L.msg.t; banner(L.msg.text, L.msg.kind); }
+      if (t > bannerUntil) $("banner").classList.remove("show");
+      if (L.phase === "caught" && overAt === null) { overAt = t; banner("Caught!", "bad"); }
+      if (overAt !== null && t - overAt > 1300 && $("card").hidden) card("over");
+      drawBolt(); drawHurdles(); drawItems(); drawCatcher(paused ? 0 : dt, t); placeScenery(L.bolt.where().x); follow(dt); hud();
+      const m = L.body.mode, s = t / 1000;
+      if (tail && !reduced) tail.rotation.z = 0.35 * Math.sin(s * (["walk", "trot", "canter", "ctrot", "pace", "sharp"].includes(m) ? 11 : 5));
+      eyes.forEach((e) => (e.scale.z = (s % 3.7) < 0.12 ? 0.12 : 1));
+    }
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  resize(); requestAnimationFrame(tick); boot();
+  window.__run = () => L;   // for checks
+})();
+</script>
