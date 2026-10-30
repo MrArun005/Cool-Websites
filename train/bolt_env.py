@@ -52,7 +52,10 @@ ACTION_SCALE = np.tile([0.4, 1.0, 1.2], 4)  # radians per unit action: abd, hip,
 # driving a joint can give at most 420 W (so less torque the faster it spins) and nothing past 21 rad/s
 # (fading to zero by 25 rad/s); braking against the motion keeps the full torque. Before this, the jump and self-righting brains spun
 # joints at up to 57 rad/s and 900 W, which no motor this size can. Sideways hips swing ±48° (Go2).
-MOTOR = dict(torque=float(os.environ.get("BOLT_MOTOR_TORQUE", 33.5)), power=420.0, speed=21.0, cutoff=25.0)
+MOTOR = dict(torque=float(os.environ.get("BOLT_MOTOR_TORQUE", 33.5)), power=float(os.environ.get("BOLT_MOTOR_POWER", 420.0)),
+             speed=float(os.environ.get("BOLT_MOTOR_SPEED", 21.0)), cutoff=float(os.environ.get("BOLT_MOTOR_CUTOFF", 25.0)))
+# Faster-motor bodies (30 Oct, owner: canter at 90+; the A1 drive caps it, research/results/canter_limit/NOTE.md):
+# BOLT_MOTOR_SPEED / _CUTOFF / _POWER (or set_motor_speed) give e.g. a Go2-class drive (~30 rad/s). Defaults: the A1.
 
 # Motor braking above the rated speed (--motor-brake, owner decision 28 Oct). The motor model above only stops
 # DRIVING a joint past 21 rad/s; nothing slows a joint that a landing or a swinging leg back-drives faster, so
@@ -76,6 +79,17 @@ MOTOR.update(brake=os.environ.get("BOLT_MOTOR_BRAKE", "0").lower() in ("1", "tru
              brake_speed=float(os.environ.get("BOLT_MOTOR_BRAKE_SPEED", MOTOR["cutoff"])),
              brake_gain=float(os.environ.get("BOLT_MOTOR_BRAKE_GAIN", BRAKE_GAIN)))
 _BRAKE = {}   # id(MjModel) -> (on, speed, gain) for envs given motor_brake explicitly; others use MOTOR's
+
+
+def set_motor_speed(speed, cutoff, power=None):
+    """A different motor drive for this process and the training envs it starts (env vars carry it to subprocesses):
+    rated speed and fade-out cutoff (rad/s), peak power (W). The brake starts at the new cutoff."""
+    MOTOR.update(speed=float(speed), cutoff=float(cutoff), brake_speed=float(cutoff))
+    if power is not None:
+        MOTOR["power"] = float(power)
+    for k in ("speed", "cutoff", "power", "brake_speed"):
+        os.environ[f"BOLT_MOTOR_{k.upper()}"] = repr(MOTOR[k])
+    return MOTOR["speed"], MOTOR["cutoff"], MOTOR["power"]
 
 
 def set_motor_brake(on, speed=None, gain=None):

@@ -23,7 +23,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 from imitate_env import ALL_CLIPS, DEFAULT_CLIPS, STEER, STEER_CLIPS, ImitateEnv, ImitatePolicy, exam, exam_steer, score
-from bolt_env import add_brake_args, set_motor_brake
+from bolt_env import add_brake_args, set_motor_brake, set_motor_speed
 
 
 class Examiner(BaseCallback):
@@ -115,7 +115,12 @@ def main():
     ap.add_argument("--steer-weight", type=float, default=STEER["weight"], help="reward weight of the steer term")
     ap.add_argument("--root-global", type=float, default=0.0, help="0..1 blend toward Peng 2020's global root terms (heading and path); 0 = our terms")
     add_brake_args(ap, default=True)
+    ap.add_argument("--motor-speed", type=float, nargs=3, metavar=("RATED", "CUTOFF", "POWER"),
+                    help="a faster motor drive (rad/s, rad/s, W), e.g. 30 35 700 for a Go2-class body (default: the A1's 21 25 420)")
     args = ap.parse_args()
+    if args.motor_speed:
+        print("motor drive (rated rad/s, cutoff rad/s, W):", set_motor_speed(*args.motor_speed), flush=True)
+        args.brake_speed = args.motor_speed[1]   # the brake starts where the faster drive fades out
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)

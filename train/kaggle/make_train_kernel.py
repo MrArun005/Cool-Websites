@@ -38,7 +38,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -105,6 +105,30 @@ JOBS = {
               "--select-heights", "0.50", "0.55", "0.60"],
         finals=[["jump", "--speeds", "2.0", "2.5", "3.0", "--dist", "3.0", "--heights", "0.50", "0.60", "--gait",
                  "--max-steps", "220", "--motor-brake"]]),
+    "jump-runup90": dict(
+        # 30 Oct, owner: every category 90+. runup 88M: 50 cm from 3 m at 2.0/2.5/3.0 m/s 57/63/17% (flat after 88M).
+        # Narrow it to the speeds that work (1.8-2.6 m/s, no 3 m/s) and to 50 cm first (practice bars 45-58 cm), so
+        # the brain masters one jump before 60 cm. Win: 50 cm at 2.0 and 2.5 m/s >= 80% in the pilot (goal 90%).
+        name="jumprunup90", script="train_jump.py", start="../models/bolt-dog-jump-runup-88M",
+        args=["--real", "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "1.5", "4.0", "--approach-speed", "2.6", "--approach-speed-min", "1.8", "--run-frac", "1.0",
+              "--gait-start", "0.8", "--bar-start", "0.45", "--bar-max", "0.58",
+              "--exam-speed", "2.5", "--exam-dist", "3.0", "--exam-heights", "0.50", "0.55",
+              "--exam2", "2.0", "3.0",
+              "--select", "midstride", "--select-speed", "2.25", "--select-dist", "3.0",
+              "--select-heights", "0.50", "0.55"],
+        finals=[["jump", "--speeds", "2.0", "2.5", "--dist", "3.0", "--heights", "0.50", "0.60", "--gait",
+                 "--max-steps", "220", "--motor-brake"]]),
+    "canter-fast": dict(
+        # 30 Oct, owner: canter 90+. The A1 drive (21 rad/s rated, fades out by 25) caps the canter at ~0.71 tracking
+        # (research/results/canter_limit/NOTE.md). A Go2-class drive (~30 rad/s rated, out by 35, 700 W; an assumed,
+        # approximate spec) as a separate body track: canter-speed 38M's recipe with the faster motors. Today's brain
+        # on the faster motors without retraining: canter 0.631 vs 0.630 (8 tries), so only training can tell.
+        # Win: canter tracking >= 0.80 at >= 85% of the dog's speed, trot >= 0.87, no falls.
+        name="canterfast", script="train_imitate.py", start="../models/bolt-dog-canter-speed-38M",
+        args=["--slots", "8", "--clips", "trot", "canter", "--switch-rate", "0.3", "--lr", "1e-4",
+              "--root-vel-weight", "0.6", "--motor-speed", "30", "35", "700"],
+        finals=[]),
     "jump-handover": dict(
         # 29 Oct pilot (2M steps, local): practising from REAL MasterMind hand-overs (research/record_handover.py)
         # took the held-out hand-over exam from 81/77/61/31% to 88/87/81/68% at 20/30/40/50 cm (brake on).
