@@ -121,6 +121,9 @@ SETS["v7c"] = dict(SETS["v7s"], clips=dict(SETS["v7s"]["clips"], canter="c38"))
 # delay-proof jump (jump-delay 76M: hand-overs at 20 ms 85/92/86/67% vs 59M 7/2/1/0)
 SETS["v10n"] = dict(SETS["v7c"], righter=MODELS / "bolt-dog-recover-delay-30M")
 SETS["v10d"] = dict(SETS["v8g"], righter=MODELS / "bolt-dog-recover-delay-30M", jump=MODELS / "bolt-dog-jump-delay-76M")
+# v11n (30 Oct): v10n with the jump trained on hand-overs from both chains (jump-handover 93M: v8g test
+# hand-overs 89/93/95/100% vs 59M 85/90/85/70)
+SETS["v11n"] = dict(SETS["v10n"], jump=MODELS / "bolt-dog-jump-handover-93M")
 SETS["v9j"] = dict(SETS["v8g"], jump=MODELS / "bolt-dog-jump-handover-74M")
 
 
