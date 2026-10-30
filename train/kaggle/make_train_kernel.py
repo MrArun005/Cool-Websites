@@ -199,6 +199,15 @@ JOBS = {
               "--latency-min-ms", "0", "--latency-max-ms", "30", "--motor-lag-max-ms", "25", "--drop-max", "0.1",
               "--exam-latency-ms", "20"],
         finals=[["recover", "--latency-ms", "20", "--motor-brake"], ["recover", "--motor-brake"]]),
+    "recover-dyndelay": dict(
+        # owner 30 Oct: one recovery brain for any delay: 0-40 ms per try, wobbling +- up to 10 ms per step, spikes, motor
+        # lag, lost packets; exams at 20 ms with jitter. From recover-delay 30M (stood up 87.3 / 74.5% at 0 / 20 ms).
+        # Judge with fair_exam recover at 0/10/20/30/40 ms (+ --jitter-ms 8): worst and average must beat 30M's.
+        name="recoverdyn", script="train_getup.py", start="../models/bolt-dog-recover-delay-30M",
+        args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015",
+              "--latency-min-ms", "0", "--latency-max-ms", "40", "--latency-jitter-ms", "10", "--latency-spike-p", "0.03",
+              "--motor-lag-max-ms", "25", "--drop-max", "0.1", "--exam-latency-ms", "20", "--exam-jitter-ms", "8"],
+        finals=[["recover", "--latency-ms", "20", "--jitter-ms", "8", "--motor-brake"], ["recover", "--motor-brake"]]),
     "recover": dict(
         name="recover", script="train_getup.py", start="../models/bolt-dog-selfright-17e-16.5M",
         args=["--goal", "selfright", "--hard", "--full-exam", "--lr", "1e-4", "--target-kl", "0.015"],
