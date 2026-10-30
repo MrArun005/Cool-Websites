@@ -1,0 +1,113 @@
+{
+ "folder": "../models/bolt-dog-jump-handover-93M",
+ "states": "research/results/handover_states_v8g_test.npz",
+ "heights": [
+  0.3,
+  0.4,
+  0.5
+ ],
+ "rows": [
+  {
+   "delay_ms": 0,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.93,
+    0.95,
+    1.0
+   ],
+   "mean": 0.96
+  },
+  {
+   "delay_ms": 10,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.42,
+    0.3,
+    0.11
+   ],
+   "mean": 0.277
+  },
+  {
+   "delay_ms": 20,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.01,
+    0.0,
+    0.02
+   ],
+   "mean": 0.01
+  },
+  {
+   "delay_ms": 30,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mean": 0.0
+  },
+  {
+   "delay_ms": 40,
+   "jitter_ms": 0.0,
+   "spike_p": 0.0,
+   "per_height": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mean": 0.0
+  },
+  {
+   "delay_ms": 10,
+   "jitter_ms": 8.0,
+   "spike_p": 0.02,
+   "per_height": [
+    0.3,
+    0.12,
+    0.1
+   ],
+   "mean": 0.173
+  },
+  {
+   "delay_ms": 20,
+   "jitter_ms": 8.0,
+   "spike_p": 0.02,
+   "per_height": [
+    0.01,
+    0.0,
+    0.01
+   ],
+   "mean": 0.007
+  },
+  {
+   "delay_ms": 30,
+   "jitter_ms": 8.0,
+   "spike_p": 0.02,
+   "per_height": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mean": 0.0
+  },
+  {
+   "delay_ms": 40,
+   "jitter_ms": 8.0,
+   "spike_p": 0.02,
+   "per_height": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mean": 0.0
+  }
+ ],
+ "floor": 0.0,
+ "average": 0.159,
+ "command": "python research/delay_sweep.py ../models/bolt-dog-jump-handover-93M --states research/results/handover_states_v8g_test.npz --workers 4 --out research/results/delay_sweep/bolt-dog-jump-handover-93M.json"
+}

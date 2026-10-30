@@ -63,7 +63,8 @@ class JumpEnv(BoltEnv):
 
     def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0,
                  approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50, motor_brake=None, under_margin=0.0,
-                 handover_file=None, handover_rate=0.0, latency_ms=(0.0, 0.0), motor_lag_ms=(0.0, 0.0), drop=(0.0, 0.0)):
+                 handover_file=None, handover_rate=0.0, latency_ms=(0.0, 0.0), motor_lag_ms=(0.0, 0.0), drop=(0.0, 0.0),
+                 latency_jitter_ms=0.0, latency_spike_p=0.0):
         # under_margin (m): the body's centre must be at least bar height + this when it crosses the bar's line, or
         # Bolt went UNDER the bar (28 Oct: bars of 60-75 cm are higher than Bolt's back, and "all paws past the bar"
         # counted running under a 70 cm bar as a clean jump). 0 = centre above the bar top; a trunk that crosses
@@ -81,6 +82,9 @@ class JumpEnv(BoltEnv):
         # motor_lag_ms, drop = (lo, hi): motor lag and lost control packets per try (bolt_env.start_delay); exams use
         # bolt_env.EXAM_GAPS
         self.motor_lag_range, self.drop_range = tuple(motor_lag_ms), tuple(drop)
+        # latency_jitter_ms: per try the delay wobbles +- up to U(0, this) ms per step; latency_spike_p: per try a
+        # spike chance in U(0, this) per step (bolt_env.start_delay)
+        self.jitter_max, self.spike_max = float(latency_jitter_ms), float(latency_spike_p)
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
                          hurdles="real" if real else True, skills=["stand"], motor_brake=motor_brake)
         self.real = real
@@ -241,7 +245,11 @@ class JumpEnv(BoltEnv):
             lag, drop = bolt_env.EXAM_GAPS["lag_ms"], bolt_env.EXAM_GAPS["drop"]
         else:
             lag, drop = (self.rng.uniform(*r) if r[1] > 0 else 0.0 for r in (self.motor_lag_range, self.drop_range))
-        self.start_delay(lat, lag, drop)
+        if self.exam_bar is not None:
+            jit, sp = bolt_env.EXAM_GAPS["jitter_ms"], bolt_env.EXAM_GAPS["spike_p"]
+        else:
+            jit, sp = self.rng.uniform(0, self.jitter_max), self.rng.uniform(0, self.spike_max)
+        self.start_delay(lat, lag, drop, jitter_ms=jit, spike_p=sp, spike_ms=bolt_env.SPIKE_MS if sp else 0.0)
 
     def start_try(self):
         """The per-try bookkeeping, for reset and for brains handed the jump mid-run (skills.Bolt, MasterMind)."""

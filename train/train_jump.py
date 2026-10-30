@@ -195,6 +195,8 @@ def main():
     ap.add_argument("--latency-max-ms", type=float, default=0.0, help="0: off; a real robot has ~10-20 ms")
     ap.add_argument("--motor-lag-max-ms", type=float, default=0.0, help="per-try motor lag drawn in [0, max] ms (0: off)")
     ap.add_argument("--drop-max", type=float, default=0.0, help="per-try share of lost control packets in [0, max] (0: off)")
+    ap.add_argument("--latency-jitter-ms", type=float, default=0.0, help="per try the delay wobbles +- up to U(0, x) ms per step")
+    ap.add_argument("--latency-spike-p", type=float, default=0.0, help="per try a delay-spike chance per step in U(0, x)")
     ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints and exams")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
@@ -211,8 +213,9 @@ def main():
                                                                                            gait_start=args.gait_start, bar_max=args.bar_max,
                                                                                            handover_file=args.handover_file, handover_rate=args.handover_rate,
                                                                                            latency_ms=(args.latency_min_ms, args.latency_max_ms),
-                                                                                           motor_lag_ms=(0.0, args.motor_lag_max_ms), drop=(0.0, args.drop_max)))
-    print("exam gaps:", set_exam_gaps(args.exam_latency_ms, args.exam_lag_ms, args.exam_drop), flush=True)
+                                                                                           motor_lag_ms=(0.0, args.motor_lag_max_ms), drop=(0.0, args.drop_max),
+                                                                                           latency_jitter_ms=args.latency_jitter_ms, latency_spike_p=args.latency_spike_p))
+    print("exam gaps:", set_exam_gaps(args.exam_latency_ms, args.exam_lag_ms, args.exam_drop, args.exam_jitter_ms, args.exam_spike_p), flush=True)
     if args.widen_from and not args.resume:
         args.resume = str(widen(args.widen_from, out / "widened"))
     if args.init_from and not args.resume:   # a model folder: policy.zip + vecnormalize.pkl

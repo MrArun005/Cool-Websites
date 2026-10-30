@@ -40,13 +40,15 @@ def main():
     ap.add_argument("--latency-ms", type=float, default=0.0, help="fixed control delay (ms) in every try (29 Oct)")
     ap.add_argument("--motor-lag-ms", type=float, default=0.0, help="fixed motor lag (ms) in every try")
     ap.add_argument("--drop", type=float, default=0.0, help="share of control packets lost in every try")
+    ap.add_argument("--jitter-ms", type=float, default=0.0, help="delay jitter, +- ms per step")
+    ap.add_argument("--spike-p", type=float, default=0.0, help="chance per step of a delay spike (up to bolt_env.SPIKE_MS)")
     add_brake_args(ap, default=False)
     a = ap.parse_args()
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(a.motor_brake, a.brake_speed, a.brake_gain), flush=True)
     folder, out, t0 = Path(a.folder), {}, time.time()
-    if a.latency_ms or a.motor_lag_ms or a.drop:
+    if a.latency_ms or a.motor_lag_ms or a.drop or a.jitter_ms or a.spike_p:
         from bolt_env import set_exam_gaps
-        out.update({k: v for k, v in set_exam_gaps(a.latency_ms, a.motor_lag_ms, a.drop).items() if v})
+        out.update({k: v for k, v in set_exam_gaps(a.latency_ms, a.motor_lag_ms, a.drop, a.jitter_ms, a.spike_p).items() if v})
     if a.what == "jump":
         from jump_env import JumpPolicy, exam
         pol = JumpPolicy(folder)

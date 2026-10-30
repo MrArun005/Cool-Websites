@@ -32,6 +32,8 @@ def main():
     ap.add_argument("--latency-ms", type=float, default=0.0, help="fixed control delay (ms) for every try")
     ap.add_argument("--motor-lag-ms", type=float, default=0.0, help="fixed motor lag (ms) for every try")
     ap.add_argument("--drop", type=float, default=0.0, help="share of control packets lost in every try")
+    ap.add_argument("--jitter-ms", type=float, default=0.0, help="delay jitter, +- ms per step")
+    ap.add_argument("--spike-p", type=float, default=0.0, help="chance per step of a delay spike")
     ap.add_argument("--out")
     add_brake_args(ap, default=False)
     a = ap.parse_args()
@@ -39,7 +41,7 @@ def main():
     pol = JumpPolicy(a.folder)
     env = JumpEnv(randomize=False, real=True, max_steps=a.max_steps, handover_file=a.states, motor_brake=a.motor_brake)
     env.exam_latency_ms = a.latency_ms
-    bolt_env.EXAM_GAPS.update(lag_ms=a.motor_lag_ms, drop=a.drop)
+    bolt_env.EXAM_GAPS.update(lag_ms=a.motor_lag_ms, drop=a.drop, jitter_ms=a.jitter_ms, spike_p=a.spike_p)
     n = len(env.handover["ahead"])
     res = dict(folder=a.folder, states=a.states, n=n, motor_brake=brake, latency_ms=a.latency_ms, motor_lag_ms=a.motor_lag_ms,
                drop=a.drop)
