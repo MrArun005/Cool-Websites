@@ -124,6 +124,9 @@ SETS["v10d"] = dict(SETS["v8g"], righter=MODELS / "bolt-dog-recover-delay-30M", 
 # v11n (30 Oct): v10n with the jump trained on hand-overs from both chains (jump-handover 93M: v8g test
 # hand-overs 89/93/95/100% vs 59M 85/90/85/70)
 SETS["v11n"] = dict(SETS["v10n"], jump=MODELS / "bolt-dog-jump-handover-93M")
+# v11d (30 Oct): v10d with the jump trained on delay+lag+lost packets (jump-gaps 80.5M: delay sweep 0-40 ms
+# average 58%, worst 34% vs jump-delay 76M 53% / 8%)
+SETS["v11d"] = dict(SETS["v10d"], jump=MODELS / "bolt-dog-jump-gaps-80.5M")
 SETS["v9j"] = dict(SETS["v8g"], jump=MODELS / "bolt-dog-jump-handover-74M")
 
 

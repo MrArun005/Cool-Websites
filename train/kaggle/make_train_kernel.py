@@ -38,7 +38,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -168,6 +168,22 @@ JOBS = {
                  "--max-steps", "220", "--motor-brake", "--latency-ms", "20", "--jitter-ms", "8"],
                 ["jump", "--speeds", "1.5", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
                  "--max-steps", "220", "--motor-brake"]]),
+    "jump-dyndelay2": dict(
+        # 30 Oct: jump-gaps 80.5M won the delay sweep alone (avg 58%, worst 34%) but lost inside the 20 ms chain (jumps
+        # 17/15/14/5 vs 26/22/15/5 of 30): a delayed trot hands over much messier (heading sd 0.24-0.34 rad vs 0.04,
+        # off line up to 27 cm). Practise also from hand-overs recorded in the v10d chain at 0-40 ms
+        # (handover_states_mix2.npz = mix + 383 delayed). Continues jump-dyndelay (same run folder).
+        name="jumpgaps", script="train_jump.py", start="../models/bolt-dog-jump-handover-59M",
+        args=["--real", "--lr", "1e-4", "--target-kl", "0.015", "--n-steps", "2048", "--max-steps", "200",
+              "--approach", "0.8", "2.0", "--approach-speed", "2.4", "--approach-speed-min", "1.2", "--run-frac", "0.85",
+              "--gait-start", "0.7", "--bar-start", "0.30", "--bar-max", "0.65",
+              "--handover-file", "research/results/handover_states_mix2.npz", "--handover-rate", "0.75",
+              "--latency-min-ms", "0", "--latency-max-ms", "40", "--latency-jitter-ms", "10", "--latency-spike-p", "0.03",
+              "--motor-lag-max-ms", "25", "--drop-max", "0.1",
+              "--exam-latency-ms", "20", "--exam-jitter-ms", "8",
+              "--exam-speed", "1.5", "--exam-dist", "1.1", "--exam-heights", "0.30", "0.40", "0.50"],
+        finals=[["jump", "--speeds", "1.5", "--dist", "1.1", "--heights", "0.30", "0.40", "0.50", "--gait",
+                 "--max-steps", "220", "--motor-brake", "--latency-ms", "20", "--jitter-ms", "8"]]),
     "jump-delay": dict(
         # owner 29 Oct: "train delay into everything". At 20 ms the jump brain cleared 0/100 real hand-overs; a local
         # pilot with 0-30 ms delay moved it to 8/100 (30 cm) after 0.5M steps. Win: held-out real hand-overs at
@@ -337,7 +353,8 @@ def build_data(a):
     for f in files:
         p = Path(f)
         if (p.parent == Path("train") and p.suffix in (".py", ".xml")) or p.parent == Path("train/dogmotion/clips") or \
-           f in ("train/research/results/handover_states.npz", "train/research/results/handover_states_mix.npz") or \
+           f in ("train/research/results/handover_states.npz", "train/research/results/handover_states_mix.npz",
+                  "train/research/results/handover_states_mix2.npz") or \
            (len(p.parts) == 3 and p.parts[0] == "models" and p.parts[1] in MODELS and p.suffix in (".zip", ".pkl", ".md", ".json", ".txt")):
             keep.append(f)
     missing = [m for m in MODELS if not any(f == f"models/{m}/policy.zip" for f in keep)]

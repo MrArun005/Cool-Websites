@@ -43,9 +43,11 @@ def main():
     ap.add_argument("--seed", type=int, default=50000, help="first seed (dev 20000 and test 1000 seeds are kept apart)")
     ap.add_argument("--teachers", default="v6h")
     ap.add_argument("--heights", type=float, nargs=2, default=[0.20, 0.60])
+    ap.add_argument("--latency-max-ms", type=float, default=0.0,
+                    help="per try a control delay drawn in [0, x] ms for the chain (30 Oct: hand-overs as a delayed robot makes them)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
-    rows = {k: [] for k in ("qpos", "qvel", "ctrl", "ahead", "heading_err", "off_line", "height", "seed")}
+    rows = {k: [] for k in ("qpos", "qvel", "ctrl", "ahead", "heading_err", "off_line", "height", "seed", "latency_ms")}
     m = Master(seed=a.seed, teachers=a.teachers)
     orig = m._start_jump_brain
 
@@ -65,6 +67,8 @@ def main():
     for k in range(a.n):
         seed = a.seed + k
         rng = np.random.default_rng(seed)
+        lat = round(rng.uniform(0, a.latency_max_ms) / 2) * 2 if a.latency_max_ms else 0.0
+        m.real.update(delay=lat / 1000.0)
         d.start("trot", seed=seed)
         d.do("trot", 2.0)
         try:
@@ -72,6 +76,7 @@ def main():
             missed += 1   # no hand-over (a fall or a run-out before the bar)
         except Captured:
             rows["seed"].append(seed)
+            rows["latency_ms"].append(lat)
         m.jump = None
     out = {k: np.array(v) for k, v in rows.items()}
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
