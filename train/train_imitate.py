@@ -131,7 +131,11 @@ def main():
     ap.add_argument("--body", choices=["bolt"] + sorted(BODIES), default=os.environ.get("BOLT_BODY", "bolt"),
                     help="the robot: bolt (default) or a real robot of robot_bodies.BODIES, e.g. go2 (the Unitree Go2: "
                          "its own clips, motors and stance)")
+    ap.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model "
+                    "file's (robot_bodies BOLT_JOINT_DAMPING; Go2's Menagerie value 2.0 is an assumption, not a measurement)")
     args = ap.parse_args()
+    if args.joint_damping is not None:
+        os.environ["BOLT_JOINT_DAMPING"] = repr(args.joint_damping)   # read when each env builds its model
     os.environ["BOLT_BODY"] = args.body   # the training envs (subprocesses), the exams and ImitatePolicy all read it
     if args.body != "bolt":
         assert not args.motor_speed, "--motor-speed changes Bolt's drive; a real-robot body has its own motor model"

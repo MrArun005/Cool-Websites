@@ -154,6 +154,15 @@ JOBS = {
         args=["--body", "go2", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
               "--switch-rate", "0.3", "--latency-ms", "0", "40"],
         finals=[]),
+    "go2-damp-pilot": dict(
+        # 30 Oct: go2-dog-pilot's exact recipe with the Go2 joint damping at 0.5 instead of Menagerie's 2.0 N·m·s/rad (a
+        # generic value; at a trot's 10.5 rad/s thigh speed 2.0 eats ~21 of the 23.7 N·m drive). A/B against the 2-h
+        # go2dog pilot (mean tracking 0.767, canter 0.32, falls 5.8% at 3.3M). Which damping a real Go2 has is a
+        # measurement for the hardware; this says how much the choice matters.
+        name="go2damp", script="train_imitate.py", start=None,
+        args=["--body", "go2", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
+              "--switch-rate", "0.3", "--latency-ms", "0", "40", "--joint-damping", "0.5"],
+        finals=[]),
     "jump-handover": dict(
         # 29 Oct pilot (2M steps, local): practising from REAL MasterMind hand-overs (research/record_handover.py)
         # took the held-out hand-over exam from 81/77/61/31% to 88/87/81/68% at 20/30/40/50 cm (brake on).
