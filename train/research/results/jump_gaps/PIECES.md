@@ -17,3 +17,10 @@ jump-dyndelay piece 1 (bolt-jump-dyndelay-p1, 3.5 h, 0-40 ms per try + jitter 10
 dev = delayed hand-overs from the v10d chain (handover_states_v10d_delay_dev.npz, 96 states) at 20 ms +-8 ms jitter,
 30/40/50 cm: 85M 70/60/38, 87M 69/57/36, 89M 70/59/36, 89.7M 70/56/28 vs jump-gaps 80.5M 80/73/47 -> worse, not used.
 One flat piece; jump-dyndelay2 (also practising from the delayed hand-overs) continues.
+
+## jump-dyndelay2 p1 (30 Oct, Kaggle bolt-jump-dyndelay2-p1, 89.7M-95.4M): flat -> the dyn-delay jump line ends
+
+Delayed hand-overs (handover_states_v10d_delay_dev.npz, 96 states) at 20 ms +-8, jumps cleared at 30 / 40 / 50 cm:
+80.5M 80 / 73 / 47; 90.5M 70 / 60 / 40; 92.5M 75 / 65 / 45; 94M 75 / 65 / 46; 95.4M 78 / 67 / 45. Below 80.5M at every
+height; with jump-dyndelay p1 that is two flat pieces in a row (HANDOFF 0i). 80.5M stays the delay jump brain; this
+run is the control arm for jump-delayaware (the same recipe plus the measured delay as an input).
