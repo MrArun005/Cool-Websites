@@ -12,3 +12,8 @@ Run 1 (bolt-jump-gaps, 12 h, 59.2M -> 76.8M):
 
 Still rising at every checkpoint; far better with all gaps at 30/40 cm, worse at 50 cm with delay alone -> not used
 yet; piece 2 (bolt-jump-gaps-p2, 3.5 h) continues from 76.8M.
+
+jump-dyndelay piece 1 (bolt-jump-dyndelay-p1, 3.5 h, 0-40 ms per try + jitter 10 ms + spikes, from piece-2 end 83.6M):
+dev = delayed hand-overs from the v10d chain (handover_states_v10d_delay_dev.npz, 96 states) at 20 ms +-8 ms jitter,
+30/40/50 cm: 85M 70/60/38, 87M 69/57/36, 89M 70/59/36, 89.7M 70/56/28 vs jump-gaps 80.5M 80/73/47 -> worse, not used.
+One flat piece; jump-dyndelay2 (also practising from the delayed hand-overs) continues.
