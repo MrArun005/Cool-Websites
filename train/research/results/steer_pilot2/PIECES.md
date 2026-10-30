@@ -12,3 +12,9 @@ Checkpoint exam (exam_steer, 2 tries per clip x rate; imitate_env.exam):
 
 Pilot 1 (weight 0.15) never moved (0.12-0.16). Pilot 2 climbs every checkpoint with tracking kept and no falls: not yet
 the 0.6 win line, but clearly working -> piece 2 (bolt-steer-pilot2-p2, 3.5 h) continues it.
+
+## Piece 2 (Kaggle bolt-steer-pilot2-p2, 41.7M -> 49.3M): passed
+
+steer_mean 0.53 (42M) -> 0.64 (43M) -> 0.71 (45M) -> **0.74 (48M)** -> 0.70 (49.3M); trot 0.871-0.878, canter
+0.708-0.723, 0 falls in the checkpoint exams. Saved as models/bolt-dog-steer-48M (MODEL.md: a bigger local check,
+trot steering 0.89, canter steering 0.63, but canter tracking 0.641 with 1 fall in 12). Piece 3 running.
