@@ -128,6 +128,10 @@ Do not claim to beat a specialist at its speciality unless the same test says so
    --resume-kernel bolt-J-p(N-1)); after each piece download, test, decide. Stop after two pieces in a row with no
    gain (in-training exams are 10 tries: one noisy piece is not a verdict). MasterMind DAgger runs stay whole (their
    data set does not carry over between pieces).
+0j. (30 Oct, owner) No external AI services and no API keys anywhere in Bolt, in software or on a robot: "all software
+   built within us". Bolt's mind is in-house: a rule-and-planner engine now, later an open-weight model we fine-tune
+   ourselves and run locally (llama.cpp-class) with local speech (Whisper-class recognition, Piper-class voice), on the
+   robot's own computer. Target robots: Unitree Go2 EDU first, DEEP Robotics Lite3 second (README header).
 0c. (28 Oct, owner delegated these calls "best for our reputation in the real world"):
    - Body = 33.5 N·m A1 motors (420 W, 21 rad/s rated, drive fades to 0 at 25 rad/s).
    - --motor-brake: brake starts at 25 rad/s (the drive cutoff, so fade and brake don't overlap), gain 3.5 N·m·s/rad (motor-constant estimate, the stricter choice). ON for all new training; exams default OFF for old brains; brains trained with the brake are examined with it ON, and their reports show both.
