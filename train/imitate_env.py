@@ -121,6 +121,8 @@ CLIP_DIR = Path(__file__).with_name("dogmotion") / "clips"
 ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup"]   # getup: lie reversed (run 18d)
 DEFAULT_CLIPS = ["walk", "trot", "pace", "turn_left", "turn_right", "sit", "lie"]   # canter (3.4 m/s) later
 WEIGHTS = dict(pose=0.5, vel=0.05, paw=0.2, root=0.15, root_vel=0.1)
+STEER = dict(share=0.6, change=0.3, weight=0.15)   # steering defaults (ImitateEnv steer_*)
+STEER_CLIPS = ("walk", "trot", "pace", "canter")
 HOLD = 1.0          # s: sit and lie hold their final pose this long
 # Switching skills mid-try (run 18e): which clip may follow which. Gaits switch to any gait (joining at the frame
 # whose pose is closest) or to sit (the sit clip starts standing, so the brain learns to stop first); a finished
@@ -233,7 +235,8 @@ class ImitateEnv(BoltEnv):
                  latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"],
                  terrain_cm=TERRAIN_ARGS["cm"], terrain_clips=TERRAIN_ARGS["clips"], terrain_spread=TERRAIN_ARGS["spread"],
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"],
-                 push_speed=PUSH["speed"], push_spin=PUSH["spin"], motor_brake=None, root_global=0.0):
+                 push_speed=PUSH["speed"], push_spin=PUSH["spin"], motor_brake=None, root_global=0.0,
+                 steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"]):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
                          skills=["stand"], motor_brake=motor_brake, terrain_cm=terrain_cm, terrain_seed=terrain_seed)
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
@@ -242,6 +245,12 @@ class ImitateEnv(BoltEnv):
         # from the try's start (research/peng_score.py; 29 Oct: Bolt drifts ~10 m off the trot's path in 10 s, root 0.09).
         # The inputs are unchanged, so the brain cannot see its drift; it can learn to turn and run at the clip's rates.
         self.root_global = root_global
+        # steering (30 Oct, Bolt Run: Bolt could not steer at a trot): a yaw-rate command (rad/s) added to the gait's
+        # reference spin rate (input 73, the spin-rate terms, the global root's heading) on STEER_CLIPS. Training draws it
+        # for steer_share of the tries, uniform in +-steer_max, redrawn at steer_change per second; a "steer" term
+        # (steer_weight x exp(-4 (w_z - w_ref_z)^2)) pays for following it. steer_max 0 (the default): exactly as before.
+        self.steer_max, self.steer_share, self.steer_change, self.steer_weight = steer_max, steer_share, steer_change, steer_weight
+        self.steer, self.exam_steer = 0.0, None   # the command now; exams set exam_steer
         self.switch_rate = switch_rate   # chance per second of switching to a following clip mid-try (training only)
         self.OBS = 66 + slots
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (self.OBS,), np.float32)
@@ -298,6 +307,13 @@ class ImitateEnv(BoltEnv):
     def ref(self, key, ahead=0):
         return self.clip.at(self.tau(ahead), key)
 
+    def ref_w(self, ahead=0):
+        """The reference spin rates (body frame) with the steering command added to the yaw rate on STEER_CLIPS."""
+        w = self.ref("w_body", ahead)
+        if self.steer and self.clip.name in STEER_CLIPS:
+            w = w + np.array([0.0, 0.0, self.steer])
+        return w
+
     def heading_paws(self):
         R = self._rotation()
         yaw = np.arctan2(R[1, 0], R[0, 0])
@@ -333,7 +349,7 @@ class ImitateEnv(BoltEnv):
             [d.qpos[2] if self.terrain is None else d.qpos[2] - self.ground_z()],
             d.qpos[7:19] - DOG, d.qvel[6:18] * 0.1, self.last_action,
             [np.sin(ph), np.cos(ph)], onehot,
-            self.ref("joints", 1) - DOG, [self.ref("height", 1)], self.ref("v_body", 1), [self.ref("w_body", 1)[2]],
+            self.ref("joints", 1) - DOG, [self.ref("height", 1)], self.ref("v_body", 1), [self.ref_w(1)[2]],
             [self.finished()],
         ])
         if self.randomize:
@@ -363,6 +379,9 @@ class ImitateEnv(BoltEnv):
             m.geom_friction[:, 0] = self.nominal_friction * self.rng.uniform(0.6, 1.3)
         self.pose_clip, self.pose_until, self.pose_hit = None, 0, False
         self.switch_t = None
+        self.steer = 0.0 if self.exam_steer is None else float(self.exam_steer)
+        if self.exam_steer is None and self.steer_max and not self.exam_start and self.rng.random() < self.steer_share:
+            self.steer = float(self.rng.uniform(-self.steer_max, self.steer_max))
         land = self.exam_landing
         if land is None and self.landing_rate and not self.exam_start and self.rng.random() < self.landing_rate:
             land = int(self.rng.integers(len(self.landing["tau0"])))
@@ -481,9 +500,11 @@ class ImitateEnv(BoltEnv):
         tilt = np.arccos(np.clip(np.dot(g, g_ref) / np.linalg.norm(g_ref), -1, 1))
         v, w = R.T @ d.qvel[0:3], d.qvel[3:6]   # MuJoCo free joint: angular velocity is in the body frame
         e_v = np.sum((self.ref("v_body") - v) ** 2)
-        e_w = np.sum((self.ref("w_body") - w) ** 2)
+        e_w = np.sum((self.ref_w() - w) ** 2)
         terms = dict(pose=np.exp(-5 * e_pose), vel=np.exp(-0.1 * e_vel), paw=np.exp(-40 * e_paw),
                      root=np.exp(-20 * e_h ** 2 - 10 * tilt ** 2), root_vel=np.exp(-2 * e_v - 0.2 * e_w))
+        if self.steer_max:   # only steering runs have the term (old runs' rewards unchanged)
+            terms["steer"] = np.exp(-4 * (self.ref_w()[2] - w[2]) ** 2)
         return terms, dict(height_err=float(e_h), tilt=float(tilt), pose_rms=float(np.sqrt(e_pose / 12)))
 
     def step(self, action):
@@ -501,6 +522,8 @@ class ImitateEnv(BoltEnv):
         self.env_steps += 1
         if self.switch_rate and not self.exam_start:
             self._maybe_switch()
+        if self.steer_max and self.exam_steer is None and not self.exam_start and self.rng.random() < self.steer_change * self.dt:
+            self.steer = float(self.rng.uniform(-self.steer_max, self.steer_max)) if self.rng.random() < self.steer_share else 0.0
         if self.t == self.land_switch_at and self.clip.name != self.landing_then:   # a landing start's bridge is over:
             self._switch_to(self.clips[self.landing_then])                         # on in landing_then (test_skills' trot)
         terms, err = self.tracking()
@@ -508,7 +531,7 @@ class ImitateEnv(BoltEnv):
             g_root, g_vel = self._global_root_terms()
             terms["root"] = (1 - self.root_global) * terms["root"] + self.root_global * g_root
             terms["root_vel"] = (1 - self.root_global) * terms["root_vel"] + self.root_global * g_vel
-        reward = sum(self.weights[k] * v for k, v in terms.items())
+        reward = sum(self.weights.get(k, self.steer_weight) * v for k, v in terms.items())
         pose = None
         if self.pose_clip is not None:   # a moving-start command: paid per step in the pose once reached in time
             pose = self.clip.name == self.pose_clip and self.pose_now(CLIP_POSE[self.pose_clip])
@@ -541,7 +564,7 @@ class ImitateEnv(BoltEnv):
         u, _, vt = np.linalg.svd(self.ref("tilt"))
         tilt = u @ vt
         R_ref = _rotz(self._ref_root[1]) @ tilt
-        v_ref, w_ref = R_ref @ self.ref("v_body"), R_ref @ self.ref("w_body")
+        v_ref, w_ref = R_ref @ self.ref("v_body"), R_ref @ self.ref_w()
         self._ref_root[0] = self._ref_root[0] + v_ref[:2] * self.dt
         self._ref_root[1] += float(w_ref[2]) * self.dt
         R_ref = _rotz(self._ref_root[1]) @ tilt
@@ -714,6 +737,49 @@ def score(result):
     names = [k[6:] for k in result if k.startswith("track_")]
     return float(np.mean([result[f"track_{n}"] * float(np.clip(result.get(f"speed_{n}", 1.0), 0.0, 1.0))
                           for n in names]))
+
+
+def exam_steer(policy, clips=("trot", "canter"), rates=(-1.0, -0.5, 0.5, 1.0), episodes=2, seconds=4.0, seed=9500):
+    """Steering exam: per clip, Bolt plays the gait with a fixed yaw-rate command (env.exam_steer, rad/s) for `seconds`,
+    from evenly spaced stride moments, randomized physics. steer_<clip>: how well the turn follows the command, 1 -
+    |turned - commanded| / |commanded| averaged over tries (clipped to 0..1; a fall counts 0); steertrack_<clip> the
+    mean tracking reward per step; steerfall_<clip> the share of tries that fell; turn_<clip>_<rate> the mean yaw rate
+    reached. steer_mean: the mean of steer_<clip>."""
+    env = ImitateEnv(randomize=True, clips=list(clips))
+    steps = int(round(seconds / env.dt))
+    out = {}
+    for name in clips:
+        c = env.clips[name]
+        follow, track, falls = [], [], 0
+        for rate in rates:
+            got = []
+            for k in range(episodes):
+                env.exam_start = (name, (k / episodes) * c.length)
+                env.exam_steer = rate
+                obs, _ = env.reset(seed=seed + k)
+                env.limit = steps
+                R = env._rotation()
+                h, yaw, total, fell = np.arctan2(R[1, 0], R[0, 0]), 0.0, 0.0, False
+                for _ in range(steps):
+                    obs, r, fell, done, _ = env.step(policy.act(obs))
+                    R = env._rotation()
+                    h1 = np.arctan2(R[1, 0], R[0, 0])
+                    yaw += float(np.angle(np.exp(1j * (h1 - h))))
+                    h, total = h1, total + r
+                    if fell or done:
+                        break
+                falls += fell
+                track.append(total / steps)
+                want = rate * seconds
+                follow.append(0.0 if fell else float(np.clip(1 - abs(yaw - want) / abs(want), 0, 1)))
+                got.append(yaw / seconds)
+            out[f"turn_{name}_{rate:+g}"] = round(float(np.mean(got)), 3)
+        out[f"steer_{name}"] = round(float(np.mean(follow)), 3)
+        out[f"steertrack_{name}"] = round(float(np.mean(track)), 3)
+        out[f"steerfall_{name}"] = round(falls / (len(rates) * episodes), 3)
+    env.exam_steer, env.exam_start = None, None
+    out["steer_mean"] = round(float(np.mean([out[f"steer_{n}"] for n in clips])), 3)
+    return out
 
 
 def exam_terrain(policy, cm, clip="trot", tries=30, seconds=4.0, seed=9000, push_speed=0.0, push_spin=0.0):

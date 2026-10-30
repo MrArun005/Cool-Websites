@@ -22,7 +22,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
-from imitate_env import ALL_CLIPS, DEFAULT_CLIPS, ImitateEnv, ImitatePolicy, exam, score
+from imitate_env import ALL_CLIPS, DEFAULT_CLIPS, STEER, STEER_CLIPS, ImitateEnv, ImitatePolicy, exam, exam_steer, score
 from bolt_env import add_brake_args, set_motor_brake
 
 
@@ -30,12 +30,15 @@ class Examiner(BaseCallback):
     """Every `every` steps: save a checkpoint, take the exam (tracking score and falls per clip), keep the best.
     After every update: print the training tries' mean reward per step and length."""
 
-    def __init__(self, out, every, clips):
+    def __init__(self, out, every, clips, steer_max=0.0, hours=None, exam_first=False):
         super().__init__()
+        self.deadline = time.time() + hours * 3600 if hours else None   # Kaggle time guard: exam, save and stop
+        self.exam_first = exam_first
         self.out, self.every, self.next, self.best, self.clips = out, every, every, -1.0, clips
+        self.steer_max = steer_max   # > 0: also the steering exam, and the best brain must steer too
 
     def _on_training_start(self):   # after a resume, the next exam is the next multiple of `every`
-        self.next = (self.num_timesteps // self.every + 1) * self.every
+        self.next = self.num_timesteps if self.exam_first else (self.num_timesteps // self.every + 1) * self.every
         self.t0 = time.time()
         best = self.out / "best" / "best.json"
         if best.exists():   # a resumed run keeps its best brain instead of overwriting it with the next exam
@@ -51,7 +54,8 @@ class Examiner(BaseCallback):
                   f"({len(eps)} tries), {fps:.0f} steps/s", flush=True)
 
     def _on_step(self):
-        if self.num_timesteps < self.next:
+        late = self.deadline is not None and time.time() > self.deadline
+        if self.num_timesteps < self.next and not late:
             return not (self.out / "STOP").exists()
         self.next += self.every
         ck = self.out / "checkpoints"
@@ -63,6 +67,13 @@ class Examiner(BaseCallback):
         tracks = [v for k, v in result.items() if k.startswith("track_")]
         falls = [v for k, v in result.items() if k.startswith("fall_")]
         s = score(result)
+        if self.steer_max:   # steering runs: score x (0.5 + 0.5 x how well the turns follow the command)
+            sc = [c for c in self.clips if c in STEER_CLIPS and c in ("trot", "canter", "walk")]
+            r = self.steer_max
+            st = exam_steer(ImitatePolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl"), clips=sc,
+                            rates=(-r, -r / 2, r / 2, r))
+            result.update(st)
+            s = s * (0.5 + 0.5 * st["steer_mean"])
         print(f"checkpoint {n} ready: {result} (mean tracking {np.mean(tracks):.3f}, fall rate {np.mean(falls):.2f}, "
               f"score {s:.3f})", flush=True)
         if s > self.best:
@@ -73,7 +84,9 @@ class Examiner(BaseCallback):
             shutil.copy(ck / f"policy_vecnormalize_{n}_steps.pkl", best / "vecnormalize.pkl")
             (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=s, clips=self.clips), indent=2))
             print(f"new best at {n}: score {s:.3f}", flush=True)
-        return not (self.out / "STOP").exists()
+        if late:
+            print(f"time guard: stopping at {n}", flush=True)
+        return not (self.out / "STOP").exists() and not late
 
 
 def main():
@@ -85,12 +98,21 @@ def main():
     ap.add_argument("--clips", nargs="*", default=DEFAULT_CLIPS)
     ap.add_argument("--switch-rate", type=float, default=0.0, help="chance per second of switching clip mid-try (run 18e: 0.3)")
     ap.add_argument("--slots", type=int, default=len(ALL_CLIPS), help="clip one-hot size: 8 for runs begun before the getup clip")
-    ap.add_argument("--exam-every", type=int, default=1_000_000)
+    ap.add_argument("--exam-every", "--every", type=int, default=1_000_000)
+    ap.add_argument("--hours", type=float, help="time guard: exam, save and stop after this long (Kaggle)")
+    ap.add_argument("--init-from", help="start from this brain folder (policy.zip, vecnormalize.pkl) at its step count, "
+                    "with --lr (default 1e-4): a fine-tune (make_train_kernel.py)")
+    ap.add_argument("--exam-first", action="store_true", help="exam the starting brain first (step 0 of the run)")
     ap.add_argument("--lr", type=float, help="on --resume: a new learning rate (fine-tune, e.g. 1e-4; default keeps the saved 3e-4)")
     ap.add_argument("--target-kl", type=float, default=0.03)
     ap.add_argument("--threads", type=int, default=2, help="torch threads")
     ap.add_argument("--root-vel-weight", type=float, help="reward weight of body velocity tracking (default 0.1, "
                     "DeepMimic); raise it if the exam's speed_ stays low while tracking is good")
+    ap.add_argument("--steer-max", type=float, default=0.0, help="yaw-rate command range (rad/s) for steering at walk/trot/"
+                    "pace/canter (30 Oct; 0 = none). Adds the steering exam to every checkpoint")
+    ap.add_argument("--steer-share", type=float, default=STEER["share"], help="share of tries (and redraws) with a command")
+    ap.add_argument("--steer-change", type=float, default=STEER["change"], help="chance per second of a new command")
+    ap.add_argument("--steer-weight", type=float, default=STEER["weight"], help="reward weight of the steer term")
     ap.add_argument("--root-global", type=float, default=0.0, help="0..1 blend toward Peng 2020's global root terms (heading and path); 0 = our terms")
     add_brake_args(ap, default=True)
     args = ap.parse_args()
@@ -99,8 +121,16 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(args.threads)
     venv = make_vec_env(ImitateEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(
-        clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None, root_global=args.root_global))
-    if args.resume:
+        clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None, root_global=args.root_global, steer_max=args.steer_max,
+        steer_share=args.steer_share, steer_change=args.steer_change, steer_weight=args.steer_weight))
+    if args.init_from and not args.resume:
+        src = Path(args.init_from)
+        venv = VecNormalize.load(str(src / "vecnormalize.pkl"), venv)
+        model = PPO.load(src / "policy.zip", env=venv, device="cpu",
+                         custom_objects=dict(learning_rate=args.lr or 1e-4, target_kl=args.target_kl))
+        args.resume = True   # keep the step count (reset_num_timesteps=False)
+        print(f"fine-tuning {src} from {model.num_timesteps:,} steps", flush=True)
+    elif args.resume:
         ck = Path(args.resume)
         venv = VecNormalize.load(str(ck.with_name(ck.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")), venv)
         model = PPO.load(ck, env=venv, device="cpu", custom_objects=dict(learning_rate=args.lr, target_kl=args.target_kl) if args.lr else None)
@@ -117,7 +147,7 @@ def main():
     print("motor brake in the training envs (on, rad/s, N·m per rad/s):", venv.get_attr("motor_brake")[0], flush=True)
     start = time.time()
     print(f"training on clips {args.clips}, {args.envs} envs, {model.n_steps * args.envs} samples per update", flush=True)
-    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, args.exam_every, args.clips),
+    model.learn(total_timesteps=args.steps - model.num_timesteps, callback=Examiner(out, args.exam_every, args.clips, args.steer_max, args.hours, args.exam_first),
                 reset_num_timesteps=not args.resume, progress_bar=False)
     model.save(out / "policy.zip")
     venv.save(str(out / "vecnormalize.pkl"))
