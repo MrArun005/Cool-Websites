@@ -2,6 +2,24 @@
 
 A 12 kg simulated quadruped with real Unitree A1 motor limits (torque, power, joint speed), trained with reinforcement learning (PPO) in MuJoCo and MuJoCo MJX: 4,096 parallel robots on free Colab and Kaggle GPUs. Nine learned gaits and postures (walk, trot, pace, turn, sit, lie, get up) score 91–97% on seeded exams with zero falls; a canter runs at ~2 m/s; a run-up jump clears 40 cm; self-righting from any fall takes under a second. Every trained policy ships in [`models/`](models/) with a model card, exam results and the command that produced them.
 
+## Target robot: Unitree Go2 EDU (decided 30 Oct 2026)
+
+Bolt's brains will be retrained for, and first run on, a **Unitree Go2 EDU**. Until that robot runs them, every result in
+this repo is **in simulation**.
+
+| Why Go2 | |
+|---|---|
+| Faster legs | ~30 rad/s hip/thigh drives vs the A1-class 21 rad/s that caps Bolt's canter today (knee 15.7 rad/s with a 45 N·m gear) |
+| Proven fast in the real world | Unitree lists up to ~3.5-5 m/s running on Go2 (vendor figures) |
+| Model ready | the official MuJoCo Menagerie Go2 (BSD-3-Clause, © Unitree) is already in [`train/robots/unitree_go2/`](train/robots/unitree_go2/) |
+| Real-robot path | widely used for sim-to-real research; the **EDU** tier opens low-level joint control (unitree_sdk2), which a learned brain needs. Air/Pro do not |
+
+What changes: Go2's knees all bend backward (Bolt's rear knees bend forward), its mass sits in the legs, and it stands
+~0.30 m tall, so the dog clips are re-retargeted and **every brain is retrained** on the Go2 model. Then MasterMind is
+re-distilled. The plan and the body comparison are in [`train/research/real_robot_port.md`](train/research/real_robot_port.md).
+Before hardware: a body-speed estimator (Go2 does not measure body velocity), delay and sensor stress tests on the Go2
+model, and a second-engine check.
+
 - Training, environments and exams: [`train/README.md`](train/README.md)
 - Rules of the project, what exists and what is next: [`HANDOFF.md`](HANDOFF.md)
 - Techniques learned from open-source robots: [`docs/LESSONS.md`](docs/LESSONS.md)
