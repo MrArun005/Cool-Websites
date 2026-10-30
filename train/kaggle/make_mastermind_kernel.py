@@ -35,7 +35,7 @@ TAR = "bolt-mastermind.pack"   # a tar under a name Kaggle does not unpack (it u
 MODELS = ["bolt-dog-switching-18e-36M", "bolt-dog-canter-switching-18g-35.5M", "bolt-dog-imitate-pps-student-r4",
           "bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-a1-16g-27M", "bolt-dog-selfright-17e-16.5M",
           "bolt-dog-posture-getup-3M", "bolt-dog-jump-trot-55M", "bolt-dog-imitate-gpu3-617M",
-          "bolt-dog-jump-handover-59M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-delay-76M", "bolt-dog-recover-delay-30M"]   # canter-speed-38M: v7c; jump-delay-76M + recover-delay-30M: v10d; jump-trot-55M: teacher set v5; gpu3 + jump-handover: v6/v7
+          "bolt-dog-jump-handover-59M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-delay-76M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-handover-93M"]   # jump-handover-93M: v11n; canter-speed-38M: v7c; jump-delay-76M + recover-delay-30M: v10d; jump-trot-55M: teacher set v5; gpu3 + jump-handover: v6/v7
 INIT = "train/mastermind/export_v3/student.pt"   # the v3 student (run b round 5), as the local v4 run
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own (numpy >= 2: the brains' stats were pickled with numpy 2)
 
