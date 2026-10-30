@@ -170,6 +170,11 @@ class Master:
         self._queue = [self.data.ctrl.copy() for _ in range(self._back + 1)]   # the robot holds its first targets
         self._lag_y = self.data.ctrl.copy()
         self._nrng = np.random.default_rng(None if seed is None else seed + 7919)
+        # what the robot measures of its delay (bolt_env.measured_delay_ms: +-2 ms clock error per try), for delay-aware
+        # teachers; Master runs its own delay queue, so the worlds' measured value is set here (a side generator)
+        meas = max(0.0, r["delay"] * 1000.0 + np.random.default_rng(None if seed is None else seed + 104729).uniform(-2, 2))
+        for env in (self.w, self.sr):
+            env.delay_meas = meas
 
     @property
     def data(self):
@@ -263,9 +268,11 @@ class Master:
             return im._obs, pol, im.ref("joints", 1), ACTION_SCALE, im.step
         if mode[0] == "jump":
             w = self.w
+            w.delay_input = getattr(b.jumper, "delay_input", False)   # a delay-aware jump brain reads the measured delay
             return w._obs, b.jumper, DOG, ACTION_SCALE, w.step
         if mode[0] == "selfright":
             sr = self.sr
+            sr.delay_input = getattr(b.righter, "delay_input", False)
             return sr._obs, b.righter, DOG, sr.scale, sr.step
         sr = self.sr   # posture
         return (lambda: BoltEnv._obs(sr)), b.posture, sr.base_pose(), sr.action_scale(), (lambda a: BoltEnv.step(sr, a))
