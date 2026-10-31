@@ -228,9 +228,13 @@ class MjxImitatePolicy:
         self.P = P
         self.mean, self.std, self.layers = np.asarray(P["mean"]), np.asarray(P["std"]), P["layers"]
         self.slots = len(self.mean) - 66
+        self.blind_vel = bool(P.get("blind_vel", False))
 
     def act(self, obs):
         obs = np.asarray(obs, np.float32)
+        if self.blind_vel:   # trained without the body-velocity inputs (--blind-vel): they are always 0 for it
+            obs = obs.copy()
+            obs[6:9] = 0.0
         if len(obs) > 66 + self.slots:   # an older brain: drop the clip slots it never had
             obs = np.concatenate([obs[:48 + self.slots], obs[48 + len(ALL_CLIPS):]])
         x = np.clip((obs - self.mean) / self.std, -10.0, 10.0).astype(np.float32)
@@ -286,7 +290,7 @@ class MjxImitate:
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"], push_speed=PUSH["speed"],
                  push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"], root_global=0.0,
                  steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"],
-                 body=None, joint_damping=None):
+                 body=None, joint_damping=None, blind_vel=False, drop_p=0.0):
         from brax.envs.base import State
         self.State = State
         # the body (module docstring, "Body"): bolt, or a real robot of robot_bodies.BODIES; None = BOLT_BODY, else bolt
@@ -371,6 +375,10 @@ class MjxImitate:
             self.land_then = self.names.index(landing_then) if landing_then and landing_bridge else -1
         # real-robot gaps (as ImitateEnv): latency (substeps, drawn per try), sensor noise, motor lag; off = not computed
         self.latency_ms, self.obs_noise, self.motor_lag_ms = tuple(float(x) for x in latency_ms), float(obs_noise), float(motor_lag_ms)
+        # real-robot inputs (train/deploy/PLAN.md phase 3): blind_vel zeroes the body-velocity inputs (a real Go2 has no
+        # velocity sensor; leg odometry was 0.2-0.3 m/s off); drop_p: chance per step that the new targets never reach
+        # the motors (they keep the old ones; the brain's previous-action input still says what it sent)
+        self.blind_vel, self.drop_p = bool(blind_vel), float(drop_p)
         self.real_on = self.latency_ms[1] > 0 or self.motor_lag_ms > 0
         self.sub_dt = float(m.opt.timestep)
         self.queue_len = int(round(self.latency_ms[1] / 1000.0 / self.sub_dt)) // 10 + 2   # control steps of sent targets kept
@@ -506,6 +514,8 @@ class MjxImitate:
             o = o.at[:34].add(k * scale * u)
         if self.randomize and key is not None:
             o = o + 0.01 * jax.random.normal(key, o.shape)
+        if self.blind_vel:
+            o = o.at[6:9].set(0.0)
         return o
 
     def heading_paws(self, d):
@@ -781,7 +791,11 @@ class MjxImitate:
         rng, k_sw, k_pick, k_obs, k_new, k_obs2 = jax.random.split(info["rng"], 6)
         mx = self.model_for(info)
         a = jp.clip(action, -1.0, 1.0)
-        d = d.replace(ctrl=jp.clip(self.ref(info, "joints", 1) + self.scale * a, self.lo, self.hi))
+        new_ctrl = jp.clip(self.ref(info, "joints", 1) + self.scale * a, self.lo, self.hi)
+        if self.drop_p:   # a lost command: the motors keep the previous targets for this step
+            rng, k_drop = jax.random.split(rng)
+            new_ctrl = jp.where(jax.random.uniform(k_drop) < self.drop_p, d.ctrl, new_ctrl)
+        d = d.replace(ctrl=new_ctrl)
         if self.push_steps:   # now and then a sideways push (imitate_env: the switch test's shove, push-sized)
             rng, k_push, k_side = jax.random.split(rng, 3)
             go = (info["t"] > 0) & (info["t"] % self.push_steps == 0) & (jax.random.uniform(k_push) < self.push_prob)
@@ -943,7 +957,8 @@ def train(args):
                           motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain,
                           root_global=args.root_global, steer_max=args.steer_max, steer_share=args.steer_share,
                           steer_change=args.steer_change, steer_weight=args.steer_weight, body=args.body,
-                          joint_damping=args.joint_damping, iterations=args.iterations, ls_iterations=args.ls_iterations)
+                          joint_damping=args.joint_damping, iterations=args.iterations, ls_iterations=args.ls_iterations,
+                          blind_vel=args.blind_vel, drop_p=args.drop_p)
 
     phases = curriculum(args.terrain_cm, args.terrain_at, args.steps)
     hidden = W["hidden"] if W else (512, 256)
@@ -951,7 +966,8 @@ def train(args):
     start, log, base0 = time.time(), [], int(W["steps"]) if W else 0
     done_steps = 0   # steps of the finished phases
     q = args.quick
-    tags = {k: v for k, v in (("body", args.body), ("steer_max", args.steer_max)) if v not in ("bolt", 0.0)}   # what the brain is for
+    tags = {k: v for k, v in (("body", args.body), ("steer_max", args.steer_max), ("blind_vel", args.blind_vel))
+            if v not in ("bolt", 0.0, False)}   # what the brain is for
     try:
         for k, (cm, n_steps) in enumerate(phases):
             env = make_env(cm)
@@ -1087,6 +1103,8 @@ def main():
                    help="bolt (bolt.xml) or a real robot of robot_bodies.BODIES (go2); default BOLT_BODY, else bolt. "
                    "--brake-speed/--brake-gain apply to bolt only (a real robot has its own)")
     t.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model file's")
+    t.add_argument("--blind-vel", action="store_true", help="zero the body-velocity inputs (no velocity sensor on a real robot)")
+    t.add_argument("--drop-p", type=float, default=0.0, help="chance per step that the new joint targets are lost (motors keep the old)")
     t.add_argument("--iterations", type=int, default=5, help="contact solver iterations (MuJoCo's own: 100; see MjxImitate)")
     t.add_argument("--ls-iterations", type=int, default=8, help="contact solver line-search iterations (MuJoCo's own: 50)")
     args = ap.parse_args()
