@@ -154,6 +154,14 @@ JOBS = {
         args=["--body", "go2", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
               "--switch-rate", "0.3", "--latency-ms", "0", "40"],
         finals=[]),
+    "go2-jump-pilot": dict(
+        # 31 Oct, owner's Go2 order: motion (done, models/bolt-go2-gpu-241M) -> jumps. First hurdle-jump brain on the Go2
+        # body (jump_env body sizes: bars x0.70, distances x0.86 of Bolt's), from scratch like Bolt's first jump brains
+        # (jump-6.5M .. 10M), with 0-40 ms control delay per try as every Go2 run. Exam bars 10/14/17/21 cm at 0.47 m.
+        # Early gate (~25%): any exam height above 0. Pilot win: jump >= 0.5 on the 10 and 14 cm bars.
+        name="go2jump", script="train_jump.py", start=None,
+        args=["--body", "go2", "--latency-min-ms", "0", "--latency-max-ms", "40"],
+        finals=[]),
     "go2-damp-pilot": dict(
         # 30 Oct: go2-dog-pilot's exact recipe with the Go2 joint damping at 0.5 instead of Menagerie's 2.0 N·m·s/rad (a
         # generic value; at a trot's 10.5 rad/s thigh speed 2.0 eats ~21 of the 23.7 N·m drive). A/B against the 2-h
