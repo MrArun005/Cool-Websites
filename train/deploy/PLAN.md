@@ -145,3 +145,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   clip's reference 3/5 (trot). The 489M brain leans on its velocity input. Decision: route B -- retrain (fine-tune
   from 489M) with the velocity input taken away, as most published Go2/A1 policies run (and keep the kinematic height,
   which works). Needs GPU time (Kaggle T4/P100 is fine: no TF32).
+* 1 Nov (night): `mjx_imitate.py --blind-vel --drop-p` (8da700c). Kaggle GPU run **bolt-go2-blind** started ~02:05
+  IST: from 489M, same recipe + no velocity inputs + 5% lost commands, 3.5 h (warm dataset bolt-go2-489m). Gate: the
+  lockstep rehearsal with kinematic height and no velocity, vendor settings, 41 s plan, 0/5 falls (489M with the true
+  velocity: 0/5; with leg odometry: 4/10).
