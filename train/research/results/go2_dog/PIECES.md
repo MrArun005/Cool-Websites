@@ -43,3 +43,33 @@ training stays on 2.0 (Menagerie's file) until the real Go2's damping is measure
 sit 0.947, lie 0.929; trot speed 80%, canter 38%; falls 9.6%, canter and moving sit/lie). +0.011 in 3.5 h (piece 2:
 +0.042). The canter is the bottleneck (flat at ~0.40; the Go2 knee drive is rated 15.7 rad/s). Piece 4 running; if flat,
 the next Go2 step is the GPU trainer (mjx) port for far more steps, not more CPU pieces.
+
+## Piece 4 (Kaggle bolt-go2-dog-p4, 14.6M -> 21.4M): flat, CPU line ended
+
+15M 0.817, 16M 0.816, 17M 0.809, 18M 0.816, 19M 0.816, 20M 0.820, 21.4M 0.816 (canter 0.411, falls 8%). +0.00 in 3.5 h:
+no more CPU pieces. Go2 continues on the GPU trainer only.
+
+## GPU (RunPod RTX 4090, mjx_imitate, 31 Oct): run b, warm from CPU 14.6M
+
+4096 envs, all 9 clips, switches 0.3/s, steering +-0.8 rad/s (weight 0.6), root-global 0.5, 0-40 ms control delay,
+4.0 h at ~16k steps/s.
+
+Bug found first: the 4090's default TF32 matmuls break MJX's contact solver. The same warm brain fell in 59% of eval
+tries on TF32 (nan scores before the blow-up guard) against 7% at full float32 (local CPU check: 6%). Fixed in
+mjx_imitate (29338fa: jax_default_matmul_precision "highest"; 9804028: a blown-up env ends its try at no reward).
+Kaggle P100/T4 have no TF32, which is why earlier GPU runs were fine. ~55 min of pod time went to the broken runs.
+
+Training eval (128 envs): reward/step 1.044 (0) -> 1.274 (45M) -> 1.318 (136M) -> 1.334 (181M); falls 7% -> 0-2%;
+steer 0.51 -> 0.94.
+
+Real exam (imitate_env.exam, all clips, 4 tries, + exam_steer trot/canter +-0.4/0.8; scratchpad go2_exam.py):
+
+| brain | mean tracking | walk / trot / pace | canter | sit / lie / getup | steer (trot / canter) | 40 ms delay | falls |
+|---|---|---|---|---|---|---|---|
+| CPU 14.6M (p3) | 0.819 | 0.817 / 0.819 / 0.833 | 0.412 | 0.947 / 0.929 / - | - | - | 9.6% |
+| GPU 45M | 0.816 | 0.794 / 0.808 / 0.816 | 0.554 | 0.947 / 0.908 / 0.924 | 0.78 / 0.46 | 0.81, 0 falls | 13.5% |
+| GPU 136M | **0.827** | 0.805 / **0.821** / 0.827 | **0.578** | **0.957** / 0.922 / 0.928 | **0.83 / 0.52** | **0.83, 0 falls** | 13.5% |
+
+No falls in any gait; every fall is a posture command given on the move (trot -> sit 4/4, trot -> lie 2/4,
+walk -> sit 1/4). Run c (from run b's final brain) adds moving starts (--moving-rate 0.3, walk/trot -> sit/lie) for
+exactly these.
