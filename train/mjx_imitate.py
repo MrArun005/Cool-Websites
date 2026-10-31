@@ -827,7 +827,11 @@ class MjxImitate:
             on = info["t"] - info["swt"] < self.transition_steps
             reward = reward - self.transition_weight * jp.where(on, self.transition_excess(d, info), 0.0)
         lost = high | (err["tilt"] > 0.8)
-        fell = lost | (self.body_on_floor(d) & ~floor_ok)
+        # a blown-up simulation (non-finite state or reward) ends the try at no reward, so one robot cannot poison the batch
+        bad = ~(jp.all(jp.isfinite(d.qpos)) & jp.all(jp.isfinite(d.qvel)) & jp.isfinite(reward))
+        reward = jp.where(bad, 0.0, reward)
+        terms = {k: jp.where(bad, 0.0, v) for k, v in terms.items()}
+        fell = lost | bad | (self.body_on_floor(d) & ~floor_ok)
         trunc = (info["t"] >= info["limit"]) & ~fell
         done = fell | trunc
         on_canter = (info["clip"] == self.canter).astype(jp.float32)
