@@ -47,8 +47,12 @@ class Handler:
     """Says what to do next, like a person with a dog on a course. jump_h / jump_ahead: the bar heights and distances
     (v2: 15-45 cm, 1.5-2 m; v3: 15-55 cm, 1.5-2.2 m)."""
 
-    def __init__(self, rng, jump_h=(0.15, 0.45), jump_ahead=(1.5, 2.0), gait_w=None):
+    def __init__(self, rng, jump_h=(0.15, 0.45), jump_ahead=(1.5, 2.0), gait_w=None, ct_boost=1.0, jump_w=22):
         self.rng = rng
+        # focus on the weakest switches (31 Oct: v12/v14 miss canter -> trot and the first jumps): ct_boost multiplies the
+        # chance that a canter is followed by a trot; jump_w is the jump's weight among the next commands from a gait.
+        # Defaults (1.0, 22) are exactly the old schedule.
+        self.ct_boost, self.jump_w = ct_boost, jump_w
         self.jump_h, self.jump_ahead = jump_h, jump_ahead
         self.gait_w = gait_w or GAIT_W
 
@@ -62,9 +66,10 @@ class Handler:
         """(command, kwargs, seconds) after `cmd` has run its time."""
         r = self.rng
         if cmd in self.gait_w:
-            k = pick(r, dict(gait=50, jump=22, sit=12, stand=4, shove=8 if cmd in ("walk", "trot") else 2))
+            k = pick(r, dict(gait=50, jump=self.jump_w, sit=12, stand=4, shove=8 if cmd in ("walk", "trot") else 2))
             if k == "gait":
-                g = pick(r, {g: w for g, w in self.gait_w.items() if g != cmd})
+                g = pick(r, {g: w * (self.ct_boost if cmd == "canter" and g == "trot" else 1.0)
+                             for g, w in self.gait_w.items() if g != cmd})
                 return g, {}, r.uniform(1.5, 4.0)
             if k == "jump":
                 return "jump", dict(height=float(r.uniform(*self.jump_h)), ahead=float(r.uniform(*self.jump_ahead))), r.uniform(1.5, 3.0)
@@ -101,7 +106,7 @@ def collect(args):
     ep_seed = seed * 1000
     while len(X) < steps:
         ep_seed += 1
-        h = Handler(rng, **hkw)
+        h = Handler(rng, **hkw, ct_boost=real.get("canter_trot_boost", 1.0), jump_w=real.get("jump_weight", 22))
         clip, tau = h.first()
         if any(real[k] for k in GAPS) or real["friction_min"] < 1.0 or real["friction_max"] > 1.0:
             # real-robot gaps, drawn per try (as mjx_imitate; 29 Oct: research/realbody_stress.py names the ones
@@ -208,6 +213,8 @@ def main():
     ap.add_argument("--init-rows", type=int, default=0)
     ap.add_argument("--init-student", help="start the network from this student.pt (weights and input normalizer) "
                     "instead of a fresh one (v4: the v3 student)")
+    ap.add_argument("--canter-trot-boost", type=float, default=1.0, help="x the chance a canter is followed by a trot")
+    ap.add_argument("--jump-weight", type=float, default=22, help="the jump's weight among next commands from a gait (22)")
     ap.add_argument("--beta-floor", type=float, default=0.0, help="teacher share of the executed actions never below this")
     ap.add_argument("--latency-min-ms", type=float, default=0.0, help="per-try action delay drawn from [min, max] ms (0: off)")
     ap.add_argument("--latency-max-ms", type=float, default=0.0, help="the real robot's control delay is ~10-20 ms")
@@ -224,7 +231,7 @@ def main():
     ap.add_argument("--gyro-bias-max", type=float, default=0.0, help="gyro bias (rad/s)")
     ap.add_argument("--height-bias-max", type=float, default=0.0, help="body height estimate bias (m)")
     a = ap.parse_args()
-    real = dict(latency_min_ms=a.latency_min_ms, latency_max_ms=a.latency_max_ms, obs_noise=a.obs_noise,
+    real = dict(canter_trot_boost=a.canter_trot_boost, jump_weight=a.jump_weight, latency_min_ms=a.latency_min_ms, latency_max_ms=a.latency_max_ms, obs_noise=a.obs_noise,
                 friction_min=a.friction_min, friction_max=a.friction_max, **{k: getattr(a, k) for k in GAPS[2:]})
     import torch
     torch.set_num_threads(a.workers)
