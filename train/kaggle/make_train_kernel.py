@@ -162,6 +162,18 @@ JOBS = {
         name="go2jump", script="train_jump.py", start=None,
         args=["--body", "go2", "--latency-min-ms", "0", "--latency-max-ms", "40"],
         finals=[]),
+    "go2-jump-pilot2": dict(
+        # 1 Nov: go2-jump-pilot (still starts, 18M steps, 10.6 h) cleared 0 bars at every height: it learned to hop in
+        # place (body 0.19 -> 0.48 m) without moving forward (0.05-0.30 m of the 0.39-0.56 m to the bar). jump-trot's
+        # recipe instead, Go2-sized: 85% of tries start running at the bar (0.8-1.8 m/s; the Go2 trot clip is 1.4), 70%
+        # of those mid-stride, bar 0.6-1.5 m away; exams at 1.2 m/s from 1.0 m. From scratch, 0-40 ms delay.
+        # Gate (end of the 3.5 h piece): any bar > 0; win: >= 0.5 on 10 and 14 cm.
+        name="go2jump2", script="train_jump.py", start=None,
+        args=["--body", "go2", "--latency-min-ms", "0", "--latency-max-ms", "40", "--max-steps", "200",
+              "--approach", "0.6", "1.5", "--approach-speed", "1.8", "--approach-speed-min", "0.8", "--run-frac", "0.85",
+              "--gait-start", "0.7", "--exam-speed", "1.2", "--exam-dist", "1.0",
+              "--exam-heights", "0.10", "0.14", "0.17", "0.21"],
+        finals=[]),
     "go2-getup-pilot": dict(
         # 31 Oct, owner's Go2 order: motion -> jumps -> shove recovery. First get-up brain on the Go2 body (getup_env
         # body sizes: heights x0.70, "standing" above 0.22 m, shoves x0.80), from scratch, stand goal (selfright needs
