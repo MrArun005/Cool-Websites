@@ -75,6 +75,9 @@ try:   # the numpy brain (MjxImitatePolicy) and the clip tables work without JAX
     import jax
     import jax.numpy as jp
     from mujoco import mjx
+    # full float32 matmuls: TF32 (the default on RTX 30xx/40xx, A100, H100) breaks the contact solver -- on a 4090 the
+    # warm Go2 brain fell in 59% of eval tries (nan without the blow-up guard) against 7% at this precision
+    jax.config.update("jax_default_matmul_precision", os.environ.get("JAX_DEFAULT_MATMUL_PRECISION", "highest"))
 except ImportError:   # pragma: no cover
     jax = jp = mjx = None
 
