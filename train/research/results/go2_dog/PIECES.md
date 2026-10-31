@@ -25,3 +25,14 @@ Still climbing -> piece 2 (bolt-go2-dog-p2, 3.5 h) and an A/B with joint damping
 
 Lower damping: a slightly better canter, about twice the falls, the same mean. The choice changes little at this stage;
 training stays on 2.0 (Menagerie's file) until the real Go2's damping is measured on hardware.
+
+## Piece 2 (Kaggle bolt-go2-dog-p2, 3.3M -> 8.9M): still climbing
+
+| steps | mean tracking | walk | trot | pace | canter | sit | lie | fall share | trot / canter speed |
+|---|---|---|---|---|---|---|---|---|---|
+| 4.0M | 0.777 | 0.782 | 0.767 | 0.804 | 0.342 | 0.919 | 0.891 | 5.8% | 73% / 29% |
+| 6.0M | 0.790 | 0.789 | 0.773 | 0.810 | 0.364 | 0.944 | 0.910 | 7.7% | 75% / 29% |
+| 8.0M | 0.803 | 0.801 | 0.776 | 0.820 | 0.410 | 0.947 | 0.918 | 5.8% | 74% / 37% |
+| 8.9M | 0.808 | 0.800 | 0.795 | 0.815 | 0.406 | 0.958 | 0.923 | 9.6% | 77% / 32% |
+
++0.04 mean in 3.5 h; falls still in the canter and moving sit/lie starts. Piece 3 running (bolt-go2-dog-p3).
