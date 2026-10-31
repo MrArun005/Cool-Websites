@@ -947,7 +947,7 @@ def train(args):
 
     phases = curriculum(args.terrain_cm, args.terrain_at, args.steps)
     hidden = W["hidden"] if W else (512, 256)
-    reward_scale = args.reward_scaling or (W["reward_scale"] if W else 1.0)
+    reward_scale = args.reward_scaling or (W.get("reward_scale", 1.0) if W else 1.0)   # (GPU params.pkl before 31 Oct: none saved)
     start, log, base0 = time.time(), [], int(W["steps"]) if W else 0
     done_steps = 0   # steps of the finished phases
     q = args.quick
@@ -988,7 +988,7 @@ def train(args):
                     raise TimeoutError(f"time budget of {args.hours} h used up at {off + int(n)} steps")
 
             def save(step, make_policy, params, base=base, off=done_steps, cm=cm):
-                P = to_numpy(params, dict(steps=base + int(step), source="mjx_imitate", terrain_cm=cm, **tags))
+                P = to_numpy(params, dict(steps=base + int(step), source="mjx_imitate", terrain_cm=cm, reward_scale=reward_scale, **tags))
                 (out / "checkpoints" / f"params_{off + int(step)}.pkl").write_bytes(pickle.dumps(P))
                 (out / "params.pkl").write_bytes(pickle.dumps(P))
 
@@ -1003,7 +1003,7 @@ def train(args):
                 restore_params=restore, restore_value_fn=True, seed=args.seed + k, deterministic_eval=True,
                 progress_fn=progress, policy_params_fn=save)
             ran = max(last[0], n_steps)
-            W = to_numpy(params, dict(steps=base + ran, source="mjx_imitate", terrain_cm=cm, **tags))   # the next phase starts here
+            W = to_numpy(params, dict(steps=base + ran, source="mjx_imitate", terrain_cm=cm, reward_scale=reward_scale, **tags))   # the next phase starts here
             (out / "params.pkl").write_bytes(pickle.dumps(W))
             done_steps += ran
     except TimeoutError as e:
