@@ -73,3 +73,7 @@ Real exam (imitate_env.exam, all clips, 4 tries, + exam_steer trot/canter +-0.4/
 No falls in any gait; every fall is a posture command given on the move (trot -> sit 4/4, trot -> lie 2/4,
 walk -> sit 1/4). Run c (from run b's final brain) adds moving starts (--moving-rate 0.3, walk/trot -> sit/lie) for
 exactly these.
+
+Final run b brain (241M total, models/bolt-go2-gpu-241M): mean 0.838, walk/trot/pace 0.820/0.823/0.839, canter 0.597
+(51% pace), sit/lie/getup 0.960/0.926/0.928, steer trot 0.84 / canter 0.50, 0/20/40 ms 0.84/0.87/0.84 with no falls,
+falls 11.5% (moving trot->sit 4/4, trot->lie 1/4, walk->sit 1/4). Best Go2 brain so far; run c started from it.
