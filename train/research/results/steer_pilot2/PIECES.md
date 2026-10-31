@@ -24,3 +24,10 @@ trot steering 0.89, canter steering 0.63, but canter tracking 0.641 with 1 fall 
 In-run: steer_mean 0.69-0.76, canter 0.711-0.726 at 78-83% speed, 0 falls. Best 56.5M saved as
 models/bolt-dog-steer-56.5M: local steering mean 0.79 (48M 0.76), canter steering 0.71 (0.63), canter tracking 0.659 (0.641,
 38M 0.710), 1 canter fall in 12. Piece 4 running.
+
+## Piece 4 (Kaggle bolt-steer-pilot2-p4, 56.5M -> 63M): flat -> the CPU steering line ends
+
+In-run steer_mean 0.72-0.75, canter 0.717-0.732 at 83-87% speed, 0 falls. Local check of its best (61M) vs 56.5M: steering
+mean 0.81 vs 0.79, canter steering 0.74 vs 0.71, trot 0.879 vs 0.877, canter tracking 0.658 vs 0.659, 1 canter fall
+in 12 for both. Within the exam's noise -> flat (owner rule: no more flat runs). steer-56.5M stays the steering brain;
+steering continues inside the Go2 GPU run (steer weight 0.6) instead of more CPU pieces.
