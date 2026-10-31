@@ -18,7 +18,7 @@ step-by-step version for the Go2 motion brain.
 |---|---|
 | Robot body | none yet: a Go2 **EDU** is needed (other Go2 models block low-level motor control) |
 | Trained brain for the Go2 body | done for motion (489M); jumps, recovery training; MasterMind not started |
-| Bridge: robot sensors -> brain -> motor commands | **not started** (this plan, phase 1) |
+| Bridge: robot sensors -> brain -> motor commands | **started**: `controller.py` builds the inputs and targets exactly as training (`test_deploy.py`: inputs 1e-7, targets 1e-15, clip switch identical); SDK side not yet |
 | Safety layer | **not started** (phase 1) |
 | Rehearsal in the vendor simulator | **not started** (phase 2) |
 | Inputs the real robot cannot measure | **open**: the brain reads body speed (3) and body height (1), which no Go2 sensor gives (phase 3) |
@@ -97,8 +97,8 @@ MasterMind switching.
 |---|---|---|
 | 1.1 toolchain | network, CPU | stand held by plain PD in unitree_mujoco |
 | 1.2 joint map | 1.1 | pose test passes |
-| 1.3 obs builder | 1.2 | matches ImitateEnv to 1e-6 |
-| 1.4 brain runner | - | matches MjxImitatePolicy |
+| 1.3 obs builder | 1.2 | matches ImitateEnv to 1e-6: **PASS** (31 Oct, `test_deploy.py`) |
+| 1.4 brain runner | - | matches MjxImitatePolicy: **PASS** (the controller uses it directly) |
 | 1.5-1.7 loop, safety, logger | 1.1-1.4 | runs 10 min without a fault in unitree_mujoco |
 | 2 rehearsal | phase 1 | exam passes, or gaps listed and fed back |
 | 3 input gap | GPU | brain with real sensors only passes phase 2 |
@@ -106,3 +106,11 @@ MasterMind switching.
 | 5 reliability | 4 | 30 min of mixed commands without a fall |
 
 All results are simulation until phase 4. Nothing here calls an external AI service.
+
+## Log
+
+* 31 Oct: `controller.py` + `test_deploy.py` pass (480 steps over 8 clips, a walk -> trot switch, steering).
+  Found while reading the vendor files: unitree_mujoco's Go2 model has joint damping 0.1 (+ armature 0.01, friction
+  loss 0.2); ours trains with Menagerie's 2.0. A real mismatch to settle in phase 2 (our damping A/B on the CPU
+  pilots said the choice matters). Installing the vendor SDK (cyclonedds + unitree_sdk2_python) in this cloud session
+  needs the owner's OK (installing downloaded code is gated); step 1.1 waits on that.
