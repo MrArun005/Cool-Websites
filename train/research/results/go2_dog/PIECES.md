@@ -36,3 +36,10 @@ training stays on 2.0 (Menagerie's file) until the real Go2's damping is measure
 | 8.9M | 0.808 | 0.800 | 0.795 | 0.815 | 0.406 | 0.958 | 0.923 | 9.6% | 77% / 32% |
 
 +0.04 mean in 3.5 h; falls still in the canter and moving sit/lie starts. Piece 3 running (bolt-go2-dog-p3).
+
+## Piece 3 (Kaggle bolt-go2-dog-p3, 8.9M -> 14.6M): slowing
+
+10M 0.803, 11M 0.807, 12M 0.804, 13M 0.815, 14M 0.809, **14.6M 0.819** (walk 0.817, trot 0.819, pace 0.833, canter 0.412,
+sit 0.947, lie 0.929; trot speed 80%, canter 38%; falls 9.6%, canter and moving sit/lie). +0.011 in 3.5 h (piece 2:
++0.042). The canter is the bottleneck (flat at ~0.40; the Go2 knee drive is rated 15.7 rad/s). Piece 4 running; if flat,
+the next Go2 step is the GPU trainer (mjx) port for far more steps, not more CPU pieces.
