@@ -27,6 +27,14 @@ Peng's global root terms (root_global > 0): the two terms, the new reference roo
 on identical states and reference roots, tries with a forced clip switch; alone with
     <cpu python> test_mjx_imitate.py dump-root-global <cases.pkl>   then   <jax python> test_mjx_imitate.py check-root-global <cases.pkl>
 
+The Go2 body with steering (MjxImitate(body="go2"), ImitateEnv(body="go2"), the motor brake on), each with steering off
+and on (steer_max 1, a fixed command of +-0.8 rad/s per try): the 75 inputs, the reward terms (steer included), the total
+reward and the end-of-try decision on identical states; the reference-state start; one control step of physics; whole
+tries replayed open-loop in MJX with the CPU env's actions (obs, reward and end of try per step); the steering draws; and
+the warm-started Go2 brain against ImitatePolicy.act:
+    <cpu python> test_mjx_imitate.py dump-go2 <run dir with policy.zip + vecnormalize.pkl> <warm.pkl> <cases.pkl>
+    <jax python> test_mjx_imitate.py check-go2 <warm.pkl> <cases.pkl>
+
 Unit tests (CPU stack; landing and moving starts keep the 75-input layout, rate 0 leaves the env as it was):
     <cpu python> -m unittest test_mjx_imitate
 """
@@ -1072,6 +1080,279 @@ def check(warm_path, cases):
     print(f"[warm start] critic on them: {v.min():.2f} .. {v.max():.2f} (SB3 normalized-return units)")
 
 
+class Go2TablesTest(unittest.TestCase):
+    """mjx_imitate's copies for the Go2 path equal imitate_env's (CPU stack only; mjx_imitate imports without JAX)."""
+
+    def test_go2_clip_tables(self):
+        import mjx_imitate as M
+        from imitate_env import ALL_CLIPS, Clip
+        T = M.clip_tables(ALL_CLIPS, prefix="go2_")
+        for i, name in enumerate(ALL_CLIPS):
+            c = Clip(name, "go2_")
+            self.assertEqual((T["n"][i], T["fps"][i], T["loop"][i]), (c.n, c.fps, c.loop))
+            for k in M.KEYS:
+                np.testing.assert_allclose(T[k][i][:c.n], getattr(c, k), atol=1e-12, err_msg=f"{name} {k}")
+
+    def test_steer_constants(self):
+        import imitate_env
+        import mjx_imitate as M
+        self.assertEqual(M.STEER, imitate_env.STEER)
+        self.assertEqual(M.STEER_CLIPS, imitate_env.STEER_CLIPS)
+
+
+def dump_go2(run_dir, warm_path, out, per_clip=2, steps=30, seed=0):
+    """The Go2 body (ImitateEnv(body="go2"), motor brake on), steering off and on: per clip `per_clip` tries of up to `steps`
+    steps of the brain in run_dir (plus noise), each with its start state, the actions, the env's outputs, and the senses
+    recomputed on up-to-date kinematics (as dump); then 20 randomized observations for the warm-start check."""
+    import os
+    import mujoco
+    os.environ["BOLT_BODY"] = "go2"   # ImitatePolicy's normalizer env, as train_imitate.py --body go2
+    from imitate_env import ALL_CLIPS, ImitateEnv, ImitatePolicy
+    from mjx_imitate import MjxImitatePolicy
+    pol, npol = ImitatePolicy(run_dir), MjxImitatePolicy(warm_path)
+    rng = np.random.default_rng(seed)
+    cases = {}
+    for steer_max in (0.0, 1.0):
+        env = ImitateEnv(body="go2", randomize=False, clips=ALL_CLIPS, motor_brake=True, steer_max=steer_max)
+        assert env.motor_brake[0] and env.body == "go2"
+        tries = []
+        for ci, name in enumerate(ALL_CLIPS):
+            c = env.clips[name]
+            for k in range(per_clip):
+                tau0 = float(rng.uniform(0, c.length if c.loop else c.length + 0.3))
+                env.exam_start = (name, tau0)
+                env.exam_steer = (0.8 if k % 2 else -0.8) if steer_max else None
+                obs, _ = env.reset(seed=3000 + 100 * ci + k)
+                u, _, vt = np.linalg.svd(env.ref("tilt"))
+                Rm = env._rotation() @ (u @ vt).T
+                start = dict(clip=ci, tau0=tau0, steer=env.steer, yaw=float(np.arctan2(Rm[1, 0], Rm[0, 0])), qpos=env.data.qpos.copy(),
+                             qvel=env.data.qvel.copy(), ctrl=env.data.ctrl.copy(), obs=obs, limit=env.limit)
+                rows = []
+                for t in range(steps):
+                    pre = dict(clip=ci, tau0=env.tau0, t=env.t, limit=env.limit, steer=env.steer, last_action=env.last_action.copy(), qpos=env.data.qpos.copy(),
+                               qvel=env.data.qvel.copy(), ctrl=env.data.ctrl.copy())
+                    a = np.clip(pol.act(obs) + rng.normal(0, 0.1, 12), -1, 1)
+                    obs, r, fell, done, info = env.step(a)
+                    d = env.data
+                    d2 = mujoco.MjData(env.model)   # the senses on up-to-date kinematics (as dump)
+                    d2.qpos[:], d2.qvel[:], d2.ctrl[:] = d.qpos, d.qvel, d.ctrl
+                    mujoco.mj_forward(env.model, d2)
+                    env.data = d2
+                    f_obs, (f_terms, f_err), f_bof = env._obs(), env.tracking(), env.body_on_floor()
+                    env.data = d
+                    f_fell = abs(f_err["height_err"]) > env.lost_h or f_err["tilt"] > 0.8 or (f_bof and not env.ref("height") < env.floor_ok_h)
+                    selfc = sum(1 for cc in d.contact[:d.ncon] if env.floor not in (cc.geom1, cc.geom2))
+                    rows.append(dict(pre=pre, action=a, obs=obs, reward=r, fell=fell, done=done, terms={k: info[f"r_{k}"] for k in f_terms},
+                                     f_obs=f_obs, f_terms=f_terms, f_err=f_err, f_bof=f_bof, f_fell=bool(f_fell), f_reward=sum(env.weights.get(k, env.steer_weight) * v for k, v in f_terms.items()),
+                                     qpos=d.qpos.copy(), qvel=d.qvel.copy(), selfc=selfc, t=env.t))
+                    if fell or done:
+                        break
+                tries.append(dict(start=start, rows=rows))
+        cases[steer_max] = tries
+    # the end-of-try decision near its limits: states of those tries moved down/up (-20..+5 cm) and tilted (0..1.2 rad)
+    edges = []
+    for t in cases[0.0]:
+        for r in t["rows"][::3]:
+            env.clip, env.tau0, env.t = env.clips[ALL_CLIPS[r["pre"]["clip"]]], r["pre"]["tau0"], r["t"]
+            d = env.data
+            d.qpos[:], d.qvel[:] = r["qpos"], r["qvel"]
+            d.qpos[2] += rng.uniform(-0.2, 0.05)
+            ax = rng.normal(size=3)
+            q = np.zeros(4)
+            mujoco.mju_axisAngle2Quat(q, ax / np.linalg.norm(ax), rng.uniform(0, 1.2))
+            mujoco.mju_mulQuat(d.qpos[3:7], q, r["qpos"][3:7].copy())
+            mujoco.mj_forward(env.model, d)
+            terms, err = env.tracking()
+            bof = env.body_on_floor()
+            fell = abs(err["height_err"]) > env.lost_h or err["tilt"] > 0.8 or (bof and not env.ref("height") < env.floor_ok_h)
+            edges.append(dict(clip=r["pre"]["clip"], tau0=env.tau0, t=env.t, qpos=d.qpos.copy(), qvel=d.qvel.copy(), f_fell=bool(fell),
+                              f_bof=bool(bof), f_err=err))
+    envr = ImitateEnv(body="go2", randomize=True, clips=ALL_CLIPS, motor_brake=True)
+    obs_set = []
+    for k in range(20):
+        o, _ = envr.reset(seed=3500 + k)
+        for _ in range(int(rng.integers(0, 30))):
+            o, _, f, dn, _ = envr.step(pol.act(o))
+            if f or dn:
+                break
+        obs_set.append(o)
+    obs_set = np.array(obs_set)
+    acts, nacts = np.array([pol.act(o) for o in obs_set]), np.array([npol.act(o) for o in obs_set])
+    print(f"[go2] numpy brain vs ImitatePolicy.act: max |diff| {np.abs(acts - nacts).max():.2e}")
+    n = sum(len(t["rows"]) for v in cases.values() for t in v)
+    Path(out).write_bytes(pickle.dumps(dict(cases=cases, edges=edges, obs=obs_set, acts=acts, clips=ALL_CLIPS)))
+    print(f"[go2] {sum(len(v) for v in cases.values())} tries, {n} steps -> {out}")
+
+
+def check_go2(warm_path, cases):
+    """MjxImitate(body="go2") against the dump_go2 cases, steering off and on (module docstring)."""
+    import jax
+    import jax.numpy as jp
+    from mujoco import mjx
+    from brax.training.agents.ppo import networks as ppo_networks
+    import mjx_imitate as M
+    C = pickle.loads(Path(cases).read_bytes())
+    out = {}
+    for steer_max, tries in C["cases"].items():
+        env = M.MjxImitate(body="go2", randomize=False, switch_rate=0.0, motor_brake=True, steer_max=steer_max)
+        env100 = M.MjxImitate(body="go2", randomize=False, switch_rate=0.0, motor_brake=True, steer_max=steer_max, iterations=100, ls_iterations=50)
+        tag = f"go2, steer {'off' if not steer_max else f'max {steer_max:g}'}"
+
+        def info_of(s, e=env):
+            i = dict(kp=jp.float32(1), mass=jp.float32(1), fric=jp.float32(1), clip=jp.int32(s["clip"]), tau0=jp.float32(s["tau0"]),
+                     t=jp.int32(s["t"]), last_action=jp.array(s["last_action"], jp.float32), trunc=jp.float32(0), limit=jp.int32(s.get("limit", 10 ** 6)))
+            if e.steer_max:
+                i["steer"] = jp.float32(s["steer"])
+            return i
+
+        @jax.jit
+        def senses(qpos, qvel, info):
+            d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel))
+            terms, err = env.tracking(d, info)
+            fell = (jp.abs(err["height_err"]) > env.lost_h) | (err["tilt"] > 0.8) | (env.body_on_floor(d) & ~(env.ref(info, "height") < env.floor_ok_h))
+            reward = sum(env.weights.get(k, env.steer_weight) * v for k, v in terms.items())
+            return env.obs(d, info), terms, err, env.body_on_floor(d), fell, reward
+
+        def state_of(e, d, info):
+            metrics = {f"r_{k}": jp.float32(0) for k in M.WEIGHTS} | dict(fell=jp.float32(0), canter=jp.float32(0), canter_steps=jp.float32(0))
+            if e.steer_max:
+                metrics["r_steer"] = jp.float32(0)
+            return e.State(pipeline_state=d, obs=jp.zeros(75), reward=jp.float32(0), done=jp.float32(0), metrics=metrics,
+                           info=info | dict(rng=jax.random.PRNGKey(0)))
+
+        steps = {}
+        for name, e in (("", env), ("100", env100)):
+            @jax.jit
+            def one_step(qpos, qvel, ctrl, info, a, e=e):
+                d = mjx.forward(e.mx, mjx.make_data(e.mx).replace(qpos=qpos, qvel=qvel, ctrl=ctrl))
+                n = e.step(state_of(e, d, info), a)
+                return n.pipeline_state.qpos, n.obs, n.reward, n.done
+            steps[name] = one_step
+        rows = [r for t in tries for r in t["rows"]]
+        # 1. senses, reward terms, total reward and end of try on identical states
+        do, dt, dr, dfell, nfell, ddone_env = [], {}, [], 0, 0, 0
+        for r in rows:
+            info = info_of(dict(r["pre"], t=r["t"], last_action=r["action"]))
+            o, terms, err, bof, fell, rew = senses(jp.array(r["qpos"], jp.float32), jp.array(r["qvel"], jp.float32), info)
+            do.append(np.abs(np.asarray(o) - r["f_obs"]))
+            assert set(terms) == set(r["f_terms"]), (set(terms), set(r["f_terms"]))
+            for k in terms:
+                dt.setdefault(k, []).append(abs(float(terms[k]) - r["f_terms"][k]))
+            dr.append(abs(float(rew) - r["f_reward"]))
+            dfell += bool(fell) != r["f_fell"]
+            nfell += r["f_fell"]
+            ddone_env += bool(fell) != r["fell"]
+        do = np.array(do)
+        worst = np.argsort(do.max(0))[::-1][:3]
+        print(f"[{tag}: senses] {len(do)} states: obs max |diff| {do.max():.2e} (worst inputs {worst.tolist()}: {[f'{do.max(0)[i]:.1e}' for i in worst]}); "
+              "reward terms max |diff| " + ", ".join(f"{k} {max(v):.1e}" for k, v in dt.items()) + f"; reward {max(dr):.1e}; "
+              f"end of try disagrees in {dfell} (CPU ends {nfell}; vs the CPU step's own flag, on stale kinematics: {ddone_env})")
+        # 2. reference-state starts
+        dq = []
+        for t in tries:
+            s = t["start"]
+            info = info_of(dict(s, t=0, last_action=np.zeros(12)))
+            d = jax.jit(env.start_data)(info, jp.float32(s["yaw"]))
+            q = np.array(d.qpos)
+            if np.dot(q[3:7], s["qpos"][3:7]) < 0:
+                q[3:7] *= -1
+            dq.append(max(np.abs(q - s["qpos"]).max(), np.abs(np.asarray(d.qvel) - s["qvel"]).max(), np.abs(np.asarray(env.obs(d, info)) - s["obs"]).max()))
+        print(f"[{tag}: start] {len(dq)} reference-state starts: max |diff| qpos/qvel/obs {max(dq):.2e} (median {np.median(dq):.1e})")
+        # 3. one control step of physics from identical states (MJX solver 5/8 iterations, and MuJoCo's 100/50)
+        res = {}
+        for name, one_step in steps.items():
+            dp, do1, drw, dd = [], [], [], 0
+            for r in rows:
+                p = r["pre"]
+                q, o, rw, dn = one_step(jp.array(p["qpos"], jp.float32), jp.array(p["qvel"], jp.float32), jp.array(p["ctrl"], jp.float32),
+                                        info_of(p), jp.array(r["action"], jp.float32))
+                dp.append(np.abs(np.asarray(q)[7:19] - r["qpos"][7:19]).max())
+                do1.append(np.abs(np.asarray(o) - r["obs"]).max() if not (r["fell"] or r["done"]) else 0.0)   # (MJX restarts a finished try)
+                drw.append(abs(float(rw) - r["reward"]))
+                dd += bool(dn) != (r["fell"] or r["done"])
+            res[name] = (dp, do1, drw, dd)
+        pc = lambda x: ", ".join(f"p{k} {np.percentile(x, k):.1e}" for k in (50, 90, 99)) + f", max {max(x):.1e}"
+        for name, (dp, do1, drw, dd) in res.items():
+            print(f"[{tag}: one step{', solver 100/50' if name else ''}] {len(dp)} steps: joint angles |diff| {pc(dp)} rad; obs |diff| {pc(do1)}; "
+                  f"reward |diff| {pc(drw)}; end of try disagrees in {dd}")
+        print(f"[{tag}] CPU self-contacts (absent in MJX) in {sum(r['selfc'] > 0 for r in rows)} of {len(rows)} states")
+        # 4. whole tries replayed open-loop in MJX with the CPU actions: obs, reward, end of try per step
+        step = jax.jit(env.step)
+        by_k, rsum, ends = {}, [], [0, 0]
+        for t in tries:
+            s = t["start"]
+            info = info_of(dict(s, t=0, last_action=np.zeros(12), limit=s["limit"]))
+            d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=jp.array(s["qpos"], jp.float32), qvel=jp.array(s["qvel"], jp.float32),
+                                                                  ctrl=jp.array(s["ctrl"], jp.float32)))
+            st = state_of(env, d, info)
+            rc, rm = 0.0, 0.0
+            for k, r in enumerate(t["rows"]):
+                st = step(st, jp.array(r["action"], jp.float32))
+                rc, rm = rc + r["reward"], rm + float(st.reward)
+                end_cpu, end_mjx = r["fell"] or r["done"], bool(st.done)
+                if end_cpu or end_mjx:
+                    ends[0] += 1
+                    ends[1] += end_cpu == end_mjx
+                    break
+                by_k.setdefault(k + 1, []).append((np.abs(np.asarray(st.obs) - r["obs"]).max(), abs(float(st.reward) - r["reward"])))
+            rsum.append(abs(rc - rm) / max(len(t["rows"]), 1))
+        hz = [h for h in (1, 2, 5, 10, 20, 30) if h in by_k]
+        print(f"[{tag}: open-loop tries] {len(tries)} tries: " + "; ".join(
+            f"step {h}: obs |diff| median {np.median([x[0] for x in by_k[h]]):.1e} max {max(x[0] for x in by_k[h]):.1e}, reward |diff| max {max(x[1] for x in by_k[h]):.1e} (n {len(by_k[h])})" for h in hz)
+            + f"; reward per step over the try |diff| max {max(rsum):.3f}; ends {ends[0]}: the same step in {ends[1]}")
+        out[steer_max] = dict(obs=do.max(), terms={k: max(v) for k, v in dt.items()}, reward=max(dr), fell=dfell)
+        # 5. steering draws (training): share with a command, range, redraw rate
+        if steer_max:
+            ks = jax.random.split(jax.random.PRNGKey(5), 20000)
+            v = np.asarray(jax.vmap(env.draw_steer)(ks))
+            print(f"[{tag}: draws] {len(v)} draws: share with a command {np.mean(v != 0):.3f} (want {env.steer_share:g}), range {v.min():.3f} .. {v.max():.3f}, "
+                  f"mean {v.mean():+.3f}")
+            st = jax.jit(jax.vmap(env.reset))(jax.random.split(jax.random.PRNGKey(6), 64))
+            step_v = jax.jit(jax.vmap(env.step))
+            s0, changes, n = np.asarray(st.info["steer"]), 0, 0
+            for _ in range(50):
+                st = step_v(st, jp.zeros((64, 12)))
+                s1 = np.asarray(st.info["steer"])
+                live = np.asarray(st.done) == 0
+                changes += int(np.sum((s1 != s0) & live))
+                n += int(live.sum())
+                s0 = s1
+            print(f"[{tag}: redraws] {changes} command changes in {n} live env-steps: {changes / max(n, 1) / env.dt:.2f}/s "
+                  f"(want ~{env.steer_change * env.steer_share + env.steer_change * (1 - env.steer_share) * env.steer_share:.2f}/s: a redraw changes "
+                  "the command unless 0 -> 0)")
+    # 6. the end-of-try decision near its limits (moved and tilted states; MJX's without self-contacts)
+    if "edges" in C:
+        env = M.MjxImitate(body="go2", randomize=False, switch_rate=0.0)
+
+        @jax.jit
+        def ends(qpos, qvel, info):
+            d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel))
+            _, err = env.tracking(d, info)
+            bof = env.body_on_floor(d)
+            return (jp.abs(err["height_err"]) > env.lost_h) | (err["tilt"] > 0.8) | (bof & ~(env.ref(info, "height") < env.floor_ok_h)), bof, err
+
+        dis, dbof, n_end, n_bof, near = 0, 0, 0, 0, 0
+        for e in C["edges"]:
+            info = dict(clip=jp.int32(e["clip"]), tau0=jp.float32(e["tau0"]), t=jp.int32(e["t"]))
+            fell, bof, err = ends(jp.array(e["qpos"], jp.float32), jp.array(e["qvel"], jp.float32), info)
+            bad = bool(fell) != e["f_fell"]
+            dis += bad
+            dbof += bool(bof) != e["f_bof"]
+            n_end += e["f_fell"]
+            n_bof += e["f_bof"]
+            near += bad and (abs(abs(e["f_err"]["height_err"]) - env.lost_h) < 2e-3 or abs(e["f_err"]["tilt"] - 0.8) < 2e-3)
+        print(f"[go2: end of try near its limits] {len(C['edges'])} moved/tilted states (CPU ends {n_end}, body on floor {n_bof}): "
+              f"end-of-try decision differs in {dis} ({near} within 2 mm / 2 mrad of a limit), body-on-floor in {dbof}")
+    # 7. the warm-started Go2 brain in Brax against ImitatePolicy.act
+    W = pickle.loads(Path(warm_path).read_bytes())
+    nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(75, 12)
+    params = M.to_brax(W)
+    act = jax.jit(ppo_networks.make_inference_fn(nets)(params, deterministic=True))
+    a = np.array([np.clip(np.asarray(act(jp.array(o), jax.random.PRNGKey(0))[0]), -1, 1) for o in C["obs"]])
+    print(f"[go2 warm start] body {W.get('body', 'bolt')}: Brax deterministic action vs ImitatePolicy.act on {len(a)} obs: max |diff| {np.abs(a - C['acts']).max():.2e}")
+    return out
+
+
 def pol8():
     """The 8-slot brain the heading pilot started from (run 18g 35.5M), for the root-global tries."""
     from imitate_env import ImitatePolicy
@@ -1079,7 +1360,11 @@ def pol8():
 
 
 if __name__ == "__main__":
-    if sys.argv[1] == "dump-root-global":       # <cpu python> test_mjx_imitate.py dump-root-global <cases.pkl>
+    if sys.argv[1] == "dump-go2":               # <cpu python> test_mjx_imitate.py dump-go2 <run dir> <warm.pkl> <cases.pkl>
+        dump_go2(*sys.argv[2:5])
+    elif sys.argv[1] == "check-go2":            # <jax python> test_mjx_imitate.py check-go2 <warm.pkl> <cases.pkl>
+        check_go2(*sys.argv[2:4])
+    elif sys.argv[1] == "dump-root-global":       # <cpu python> test_mjx_imitate.py dump-root-global <cases.pkl>
         Path(sys.argv[2]).write_bytes(pickle.dumps(dict(root_global=dump_root_global(pol8(), np.random.default_rng(0)))))
     elif sys.argv[1] == "check-root-global":    # <jax python> test_mjx_imitate.py check-root-global <cases.pkl>
         import mjx_imitate

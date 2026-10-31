@@ -22,6 +22,13 @@
         --steps 1000000000 --hours 10.5 --terrain-cm 0 5 10 --terrain-at 0 0.3 0.6 --push-interval 2 --push-prob 0.5 \
         --push-speed 1.0 --landing-rate 0.2 --moving-rate 0.2 --transition-weight 0.3 --latency-min-ms 0 --latency-max-ms 40 \
         --obs-noise 1.0 --evals 40 --extra "--reward-scaling 0.246 --switch-rate 0.3 --seed 6" -o /tmp/kt
+    # the Unitree Go2 body (--body go2) with steering, warm-started from the CPU Go2 brain (mjx_imitate.py warm
+    # <run>/best/policy.zip warm.pkl: it records body go2, which train --body go2 checks; upload it as a dataset). The CPU
+    # go2-dog-pilot recipe (switches 0.3/s, 0-40 ms delay per try, brake on) plus steering up to 1 rad/s. The kernel carries
+    # robot_bodies.py, the Go2 model + LICENSE and the go2_ clips
+    python kaggle/make_kernel.py --user <user> --job imitate --body go2 --slug bolt-go2-gpu --warm-dataset <user>/bolt-go2-warm \
+        --steps 1000000000 --hours 10.5 --steer-max 1.0 --latency-min-ms 0 --latency-max-ms 40 \
+        --evals 40 --extra "--switch-rate 0.3 --seed 1" -o /tmp/kgo2
     MUJOCO_GL=osmesa python /tmp/kg3/kernel.py --local /tmp/kg3_run   # optional local smoke test: runs the trainer
                                                                       # with --steps 20000 --envs 16 --quick in /tmp/kg3_run
 
@@ -31,7 +38,10 @@ for imitate also the dog clips and the warm-start brain) and runs the trainer, k
 Embedded files are lzma-compressed (Kaggle refuses scripts over ~1 MB). The imitate job always carries pose_reached.py
 (moving starts) and, with --landing-rate > 0, research/results/landing_starts.npz slimmed to the arrays mjx_imitate
 reads, in float32 (what MjxImitate turns them into anyway). Every mjx_imitate.py train flag of steps 1-3, the real-robot
-gaps (latency, sensor noise, motor lag) and the motor brake passes through; --extra passes any other train flags verbatim.
+gaps (latency, sensor noise, motor lag), the motor brake, steering (--steer-*) and the body (--body, --joint-damping)
+passes through; --extra passes any other train flags verbatim. --body go2 embeds robot_bodies.py, the Go2 model
+(robots/unitree_go2/go2_nomesh.xml) with its LICENSE and the clips retargeted onto the Go2 (dogmotion/clips/go2_*.npz)
+instead of bolt.xml and Bolt's clips: ~0.45 MB, the same as Bolt's kernel; the warm brain comes as a dataset either way.
 """
 import argparse
 import base64
@@ -95,9 +105,13 @@ def main():
                      ("--terrain-clips", dict(nargs="+")), ("--terrain-spread", dict(type=float)), ("--terrain-seed", dict(type=int)),
                      ("--push-interval", dict(type=float)), ("--push-prob", dict(type=float)), ("--push-speed", dict(type=float)),
                      ("--push-spin", dict(type=float)), ("--root-global", dict(type=float)),
+                     ("--steer-max", dict(type=float)), ("--steer-share", dict(type=float)), ("--steer-change", dict(type=float)),
+                     ("--steer-weight", dict(type=float)), ("--joint-damping", dict(type=float)),
                      ("--brake-speed", dict(type=float)), ("--brake-gain", dict(type=float))]:
         ap.add_argument(flag, **kw, help="imitate: passed to mjx_imitate.py train (default: its own)")
     ap.add_argument("--motor-brake", action=argparse.BooleanOptionalAction, help="imitate: passed on (default: mjx_imitate's, on)")
+    ap.add_argument("--body", default="bolt", help="imitate: bolt, or a real robot of robot_bodies.BODIES (go2): its model, clips "
+                    "and motors (passed on as mjx_imitate.py train --body)")
     ap.add_argument("--extra", default="", help='imitate: more train flags, verbatim (e.g. "--reward-scaling 0.246 --seed 3")')
     ap.add_argument("-o", "--out", required=True)
     args = ap.parse_args()
@@ -110,8 +124,17 @@ def main():
         cmd = ["mjx_run.py", "--steps", str(args.steps), "--envs", str(args.envs), "--evals", str(args.evals or 40), "--out", "run"]
     else:
         from mjx_imitate import ALL_CLIPS   # numpy + mujoco only
-        files = {n: enc(HERE / n) for n in ("bolt.xml", "mjx_imitate.py", "pose_reached.py")}
-        files.update({f"dogmotion/clips/{c}.npz": enc(HERE / "dogmotion" / "clips" / f"{c}.npz") for c in ALL_CLIPS})
+        if args.body == "bolt":
+            files = {n: enc(HERE / n) for n in ("bolt.xml", "mjx_imitate.py", "pose_reached.py")}
+            prefix = ""
+        else:   # a real robot: its table entry's model (and licence, kept next to it) and its retargeted clips
+            from robot_bodies import BODIES
+            assert args.body in BODIES, f"unknown body {args.body!r}: bolt or one of {sorted(BODIES)}"
+            assert not args.landing_rate and not any(args.terrain_cm or []), "landing starts and terrain are Bolt's"
+            model = Path(BODIES[args.body]["xml"])
+            files = {n: enc(HERE / n) for n in ("mjx_imitate.py", "pose_reached.py", "robot_bodies.py", str(model), str(model.parent / "LICENSE"))}
+            prefix = BODIES[args.body]["clip_prefix"]
+        files.update({f"dogmotion/clips/{prefix}{c}.npz": enc(HERE / "dogmotion" / "clips" / f"{prefix}{c}.npz") for c in ALL_CLIPS})
         cmd = ["mjx_imitate.py", "train", "--steps", str(args.steps), "--envs", str(args.envs), "--evals", str(args.evals or 21),
                "--out", "run", "--hours", str(args.hours)]
         if args.warm:
@@ -121,8 +144,8 @@ def main():
         for k, v in vars(args).items():   # the step 1-3 and brake flags given here
             flag = "--" + k.replace("_", "-")
             if v is None or flag not in ap._option_string_actions or k in ("user", "job", "slug", "warm", "warm_dataset", "hours", "steps",
-                                                                          "envs", "evals", "out", "extra"):
-                continue
+                                                                          "envs", "evals", "out", "extra") or (k == "body" and v == "bolt"):
+                continue   # (bolt: no --body, so a Bolt kernel's command is what it always was)
             if isinstance(v, bool):
                 cmd.append(flag if v else "--no-" + flag[2:])
             else:

@@ -40,12 +40,29 @@ The brain: Brax PPO with SB3's network (ELU MLP, plain Gaussian with a learned l
 to +-10), so the CPU brain's weights load unchanged (warm), and a trained brain exports back to numpy
 (MjxImitatePolicy.act, the same call as imitate_env.ImitatePolicy, for exam() and cloudwatch.record_imitate).
 
+Steering (--steer-max, default 0 = off) as ImitateEnv's: a yaw-rate command (rad/s) added to the reference spin rate
+(input 73, the spin-rate terms, the global root's heading) on walk, trot, pace and canter, drawn per try for --steer-share
+of the tries, uniform in +-steer_max, redrawn at --steer-change per second; a "steer" term (--steer-weight x
+exp(-4 (w_z - w_ref_z)^2)) pays for following it. Off: the same computation as before.
+
+Body (--body go2, or the BOLT_BODY env var; default bolt): a real robot of robot_bodies.BODIES, as ImitateEnv(body=...):
+its model (Menagerie's Go2 with position servos, kp/kd and joint damping from the table; --joint-damping replaces the
+damping), its stance in place of DOG (inputs 10 and 57), its per-joint motor model (peak torque, rated speed, cutoff,
+power; brake speeds and gains: --brake-speed/--brake-gain do not apply), its clips (dogmotion/clips/go2_*.npz), its
+height limits (Go2: body on the floor allowed below a 21 cm reference, a try ends 10.5 cm off the reference height) and
+its sit/lie/stand poses (moving starts). Contacts: see body_contacts. Landing starts and terrain stay Bolt's (as the
+CPU env). bolt: exactly the computation it always was (test_mjx_imitate.py, and a before/after rollout hash).
+
+    BOLT_BODY=go2 python mjx_imitate.py warm runs/go2_dog/policy.zip warm.pkl        # a CPU Go2 brain (records body go2)
+    python mjx_imitate.py train --body go2 --warm warm.pkl --steer-max 1.0 --envs 4096 ...
+
 Writes <out>/params.pkl (numpy brain), <out>/checkpoints/params_<steps>.pkl every eval (num_evals evenly over the
 run), <out>/progress.json, and "update at N: ..." lines.
 """
 import argparse
 import functools
 import json
+import os
 import pickle
 import re
 import time
@@ -125,6 +142,8 @@ LANDING = dict(rate=0.0, grace=0.5, bridge=0.6, then="trot")         # as imitat
 MOVING = dict(rate=0.0, speed=(0.5, 2.0), gaits=("walk", "trot"), clips=("sit", "lie", "getup"),
               pose_time={"sit": 4.0, "lie": 5.5, "getup": 5.5}, weight=0.2)   # as imitate_env.MOVING
 KEYS = ("joints", "joint_vel", "height", "gravity", "v_body", "w_body", "paws", "tilt")
+STEER = dict(share=0.6, change=0.3, weight=0.15)   # as imitate_env.STEER (steering defaults)
+STEER_CLIPS = ("walk", "trot", "pace", "canter")    # as imitate_env.STEER_CLIPS
 
 
 def floor_only(xml):
@@ -143,16 +162,39 @@ def collisions(xml):
     return xml.replace("</mujoco>", f"  <contact>{pairs}</contact>\n</mujoco>")
 
 
+def body_contacts(m, robot):
+    """A real-robot body's contacts in MJX (in place on the MjModel, before mjx.put_model): every robot geom collides with
+    the floor and nothing with itself, and the abduction (hip) geoms not at all (robot contype 2 / conaffinity 1, floor
+    contype 1 / conaffinity 2, as floor_only). Why, for the Go2: MJX has no cylinder-box or cylinder-cylinder collision
+    (calves, hips and head are cylinders, trunk and thighs boxes), so the CPU model's all-pairs self-collision cannot be
+    built at all; and it is nearly never used: in the CPU env (ImitateEnv(body="go2"), 40 tries of all 9 clips, 7.6k steps)
+    a self-contact came in 3 steps (paw on paw), while the floor met paws (25k contacts), calves, thighs and the trunk
+    (which ends a try). The hip cylinders never met the floor (at trunk height, 4.6 cm radius: the trunk box touches
+    first, and a body rolled far enough onto its side has passed the 0.8 rad tilt limit); dropping their 4 floor pairs
+    saves ~1/6 of the contact work. Paws stay spheres (sphere-plane, MJX's cheapest), with the file's condim 6 and solimp."""
+    floor = m.geom("floor").id
+    hips = {int(m.jnt_bodyid[m.joint(j).id]) for j in robot.joints[0::3]}
+    for g in range(m.ngeom):
+        if g == floor:
+            m.geom_contype[g], m.geom_conaffinity[g] = 1, 2
+        elif int(m.geom_bodyid[g]) in hips:
+            m.geom_contype[g], m.geom_conaffinity[g] = 0, 0
+        else:
+            m.geom_contype[g], m.geom_conaffinity[g] = 2, 1
+    return m
+
+
 def _rotz(a):
     c, s = np.cos(a), np.sin(a)
     return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
 
-def clip_tables(names, clip_dir=CLIP_DIR):
-    """imitate_env.Clip's per-frame quantities for each clip, padded (last frame repeated) to equal length."""
+def clip_tables(names, clip_dir=CLIP_DIR, prefix=""):
+    """imitate_env.Clip's per-frame quantities for each clip, padded (last frame repeated) to equal length. prefix: a real
+    robot's clips (robot_bodies clip_prefix, "go2_": dogmotion/clips/go2_<clip>.npz)."""
     per = []
     for name in names:
-        z = np.load(Path(clip_dir) / f"{name}.npz")
+        z = np.load(Path(clip_dir) / f"{prefix}{name}.npz")
         n = len(z["joints"])
         R = np.zeros((n, 9))
         for t, q in enumerate(z["base_quat"]):
@@ -239,14 +281,35 @@ class MjxImitate:
                  latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"],
                  terrain_cm=TERRAIN_ARGS["cm"], terrain_clips=TERRAIN_ARGS["clips"], terrain_spread=TERRAIN_ARGS["spread"],
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"], push_speed=PUSH["speed"],
-                 push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"], root_global=0.0):
+                 push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"], root_global=0.0,
+                 steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"],
+                 body=None, joint_damping=None):
         from brax.envs.base import State
         self.State = State
-        xml = (HERE / "bolt.xml").read_text()
-        if terrain_cm > 0:   # rough terrain beside the floor (bolt_env.terrain_xml)
-            xml = terrain_xml(xml, terrain_cm)
-        xml = collisions(xml)
-        self.m = m = mujoco.MjModel.from_xml_string(xml)
+        # the body (module docstring, "Body"): bolt, or a real robot of robot_bodies.BODIES; None = BOLT_BODY, else bolt
+        self.body = body or os.environ.get("BOLT_BODY", "bolt")
+        self.robot, prefix, dog = None, "", DOG
+        self.floor_ok_h, self.lost_h, self.poses = 0.3, 0.15, None   # Bolt's (imitate_env.ImitateEnv)
+        self.motor, self.brake_cap = MOTOR, MOTOR["torque"]          # Bolt's A1 drive (python floats, as always)
+        if self.body == "bolt":
+            xml = (HERE / "bolt.xml").read_text()
+            if terrain_cm > 0:   # rough terrain beside the floor (bolt_env.terrain_xml)
+                xml = terrain_xml(xml, terrain_cm)
+            xml = collisions(xml)
+            self.m = m = mujoco.MjModel.from_xml_string(xml)
+        else:
+            assert not terrain_cm > 0 and not landing_rate, "terrain and landing starts are Bolt's (as imitate_env)"
+            import robot_bodies   # (only for a real-robot body: older kernels lack the file)
+            r = self.robot = robot_bodies.Body(self.body)
+            if joint_damping is not None:   # as train_imitate.py --joint-damping (BOLT_JOINT_DAMPING)
+                r.joint_damping = float(joint_damping)
+            self.m = m = body_contacts(mujoco.MjModel.from_xml_string(r.xml()), r)
+            prefix, dog = r.clip_prefix, r.stance
+            self.floor_ok_h, self.lost_h, self.poses = float(r.floor_ok), float(r.lost), r.pose_ok
+            # per joint arrays (robot_bodies.Body.motor), as bolt_env.physics for this body; brake capped at each joint's torque
+            self.motor = {k: jp.array(r.motor[k], jp.float32) for k in ("torque", "power", "speed", "cutoff")}
+            self.brake_cap = self.motor["torque"]
+            brake_speed, brake_gain = jp.array(r.motor["brake_speed"], jp.float32), jp.array(r.motor["brake_gain"], jp.float32)
         self.terrain = None
         if terrain_cm > 0:
             field = terrain_field(terrain_seed)
@@ -264,8 +327,12 @@ class MjxImitate:
         # root integrated since the try began (info gp, gyaw, ginit; set at the try's first step); 0 = not computed
         self.root_global = float(root_global)
         self.weights = dict(WEIGHTS, **(weights or {}))
+        # steering (as ImitateEnv): info["steer"] drawn per try and redrawn mid-try; 0 = not drawn or computed
+        self.steer_max, self.steer_share, self.steer_change = float(steer_max), float(steer_share), float(steer_change)
+        self.steer_weight = float(steer_weight)
         self.names = list(clips or ALL_CLIPS)
-        T = clip_tables(self.names, clip_dir)
+        self.steer_clip = jp.array([n in STEER_CLIPS for n in self.names])
+        T = clip_tables(self.names, clip_dir, prefix)
         self.T = {k: jp.array(T[k], jp.float32) for k in KEYS}
         self.n, self.fps, self.length = jp.array(T["n"], jp.int32), jp.array(T["fps"], jp.float32), jp.array(T["length"], jp.float32)
         self.loop = jp.array(T["loop"])
@@ -275,7 +342,8 @@ class MjxImitate:
         self.next = jp.array([[b in NEXT.get(a, ()) and b != a for b in self.names] for a in self.names])
         self.canter = self.names.index("canter") if "canter" in self.names else -1
         self.torso, self.floor = m.body("torso").id, m.geom("floor").id
-        assert all(m.body(m.geom_bodyid[m.geom(f"{l}_thigh_geom").id]).name == f"{l}_thigh" for l in ("FL", "FR", "RL", "RR"))
+        if self.robot is None:
+            assert all(m.body(m.geom_bodyid[m.geom(f"{l}_thigh_geom").id]).name == f"{l}_thigh" for l in ("FL", "FR", "RL", "RR"))
         self.feet = jp.array([m.geom(f"{l}_foot").id for l in ("FL", "FR", "RL", "RR")])
         bodies = [mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, b) or "" for b in m.geom_bodyid]
         ground = {self.floor} | ({self.terrain["geom"]} if self.terrain else set())
@@ -285,7 +353,7 @@ class MjxImitate:
         self.qpos0 = jp.array(m.qpos0, jp.float32)
         self.dt = float(m.opt.timestep * 10)
         self.max_steps = int(LOOP_SECONDS * 50)
-        self.dog, self.scale = jp.array(DOG, jp.float32), jp.array(ACTION_SCALE, jp.float32)
+        self.dog, self.scale = jp.array(dog, jp.float32), jp.array(ACTION_SCALE, jp.float32)
         # landing starts (as ImitateEnv): None at rate 0, so reset and step are the computation they always were
         self.landing_rate = float(landing_rate)
         self.L = None
@@ -307,7 +375,7 @@ class MjxImitate:
         self.transition_weight, self.transition_threshold = float(transition_weight), float(transition_threshold)
         self.transition_steps = int(round(transition_window / self.dt))
         # moving-start posture commands (as ImitateEnv): None at rate 0
-        self.brake = (float(brake_speed), float(brake_gain)) if motor_brake else None
+        self.brake = ((float(brake_speed), float(brake_gain)) if self.robot is None else (brake_speed, brake_gain)) if motor_brake else None
         self.moving_rate, self.moving_speed, self.pose_weight = float(moving_rate), tuple(moving_speed), float(pose_weight)
         self.M = None
         if self.moving_rate > 0:
@@ -350,6 +418,14 @@ class MjxImitate:
         i, j, b = self.frame(c, self.tau(info, ahead))
         a = self.T[key][c]
         return (1 - b) * a[i] + b * a[j]
+
+    def ref_w(self, info, ahead=0):
+        """The reference spin rates (body frame) with the steering command added to the yaw rate on STEER_CLIPS
+        (ImitateEnv.ref_w); steering off: the clip's own."""
+        w = self.ref(info, "w_body", ahead)
+        if self.steer_max:
+            w = w.at[2].add(jp.where(self.steer_clip[info["clip"]], info["steer"], 0.0))
+        return w
 
     def finished(self, info):
         return jp.where(self.loop[info["clip"]], 0.0, jp.maximum(0.0, self.tau(info) - self.length[info["clip"]]))
@@ -394,17 +470,19 @@ class MjxImitate:
         return dict(info, qhist=jp.tile(d.ctrl[None], (self.queue_len, 1)), lagy=d.ctrl)
 
     def substep(self, mx, d):
-        """One physics substep (2 ms) with the A1 motor model and, if on, the brake."""
+        """One physics substep (2 ms) with the motor model (Bolt: the A1's; a real robot: its own, per joint) and, if on,
+        the brake."""
+        M = self.motor
         if self.brake is not None:   # back-EMF braking above brake speed, against the motion (bolt_env.brake_torque)
             speed, gain = self.brake
             v = d.qvel[6:18]
             d = d.replace(qfrc_applied=d.qfrc_applied.at[6:18].set(
-                -jp.sign(v) * jp.minimum(gain * jp.maximum(jp.abs(v) - speed, 0.0), MOTOR["torque"])))
+                -jp.sign(v) * jp.minimum(gain * jp.maximum(jp.abs(v) - speed, 0.0), self.brake_cap)))
         w = jp.abs(d.qvel[6:18])
-        drive = jp.minimum(MOTOR["torque"], MOTOR["power"] / jp.maximum(w, 1e-6))
-        drive = drive * jp.clip((MOTOR["cutoff"] - w) / (MOTOR["cutoff"] - MOTOR["speed"]), 0.0, 1.0)
-        lo = jp.where(d.qvel[6:18] < 0, -drive, -MOTOR["torque"])
-        hi = jp.where(d.qvel[6:18] >= 0, drive, MOTOR["torque"])
+        drive = jp.minimum(M["torque"], M["power"] / jp.maximum(w, 1e-6))
+        drive = drive * jp.clip((M["cutoff"] - w) / (M["cutoff"] - M["speed"]), 0.0, 1.0)
+        lo = jp.where(d.qvel[6:18] < 0, -drive, -M["torque"])
+        hi = jp.where(d.qvel[6:18] >= 0, drive, M["torque"])
         return mjx.step(mx.replace(actuator_forcerange=jp.stack([lo, hi], -1)), d)
 
     # ---------- senses and scores ----------
@@ -416,7 +494,7 @@ class MjxImitate:
                             d.qpos[2:3] if self.terrain is None else (d.qpos[2] - self.ground_z(d))[None],
                             d.qpos[7:19] - self.dog, d.qvel[6:18] * 0.1, info["last_action"], jp.stack([jp.sin(ph), jp.cos(ph)]), onehot,
                             self.ref(info, "joints", 1) - self.dog, self.ref(info, "height", 1)[None], self.ref(info, "v_body", 1),
-                            self.ref(info, "w_body", 1)[2:3], self.finished(info)[None]])
+                            self.ref_w(info, 1)[2:3], self.finished(info)[None]])
         if self.obs_noise and key is not None:   # sensor noise (imitate_env.ImitateEnv._obs): its own key
             key, kn = jax.random.split(key)
             k, u = self.obs_noise, jax.random.uniform(kn, (34,), minval=-1.0, maxval=1.0)
@@ -445,9 +523,12 @@ class MjxImitate:
         tilt = jp.arccos(jp.clip(jp.dot(g, g_ref) / jp.linalg.norm(g_ref), -1.0, 1.0))
         v, w = R.T @ d.qvel[0:3], d.qvel[3:6]
         e_v = jp.sum((self.ref(info, "v_body") - v) ** 2)
-        e_w = jp.sum((self.ref(info, "w_body") - w) ** 2)
+        w_ref = self.ref_w(info)
+        e_w = jp.sum((w_ref - w) ** 2)
         terms = dict(pose=jp.exp(-5 * e_pose), vel=jp.exp(-0.1 * e_vel), paw=jp.exp(-40 * e_paw),
                      root=jp.exp(-20 * e_h ** 2 - 10 * tilt ** 2), root_vel=jp.exp(-2 * e_v - 0.2 * e_w))
+        if self.steer_max:   # only steering runs have the term (ImitateEnv.tracking)
+            terms["steer"] = jp.exp(-4 * (w_ref[2] - w[2]) ** 2)
         return terms, dict(height_err=e_h, tilt=tilt)
 
     def global_root_terms(self, d, info):
@@ -462,7 +543,7 @@ class MjxImitate:
         tilt = u @ vt
         rz = lambda a: jp.array([[jp.cos(a), -jp.sin(a), 0.0], [jp.sin(a), jp.cos(a), 0.0], [0.0, 0.0, 1.0]])
         R_ref = rz(yaw0) @ tilt
-        v_ref, w_ref = R_ref @ self.ref(info, "v_body"), R_ref @ self.ref(info, "w_body")
+        v_ref, w_ref = R_ref @ self.ref(info, "v_body"), R_ref @ self.ref_w(info)
         p = p0 + v_ref[:2] * self.dt
         yaw = yaw0 + w_ref[2] * self.dt
         R_ref = rz(yaw) @ tilt
@@ -509,12 +590,20 @@ class MjxImitate:
         q = q * jp.where(q[0] < 0, -1.0, 1.0)
         return q / jp.linalg.norm(q)
 
+    def draw_steer(self, key):
+        """A yaw-rate command (rad/s): uniform in +-steer_max for steer_share of the draws, else 0 (ImitateEnv)."""
+        k1, k2 = jax.random.split(key)
+        return jp.where(jax.random.uniform(k1) < self.steer_share,
+                        jax.random.uniform(k2, minval=-self.steer_max, maxval=self.steer_max), 0.0).astype(jp.float32)
+
     def limit_for(self, c, tau0, t):
         """Last step of the try: loops run 5 s, sit/lie/getup to the end of their 1 s hold (at least 25 steps)."""
         left = jp.floor((self.length[c] + HOLD - tau0) / self.dt)
         return jp.where(self.loop[c], self.max_steps, jp.maximum(25, jp.minimum(self.max_steps, left)).astype(jp.int32)) + t
 
     def start_info(self, rng):
+        if self.steer_max:   # steering on: the command's own keys
+            rng, k_st = jax.random.split(rng)
         if self.terrain is not None:   # terrain on: the start spot's own key
             rng, k_ter = jax.random.split(rng)
         if self.real_on:   # real-robot gaps on: the latency's own key
@@ -532,6 +621,8 @@ class MjxImitate:
                     last_action=jp.zeros(12), trunc=jp.float32(0.0))
         if self.transition_weight:
             info["swt"] = jp.int32(-10 ** 6)   # step of the last mid-try switch (none yet)
+        if self.steer_max:   # a yaw-rate command for steer_share of the tries (ImitateEnv.reset)
+            info["steer"] = self.draw_steer(k_st)
         if self.root_global:   # the reference root: set from the body at the try's first step (ImitateEnv._global_root_terms)
             info.update(gp=jp.zeros(2, jp.float32), gyaw=jp.float32(0.0), ginit=jp.int32(0))
         if self.real_on:   # latency in physics substeps, drawn per try
@@ -650,13 +741,15 @@ class MjxImitate:
         info["rng"] = k2
         z = jp.float32(0.0)
         metrics = {**{f"r_{k}": z for k in WEIGHTS}, "fell": z, "canter": z, "canter_steps": z}
+        if self.steer_max:
+            metrics["r_steer"] = z
         return self.State(pipeline_state=d, obs=self.obs(d, info, k3), reward=z, done=z, metrics=metrics, info=info)
 
     def pose_term(self, d, info):
         """(bonus, reached in time so far, in the pose now) of a moving-start command (pose_reached.pose_ok)."""
         R = d.xmat[self.torso]
         h, pitch, up = d.qpos[2], jp.arcsin(jp.clip(R[2, 0], -1.0, 1.0)), R[2, 2]
-        oks = jp.stack([self.pose_ok(n, h, pitch, up) for n in self.pose_names])
+        oks = jp.stack([self.pose_ok(n, h, pitch, up, self.poses) for n in self.pose_names])
         pc = info["pclip"]
         pose = (pc >= 0) & (info["clip"] == pc) & oks[jp.maximum(self.M["pose"][jp.maximum(pc, 0)], 0)]
         hit = (info["phit"] > 0) | (pose & (info["t"] <= info["puntil"]))
@@ -706,6 +799,9 @@ class MjxImitate:
             info.update(clip=jp.where(go, nc, c), tau0=jp.where(go, tau0, info["tau0"]), limit=jp.where(go, limit, info["limit"]))
             if self.transition_weight:
                 info["swt"] = jp.where(go, info["t"], info["swt"])
+        if self.steer_max:   # now and then a new command (ImitateEnv.step: steer_change per second)
+            rng, k_sc, k_sn = jax.random.split(rng, 3)
+            info["steer"] = jp.where(jax.random.uniform(k_sc) < self.steer_change * self.dt, self.draw_steer(k_sn), info["steer"])
         if self.L is not None and self.land_then >= 0:   # a landing start's bridge is over: on in landing_then
             go = (info["t"] == info["lswitch"]) & (info["clip"] != self.land_then)
             tau0, limit = self.switch_to(info, d.qpos[7:19], jp.int32(self.land_then))
@@ -718,9 +814,9 @@ class MjxImitate:
             g_root, g_vel, info = self.global_root_terms(d, info)
             rg = self.root_global
             terms = dict(terms, root=(1 - rg) * terms["root"] + rg * g_root, root_vel=(1 - rg) * terms["root_vel"] + rg * g_vel)
-        reward = sum(self.weights[k] * v for k, v in terms.items())
-        floor_ok = self.ref(info, "height") < 0.3     # sitting and lying: the body may rest on the floor
-        high = jp.abs(err["height_err"]) > 0.15
+        reward = sum(self.weights.get(k, self.steer_weight) * v for k, v in terms.items())
+        floor_ok = self.ref(info, "height") < self.floor_ok_h     # sitting and lying: the body may rest on the floor
+        high = jp.abs(err["height_err"]) > self.lost_h
         if self.L is not None:   # landing starts: no height check for the first landing_grace s (still in the air)
             high = high & (info["t"] > info["grace"])
         if self.M is not None:   # a moving-start command: paid per step in the pose once reached in time
@@ -823,6 +919,9 @@ def train(args):
     out = Path(args.out)
     (out / "checkpoints").mkdir(parents=True, exist_ok=True)
     W = pickle.loads(Path(args.warm).read_bytes()) if args.warm else None
+    os.environ["BOLT_BODY"] = args.body   # as train_imitate.py: this process's body
+    if W:   # a brain trained on another body would start from the wrong stance and clips
+        assert W.get("body", "bolt") == args.body, f"warm brain is for body {W.get('body', 'bolt')}, training {args.body}"
 
     def make_env(cm):
         return MjxImitate(switch_rate=args.switch_rate, landing_rate=args.landing_rate, landing_file=args.landing_file,
@@ -835,7 +934,9 @@ def train(args):
                           terrain_spread=args.terrain_spread, terrain_seed=args.terrain_seed, push_interval=args.push_interval,
                           push_prob=args.push_prob, push_speed=args.push_speed, push_spin=args.push_spin,
                           motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain,
-                          root_global=args.root_global)
+                          root_global=args.root_global, steer_max=args.steer_max, steer_share=args.steer_share,
+                          steer_change=args.steer_change, steer_weight=args.steer_weight, body=args.body,
+                          joint_damping=args.joint_damping, iterations=args.iterations, ls_iterations=args.ls_iterations)
 
     phases = curriculum(args.terrain_cm, args.terrain_at, args.steps)
     hidden = W["hidden"] if W else (512, 256)
@@ -843,11 +944,18 @@ def train(args):
     start, log, base0 = time.time(), [], int(W["steps"]) if W else 0
     done_steps = 0   # steps of the finished phases
     q = args.quick
+    tags = {k: v for k, v in (("body", args.body), ("steer_max", args.steer_max)) if v not in ("bolt", 0.0)}   # what the brain is for
     try:
         for k, (cm, n_steps) in enumerate(phases):
             env = make_env(cm)
-            if k == 0:
+            if k == 0 and env.robot is not None:   # a real robot: its own motors and brake (robot_bodies)
+                print(f"body: {args.body} ({env.robot.entry['name']}; joint damping {env.robot.joint_damping if env.robot.joint_damping is not None else 'from the model file'}); "
+                      f"motor brake: {'on' if env.brake else 'off'}" + (f", from {[round(float(x), 1) for x in env.brake[0][:3]]} rad/s, "
+                      f"{[round(float(x), 2) for x in env.brake[1][:3]]} N·m per rad/s (abduction, thigh, knee)" if env.brake else ""), flush=True)
+            elif k == 0:
                 print(f"motor brake: {'on' if env.brake else 'off'}" + (f" above {env.brake[0]:g} rad/s, {env.brake[1]:g} N·m per rad/s" if env.brake else ""), flush=True)
+            if k == 0 and env.steer_max:
+                print(f"steering: +-{env.steer_max:g} rad/s for {env.steer_share:g} of the tries, redrawn {env.steer_change:g}/s, weight {env.steer_weight:g}", flush=True)
             if len(phases) > 1:
                 print(f"phase {k + 1}/{len(phases)}: terrain {cm:g} cm for {n_steps:,} steps", flush=True)
             base = base0 + done_steps
@@ -862,15 +970,18 @@ def train(args):
                            fell=float(m.get("eval/episode_fell", np.nan)),
                            canter=float(m.get("eval/episode_canter", np.nan)) / max(1e-6, float(m.get("eval/episode_canter_steps", np.nan))),
                            sps=float(m.get("training/sps", np.nan)), **{t: float(m.get(f"eval/episode_r_{t}", np.nan)) / L for t in WEIGHTS})
+                if args.steer_max:
+                    row["steer"] = float(m.get("eval/episode_r_steer", np.nan)) / L
                 log.append(row)
                 (out / "progress.json").write_text(json.dumps(log, indent=1))
                 print(f"update at {off + int(n)}: reward/step {row['reward_per_step']:.3f} (canter {row['canter']:.3f}), try {L:.0f} steps, fell {row['fell']:.2f}, "
-                      f"pose {row['pose']:.2f}, {row['sps']:.0f} steps/s, {row['minutes']} min" + (f", terrain {cm:g} cm" if len(phases) > 1 else ""), flush=True)
+                      f"pose {row['pose']:.2f}" + (f", steer {row['steer']:.2f}" if args.steer_max else "") + f", {row['sps']:.0f} steps/s, {row['minutes']} min"
+                      + (f", terrain {cm:g} cm" if len(phases) > 1 else ""), flush=True)
                 if args.hours and time.time() - start > args.hours * 3600:
                     raise TimeoutError(f"time budget of {args.hours} h used up at {off + int(n)} steps")
 
             def save(step, make_policy, params, base=base, off=done_steps, cm=cm):
-                P = to_numpy(params, dict(steps=base + int(step), source="mjx_imitate", terrain_cm=cm))
+                P = to_numpy(params, dict(steps=base + int(step), source="mjx_imitate", terrain_cm=cm, **tags))
                 (out / "checkpoints" / f"params_{off + int(step)}.pkl").write_bytes(pickle.dumps(P))
                 (out / "params.pkl").write_bytes(pickle.dumps(P))
 
@@ -885,7 +996,7 @@ def train(args):
                 restore_params=restore, restore_value_fn=True, seed=args.seed + k, deterministic_eval=True,
                 progress_fn=progress, policy_params_fn=save)
             ran = max(last[0], n_steps)
-            W = to_numpy(params, dict(steps=base + ran, source="mjx_imitate", terrain_cm=cm))   # the next phase starts here
+            W = to_numpy(params, dict(steps=base + ran, source="mjx_imitate", terrain_cm=cm, **tags))   # the next phase starts here
             (out / "params.pkl").write_bytes(pickle.dumps(W))
             done_steps += ran
     except TimeoutError as e:
@@ -899,7 +1010,10 @@ def main():
     w = sub.add_parser("warm", help="SB3 brain -> numpy params.pkl (run with the CPU stack)")
     w.add_argument("zip")
     w.add_argument("out")
-    w.add_argument("--stats", help="VecNormalize pkl (default: the checkpoint's policy_vecnormalize_<n>_steps.pkl)")
+    w.add_argument("--stats", help="VecNormalize pkl (default: the checkpoint's policy_vecnormalize_<n>_steps.pkl, or vecnormalize.pkl "
+                   "next to a policy.zip)")
+    w.add_argument("--body", help="the body the brain was trained on, recorded in the pkl (default: best.json's next to the zip, "
+                   "else BOLT_BODY, else bolt); train --body checks it")
     t = sub.add_parser("train")
     t.add_argument("--warm", help="numpy brain to start from (from `warm`, or a params.pkl from an earlier GPU run)")
     t.add_argument("--steps", type=int, default=1_000_000_000)
@@ -957,13 +1071,32 @@ def main():
     t.add_argument("--root-global", type=float, default=0.0,
                    help="0..1 blend toward Peng 2020's global root terms (heading and path), as train_imitate.py; 0 = our terms")
     t.add_argument("--brake-gain", type=float, default=BRAKE["gain"], help="braking N·m per rad/s above --brake-speed (default %(default)s)")
+    t.add_argument("--steer-max", type=float, default=0.0, help="yaw-rate command range (rad/s) for steering at walk/trot/pace/canter; "
+                   "0 = none, as before (train_imitate.py --steer-max)")
+    t.add_argument("--steer-share", type=float, default=STEER["share"], help="share of tries (and redraws) with a command")
+    t.add_argument("--steer-change", type=float, default=STEER["change"], help="chance per second of a new command")
+    t.add_argument("--steer-weight", type=float, default=STEER["weight"], help="reward weight of the steer term")
+    t.add_argument("--body", default=os.environ.get("BOLT_BODY", "bolt"),
+                   help="bolt (bolt.xml) or a real robot of robot_bodies.BODIES (go2); default BOLT_BODY, else bolt. "
+                   "--brake-speed/--brake-gain apply to bolt only (a real robot has its own)")
+    t.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model file's")
+    t.add_argument("--iterations", type=int, default=5, help="contact solver iterations (MuJoCo's own: 100; see MjxImitate)")
+    t.add_argument("--ls-iterations", type=int, default=8, help="contact solver line-search iterations (MuJoCo's own: 50)")
     args = ap.parse_args()
     if args.cmd == "warm":
         z = Path(args.zip)
         stats = Path(args.stats) if args.stats else z.with_name(z.name.replace("policy_", "policy_vecnormalize_", 1)).with_suffix(".pkl")
+        if not args.stats and not stats.exists() and (z.parent / "vecnormalize.pkl").exists():   # a run's policy.zip / best/
+            stats = z.parent / "vecnormalize.pkl"
+        body = args.body
+        if body is None and (z.parent / "best.json").exists():
+            body = json.loads((z.parent / "best.json").read_text()).get("body")
+        body = body or os.environ.get("BOLT_BODY", "bolt")
         P = from_sb3(z, stats)
+        if body != "bolt":   # Bolt's pkls stay as they were (no key = bolt)
+            P["body"] = body
         Path(args.out).write_bytes(pickle.dumps(P))
-        print(f"{z} ({P['steps']:,} steps, hidden {P['hidden']}, {len(P['mean'])} inputs, reward scale {P['reward_scale']:.4f}) -> {args.out}")
+        print(f"{z} ({P['steps']:,} steps, hidden {P['hidden']}, {len(P['mean'])} inputs, reward scale {P['reward_scale']:.4f}, body {body}) -> {args.out}")
     else:
         train(args)
 

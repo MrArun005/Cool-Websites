@@ -109,8 +109,8 @@ Go2: Menagerie's model with position servos and the Go2's motor limits), trackin
 (dogmotion/clips/<clip_prefix><clip>.npz, dogmotion/retarget_body.py). The observation, action and reward layout are the
 same; the body's own stance replaces DOG (inputs 10 and 57, residual=False), and the body-size limits are the entry's
 (Go2: the body may rest on the floor below a 21 cm reference instead of 30 cm, a try ends 10.5 cm off the reference
-height instead of 15 cm; its own sit/lie/stand poses for pose_reached). Landing starts, terrain and the GPU env
-(mjx_imitate.py) are Bolt-only.
+height instead of 15 cm; its own sit/lie/stand poses for pose_reached). Landing starts and terrain are Bolt-only; the GPU
+env (mjx_imitate.py --body go2) has the Go2 too (test_mjx_imitate.py dump-go2 / check-go2: the parity).
 """
 from pathlib import Path
 

@@ -105,6 +105,13 @@ CPU-vs-GPU parity of all of it (CPU venv dumps, JAX venv checks; needs a 75-inpu
 python test_mjx_imitate.py dump runs/imitate18d_start/policy_14000000_steps.zip warm.pkl cases.pkl   # CPU stack
 python test_mjx_imitate.py check warm.pkl cases.pkl                                                    # JAX stack
 ```
+The Unitree Go2 body with steering (`mjx_imitate.py train --body go2 --steer-max 1.0`; Kaggle: `make_kernel.py --body go2`),
+against `ImitateEnv(body="go2")`, steering off and on (needs a Go2 SB3 run folder with policy.zip + vecnormalize.pkl):
+```bash
+python mjx_imitate.py warm runs/go2_smoke/best/policy.zip warm_go2.pkl                                # CPU stack (records body go2)
+python test_mjx_imitate.py dump-go2 runs/go2_smoke/best warm_go2.pkl cases_go2.pkl                    # CPU stack
+python test_mjx_imitate.py check-go2 warm_go2.pkl cases_go2.pkl                                       # JAX stack
+```
 Known gap (accepted 28 Oct): at joint speeds above ~25 rad/s MJX's `implicitfast` substep differs from MuJoCo's by
 ~1 rad/s, brake or not (exactly 0 with the Euler integrator on both sides, where the brake also matches to 6e-6
 rad/s; the `[brake]` lines show both). Below that the one-step physics agrees to ~5e-7 rad (median).
