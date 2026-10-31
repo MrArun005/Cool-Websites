@@ -129,3 +129,12 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
     Brain loop timing: median 20.1 ms, p95 21.3 ms. Next: run the simulator on a dedicated core (or the C++
     unitree_mujoco) to separate VM stalls from real canter sensitivity; then phase 3 (no true velocity/height).
   * Harness lesson: never start a simulator while another still publishes on the same DDS domain.
+* 1 Nov (night): real-time runs with the simulator and the controller pinned to separate cores were worse (1/5
+  complete): the Python vendor simulator cannot hold real time on this VM, so real-time results here measure the VM.
+  Timing sensitivity measured instead in lockstep (`lockstep_vendor.py --delay-ms LO HI --skip-p P`, vendor settings,
+  41 s plan, 5 tries): delay 0-10 ms **0/5** falls; 0-19 ms 1/5; **5% of brain steps missed 3/5**; 5-19 ms + 10%
+  missed 3/5. The brain handles delay (it was trained with 0-40 ms) but **not missed control steps** (motors holding
+  old targets for 40 ms while the brain's "previous action" input says otherwise). Two consequences:
+  (1) on the robot the 50 Hz loop must never miss a step: brain on the Jetson, loop at real-time priority, watchdog
+  logs every late step; (2) the next Go2 training run adds missed steps (mastermind/env.py's packet-drop model,
+  drop 0-10%) so the brain learns to tolerate them. Same as the A1 port plan's packet-drop line.
