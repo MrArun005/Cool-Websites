@@ -29,6 +29,10 @@ is paid only up to 1 m/s (was 2). Run 15e still broke within 500k steps (the thi
 each update saw only 4096 steps (~40 jumps), too noisy a signal. Run 15f: 4x the data per update, from
 15c's 8M brain (landing again, practising 25 cm bars).
 
+Other bodies (body="go2" or BOLT_BODY=go2; python train_jump.py --body go2): the same task on a robot of
+robot_bodies.BODIES, the bar added to its model, its stance at the centre of the actions, mid-stride starts from its own
+clips, and every length scaled to its size (jump_sizes, below; Bolt's numbers are unchanged).
+
 Run 16 (real=True): a real agility hurdle (hurdle.py: solid wing stands, a loose bar in cups that drops
 if knocked) instead of a solid board. In the games, run 15f's brains landed twisted 40-120 degrees off
 the way they jumped, so run 16 starts each try up to 11 degrees askew and up to 10 cm off the centre
@@ -42,6 +46,8 @@ after landing added up to about the -25 for a fall, and a fall ends the episode 
 twisted Bolt was better off falling. Run 16c: no charge after landing, standing still pays whichever way
 Bolt faces; only the spin charge and the landing bonus care about the heading.
 """
+import os
+
 import gymnasium as gym
 import mujoco
 import numpy as np
@@ -57,14 +63,77 @@ DOG = STANCES["dog"]
 
 EXAM_LATENCY_MS = 0.0   # fixed control delay (ms) for exams (fair_exam.py --latency-ms)
 
+# ---------- body sizes (body="go2", BOLT_BODY=go2; robot_bodies.BODIES) ----------
+# Every length in the try, the reward and the exams was tuned on Bolt. On another body they are Bolt's numbers scaled by
+# two factors measured from the models (rounded to 2 places, so a brain's task never shifts with a model rebuild):
+#   kz  vertical:   the body's stand height / Bolt's (robot_bodies stand_height / 0.436, Bolt's dog stance, bolt_env)
+#                   - body heights (start, landing, standing tall), the body's clearance over the bar, bar heights
+#   kx  horizontal: front-to-rear paw base in the stance / Bolt's (robot_bodies.paw_positions / 0.45, measured with the
+#                   dog stance held on the motors: paws at x = +-0.225)
+#                   - bar distances, the take-off window, "all paws past", the tuck zone
+# Pay per metre is divided by the same factor (15 per metre of paw progress: 15 / kx), so a whole jump pays as on Bolt.
+# Go2: kz = 0.304 / 0.436 = 0.70, kx = 0.387 / 0.45 = 0.86. ASSUMPTIONS (not measured on a Go2 jumping):
+#   - geometric scaling is a guess at a fair task: the Go2's legs are as long as Bolt's (2 x 0.213 m vs 2 x 0.2 m) but it
+#     stands crouched (Unitree's 0.30 m stand), and on kp 40 servos it sags to 0.26 m holding the stance with no brain;
+#     the standing-tall target is the stance's 0.30 m (0.43 x kz), which the brain reaches by pushing, not the 0.26 sag
+#   - bars scale with kz: the coach's range 4-35 cm (Bolt 6-50), exam bars 10/14/17/21 cm (Bolt 15/20/25/30); Go2's
+#     belly is at 0.20 m standing (Bolt 0.36), so ~17 cm (Bolt's 25 x kz) is about what it can step over
+#   - speeds are NOT scaled (forward-speed pay up to 1 m/s, still-standing speed 0.5 m/s, the CLI's approach speeds);
+#     Froude scaling would give x sqrt(0.7) = 0.84. The trot/canter pose for mid-stride starts switches at 1.5 m/s
+#     (Bolt 2.0: between its trot 1.9 and canter 3.3 m/s clips; the Go2 clips run 1.4 and 2.4 m/s)
+#   - the effort cost 5e-5 x force^2 is per joint x (33.5 / that joint's peak torque)^2 (Bolt: 33.5 N·m on every joint),
+#     so full effort costs the same: Go2 hip/thigh 1.0e-4 (23.7 N·m), calf 2.7e-5 (45.43 N·m)
+#   - the real hurdle (hurdle.py, sized for Bolt: 1.2 m bar) is used as is; the start's askew/off-line (11 deg, 10 cm)
+#     are not scaled
+BOLT_STAND, BOLT_PAW_BASE, BOLT_TORQUE = 0.436, 0.45, 33.5
+
+
+def sizes(kx=1.0, kz=1.0, torque=None, canter_from=2.0):
+    """The body-dependent numbers of the jump (Bolt: kx = kz = 1, every value exactly Bolt's as before)."""
+    return dict(
+        kx=kx, kz=kz, start_z=0.45 * kz,
+        approach=(0.45 * kx, 0.65 * kx), exam_dist=0.55 * kx, exam_heights=(0.15, 0.20, 0.25, 0.30), bar_max=0.50,
+        bar_level=0.12 * kz, bar_jitter=(0.05 * kz, 0.03 * kz), bar_min=0.06 * kz, bar_floor=0.10 * kz,
+        bar_step=0.005 * kz, bar_top_gap=0.02 * kz,
+        paw_pay=15.0 / kx, takeoff=(0.3 * kx, 0.5 * kx), late=0.25 * kx, over_zone=0.1 * kx,
+        clear_z=0.30 * kz, clear_clip=0.2 * kz, clear_pay=2.0 / kz,
+        tuck_zone=0.12 * kx, tuck_gap=0.03 * kz, tuck_clip=0.1 * kz, tuck_pay=3.0 / kz, past_ok=0.08 * kx,
+        land_z=0.3 * kz, stand_z=0.43 * kz, stand_w=0.08 * kz, strict_z=0.35 * kz,
+        effort=None if torque is None else 5e-5 * (BOLT_TORQUE / np.asarray(torque, dtype=float)) ** 2,
+        canter_from=canter_from)
+
+
+BOLT_SIZES = sizes()
+
+
+def jump_sizes(body=None):
+    """sizes() for a body (None: BOLT_BODY, else bolt). Go2: see the block above."""
+    body = body or os.environ.get("BOLT_BODY", "bolt")
+    if body == "bolt":
+        return BOLT_SIZES
+    import robot_bodies
+    r = robot_bodies.get(body)
+    paws = robot_bodies.paw_positions(r.kin, r.stance)
+    kz, kx = round(r.stand_height / BOLT_STAND, 2), round(float(paws[0, 0] - paws[2, 0]) / BOLT_PAW_BASE, 2)
+    J = sizes(kx, kz, torque=r.motor["torque"], canter_from=JUMP_CANTER_FROM.get(body, 2.0))
+    J.update(exam_heights=tuple(round(h * kz, 2) for h in BOLT_SIZES["exam_heights"]), bar_max=round(0.50 * kz, 2),
+             approach=tuple(round(x, 3) for x in J["approach"]), exam_dist=round(J["exam_dist"], 3))
+    return J
+
+
+JUMP_CANTER_FROM = {"go2": 1.5}   # m/s: mid-stride starts below it take the trot pose, above it the canter's
+
 
 class JumpEnv(BoltEnv):
     OBS = 49   # 51 with real=True
 
-    def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=(0.45, 0.65), approach_speed=0.0,
-                 approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=0.50, motor_brake=None, under_margin=0.0,
+    def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=None, approach_speed=0.0,
+                 approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=None, motor_brake=None, under_margin=0.0,
                  handover_file=None, handover_rate=0.0, latency_ms=(0.0, 0.0), motor_lag_ms=(0.0, 0.0), drop=(0.0, 0.0),
-                 latency_jitter_ms=0.0, latency_spike_p=0.0, delay_input=False):
+                 latency_jitter_ms=0.0, latency_spike_p=0.0, delay_input=False, body=None):
+        # body: "bolt" (default) or a robot of robot_bodies.BODIES ("go2"); None = the BOLT_BODY env var, else "bolt".
+        # Lengths, bars and pay are scaled to the body (sizes(), jump_sizes()); approach and bar_max None = the body's
+        # (Bolt: 0.45-0.65 m, 50 cm).
         # under_margin (m): the body's centre must be at least bar height + this when it crosses the bar's line, or
         # Bolt went UNDER the bar (28 Oct: bars of 60-75 cm are higher than Bolt's back, and "all paws past the bar"
         # counted running under a 70 cm bar as a clean jump). 0 = centre above the bar top; a trunk that crosses
@@ -86,8 +155,17 @@ class JumpEnv(BoltEnv):
         # spike chance in U(0, this) per step (bolt_env.start_delay)
         self.jitter_max, self.spike_max = float(latency_jitter_ms), float(latency_spike_p)
         super().__init__(randomize=randomize, max_steps=max_steps, seed=seed, gait_generator="dog",
-                         hurdles="real" if real else True, skills=["stand"], motor_brake=motor_brake)
+                         hurdles="real" if real else True, skills=["stand"], motor_brake=motor_brake, body=body)
         self.real = real
+        # the body's stance (the action's centre and inputs 13-24) and sizes; Bolt: DOG and BOLT_SIZES
+        self.J = jump_sizes(self.body)
+        self.dog = DOG if self.body == "bolt" else self.robot.stance
+        self.effort = self.J["effort"]   # None: Bolt's single 5e-5 for every joint
+        assert self.body == "bolt" or self.handover is None, "hand-over states are Bolt's (MasterMind's world)"
+        if approach is None:
+            approach = self.J["approach"]
+        if bar_max is None:
+            bar_max = self.J["bar_max"]
         # delay_input (30 Oct): one more input, the delay Bolt measures (bolt_env measured_delay_ms / 40 ms), so a brain
         # can act on the delay it has instead of one compromise for all delays
         self.delay_input = delay_input
@@ -117,18 +195,19 @@ class JumpEnv(BoltEnv):
         self._clips = None
         self.exam_speed = None   # exams: start speed (m/s) or None for standing
         # adaptive bar height, like a coach: it goes up (0.5 cm) while clean jumps are common, down when rare
-        self.bar_level, self.clean_rate = 0.12, 0.0
+        self.bar_level, self.clean_rate = self.J["bar_level"], 0.0
 
     def _bar_height(self):
-        return float(np.clip(self.rng.uniform(self.bar_level - 0.05, self.bar_level + 0.03), 0.06, self.bar_max))
+        lo, hi = self.J["bar_jitter"]
+        return float(np.clip(self.rng.uniform(self.bar_level - lo, self.bar_level + hi), self.J["bar_min"], self.bar_max))
 
     def _grade(self, clean):
         """After each training try: raise the bar when clean jumps are common, lower it when they are rare."""
         self.clean_rate = 0.9 * self.clean_rate + 0.1 * float(clean)
         if self.clean_rate > 0.6:
-            self.bar_level = min(self.bar_max - 0.02, self.bar_level + 0.005)
+            self.bar_level = min(self.bar_max - self.J["bar_top_gap"], self.bar_level + self.J["bar_step"])
         elif self.clean_rate < 0.15:
-            self.bar_level = max(0.10, self.bar_level - 0.005)
+            self.bar_level = max(self.J["bar_floor"], self.bar_level - self.J["bar_step"])
 
     def paws_past(self):
         """How far each paw is past the bar, along the jump (negative: still in front of it)."""
@@ -180,7 +259,7 @@ class JumpEnv(BoltEnv):
         d, R = self.data, self._rotation()
         obs = np.concatenate([
             R.T @ np.array([0, 0, -1.0]), d.qvel[3:6] * 0.25, R.T @ d.qvel[0:3], [d.qpos[2]],
-            d.qpos[7:19] - DOG, d.qvel[6:18] * 0.1, self.last_action,
+            d.qpos[7:19] - self.dog, d.qvel[6:18] * 0.1, self.last_action,
             [self.hurdle_ahead(), self.hurdle_h, self.t / self.max_steps],
         ] + ([[np.sin(self.heading_error()), self.off_line()]] if self.real else []))
         if self.randomize:
@@ -202,9 +281,9 @@ class JumpEnv(BoltEnv):
             m.body_mass[self.torso] = self.nominal_mass[self.torso] * self.rng.uniform(0.85, 1.15)
             m.geom_friction[:, 0] = self.nominal_friction * self.rng.uniform(0.6, 1.3)
         yaw = self.rng.uniform(-np.pi, np.pi)
-        d.qpos[2] = 0.45
+        d.qpos[2] = self.J["start_z"]
         d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
-        d.qpos[7:19] = d.ctrl[:] = np.clip(DOG + self.rng.normal(0, 0.02, 12), self.lo, self.hi)
+        d.qpos[7:19] = d.ctrl[:] = np.clip(self.dog + self.rng.normal(0, 0.02, 12), self.lo, self.hi)
         mujoco.mj_forward(m, d)
         for _ in range(25):  # settle into the dog stance on the motors
             physics(m, d, self.frame_skip)
@@ -238,7 +317,7 @@ class JumpEnv(BoltEnv):
         mujoco.mj_forward(self.model, d)
         h = self.exam_bar[1] if self.exam_bar is not None else self._bar_height()
         self.place_real(float(H["ahead"][k]), h, float(H["heading_err"][k]), float(H["off_line"][k]))
-        self.t, self.last_action = 0, np.clip((d.ctrl - DOG) / ACTION_SCALE, -1, 1)
+        self.t, self.last_action = 0, np.clip((d.ctrl - self.dog) / ACTION_SCALE, -1, 1)
         self.start_try()
         self._start_latency()
         return self._obs(), {}
@@ -268,8 +347,9 @@ class JumpEnv(BoltEnv):
         dog's trot (below 2 m/s) or canter clip, keeping the heading; joint speeds scaled to the cadence of v0."""
         from imitate_env import Clip, _rotz
         if self._clips is None:
-            self._clips = {n: Clip(n) for n in ("trot", "canter")}
-        c = self._clips["trot" if v0 < 2.0 else "canter"]
+            prefix = "" if self.body == "bolt" else self.robot.clip_prefix   # the clips retargeted onto this body
+            self._clips = {n: Clip(n, prefix) for n in ("trot", "canter")}
+        c = self._clips["trot" if v0 < self.J["canter_from"] else "canter"]
         k = int(self.rng.integers(c.n))
         m, d = self.model, self.data
         R = self._rotation()
@@ -292,11 +372,11 @@ class JumpEnv(BoltEnv):
 
     def step(self, action):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
-        self.data.ctrl[:] = np.clip(DOG + ACTION_SCALE * a, self.lo, self.hi)  # the full motor range
+        self.data.ctrl[:] = np.clip(self.dog + ACTION_SCALE * a, self.lo, self.hi)  # the full motor range
         self._physics_step()
         self.t += 1
         self.env_steps += 1
-        d, R = self.data, self._rotation()
+        d, R, J = self.data, self._rotation(), self.J
         p = self.posture()
         hits = self.hurdle_hits()
         first_touch = hits > 0 and not self.touched
@@ -321,7 +401,7 @@ class JumpEnv(BoltEnv):
             pass   # the try ends this step
         elif not self.cleared:
             reward -= 0.1  # every moment still in front of the bar costs a little
-            reward += 15.0 * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
+            reward += J["paw_pay"] * max(0.0, past.min() - self.best_past)  # the hindmost paw moving past the bar
             self.best_past = max(self.best_past, past.min())
             reward += 0.5 * np.clip(p["vx"], -0.5, 1.0) * upright
             # Judge the bar like a dog (run 16i). Take off from the right spot for THIS height: agility dogs leave the
@@ -331,32 +411,33 @@ class JumpEnv(BoltEnv):
             # peaked at 0.72 m but ran into a 40 cm bar: nothing paid for timing the jump to the bar.
             ahead, h = self.hurdle_ahead(), self.hurdle_h
             grounded = self.feet_on_ground().sum() > 0
-            if 0.3 + 0.8 * h < ahead < 0.5 + 1.5 * h and not grounded:
+            if J["takeoff"][0] + 0.8 * h < ahead < J["takeoff"][1] + 1.5 * h and not grounded:
                 reward += 0.5 * max(0.0, d.qvel[2])
-            if 0.0 < ahead < 0.25 + 0.5 * h and grounded:
+            if 0.0 < ahead < J["late"] + 0.5 * h and grounded:
                 reward -= 0.3
-            if abs(ahead) < 0.1:
-                reward += 2.0 * np.clip(d.qpos[2] - (h + 0.30), -0.2, 0.2)
+            if abs(ahead) < J["over_zone"]:
+                reward += J["clear_pay"] * np.clip(d.qpos[2] - (h + J["clear_z"]), -J["clear_clip"], J["clear_clip"])
             # tuck: a paw passing over the bar (within 12 cm of it) should be above it, with 3 cm to spare.
             # At 4-5M it cleared and landed 11 times in 12 at 10-12 cm, but the trailing rear legs clipped
             # the bar, so clean jumps stayed rare and the practice bar stuck at 10-12 cm.
-            over = np.abs(past) < 0.12
+            over = np.abs(past) < J["tuck_zone"]
             if over.any():
                 z = np.array([self.data.geom_xpos[f][2] for f in self.foot_ids])
-                reward += 3.0 * np.sum(np.clip(z[over] - (self.hurdle_h + 0.03), -0.1, 0.1))
-            if past.min() > 0.08:  # all four paws past the bar: a little now, the rest for landing
+                reward += J["tuck_pay"] * np.sum(np.clip(z[over] - (self.hurdle_h + J["tuck_gap"]), -J["tuck_clip"], J["tuck_clip"]))
+            if past.min() > J["past_ok"]:  # all four paws past the bar: a little now, the rest for landing
                 self.cleared = just_cleared = True
                 self.clear_t = self.t
                 reward += 5.0 if not self.touched else 1.0
         else:  # landed: stand tall and still
-            if not self.landed and self.t - self.clear_t >= 25 and R[2, 2] > 0.85 and p["height"] > 0.3:
+            if not self.landed and self.t - self.clear_t >= 25 and R[2, 2] > 0.85 and p["height"] > J["land_z"]:
                 self.landed = True   # still on its feet half a second after clearing; worth more facing forward
                 reward += (1.0 if self.dropped else 12.0 if not self.touched else 6.0) * (0.5 + 0.5 * facing)
             speed = np.hypot(p["vx"], p["vy"])
-            reward += 1.0 * np.exp(-((p["height"] - 0.43) / 0.08) ** 2) * upright * np.exp(-(speed / 0.5) ** 2)
+            reward += 1.0 * np.exp(-((p["height"] - J["stand_z"]) / J["stand_w"]) ** 2) * upright * np.exp(-(speed / 0.5) ** 2)
         if self.real:   # spinning about the vertical, all through the jump, is where a twisted landing starts
             reward -= 0.02 * d.qvel[5] ** 2
-        reward -= 0.01 * np.sum((a - self.last_action) ** 2) + 5e-5 * np.sum(d.actuator_force ** 2)
+        effort = 5e-5 * np.sum(d.actuator_force ** 2) if self.effort is None else np.sum(self.effort * d.actuator_force ** 2)
+        reward -= 0.01 * np.sum((a - self.last_action) ** 2) + effort
         self.last_action = a
         fell = R[2, 2] < 0.2
         if fell:
@@ -370,21 +451,27 @@ class JumpEnv(BoltEnv):
 
 
 class JumpPolicy:
-    def __init__(self, run_dir, zip_name="policy.zip", stats_name="vecnormalize.pkl"):
+    def __init__(self, run_dir, zip_name="policy.zip", stats_name="vecnormalize.pkl", body=None):
+        """body: the robot the brain drives (None: the folder's best.json "body", else BOLT_BODY, else bolt)."""
+        import json
         from pathlib import Path
         run_dir = Path(run_dir)
+        if body is None and (run_dir / "best.json").exists():
+            body = json.loads((run_dir / "best.json").read_text()).get("body")
+        self.body = body or os.environ.get("BOLT_BODY", "bolt")
         self.model = PPO.load(run_dir / zip_name, device="cpu")
         n = self.model.observation_space.shape[0]
         self.real = n in (51, 52)                    # run 16 on: the real hurdle
         self.delay_input = n == 52                   # 30 Oct on: the measured delay as an input
-        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: JumpEnv(real=self.real, delay_input=self.delay_input)]))
+        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: JumpEnv(
+            real=self.real, delay_input=self.delay_input, body=self.body)]))
         self.norm.training = False
 
     def act(self, obs):
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 
-def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=0.55, max_steps=100, speed=None,
+def exam(policy, episodes=10, seed=5000, heights=None, dist=None, max_steps=100, speed=None,
          strict_too=True, gait=False, motor_brake=None):
     """Jump the bar from `dist` m away (55 cm up to run 16h; 1.5 m with a run-up from run 16i), optionally
     arriving at `speed` m/s. Two scores per height:
@@ -394,12 +481,18 @@ def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=
                at all, standing tall at the end and facing within 20 degrees of the jump.
     strict_too=False: the fair score only. gait=True (with speed): start mid-stride in the dog's trot/canter pose.
     motor_brake: None = the process default (bolt_env.MOTOR["brake"]: off unless a training script or
-    BOLT_MOTOR_BRAKE turned it on), True/False for this exam."""
+    BOLT_MOTOR_BRAKE turned it on), True/False for this exam.
+    heights, dist: None = the body's (Bolt: 15-30 cm from 0.55 m; jump_sizes). The policy's body (JumpPolicy.body, else
+    BOLT_BODY) is the exam's; "standing tall" in the strict test is Bolt's 35 cm x the body's kz."""
     out = {}
     real = getattr(policy, "real", False)
+    body = getattr(policy, "body", None)
+    J = jump_sizes(body)
+    heights = J["exam_heights"] if heights is None else heights
+    dist = J["exam_dist"] if dist is None else dist
     for strict in ((False, True) if strict_too else (False,)):
         env = JumpEnv(randomize=strict, real=real, max_steps=max_steps, motor_brake=motor_brake,
-                      delay_input=getattr(policy, "delay_input", False))
+                      delay_input=getattr(policy, "delay_input", False), body=body)
         env.exam_speed, env.exam_gait = speed, gait
         for h in heights:
             wins = 0
@@ -415,7 +508,7 @@ def exam(policy, episodes=10, seed=5000, heights=(0.15, 0.20, 0.25, 0.30), dist=
                         break
                 if strict:
                     wins += bool(info["cleared"] and not info["touched"] and not fell and info["up"] > 0.9
-                                 and info["height"] > 0.35 and abs(info.get("heading_error", 0.0)) < 0.35)
+                                 and info["height"] > J["strict_z"] and abs(info.get("heading_error", 0.0)) < 0.35)
                 else:
                     wins += bool(info["cleared"] and not info.get("dropped", info["touched"]) and not fell and info["up"] > 0.7)
             out[f"{'strict' if strict else 'jump'}_{round(h * 100)}"] = wins / episodes

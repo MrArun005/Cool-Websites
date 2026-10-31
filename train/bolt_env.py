@@ -315,15 +315,23 @@ class BoltEnv(gym.Env):
         self.s, self.ts = scale, np.sqrt(scale)  # length and time scale
         # body: "bolt" (bolt.xml, the default) or a real robot of robot_bodies.BODIES ("go2": the Unitree Go2, Menagerie's
         # model with position servos and its own motor model); None = the BOLT_BODY env var, else "bolt". Real-robot
-        # bodies are for the imitation env (ImitateEnv): this class's own command tasks (stand/sit/lie/walk rewards,
+        # bodies are for the imitation env (ImitateEnv) and the jump env (JumpEnv, with hurdles=True or "real": the same
+        # bar or agility hurdle added to the body's model): this class's own command tasks (stand/sit/lie/walk rewards,
         # poses, gaits) are Bolt's.
         self.body = body or os.environ.get("BOLT_BODY", "bolt")
         if self.body != "bolt":
-            assert scale == 1.0 and not hurdles and not terrain_cm > 0, "real-robot bodies have no scaling, hurdles or terrain yet"
+            assert scale == 1.0 and not terrain_cm > 0, "real-robot bodies have no scaling or terrain yet"
             import robot_bodies
             import weakref
             self.robot = robot_bodies.get(self.body)
-            self.model = mujoco.MjModel.from_xml_string(self.robot.xml())
+            xml = self.robot.xml()
+            if hurdles == "real":   # hurdle.py's agility hurdle (stands before the floor, the loose bar after the robot)
+                import hurdle
+                xml = hurdle.world_xml(xml, n=1)
+            elif hurdles:           # HURDLE_XML's bar, parked far away until placed, as on Bolt
+                assert xml.count('<geom name="floor"') == 1
+                xml = xml.replace('<geom name="floor"', HURDLE_XML + '\n    <geom name="floor"', 1)
+            self.model = mujoco.MjModel.from_xml_string(xml)
             _MOTORS[id(self.model)] = self.robot.motor
             weakref.finalize(self, _MOTORS.pop, id(self.model), None)
         elif scale == 1.0 and hurdles == "real":   # a real agility hurdle: solid stands, a loose bar (hurdle.py)
