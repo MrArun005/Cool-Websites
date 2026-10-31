@@ -20,7 +20,7 @@ step-by-step version for the Go2 motion brain.
 | Trained brain for the Go2 body | done for motion (489M); jumps, recovery training; MasterMind not started |
 | Bridge: robot sensors -> brain -> motor commands | **started**: `controller.py` builds the inputs and targets exactly as training (`test_deploy.py`: inputs 1e-7, targets 1e-15, clip switch identical); SDK side not yet |
 | Safety layer | **not started** (phase 1) |
-| Rehearsal in the vendor simulator | **not started** (phase 2) |
+| Rehearsal in the vendor simulator | **started**: passes in lockstep (5/5, 41 s plan) and 2/5 full runs in real time through DDS (see Log) |
 | Inputs the real robot cannot measure | **open**: the brain reads body speed (3) and body height (1), which no Go2 sensor gives (phase 3) |
 | Real-world tuning | needs the robot (phase 4-5) |
 
@@ -114,3 +114,18 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   loss 0.2); ours trains with Menagerie's 2.0. A real mismatch to settle in phase 2 (our damping A/B on the CPU
   pilots said the choice matters). Installing the vendor SDK (cyclonedds + unitree_sdk2_python) in this cloud session
   needs the owner's OK (installing downloaded code is gated); step 1.1 waits on that.
+* 31 Oct (late): toolchain up (CycloneDDS 0.10.x built from source, unitree_sdk2_python, unitree_mujoco; owner's OK).
+  `sim_vendor.py` (Unitree's simulator, headless), `run_go2.py` (the robot program), `lockstep_vendor.py` (gap finder).
+  * First runs fell after 2-5 s of trot. Not physics: **Unitree's go2 scene has two 8 cm bumps and a staircase 1.2-3.4 m
+    ahead**, and the dog trotted into them. Ruled out on the way, each by an A/B: joint damping 0.1 vs 2.0, physics step
+    5 vs 2 ms, Euler vs implicitfast, foot friction 0.4 vs 0.8, servo vs torque motors, shin collisions. Field by field
+    the vendor go2.xml and our Menagerie model are identical in bodies, masses, inertias and joints; only the joint
+    damping and the geom friction (0.4 vs 0.6/0.8) differ. `--flat` (default) switches the obstacles off.
+  * Lockstep on Unitree's model, flat floor, plan trot 10 s, sit 5, lie 6, getup 6, walk 8, canter 6 (41 s):
+    **0/5 falls** at the vendor's own settings (damping 0.1, 5 ms step), at 2 ms, and at damping 2.0.
+  * Real time through DDS (rt/lowstate, rt/lowcmd at 500 Hz, brain at 50 Hz, true velocity/height): 2/5 runs complete
+    the 41 s plan; 1 stopped by the safety layer on a 63 ms stale state (the Python simulator stalls: it runs at
+    0.95x real time on this 4-core cloud VM); 2 fell in the canter (the last 6 s), which does not fall in lockstep.
+    Brain loop timing: median 20.1 ms, p95 21.3 ms. Next: run the simulator on a dedicated core (or the C++
+    unitree_mujoco) to separate VM stalls from real canter sensitivity; then phase 3 (no true velocity/height).
+  * Harness lesson: never start a simulator while another still publishes on the same DDS domain.
