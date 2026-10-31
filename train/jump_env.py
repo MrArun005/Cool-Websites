@@ -452,12 +452,13 @@ class JumpEnv(BoltEnv):
 
 class JumpPolicy:
     def __init__(self, run_dir, zip_name="policy.zip", stats_name="vecnormalize.pkl", body=None):
-        """body: the robot the brain drives (None: the folder's best.json "body", else BOLT_BODY, else bolt)."""
+        """body: the robot the brain drives (None: the folder's best.json "body" -- bolt when it records none --, else BOLT_BODY, else bolt)."""
         import json
         from pathlib import Path
         run_dir = Path(run_dir)
-        if body is None and (run_dir / "best.json").exists():
-            body = json.loads((run_dir / "best.json").read_text()).get("body")
+        saved = [run_dir / f for f in ("best.json", "model.json") if (run_dir / f).exists()]
+        if body is None and saved:   # a saved brain (run's best/ or models/ folder): its own body; none recorded = Bolt
+            body = json.loads(saved[0].read_text()).get("body") or "bolt"
         self.body = body or os.environ.get("BOLT_BODY", "bolt")
         self.model = PPO.load(run_dir / zip_name, device="cpu")
         n = self.model.observation_space.shape[0]
