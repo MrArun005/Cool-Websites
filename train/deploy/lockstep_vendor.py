@@ -35,7 +35,7 @@ from controller import DT, Go2Controller  # noqa: E402
 FALL_UP = np.cos(np.radians(60))
 
 
-def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0):
+def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, est=None, errs=None):
     d = mujoco.MjData(m)
     mujoco.mj_resetDataKeyframe(m, d, 0) if m.nkey else None
     rng = np.random.default_rng(seed)
@@ -65,7 +65,16 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0):
                 return t_brain, name, float(d.qpos[2])
             q_ours, dq_ours = np.zeros(12), np.zeros(12)
             q_ours[ours], dq_ours[ours] = d.qpos[qadr], d.qvel[vadr]
-            new = ctl.step(d.qpos[3:7].copy(), d.qvel[3:6].copy(), q_ours, dq_ours, R.T @ d.qvel[0:3], float(d.qpos[2]))
+            v_true, h_true = R.T @ d.qvel[0:3], float(d.qpos[2])
+            if est == "ref":      # velocity = what the clip asks for (no measurement); height measured by kinematics
+                v_use, h_use = ctl.ref("v_body", 0), h_true
+                errs.append(np.concatenate([v_use - v_true, [0.0]]))
+            elif est is not None:   # phase 3: what a real Go2 can know, from the IMU rotation and the joints
+                v_use, h_use = est.update(d.qpos[3:7].copy(), q_ours)
+                errs.append(np.concatenate([v_use - v_true, [h_use - h_true]]))
+            else:
+                v_use, h_use = v_true, h_true
+            new = ctl.step(d.qpos[3:7].copy(), d.qvel[3:6].copy(), q_ours, dq_ours, v_use, h_use)
             if rng.random() < skip_p:   # a missed brain step: the motors keep the old targets for another 20 ms
                 new = target
             lag = int(round(rng.uniform(*delay_ms) / 1000 / m.opt.timestep))   # the new targets reach the motors this late
@@ -91,6 +100,8 @@ def main():
     ap.add_argument("--stairs", action="store_true", help="keep the scene's bumps and staircase (default: flat floor)")
     ap.add_argument("--delay-ms", type=float, nargs=2, default=[0.0, 0.0], help="per step, the targets arrive U(lo, hi) ms late (< 20)")
     ap.add_argument("--skip-p", type=float, default=0.0, help="chance per step that the brain's step is missed")
+    ap.add_argument("--estimate", action="store_true", help="velocity and height from estimator.LegEstimator, not the truth")
+    ap.add_argument("--vel-ref", action="store_true", help="velocity input = the clip's reference velocity (no measurement)")
     a = ap.parse_args()
     xml = Path(os.environ["UNITREE_MUJOCO"]) / "unitree_robots" / "go2" / "scene.xml"
     m = mujoco.MjModel.from_xml_path(str(xml))
@@ -103,9 +114,17 @@ def main():
     kp, kd = ctl.body.entry["kp"], ctl.body.entry["kv"]
     plan = [(c.split(":")[0], float(c.split(":")[1])) for c in a.plan.split(",")]
     total = sum(s for _, s in plan)
-    res = [run(ctl, m, plan, a.pd_every, kp, kd, seed, a.delay_ms, a.skip_p) for seed in range(a.tries)]
+    errs = []
+    if a.estimate:
+        from estimator import LegEstimator
+    res = [run(ctl, m, plan, a.pd_every, kp, kd, seed, a.delay_ms, a.skip_p,
+               "ref" if a.vel_ref else (LegEstimator() if a.estimate else None), errs) for seed in range(a.tries)]
+    if errs:
+        e = np.abs(np.array(errs))
+        print(f"estimator error (mean abs): velocity x/y/z {e[:, 0].mean():.3f} / {e[:, 1].mean():.3f} / {e[:, 2].mean():.3f} m/s, "
+              f"height {e[:, 3].mean() * 100:.1f} cm")
     falls = [r for r in res if r[1] is not None]
-    print(f"dt {a.dt} pd every {a.pd_every} damping {m.dof_damping[6]:g} delay {a.delay_ms} ms skip {a.skip_p}: {len(falls)}/{a.tries} fell; "
+    print(f"dt {a.dt} pd every {a.pd_every} damping {m.dof_damping[6]:g} delay {a.delay_ms} ms skip {a.skip_p}{' estimated v/h' if a.estimate else ''}{' v = reference' if a.vel_ref else ''}: {len(falls)}/{a.tries} fell; "
           f"time under the brain {np.mean([r[0] for r in res]):.1f}/{total:g} s; "
           f"falls in {[r[1] for r in falls]}; end heights {[round(r[2], 2) for r in res]}")
 

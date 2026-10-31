@@ -138,3 +138,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   (1) on the robot the 50 Hz loop must never miss a step: brain on the Jetson, loop at real-time priority, watchdog
   logs every late step; (2) the next Go2 training run adds missed steps (mastermind/env.py's packet-drop model,
   drop 0-10%) so the brain learns to tolerate them. Same as the A1 port plan's packet-drop line.
+* 1 Nov (night): phase 3 first measurements (`estimator.py`, `lockstep_vendor.py --estimate / --vel-ref`; vendor
+  settings, flat floor, 41 s plan): **height from leg kinematics is good (mean error 0.3 cm)**; body velocity from leg
+  odometry is not: 0.18-0.29 m/s mean forward error (differencing paw positions beats the Jacobian version: the paw
+  spheres roll and slip). Falls: true velocity 0/5; **leg-odometry velocity 4/10** (mostly canter); velocity = the
+  clip's reference 3/5 (trot). The 489M brain leans on its velocity input. Decision: route B -- retrain (fine-tune
+  from 489M) with the velocity input taken away, as most published Go2/A1 policies run (and keep the kinematic height,
+  which works). Needs GPU time (Kaggle T4/P100 is fine: no TF32).
