@@ -162,6 +162,14 @@ JOBS = {
         name="go2jump", script="train_jump.py", start=None,
         args=["--body", "go2", "--latency-min-ms", "0", "--latency-max-ms", "40"],
         finals=[]),
+    "go2-getup-pilot": dict(
+        # 31 Oct, owner's Go2 order: motion -> jumps -> shove recovery. First get-up brain on the Go2 body (getup_env
+        # body sizes: heights x0.70, "standing" above 0.22 m, shoves x0.80), from scratch, stand goal (selfright needs
+        # a Go2 posture brain), tough falls (--hard: kicks, drops, ice, second kick), 0-40 ms control delay per try.
+        # Pilot win: stands up from every start kind of the exam >= 0.5 (Bolt recover-delay 30M: 1.0 on all).
+        name="go2getup", script="train_getup.py", start=None,
+        args=["--body", "go2", "--goal", "stand", "--hard", "--latency-min-ms", "0", "--latency-max-ms", "40"],
+        finals=[]),
     "go2-damp-pilot": dict(
         # 30 Oct: go2-dog-pilot's exact recipe with the Go2 joint damping at 0.5 instead of Menagerie's 2.0 N·m·s/rad (a
         # generic value; at a trot's 10.5 rad/s thigh speed 2.0 eats ~21 of the 23.7 N·m drive). A/B against the 2-h
