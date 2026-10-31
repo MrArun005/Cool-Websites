@@ -4,9 +4,16 @@
 
 Writes runs/<name>/checkpoints/, runs/<name>/best/ (policy.zip, vecnormalize.pkl, best.json) and prints
 "checkpoint N ready: {...}" / "new best" lines as it goes.
+
+--body go2 (or BOLT_BODY=go2) trains the Unitree Go2 (robot_bodies.BODIES) instead of Bolt: its own model, motors and
+stance, the heights, kicks and effort cost of the try scaled to it (getup_env.getup_sizes); best.json records the body,
+and GetUpPolicy loads a saved brain on the body it records. --full-exam is Bolt's only (it uses Bolt's posture brain).
+
+    python train_getup.py --body go2 --name go2_getup1 --steps 15000000 [--hard]
 """
 import argparse
 import json
+import os
 import shutil
 import time
 from pathlib import Path
@@ -18,8 +25,9 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 from train_jump import TimeGuard
-from getup_env import EXAM_KINDS, GetUpEnv, GetUpPolicy, exam, exam_full
+from getup_env import EXAM_KINDS, GetUpEnv, GetUpPolicy, exam, exam_full, getup_sizes
 from bolt_env import add_brake_args, add_exam_gap_args, set_exam_gaps, set_motor_brake
+from robot_bodies import BODIES
 
 
 class Examiner(BaseCallback):
@@ -54,7 +62,8 @@ class Examiner(BaseCallback):
         ck.mkdir(exist_ok=True)
         self.model.save(ck / f"policy_{n}_steps.zip")
         self.training_env.save(str(ck / f"policy_vecnormalize_{n}_steps.pkl"))
-        pol = GetUpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl")
+        body = os.environ.get("BOLT_BODY", "bolt")   # main() sets it from --body
+        pol = GetUpPolicy(ck, f"policy_{n}_steps.zip", f"policy_vecnormalize_{n}_steps.pkl", body=body)
         if self.full:
             result = exam_full(pol, episodes=self.episodes)
             rates = [v for k, v in result.items() if k.startswith("stood_")]
@@ -73,7 +82,8 @@ class Examiner(BaseCallback):
             best.mkdir(exist_ok=True)
             shutil.copy(ck / f"policy_{n}_steps.zip", best / "policy.zip")
             shutil.copy(ck / f"policy_vecnormalize_{n}_steps.pkl", best / "vecnormalize.pkl")
-            (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=score), indent=2))
+            (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=score,
+                                                            **({"body": body} if body != "bolt" else {})), indent=2))
             print(f"new best at {n}: score {score:.2f}", flush=True)
 
 
@@ -135,9 +145,22 @@ def main():
     ap.add_argument("--drop-max", type=float, default=0.0, help="per-try share of lost control packets in [0, max] (0: off)")
     ap.add_argument("--latency-jitter-ms", type=float, default=0.0, help="per try the delay wobbles +- up to U(0, x) ms per step")
     ap.add_argument("--latency-spike-p", type=float, default=0.0, help="per try a delay-spike chance per step in U(0, x)")
+    ap.add_argument("--body", choices=["bolt"] + sorted(BODIES), default=os.environ.get("BOLT_BODY", "bolt"),
+                    help="the robot: bolt (default) or a real robot of robot_bodies.BODIES, e.g. go2 (the Unitree Go2)")
+    ap.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model "
+                    "file's (robot_bodies BOLT_JOINT_DAMPING; Go2's Menagerie value 2.0 is an assumption, not a measurement)")
     add_exam_gap_args(ap)
     add_brake_args(ap, default=True)
     args = ap.parse_args()
+    if args.joint_damping is not None:
+        os.environ["BOLT_JOINT_DAMPING"] = repr(args.joint_damping)   # read when each env builds its model
+    os.environ["BOLT_BODY"] = args.body   # the training envs (subprocesses), the exams and GetUpPolicy all read it
+    if args.body != "bolt":
+        assert not args.full_exam, "--full-exam uses Bolt's posture brain (tuck and stand); other bodies have none"
+        G = getup_sizes(args.body)
+        print(f"body: {args.body} (motors, brake speeds and gains: robot_bodies.BODIES; --brake-speed/--brake-gain do not "
+              f"apply); sizes kz {G['kz']}, kicks x{G['kv']} m/s x{G['kw']} rad/s: stands at {G['stand_z']:.3f} m, "
+              f"'standing' above {G['standing_z']:.3f} m", flush=True)
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)

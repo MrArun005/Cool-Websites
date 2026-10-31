@@ -315,9 +315,9 @@ class BoltEnv(gym.Env):
         self.s, self.ts = scale, np.sqrt(scale)  # length and time scale
         # body: "bolt" (bolt.xml, the default) or a real robot of robot_bodies.BODIES ("go2": the Unitree Go2, Menagerie's
         # model with position servos and its own motor model); None = the BOLT_BODY env var, else "bolt". Real-robot
-        # bodies are for the imitation env (ImitateEnv) and the jump env (JumpEnv, with hurdles=True or "real": the same
-        # bar or agility hurdle added to the body's model): this class's own command tasks (stand/sit/lie/walk rewards,
-        # poses, gaits) are Bolt's.
+        # bodies are for the imitation env (ImitateEnv), the jump env (JumpEnv, with hurdles=True or "real": the same
+        # bar or agility hurdle added to the body's model) and the get-up env (GetUpEnv): this class's own command tasks
+        # (stand/sit/lie/walk rewards, poses, gaits) are Bolt's.
         self.body = body or os.environ.get("BOLT_BODY", "bolt")
         if self.body != "bolt":
             assert scale == 1.0 and not terrain_cm > 0, "real-robot bodies have no scaling or terrain yet"

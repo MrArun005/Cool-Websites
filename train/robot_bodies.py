@@ -3,6 +3,7 @@
     BOLT_BODY=go2 python train_imitate.py ...        # or  python train_imitate.py --body go2 ...
     ImitateEnv(body="go2")                            # one env; BoltEnv(body="go2") loads the same model
     JumpEnv(body="go2"), python train_jump.py --body go2   # the hurdle jump on it (jump_env.jump_sizes: lengths scaled)
+    GetUpEnv(body="go2"), python train_getup.py --body go2  # getting up after a fall (getup_env.getup_sizes)
     python robot_bodies.py go2                        # print what the entry resolves to (kinematics, motors, stance)
 
 "bolt" (bolt.xml, bolt_env.py's own constants) is not in the table: it is the default and its code path is unchanged.
