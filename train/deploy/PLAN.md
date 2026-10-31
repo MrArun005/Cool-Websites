@@ -154,3 +154,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   canter 0.76 / 0.82 / 0.86. Gate (lockstep, vendor settings, kinematic height, 41 s plan, 10 tries): **3/10 falls**
   (all trot) vs 489M with leg-odometry velocity 4/10 -- better direction, not passed, not saved. Pod stopped, $0.17
   left. The Kaggle run (bolt-go2-blind, same recipe, 3.5 h) continues it.
+* 1 Nov 03:15: run_go2.py gets `--interactive` (type a clip, "steer X", "stop"), the kinematic estimator in place of
+  the --truth shortcut (height from the legs; velocity from leg odometry, ignored by a --blind-vel brain), and a late-
+  step watchdog (counts steps > 25 ms; damping mode after 3 in a row > 40 ms). Test in Unitree's simulator through DDS,
+  real time, run f's blind brain, no truth: trot -> walk -> steer 0.4 -> sit -> lie -> stop by typed commands, 23 s,
+  no fall, 0 of 1152 steps late; an unknown command is refused with the list of valid ones.

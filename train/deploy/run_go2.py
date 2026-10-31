@@ -12,12 +12,17 @@ Safety (never in the brain): targets kept --margin rad inside the joint limits; 
 a tilt past 60 degrees, a joint faster than its rated speed, a state older than 60 ms, or the end of the plan.
 
 Body velocity and height have no sensor on a real Go2 (PLAN.md phase 3). --truth takes them from rt/sportmodestate,
-which Unitree's simulator fills with the true values: a rehearsal-only shortcut, refused with --domain 0. Without it a
-leg-kinematics height and a gyro-free velocity of 0 are used (placeholders until phase 3's estimator).
+which Unitree's simulator fills with the true values: a rehearsal-only shortcut, refused with --domain 0. Without it
+estimator.LegEstimator gives them from the IMU rotation and the joints: kinematic height (0.3 cm off in the rehearsal)
+and leg-odometry velocity (0.2-0.3 m/s off; a brain trained with --blind-vel ignores it).
+
+--interactive: type commands while it runs (a clip name, "steer 0.4", "stop"). Late brain steps (> 25 ms) are counted;
+3 in a row over 40 ms put the robot in damping mode.
 
 On a real robot: release sport mode first (--release-sport); start lying down, robot clear, e-stop in hand.
 """
 import argparse
+import queue
 import sys
 import threading
 import time
@@ -29,6 +34,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from controller import DT, Go2Controller, quat_to_mat  # noqa: E402
+from estimator import LegEstimator  # noqa: E402
 
 FALL_TILT = np.cos(np.radians(60))   # body z-axis below this up-component: fallen
 
@@ -113,6 +119,7 @@ def main():
     ap.add_argument("--speed-stop", type=float, default=1.2, help="damping mode above this x rated joint speed (0: off)")
     ap.add_argument("--truth", action="store_true", help="simulator only: true velocity/height from rt/sportmodestate")
     ap.add_argument("--release-sport", action="store_true", help="real robot: release Unitree's sport mode first")
+    ap.add_argument("--interactive", action="store_true", help="read commands from the keyboard (clip names, steer X, stop)")
     ap.add_argument("--log")
     a = ap.parse_args()
     if a.truth and a.domain == 0:
@@ -151,41 +158,75 @@ def main():
         s = min(1.0, (k + 1) / n_blend)
         bot.set(np.clip((1 - s) * q0 + s * ctl.stance, lo, hi))
         time.sleep(DT)
-    plan = [(c.split(":")[0], float(c.split(":")[1])) for c in a.plan.split(",")]
-    print(f"brain {Path(a.brain).parent.name}, kp {kp:g} kd {kd:g}, plan {plan}", flush=True)
+    plan = [(c.split(":")[0], float(c.split(":")[1])) for c in a.plan.split(",")] if a.plan else []
+    cmds = queue.Queue()
+    if a.interactive:   # type a clip name (trot, sit, ...), "steer 0.4" or "stop" + Enter while it runs
+        def reader():
+            for line in sys.stdin:
+                cmds.put(line.strip())
+        threading.Thread(target=reader, daemon=True).start()
+        plan = plan or [("trot", 1e9)]
+    est = LegEstimator(body.key) if not a.truth else None
+    print(f"brain {Path(a.brain).parent.name}{' (no velocity input)' if ctl.brain.blind_vel else ''}, kp {kp:g} kd {kd:g}, "
+          f"plan {plan}{', interactive' if a.interactive else ''}", flush=True)
+    late = late_run = 0
     for name, secs in plan:
         quat, gyro, q, dq, age = bot.read()
         ctl.command(name, steer=a.steer, q=q)
-        for _ in range(int(secs / DT)):
+        n = 0
+        while n < int(secs / DT):
             t = time.perf_counter()
+            while not cmds.empty():   # interactive commands, between brain steps
+                c = cmds.get().split()
+                if not c:
+                    continue
+                if c[0] == "stop":
+                    reason = "stop command"
+                elif c[0] == "steer" and len(c) > 1:
+                    ctl.steer = float(c[1])
+                elif c[0] in ctl.clips:
+                    ctl.command(c[0], q=bot.read()[2])
+                    name = c[0]
+                else:
+                    print(f"? {' '.join(c)} (clips: {', '.join(ctl.clips)}; steer X; stop)", flush=True)
             quat, gyro, q, dq, age = bot.read()
             R = quat_to_mat(quat)
             if a.truth and bot.sport is not None:
                 v_body = R.T @ np.array(bot.sport.velocity, float)
                 height = float(bot.sport.position[2])
-            else:
-                v_body, height = np.zeros(3), body.stand_height   # placeholders until the phase 3 estimator
-            if R[2, 2] < FALL_TILT:
+            else:   # what a real Go2 can know: kinematic height; leg-odometry velocity (a --blind-vel brain ignores it)
+                v_body, height = est.update(quat, q)
+            if reason != "plan done":
+                pass
+            elif R[2, 2] < FALL_TILT:
                 reason = "tilt past 60 degrees"
             elif age > 0.06:
                 reason = f"state {age * 1000:.0f} ms old"
             elif a.speed_stop and np.any(np.abs(dq) > rated * a.speed_stop):
                 k = int(np.argmax(np.abs(dq) / rated))
                 reason = f"joint {k} at {dq[k]:+.1f} rad/s, over its rated {rated[k]:g}"
+            elif late_run >= 3:
+                reason = "3 brain steps in a row over 40 ms (the loop is too slow for this machine)"
             if reason != "plan done":
                 break
             tgt = np.clip(ctl.step(quat, gyro, q, dq, v_body, height), lo, hi)
             bot.set(tgt)
             log.append(np.concatenate([[time.perf_counter() - t0], quat, gyro, q, dq, tgt, v_body, [height],
-                                       [ALL.index(name)]]))
-            time.sleep(max(0.0, DT - (time.perf_counter() - t)))
+                                       [ALL.index(ctl.clip.name)]]))
+            took = time.perf_counter() - t
+            time.sleep(max(0.0, DT - took))
+            step = time.perf_counter() - t
+            late += step > 0.025
+            late_run = late_run + 1 if step > 0.04 else 0
+            n += 1
         if reason != "plan done":
             break
     bot.set(None, 0.0, a.damp_kd)   # damping mode
     time.sleep(0.5)
     bot.running = False
     up = quat_to_mat(bot.read()[0])[2, 2]
-    print(f"stopped: {reason}; {len(log) * DT:.1f} s under the brain; body up-component at the end {up:.2f}", flush=True)
+    print(f"stopped: {reason}; {len(log) * DT:.1f} s under the brain; body up-component at the end {up:.2f}; "
+          f"late steps (> 25 ms) {late} of {len(log)}", flush=True)
     if a.log:
         np.savez(a.log, frames=np.array(log), reason=reason, plan=a.plan)
 
