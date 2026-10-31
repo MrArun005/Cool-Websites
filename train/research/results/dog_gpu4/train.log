@@ -1,0 +1,30 @@
+Failed to import warp: No module named 'warp'
+Failed to import mujoco_warp: No module named 'warp'
+motor brake: on above 25 rad/s, 3.5 N·m per rad/s
+update at 0: reward/step 0.673 (canter 0.365), try 205 steps, fell 0.15, pose 0.81, nan steps/s, 5.4 min
+update at 25722880: reward/step 0.650 (canter 0.289), try 209 steps, fell 0.16, pose 0.78, 14857 steps/s, 37.0 min
+update at 51445760: reward/step 0.669 (canter 0.301), try 195 steps, fell 0.22, pose 0.79, 15129 steps/s, 65.5 min
+update at 77168640: reward/step 0.688 (canter 0.338), try 204 steps, fell 0.13, pose 0.82, 16405 steps/s, 91.8 min
+update at 102891520: reward/step 0.662 (canter 0.284), try 209 steps, fell 0.15, pose 0.80, 16444 steps/s, 118.0 min
+update at 128614400: reward/step 0.662 (canter 0.342), try 199 steps, fell 0.17, pose 0.79, 16404 steps/s, 144.2 min
+update at 154337280: reward/step 0.640 (canter 0.361), try 199 steps, fell 0.18, pose 0.78, 16440 steps/s, 170.5 min
+update at 180060160: reward/step 0.680 (canter 0.342), try 195 steps, fell 0.18, pose 0.80, 16408 steps/s, 196.7 min
+update at 205783040: reward/step 0.649 (canter 0.346), try 207 steps, fell 0.16, pose 0.79, 16447 steps/s, 222.9 min
+update at 231505920: reward/step 0.660 (canter 0.337), try 204 steps, fell 0.15, pose 0.79, 16399 steps/s, 249.2 min
+update at 257228800: reward/step 0.673 (canter 0.350), try 202 steps, fell 0.20, pose 0.80, 16439 steps/s, 275.4 min
+update at 282951680: reward/step 0.661 (canter 0.386), try 198 steps, fell 0.17, pose 0.80, 16404 steps/s, 301.7 min
+update at 308674560: reward/step 0.690 (canter 0.367), try 209 steps, fell 0.13, pose 0.82, 16440 steps/s, 327.9 min
+update at 334397440: reward/step 0.678 (canter 0.377), try 201 steps, fell 0.18, pose 0.82, 16410 steps/s, 354.2 min
+update at 360120320: reward/step 0.650 (canter 0.352), try 197 steps, fell 0.20, pose 0.78, 16439 steps/s, 380.4 min
+update at 385843200: reward/step 0.670 (canter 0.375), try 200 steps, fell 0.13, pose 0.81, 16396 steps/s, 406.7 min
+update at 411566080: reward/step 0.640 (canter 0.368), try 216 steps, fell 0.13, pose 0.78, 16426 steps/s, 432.9 min
+update at 437288960: reward/step 0.661 (canter 0.399), try 209 steps, fell 0.13, pose 0.80, 16403 steps/s, 459.2 min
+update at 463011840: reward/step 0.643 (canter 0.363), try 201 steps, fell 0.18, pose 0.79, 16447 steps/s, 485.4 min
+update at 488734720: reward/step 0.688 (canter 0.392), try 207 steps, fell 0.16, pose 0.82, 16408 steps/s, 511.7 min
+update at 514457600: reward/step 0.698 (canter 0.407), try 207 steps, fell 0.12, pose 0.82, 16443 steps/s, 537.9 min
+update at 540180480: reward/step 0.684 (canter 0.351), try 209 steps, fell 0.14, pose 0.81, 16402 steps/s, 564.2 min
+update at 565903360: reward/step 0.655 (canter 0.359), try 181 steps, fell 0.24, pose 0.79, 16445 steps/s, 590.4 min
+update at 591626240: reward/step 0.668 (canter 0.358), try 198 steps, fell 0.17, pose 0.79, 16402 steps/s, 616.7 min
+update at 617349120: reward/step 0.661 (canter 0.394), try 201 steps, fell 0.14, pose 0.81, 16445 steps/s, 642.9 min
+stopped: time budget of 10.5 h used up at 617349120 steps; the last saved brain is run/params.pkl
+done: 642.9 min -> run
