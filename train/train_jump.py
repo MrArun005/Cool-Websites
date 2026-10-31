@@ -4,11 +4,19 @@
     # pick best/ on the mid-stride hand-over (MasterMind's trot -> jump): 1.7 m/s from 1.1 m, legs mid-stride
     python train_jump.py ... --select midstride --select-speed 1.7 --select-dist 1.1 --select-heights 0.40 0.50 0.60
 
+--body go2 (or BOLT_BODY=go2) trains the Unitree Go2 (robot_bodies.BODIES) instead of Bolt: its own model, motors,
+stance and clips, the bar and the try's lengths scaled to its size (jump_env.jump_sizes). Defaults of --approach,
+--exam-dist, --exam-heights and --bar-max are then the Go2's (0.39-0.56 m, 0.47 m, 10/14/17/21 cm, 35 cm); speeds are not
+scaled, so give Go2-sized ones (its trot clip runs 1.4 m/s, canter 2.4).
+
+    python train_jump.py --body go2 --name go2_jump1 --steps 6000000
+
 Writes runs/<name>/checkpoints/, runs/<name>/best/ (policy.zip, vecnormalize.pkl, best.json) and prints
 "checkpoint N ready: {...}" / "new best" lines (watch.log style) as it goes.
 """
 import argparse
 import json
+import os
 import shutil
 import time
 from pathlib import Path
@@ -19,8 +27,9 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
-from jump_env import JumpEnv, JumpPolicy, exam
+from jump_env import JumpEnv, JumpPolicy, exam, jump_sizes
 from bolt_env import add_brake_args, add_exam_gap_args, set_exam_gaps, set_motor_brake
+from robot_bodies import BODIES
 
 
 def widen(src, out, delay_input=False):
@@ -124,15 +133,18 @@ class Examiner(BaseCallback):
             print(f"checkpoint {n} mid-stride: {self.mid['speed']} m/s from {self.mid['dist']} m, legs mid-stride, "
                   f"{result['mid_mean']:.2f} mean over {self.mid['heights']} m; still-legs mean {sum(still) / len(still):.2f}; "
                   f"selecting on {self.select}", flush=True)
-        if result.get("jump_15", 1) == 0 and self.best > 0.3:   # collapsed (run 15c at 7M): say so loudly
-            print(f"collapse warning at {n}: no clean 15 cm jumps (best score so far {self.best:.2f})", flush=True)
+        low = round(min(self.heights) * 100)
+        if result.get(f"jump_{low}", 1) == 0 and self.best > 0.3:   # collapsed (run 15c at 7M): say so loudly
+            print(f"collapse warning at {n}: no clean {low} cm jumps (best score so far {self.best:.2f})", flush=True)
         if score > self.best:
             self.best = score
             best = self.out / "best"
             best.mkdir(exist_ok=True)
             shutil.copy(ck / f"policy_{n}_steps.zip", best / "policy.zip")
             shutil.copy(ck / f"policy_vecnormalize_{n}_steps.pkl", best / "vecnormalize.pkl")
-            (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=score, select=self.select), indent=2))
+            body = os.environ.get("BOLT_BODY", "bolt")
+            (best / "best.json").write_text(json.dumps(dict(steps=n, exam=result, score=score, select=self.select,
+                                                            **({"body": body} if body != "bolt" else {})), indent=2))
             print(f"new best at {n}: score {score:.2f}", flush=True)
 
 
@@ -169,18 +181,19 @@ def main():
     ap.add_argument("--widen-from", help="a jump brain folder with fewer inputs to start from (with --real; "
                     "49 -> 51, or -> 52 with --delay-input)")
     ap.add_argument("--delay-input", action="store_true", help="the measured delay as one more input (30 Oct; with --real)")
-    ap.add_argument("--approach", type=float, nargs=2, default=[0.45, 0.65], help="bar distance at the start (m), run 16i: 1.5 3.0")
+    ap.add_argument("--approach", type=float, nargs=2, help="bar distance at the start (m); default the body's (Bolt 0.45 0.65), run 16i: 1.5 3.0")
     ap.add_argument("--max-steps", type=int, default=100, help="steps per try (50 per second); a run-up needs ~200")
     ap.add_argument("--approach-speed", type=float, default=0.0, help="half the tries start running at the bar, 1 m/s up to this (run 16i: 3)")
     ap.add_argument("--exam-speed", type=float, help="exam: arrive at the bar at this speed (m/s), e.g. 2.0 as from a trot or canter")
-    ap.add_argument("--exam-dist", type=float, default=0.55, help="bar distance in the exam (m), run 16i: 2.0")
-    ap.add_argument("--exam-heights", type=float, nargs="+", default=[0.15, 0.20, 0.25, 0.30],
-                    help="bar heights (m) of the exam, e.g. 0.25 0.30 0.40 0.50 for a brain that clears 30 cm")
+    ap.add_argument("--exam-dist", type=float, help="bar distance in the exam (m); default the body's (Bolt 0.55), run 16i: 2.0")
+    ap.add_argument("--exam-heights", type=float, nargs="+",
+                    help="bar heights (m) of the exam; default the body's (Bolt 0.15 0.20 0.25 0.30), e.g. 0.25 0.30 0.40 "
+                         "0.50 for a brain that clears 30 cm")
     ap.add_argument("--bar-start", type=float, help="the coach's starting bar height (m), e.g. 0.20 for a skilled brain")
     ap.add_argument("--approach-speed-min", type=float, default=1.0, help="running tries start at this speed or more (jump-trot: 1.2)")
     ap.add_argument("--run-frac", type=float, default=0.5, help="share of tries that start running (jump-trot: 0.85)")
     ap.add_argument("--gait-start", type=float, default=0.0, help="share of running tries that start mid-stride in a trot/canter pose")
-    ap.add_argument("--bar-max", type=float, default=0.50, help="highest practice bar (m); 16i: 0.50, jump-trot: 0.75")
+    ap.add_argument("--bar-max", type=float, help="highest practice bar (m); default the body's (Bolt 0.50); jump-trot: 0.75")
     ap.add_argument("--exam2", type=float, nargs=2, action="append", default=[], metavar=("SPEED", "DIST"),
                     help="an extra fair exam at SPEED m/s from DIST m (repeatable), e.g. --exam2 2.0 1.5")
     ap.add_argument("--select", choices=["still", "midstride", "both"], default="still",
@@ -205,9 +218,26 @@ def main():
     ap.add_argument("--every", type=int, default=500_000, help="steps between checkpoints and exams")
     ap.add_argument("--hours", type=float, help="stop cleanly (saving a checkpoint) after this many hours")
     ap.add_argument("--exam-first", action="store_true", help="examine the starting brain too (it can stay the best)")
+    ap.add_argument("--body", choices=["bolt"] + sorted(BODIES), default=os.environ.get("BOLT_BODY", "bolt"),
+                    help="the robot: bolt (default) or a real robot of robot_bodies.BODIES, e.g. go2 (the Unitree Go2)")
+    ap.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model "
+                    "file's (robot_bodies BOLT_JOINT_DAMPING; Go2's Menagerie value 2.0 is an assumption, not a measurement)")
     add_exam_gap_args(ap)
     add_brake_args(ap, default=True)
     args = ap.parse_args()
+    if args.joint_damping is not None:
+        os.environ["BOLT_JOINT_DAMPING"] = repr(args.joint_damping)   # read when each env builds its model
+    os.environ["BOLT_BODY"] = args.body   # the training envs (subprocesses), the exams and JumpPolicy all read it
+    J = jump_sizes(args.body)   # the body's defaults (Bolt: exactly the old ones)
+    args.approach = args.approach or list(J["approach"])
+    args.exam_dist = J["exam_dist"] if args.exam_dist is None else args.exam_dist
+    args.exam_heights = args.exam_heights or list(J["exam_heights"])
+    args.bar_max = J["bar_max"] if args.bar_max is None else args.bar_max
+    if args.body != "bolt":
+        assert not (args.handover_file or args.widen_from), "hand-over states and widened brains are Bolt's"
+        print(f"body: {args.body} (motors, brake speeds and gains: robot_bodies.BODIES; --brake-speed/--brake-gain do not "
+              f"apply); sizes kx {J['kx']}, kz {J['kz']}: approach {args.approach} m, exam {args.exam_heights} m from "
+              f"{args.exam_dist:.3f} m, bars up to {args.bar_max} m", flush=True)
     print("motor brake (on, rad/s, N·m per rad/s):", set_motor_brake(args.motor_brake, args.brake_speed, args.brake_gain), flush=True)
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
