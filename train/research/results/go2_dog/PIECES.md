@@ -77,3 +77,7 @@ exactly these.
 Final run b brain (241M total, models/bolt-go2-gpu-241M): mean 0.838, walk/trot/pace 0.820/0.823/0.839, canter 0.597
 (51% pace), sit/lie/getup 0.960/0.926/0.928, steer trot 0.84 / canter 0.50, 0/20/40 ms 0.84/0.87/0.84 with no falls,
 falls 11.5% (moving trot->sit 4/4, trot->lie 1/4, walk->sit 1/4). Best Go2 brain so far; run c started from it.
+
+Run c (moving starts walk/trot -> sit/lie, from 241M), checkpoint at 158M more (models/bolt-go2-gpu-399M): mean 0.845,
+walk/trot/pace 0.829/0.834/0.855, canter 0.617, falls 11.5% -> **1.9%** (moving sit/lie: from a walk 4/4 + 4/4, from a
+trot sit 3/4 (1 fell) and lie 4/4), steer trot 0.79 / canter 0.57, 20/40 ms 0.88/0.85 no falls.
