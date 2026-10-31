@@ -81,3 +81,7 @@ falls 11.5% (moving trot->sit 4/4, trot->lie 1/4, walk->sit 1/4). Best Go2 brain
 Run c (moving starts walk/trot -> sit/lie, from 241M), checkpoint at 158M more (models/bolt-go2-gpu-399M): mean 0.845,
 walk/trot/pace 0.829/0.834/0.855, canter 0.617, falls 11.5% -> **1.9%** (moving sit/lie: from a walk 4/4 + 4/4, from a
 trot sit 3/4 (1 fell) and lie 4/4), steer trot 0.79 / canter 0.57, 20/40 ms 0.88/0.85 no falls.
+
+Run c final (249M more, 489M in all; models/bolt-go2-gpu-489M, the Go2 motion brain): mean 0.848, walk/trot/pace
+0.836/0.827/0.864, canter 0.628, sit/lie 0.951/0.935, steer trot 0.84 / canter 0.58, 20/40 ms 0.88/0.85 no falls,
+falls 1.9% (1 of 4 trot -> sit). RunPod stopped after it ($1.15 left of the owner's credit).

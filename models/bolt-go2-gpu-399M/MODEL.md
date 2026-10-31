@@ -1,4 +1,4 @@
-# bolt-go2-gpu-399M (simulation): Go2 dog motion that sits and lies down on the move (31 Oct); replaces go2-gpu-241M
+# bolt-go2-gpu-399M (simulation): Go2 dog motion that sits and lies down on the move (31 Oct); replaced by go2-gpu-489M (same run, its end)
 
 From models/bolt-go2-gpu-241M, 158M more steps on a RunPod RTX 4090 (run c, 398969648 steps in all): the same recipe plus
 moving starts (30% of tries begin mid walk or trot and are told to sit or lie: --moving-rate 0.3 --moving-gaits walk
