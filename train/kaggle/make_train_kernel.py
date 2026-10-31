@@ -182,6 +182,15 @@ JOBS = {
         name="go2getup", script="train_getup.py", start=None,
         args=["--body", "go2", "--goal", "stand", "--hard", "--latency-min-ms", "0", "--latency-max-ms", "40"],
         finals=[]),
+    "go2-selfright-pilot": dict(
+        # 1 Nov: go2-getup-pilot (stand goal, 23M steps, 10.6 h) never got up from the side or back (0.0 at every
+        # checkpoint): the stand goal moves the joints only ACTION_SCALE around the stance, too little to roll a body
+        # over. Bolt's way instead: the selfright goal (full motor range; belly down, legs tucked, still), then the
+        # motion brain's getup clip stands it up (models/bolt-go2-gpu-489M: getup 0.93). From scratch, tough falls,
+        # 0-40 ms delay. Gate (end of the 3.5 h piece): righted from side or back > 0; win: >= 0.5 from both.
+        name="go2selfright", script="train_getup.py", start=None,
+        args=["--body", "go2", "--goal", "selfright", "--hard", "--latency-min-ms", "0", "--latency-max-ms", "40"],
+        finals=[]),
     "go2-damp-pilot": dict(
         # 30 Oct: go2-dog-pilot's exact recipe with the Go2 joint damping at 0.5 instead of Menagerie's 2.0 N·m·s/rad (a
         # generic value; at a trot's 10.5 rad/s thigh speed 2.0 eats ~21 of the 23.7 N·m drive). A/B against the 2-h

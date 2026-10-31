@@ -1,0 +1,39 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+body: go2 (motors, brake speeds and gains: robot_bodies.BODIES; --brake-speed/--brake-gain do not apply); sizes kz 0.7, kicks x0.8 m/s x1.0 rad/s: stands at 0.301 m, 'standing' above 0.220 m
+motor brake (on, rad/s, N·m per rad/s): (True, 25.0, 3.5)
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+exam gaps: {'latency_ms': 0.0, 'lag_ms': 0.0, 'drop': 0.0, 'jitter_ms': 0.0, 'spike_p': 0.0}
+motor brake in the training envs (on, rad/s, N·m per rad/s): (True, [35.8, 35.8, 18.7], [1.7, 1.7, 6.3])
+checkpoint 1000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.52, 'up_standing': 1.0, 'secs_standing': 0.02}
+new best at 1000000: score 0.38
+checkpoint 2000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.6, 'secs_tipped': 0.49, 'up_standing': 1.0, 'secs_standing': 0.02}
+new best at 2000000: score 0.40
+checkpoint 3000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.3, 'secs_tipped': 0.12, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 4000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.4, 'secs_tipped': 0.19, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 5000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.4, 'secs_tipped': 0.18, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 6000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.4, 'secs_tipped': 0.24, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 7000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.4, 'secs_tipped': 0.16, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 8000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.12, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 9000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.12, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 10000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.1, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 11000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.4, 'secs_tipped': 0.27, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 12000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.4, 'secs_tipped': 0.21, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 13000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.3, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 14000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.22, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 15000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.24, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 16000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.26, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 17000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.4, 'secs_tipped': 0.18, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 18000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.3, 'secs_tipped': 0.1, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 19000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.4, 'secs_tipped': 0.18, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 20000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.22, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 21000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.26, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 22000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.5, 'secs_tipped': 0.24, 'up_standing': 1.0, 'secs_standing': 0.02}
+checkpoint 23000000 ready: {'up_side': 0.0, 'secs_side': None, 'up_back': 0.0, 'secs_back': None, 'up_tipped': 0.4, 'secs_tipped': 0.12, 'up_standing': 1.0, 'secs_standing': 0.02}
+time guard: stopping at 23413600 steps after the time budget
+done: 23,413,600 steps in 635.3 min -> /tmp/bolt/train/runs/go2getup
