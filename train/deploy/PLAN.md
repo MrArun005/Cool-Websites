@@ -149,3 +149,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   IST: from 489M, same recipe + no velocity inputs + 5% lost commands, 3.5 h (warm dataset bolt-go2-489m). Gate: the
   lockstep rehearsal with kinematic height and no velocity, vendor settings, 41 s plan, 0/5 falls (489M with the true
   velocity: 0/5; with leg odometry: 4/10).
+* 1 Nov 02:00-02:55: RunPod freed a GPU; run f on the 4090 (last ~$1.15): from 489M, --blind-vel --drop-p 0.05,
+  45M steps. Training eval 0 / 22.6 / 45.2M: reward 1.205 / 1.258 / 1.288, falls (with 5% lost commands) 35 / 27 / 23%,
+  canter 0.76 / 0.82 / 0.86. Gate (lockstep, vendor settings, kinematic height, 41 s plan, 10 tries): **3/10 falls**
+  (all trot) vs 489M with leg-odometry velocity 4/10 -- better direction, not passed, not saved. Pod stopped, $0.17
+  left. The Kaggle run (bolt-go2-blind, same recipe, 3.5 h) continues it.
