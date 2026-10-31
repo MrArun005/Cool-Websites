@@ -18,3 +18,9 @@ the 0.6 win line, but clearly working -> piece 2 (bolt-steer-pilot2-p2, 3.5 h) c
 steer_mean 0.53 (42M) -> 0.64 (43M) -> 0.71 (45M) -> **0.74 (48M)** -> 0.70 (49.3M); trot 0.871-0.878, canter
 0.708-0.723, 0 falls in the checkpoint exams. Saved as models/bolt-dog-steer-48M (MODEL.md: a bigger local check,
 trot steering 0.89, canter steering 0.63, but canter tracking 0.641 with 1 fall in 12). Piece 3 running.
+
+## Piece 3 (Kaggle bolt-steer-pilot2-p3, 49.3M -> 56.5M): small gain, canter partly back
+
+In-run: steer_mean 0.69-0.76, canter 0.711-0.726 at 78-83% speed, 0 falls. Best 56.5M saved as
+models/bolt-dog-steer-56.5M: local steering mean 0.79 (48M 0.76), canter steering 0.71 (0.63), canter tracking 0.659 (0.641,
+38M 0.710), 1 canter fall in 12. Piece 4 running.

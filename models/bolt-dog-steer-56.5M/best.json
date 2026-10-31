@@ -1,0 +1,39 @@
+{
+  "steps": 56507674,
+  "exam": {
+    "track_trot": 0.877,
+    "fall_trot": 0.0,
+    "speed_trot": 0.94,
+    "track_canter": 0.72,
+    "fall_canter": 0.0,
+    "speed_canter": 0.83,
+    "lat0_track": 0.798,
+    "lat0_fall": 0.0,
+    "lat10_track": 0.622,
+    "lat10_fall": 0.125,
+    "lat20_track": 0.101,
+    "lat20_fall": 0.75,
+    "lat40_track": 0.024,
+    "lat40_fall": 1.0,
+    "turn_trot_-0.8": -0.858,
+    "turn_trot_-0.4": -0.485,
+    "turn_trot_+0.4": 0.28,
+    "turn_trot_+0.8": 0.651,
+    "steer_trot": 0.807,
+    "steertrack_trot": 0.849,
+    "steerfall_trot": 0.0,
+    "turn_canter_-0.8": -0.495,
+    "turn_canter_-0.4": -0.172,
+    "turn_canter_+0.4": 0.461,
+    "turn_canter_+0.8": 0.808,
+    "steer_canter": 0.707,
+    "steertrack_canter": 0.67,
+    "steerfall_canter": 0.0,
+    "steer_mean": 0.757
+  },
+  "score": 0.624604715,
+  "clips": [
+    "trot",
+    "canter"
+  ]
+}
