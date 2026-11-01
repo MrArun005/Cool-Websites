@@ -207,3 +207,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   controller (max diff 1.2e-7 / 4.6e-15). Tested from an empty folder: install ~10 min, READY 7/7; brain + self-right +
   estimator 0.15 ms median, 0.27 ms 99th percentile of the 20 ms step; then the DDS rehearsal on the fresh install
   (pushed over mid-plan): recovered, resumed sit, plan done, 0 of 1515 steps late.
+* 1 Nov 10:20-10:40: **the Go2's own remote drives Bolt** (`remote.py`, `run_go2.py --remote`): left stick walk /
+  trot (R1 + full stick canter), release 0.5 s -> sit, right stick steer (0.6 rad/s max), A sit, B lie, Y get up,
+  L2+B or SELECT stop; hysteresis on the stick bands. It feeds the same text commands as --interactive (one path).
+  Decoding checked against the SDK's own reader on the same bytes. `sim_vendor.py --remote-script` scripts the remote
+  inside Unitree's simulator (the bytes the real remote sends, through the real DDS path). Test, real time, damping
+  2.0, with --recover: sit -> walk -> trot -> steer 0.3 -> release (sit) -> lie -> getup -> walk -> L2+B stop: every
+  command acted on, no fall, 2 of 2349 steps late.

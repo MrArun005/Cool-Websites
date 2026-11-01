@@ -36,6 +36,8 @@ def main():
     ap.add_argument("--dt", type=float, default=0.005, help="physics step (the vendor's 0.005; ours trains at 0.002)")
     ap.add_argument("--stairs", action="store_true", help="keep the scene's bumps and staircase (default: flat floor)")
     ap.add_argument("--shove-at", type=float, nargs="*", default=[], help="sim times (s) to push the dog over sideways")
+    ap.add_argument("--remote-script", default="", help='a scripted wireless remote: "t:keys;..." e.g. '
+                    '"12:ly=0.5;16:ly=0.8,rx=0.4;20:;24:B;30:L2+B" (sticks hold until changed, buttons press 0.3 s)')
     ap.add_argument("--shove", type=float, default=3.0, help="the push: sideways m/s, plus a roll kick of 8 rad/s")
     a = ap.parse_args()
     root = Path(os.environ["UNITREE_MUJOCO"]) / "simulate_python"
@@ -58,12 +60,33 @@ def main():
         m.dof_damping[6:] = a.damping
     d = mujoco.MjData(m)
     ChannelFactoryInitialize(cfg.DOMAIN_ID, cfg.INTERFACE)
-    UnitreeSdk2Bridge(m, d)
+    bridge = UnitreeSdk2Bridge(m, d)
+    script = []
+    for item in filter(None, a.remote_script.split(";")):
+        t, keys = item.split(":")
+        sticks, buttons = {}, []
+        for k in filter(None, keys.split(",")):
+            if "=" in k:
+                sticks[k.split("=")[0]] = float(k.split("=")[1])
+            else:
+                buttons += k.split("+")
+        script.append((float(t), sticks, buttons))
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from remote import encode
+    held, press_until, cur_buttons = {}, -1.0, []
     print(f"vendor sim up: Go2, dt {m.opt.timestep}, joint damping {m.dof_damping[6]:g}, domain {a.domain} on {a.iface}", flush=True)
     shoves = sorted(a.shove_at)
     t0 = time.perf_counter()
     while time.perf_counter() - t0 < a.seconds:
         s = time.perf_counter()
+        if script and d.time >= script[0][0]:   # the scripted remote, into the state the bridge publishes
+            _, sticks, cur_buttons = script.pop(0)
+            held = {k: 0.0 for k in ("lx", "rx", "ry", "ly")} if not sticks and not cur_buttons else {**held, **sticks}
+            press_until = d.time + 0.3
+            print(f"remote at {d.time:.1f} s: {sticks or ''} {'+'.join(cur_buttons)}", flush=True)
+        if a.remote_script:
+            raw = encode(cur_buttons if d.time < press_until else [], **held)
+            bridge.low_state.wireless_remote[:] = list(raw)
         if shoves and d.time >= shoves[0]:   # a push: sideways speed and a roll kick, in the body frame
             shoves.pop(0)
             side = 1 if len(shoves) % 2 == 0 else -1

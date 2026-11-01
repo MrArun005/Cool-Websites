@@ -53,7 +53,9 @@ falls). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
 ## 4. Full gains, then commands
 
 - [ ] `--gain-scale 1.0`, `--interactive`: walk, trot, steer 0.3, sit, lie, getup, stop. Video every run.
-- [ ] Only then canter, on the longest clear stretch.
+- [ ] Then `--remote` (the Go2's own remote; `deploy/remote.py` has the map: left stick walk/trot, right stick steer,
+      A sit, B lie, Y get up, L2+B stop). The keyboard person keeps `--interactive` on too, with "stop" ready.
+- [ ] Only then canter (R1 + left stick fully forward), on the longest clear stretch.
 - Not today: jumps (need a camera to see the bar), self-righting (needs a cleared cage), MasterMind.
 - A later session, in a cleared cage: `--recover` (a fall -> self-right -> get up -> resume; rehearsed on Unitree's
   simulator with pushes, PLAN.md log). First with the robot laid on its side by hand, gains 0.8, remote in hand.

@@ -21,6 +21,9 @@ self-right brain (numpy, models/bolt-go2-selfright-6.9M/brain.npz), stands it up
 command; the plan clock waits meanwhile. Damping mode if it is not righted in 4 s or falls 3 times in a row. Only with
 a cleared cage on a real robot (HARDWARE_DAY.md).
 
+--remote: drive it with the Go2's own wireless remote (deploy/remote.py: left stick walk/trot, R1 + full stick canter,
+right stick steer, A sit, B lie, Y get up, L2+B or SELECT stop); starts sitting. Works together with --interactive.
+
 --interactive: type commands while it runs (a clip name, "steer 0.4", "stop"). Late brain steps (> 25 ms) are counted;
 3 in a row over 40 ms put the robot in damping mode.
 
@@ -125,6 +128,7 @@ def main():
     ap.add_argument("--truth", action="store_true", help="simulator only: true velocity/height from rt/sportmodestate")
     ap.add_argument("--release-sport", action="store_true", help="real robot: release Unitree's sport mode first")
     ap.add_argument("--interactive", action="store_true", help="read commands from the keyboard (clip names, steer X, stop)")
+    ap.add_argument("--remote", action="store_true", help="the Go2's wireless remote drives it (deploy/remote.py)")
     ap.add_argument("--recover", action="store_true", help="on a fall: self-right, get up, resume (instead of stopping)")
     ap.add_argument("--selfright", default=str(HERE.parent.parent / "models" / "bolt-go2-selfright-6.9M"))
     ap.add_argument("--log")
@@ -173,13 +177,27 @@ def main():
                 cmds.put(line.strip())
         threading.Thread(target=reader, daemon=True).start()
         plan = plan or [("trot", 1e9)]
+    if a.remote:   # the remote's buttons and sticks -> the same text commands, polled every 20 ms
+        from remote import RemoteCommander
+        rc = RemoteCommander(DT)
+
+        def poller():
+            while bot.running:
+                with bot.lock:
+                    raw = None if bot.state is None else list(bot.state.wireless_remote)
+                for c in (rc.update(raw) if raw is not None else []):
+                    print(f"remote: {c}", flush=True)
+                    cmds.put(c)
+                time.sleep(DT)
+        threading.Thread(target=poller, daemon=True).start()
+        plan = [("sit", 1e9)] if not a.interactive else plan
     est = LegEstimator(body.key) if not a.truth else None
     rec = None
     if a.recover:
         from recovery import Recovery
         rec = Recovery(ctl, a.selfright)
     print(f"brain {Path(a.brain).parent.name}{' (no velocity input)' if ctl.brain.blind_vel else ''}, kp {kp:g} kd {kd:g}, "
-          f"plan {plan}{', interactive' if a.interactive else ''}", flush=True)
+          f"plan {plan}{', interactive' if a.interactive else ''}{', remote' if a.remote else ''}", flush=True)
     late = late_run = 0
     for name, secs in plan:
         quat, gyro, q, dq, age = bot.read()
