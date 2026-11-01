@@ -18,7 +18,12 @@ body. Until a robot runs them, every result in this repo is **in simulation**.
 | Real-robot path | official RL sim-to-sim / sim-to-real code (Lite3_rl_deploy) and a low-level C++ MotionSDK; used in published learned-locomotion work deployed onboard at 50 Hz |
 | Size class | a ~12-DoF small quadruped like Go2, so the same dog clips and brains fit after retargeting |
 
-Licence of the Lite3 model files is checked before they are copied in; nothing of it is in the repo yet.
+Licences checked (1 Nov): the Lite3 model files (DeepRoboticsLab/URDF_model, commit 52352f5) are **BSD 3-Clause**, the
+low-level **Lite3_MotionSDK** is **MIT**, the official learned-policy deployment code (**Lite3_rl_deploy**) is **BSD 3-Clause**:
+all three may be used and adapted with their copyright notices kept. What the official MJCF says: 11.94 kg, 12 joints,
+all four knees bending the same way (like the Go2), torque-controlled motors at +-30 N·m, sideways hips +-0.52 rad.
+The MotionSDK takes the same per-joint command as the Go2 program sends (target angle and speed, kp, kd, feed-forward
+torque), so `train/deploy/` carries over with a new body entry. Nothing of it is copied into the repo yet.
 
 ### Unitree Go2 EDU
 
