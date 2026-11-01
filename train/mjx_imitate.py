@@ -290,9 +290,12 @@ class MjxImitate:
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"], push_speed=PUSH["speed"],
                  push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"], root_global=0.0,
                  steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"],
-                 body=None, joint_damping=None, blind_vel=False, drop_p=0.0):
+                 body=None, joint_damping=None, blind_vel=False, drop_p=0.0, damping_range=None):
         from brax.envs.base import State
         self.State = State
+        # joint damping drawn per try, log-uniform in [lo, hi] (N·m·s/rad): the real robot's is unknown (deploy/PLAN.md
+        # 1 Nov 09:40: at Unitree's 0.1 the 592M brain shakes its calves past their rated speed); None = the body's own
+        self.damping_range = None if damping_range is None else tuple(float(x) for x in damping_range)
         # the body (module docstring, "Body"): bolt, or a real robot of robot_bodies.BODIES; None = BOLT_BODY, else bolt
         self.body = body or os.environ.get("BOLT_BODY", "bolt")
         self.robot, prefix, dog = None, "", DOG
@@ -451,7 +454,8 @@ class MjxImitate:
         kp = self.kp0 * info["kp"]
         return mx.replace(actuator_gainprm=mx.actuator_gainprm.at[:, 0].set(kp), actuator_biasprm=mx.actuator_biasprm.at[:, 1].set(-kp),
                           geom_friction=mx.geom_friction.at[:, 0].set(self.fric0 * info["fric"]),
-                          body_mass=mx.body_mass.at[self.torso].set(self.mass0 * info["mass"]))
+                          body_mass=mx.body_mass.at[self.torso].set(self.mass0 * info["mass"]),
+                          **({} if self.damping_range is None else {"dof_damping": mx.dof_damping.at[6:].set(info["damp"])}))
 
     def physics(self, mx, d, n=10):
         return jax.lax.scan(lambda d, _: (self.substep(mx, d), None), d, None, length=n)[0]
@@ -625,6 +629,8 @@ class MjxImitate:
             rng, k_land = jax.random.split(rng)
         if self.M is not None:   # moving starts on: the same
             rng, k_move = jax.random.split(rng)
+        if self.damping_range is not None:   # its own key too: runs without it draw exactly as before
+            rng, k_dmp = jax.random.split(rng)
         k = jax.random.split(rng, 6)
         one = jp.float32(1.0)
         info = dict(kp=jax.random.uniform(k[0], minval=0.85, maxval=1.15) if self.randomize else one,
@@ -632,6 +638,9 @@ class MjxImitate:
                     fric=jax.random.uniform(k[2], minval=0.6, maxval=1.3) if self.randomize else one,
                     clip=jax.random.categorical(k[3], self.clip_logits).astype(jp.int32), t=jp.int32(0),
                     last_action=jp.zeros(12), trunc=jp.float32(0.0))
+        if self.damping_range is not None:
+            lo, hi = np.log(self.damping_range[0]), np.log(self.damping_range[1])
+            info["damp"] = jp.exp(jax.random.uniform(k_dmp, minval=lo, maxval=hi))
         if self.transition_weight:
             info["swt"] = jp.int32(-10 ** 6)   # step of the last mid-try switch (none yet)
         if self.steer_max:   # a yaw-rate command for steer_share of the tries (ImitateEnv.reset)
@@ -958,7 +967,7 @@ def train(args):
                           root_global=args.root_global, steer_max=args.steer_max, steer_share=args.steer_share,
                           steer_change=args.steer_change, steer_weight=args.steer_weight, body=args.body,
                           joint_damping=args.joint_damping, iterations=args.iterations, ls_iterations=args.ls_iterations,
-                          blind_vel=args.blind_vel, drop_p=args.drop_p)
+                          blind_vel=args.blind_vel, drop_p=args.drop_p, damping_range=args.damping_range)
 
     phases = curriculum(args.terrain_cm, args.terrain_at, args.steps)
     hidden = W["hidden"] if W else (512, 256)
@@ -1104,6 +1113,8 @@ def main():
                    "--brake-speed/--brake-gain apply to bolt only (a real robot has its own)")
     t.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model file's")
     t.add_argument("--blind-vel", action="store_true", help="zero the body-velocity inputs (no velocity sensor on a real robot)")
+    t.add_argument("--damping-range", type=float, nargs=2, metavar=("LO", "HI"),
+                   help="joint damping drawn per try, log-uniform (e.g. 0.1 2.0); default: the body's own")
     t.add_argument("--drop-p", type=float, default=0.0, help="chance per step that the new joint targets are lost (motors keep the old)")
     t.add_argument("--iterations", type=int, default=5, help="contact solver iterations (MuJoCo's own: 100; see MjxImitate)")
     t.add_argument("--ls-iterations", type=int, default=8, help="contact solver line-search iterations (MuJoCo's own: 50)")
