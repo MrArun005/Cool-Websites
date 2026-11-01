@@ -154,6 +154,14 @@ JOBS = {
         args=["--body", "go2", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
               "--switch-rate", "0.3", "--latency-ms", "0", "40"],
         finals=[]),
+    "lite3-dog-pilot": dict(
+        # 1 Nov: DEEP Robotics Lite3, the second target robot (robot_bodies "lite3", robots/deeprobotics_lite3). Its first
+        # dog-motion brain, exactly go2-dog-pilot's recipe (which led to the Go2 GPU brains): all 9 clips, switches
+        # 0.3/s, brake on, 0-40 ms delay, from scratch. Win line as Go2's: mean tracking >= 0.70 with no falls.
+        name="lite3dog", script="train_imitate.py", start=None,
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
+              "--switch-rate", "0.3", "--latency-ms", "0", "40"],
+        finals=[]),
     "go2-jump-pilot": dict(
         # 31 Oct, owner's Go2 order: motion (done, models/bolt-go2-gpu-241M) -> jumps. First hurdle-jump brain on the Go2
         # body (jump_env body sizes: bars x0.70, distances x0.86 of Bolt's), from scratch like Bolt's first jump brains
