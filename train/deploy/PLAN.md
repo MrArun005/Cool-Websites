@@ -239,3 +239,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   then dance", joke, "good boy" (labelled the dance as liked), "walk left", "do a backflip" (-> spin, said so),
   "stop" (cut the spin short, sat), "lie down", "how are you" (mood fantastic), "!stop": all acted on, no fall,
   2 of 2796 steps late. Not yet: voice input (an offline speech recognizer on the robot), the browser-only tricks.
+* 1 Nov 14:30: **Kaggle bolt-go2-damp verdict: the damping range works on the knees, but this piece does not replace
+  695M.** From 592M + 103M steps with joint damping drawn 0.1-2.0 per try. Rehearsal (Unitree defaults, robot-only
+  inputs, 41 s, 10 tries) 695M -> damp: falls 0/10 -> 0/10; knee steps over 1.2x rated 1448 -> **580** (worst 2.17x ->
+  1.93x); 5% missed steps 2/10 -> **0/10**; 0-19 ms delay 0/10 -> 0/10; damping 0.5: 76 -> 50 steps; recovery 40/40
+  -> 40/40. But our exam: mean 0.819 -> 0.807, falls 0% -> 5.8% (trot -> sit 2/4), steer 0.678 -> 0.555, canter
+  0.52 -> 0.50: it started from 592M and missed blind2's gains. Still over the speed check (580 steps). Next: the same
+  damping range from 695M (Kaggle **bolt-go2-damp2**, started 14:30 IST, ends ~18:15; -p scratchpad/kout_go2damp2),
+  same gate. Kept as a result only (scratchpad/kout_go2damp), not in models/.
