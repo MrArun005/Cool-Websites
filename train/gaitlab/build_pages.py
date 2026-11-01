@@ -11,6 +11,9 @@ game.js imitate.js dash.js, mujoco/ and data/bolt_run.json dog_gpu360.json dog_1
 Bolt Companion (companion): copy companion_template.html to <scratchpad>/companion/template.html; the site folder needs
 live.js doglife.js game.js imitate.js companion.js companion_mind.js, ../../pet/js/brain.js, mujoco/ and the same data/
 files as Bolt Dash.
+The published demo "Bolt the Robot Dog" (1 Nov) is Companion with the Day Out yard as a second tab: build companion and
+doglife, then `python merge_bolt_demo.py <companion>/site/index.html <doglife>/site/index.html <out>/index.html`; its
+site folder is Companion's plus hurdles3d.js and data/jump*.json.
 """
 import sys, re, os
 S = sys.argv[1]
