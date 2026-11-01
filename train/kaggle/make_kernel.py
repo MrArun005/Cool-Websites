@@ -123,7 +123,7 @@ def main():
         files = {n: enc(HERE / n) for n in ("bolt.xml", "mjx_run.py")}
         cmd = ["mjx_run.py", "--steps", str(args.steps), "--envs", str(args.envs), "--evals", str(args.evals or 40), "--out", "run"]
     else:
-        from mjx_imitate import ALL_CLIPS   # numpy + mujoco only
+        from mjx_imitate import ALL_CLIPS   # numpy + mujoco only (jump: only where the body has the clip)
         if args.body == "bolt":
             files = {n: enc(HERE / n) for n in ("bolt.xml", "mjx_imitate.py", "pose_reached.py")}
             prefix = ""
@@ -134,7 +134,8 @@ def main():
             model = Path(BODIES[args.body]["xml"])
             files = {n: enc(HERE / n) for n in ("mjx_imitate.py", "pose_reached.py", "robot_bodies.py", str(model), str(model.parent / "LICENSE"))}
             prefix = BODIES[args.body]["clip_prefix"]
-        files.update({f"dogmotion/clips/{prefix}{c}.npz": enc(HERE / "dogmotion" / "clips" / f"{prefix}{c}.npz") for c in ALL_CLIPS})
+        files.update({f"dogmotion/clips/{prefix}{c}.npz": enc(HERE / "dogmotion" / "clips" / f"{prefix}{c}.npz") for c in ALL_CLIPS
+                      if (HERE / "dogmotion" / "clips" / f"{prefix}{c}.npz").exists()})
         cmd = ["mjx_imitate.py", "train", "--steps", str(args.steps), "--envs", str(args.envs), "--evals", str(args.evals or 21),
                "--out", "run", "--hours", str(args.hours)]
         if args.warm:

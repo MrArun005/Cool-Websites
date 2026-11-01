@@ -29,7 +29,10 @@ from mjx_imitate import MjxImitatePolicy  # noqa: E402
 
 CLIP_DIR = HERE.parent / "dogmotion" / "clips"
 # as imitate_env (copied, not imported: imitate_env pulls in torch and SB3, which the robot does not need)
-ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup"]
+ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup", "jump"]
+MOTION_CLIPS = ALL_CLIPS[:9]   # what every brain knows; "jump" only for a brain with the 10th slot
+THEN = {"jump": ("trot", 0.2)}   # a clip that ends running: hand over to this gait this long after its end (training's
+                                 # hold, imitate_env.CLIP_HOLD), joining at the closest pose
 STEER_CLIPS = ("walk", "trot", "pace", "canter")
 DT = 0.02   # s: the brain's step (50 Hz), as BoltEnv (0.002 s physics x 10)
 
@@ -80,8 +83,11 @@ class Clip:
 
 
 class Go2Controller:
-    def __init__(self, brain, body="go2", clips=ALL_CLIPS):
+    def __init__(self, brain, body="go2", clips=None):
+        """clips None: the motion clips, plus "jump" when the brain has its slot (a 9-slot brain never saw it)."""
         self.brain = MjxImitatePolicy(brain)
+        if clips is None:
+            clips = MOTION_CLIPS + (["jump"] if self.brain.slots >= 10 else [])
         self.body = robot_bodies.get(body)
         self.stance = np.asarray(self.body.stance, float)
         m = self.body.model()
@@ -142,4 +148,7 @@ class Go2Controller:
         target = np.clip(self.ref("joints") + ACTION_SCALE * a, self.lo, self.hi)   # residual on the reference
         self.last_action = np.asarray(a, float)
         self.tau += DT
+        nxt = THEN.get(self.clip.name)
+        if nxt and nxt[0] in self.clips and self.finished() >= nxt[1]:
+            self.command(nxt[0], q=q)
         return target

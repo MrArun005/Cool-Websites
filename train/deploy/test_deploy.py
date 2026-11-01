@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
 
-from controller import ALL_CLIPS, Go2Controller  # noqa: E402
+from controller import MOTION_CLIPS, Go2Controller  # noqa: E402
 
 
 def readings(env):
@@ -46,7 +46,11 @@ def check_golden(brain):
         ctl.start_at(str(g["clip"][i]), float(g["tau"][i]))
         ctl.steer, ctl.last_action[:] = float(g["steer"][i]), g["last_action"][i]
         r = {k: (float(g[k][i]) if k == "height" else g[k][i]) for k in ("quat", "gyro", "q", "dq", "v_body", "height")}
-        worst_obs = max(worst_obs, float(np.abs(ctl.inputs(**r) - g["obs"][i]).max()))
+        o = ctl.inputs(**r)
+        if len(o) != len(g["obs"][i]):   # recorded with fewer clip slots (9, before the jump clip): compare the old ones
+            k = len(o) - len(g["obs"][i])
+            o = np.concatenate([o[:48 + 9], o[48 + 9 + k:]])
+        worst_obs = max(worst_obs, float(np.abs(o - g["obs"][i]).max()))
         worst_tgt = max(worst_tgt, float(np.abs(ctl.step(**r) - g["target"][i]).max()))
     sw = g["switch"]   # the walk -> trot switch rule: same clip time as the env picked
     ctl.start_at("walk", float(sw[0]))
@@ -65,7 +69,7 @@ def main():
         return check_golden(brain)
     from imitate_env import ImitateEnv
     ctl = Go2Controller(brain)
-    env = ImitateEnv(randomize=False, seed=3, clips=ALL_CLIPS, body="go2")
+    env = ImitateEnv(randomize=False, seed=3, clips=MOTION_CLIPS, body="go2")
     rec = {k: [] for k in ("clip", "tau", "steer", "last_action", "quat", "gyro", "q", "dq", "v_body", "height", "obs",
                            "target")}
     switch = None

@@ -106,7 +106,7 @@ def main():
     ap.add_argument("--resume")
     ap.add_argument("--clips", nargs="*", default=DEFAULT_CLIPS)
     ap.add_argument("--switch-rate", type=float, default=0.0, help="chance per second of switching clip mid-try (run 18e: 0.3)")
-    ap.add_argument("--slots", type=int, default=len(ALL_CLIPS), help="clip one-hot size: 8 for runs begun before the getup clip")
+    ap.add_argument("--slots", type=int, default=len(ALL_CLIPS), help="clip one-hot size: 8 for runs begun before the getup clip, 9 before the jump clip")
     ap.add_argument("--exam-every", "--every", type=int, default=1_000_000)
     ap.add_argument("--hours", type=float, help="time guard: exam, save and stop after this long (Kaggle)")
     ap.add_argument("--init-from", help="start from this brain folder (policy.zip, vecnormalize.pkl) at its step count, "

@@ -517,10 +517,10 @@ class Go2BodyTest(unittest.TestCase):
         np.testing.assert_allclose(lo, -np.tile([23.7, 23.7, 45.43], 4))
 
     def test_imitation_env_on_go2(self):
-        from imitate_env import ALL_CLIPS, ImitateEnv
-        env = ImitateEnv(body="go2", clips=ALL_CLIPS, randomize=False)
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+        env = ImitateEnv(body="go2", clips=MOTION_CLIPS, randomize=False)
         obs, _ = env.reset(seed=0)
-        self.assertEqual(obs.shape, (75,))
+        self.assertEqual(obs.shape, (66 + len(ALL_CLIPS),))
         for _ in range(25):   # the reference played with no corrections keeps the Go2 up for half a second
             obs, r, fell, done, info = env.step(np.zeros(12))
         self.assertFalse(fell)

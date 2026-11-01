@@ -41,7 +41,7 @@ Observation (OBS = 75 floats; 74 for brains from before the getup clip), in this
     34  previous action                     12
     46  clip phase sin, cos (2 pi phase)     2   loops: position in the stride; sit/lie: progress 0..1
                                                  (held at 1 once the clip has finished)
-    48  clip one-hot                         9   ALL_CLIPS order (fixed, so brains stay swappable; 8 before getup)
+    48  clip one-hot                        10   ALL_CLIPS order (fixed, so brains stay swappable; 8 before getup, 9 before jump)
     57  reference joints next step - stance 12
     69  reference body height next step      1
     70  reference body velocity (body frame) 3   next step
@@ -126,12 +126,21 @@ from pose_reached import CLIP_POSE, pose_ok
 
 DOG = STANCES["dog"]
 CLIP_DIR = Path(__file__).with_name("dogmotion") / "clips"
-ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup"]   # getup: lie reversed (run 18d)
+# The clip one-hot's order (fixed, so brains stay swappable; a brain with fewer slots reads only its own, see the
+# policies' "older brain" handling). getup: lie reversed (run 18d). jump (1 Nov): a running hurdle jump, Go2 only so far
+# (dogmotion/clips/go2_jump.npz; Bolt has no jump clip): MOTION_CLIPS are the clips every body has.
+ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup", "jump"]
+MOTION_CLIPS = ALL_CLIPS[:9]
 DEFAULT_CLIPS = ["walk", "trot", "pace", "turn_left", "turn_right", "sit", "lie"]   # canter (3.4 m/s) later
 WEIGHTS = dict(pose=0.5, vel=0.05, paw=0.2, root=0.15, root_vel=0.1)
 STEER = dict(share=0.6, change=0.3, weight=0.15)   # steering defaults (ImitateEnv steer_*)
 STEER_CLIPS = ("walk", "trot", "pace", "canter")
 HOLD = 1.0          # s: sit and lie hold their final pose this long
+CLIP_HOLD = {"jump": 0.2}   # s: per-clip hold where it differs (the jump ends running: the controller hands it to trot)
+
+
+def hold(name):
+    return CLIP_HOLD.get(name, HOLD)
 # Switching skills mid-try (run 18e): which clip may follow which. Gaits switch to any gait (joining at the frame
 # whose pose is closest) or to sit (the sit clip starts standing, so the brain learns to stop first); a finished
 # sit goes on to lie, a finished lie to getting up, a finished getup to walking or trotting.
@@ -418,7 +427,7 @@ class ImitateEnv(BoltEnv):
             name = self.clip_names[self.rng.integers(len(self.clip_names))]
             c = self.clips[name]
             # anywhere in a loop; sit/lie: anywhere in the clip or its hold (the hold gets ~1/4 of starts)
-            self.tau0 = float(self.rng.uniform(0, c.length if c.loop else c.length + 0.3 * HOLD))
+            self.tau0 = float(self.rng.uniform(0, c.length if c.loop else c.length + 0.3 * hold(name)))
         self.clip = self.clips[name]
         self.t = 0
         self._rsi(on_terrain=self.terrain is not None and name in self.terrain_clips)
@@ -480,7 +489,7 @@ class ImitateEnv(BoltEnv):
             longest = max(self.delay_sub, int(round(self.latency_ms[1] / 1000.0 / m.opt.timestep)))   # as MjxImitate.queue_len
             self._queue = [d.ctrl.copy() for _ in range(longest // self.frame_skip + 2)]
             self._lag_y = d.ctrl.copy()
-        steps_left = (self.clip.length + HOLD - self.tau0) / self.dt if not self.clip.loop else self.max_steps
+        steps_left = (self.clip.length + hold(self.clip.name) - self.tau0) / self.dt if not self.clip.loop else self.max_steps
         self.limit = int(max(25, min(self.max_steps, steps_left)))
         return self._obs(), {}
 
@@ -594,7 +603,7 @@ class ImitateEnv(BoltEnv):
 
     def _maybe_switch(self):
         """Now and then hand over to a clip that may follow this one (NEXT), as a dog changes what it does."""
-        ready = self.clip.loop or self.finished() > 0.5 * HOLD
+        ready = self.clip.loop or self.finished() > 0.5 * hold(self.clip.name)
         nxt = [n for n in NEXT.get(self.clip.name, ()) if n in self.clips and n != self.clip.name]
         if not ready or not nxt or self.rng.random() > self.switch_rate * self.dt:
             return
@@ -633,7 +642,7 @@ class ImitateEnv(BoltEnv):
         else:        # sit, lie, getup play from their start
             start = 0.0
         self.clip, self.tau0 = c, start - self.t * self.dt
-        left = (c.length + HOLD - start) / self.dt if not c.loop else self.max_steps
+        left = (c.length + hold(c.name) - start) / self.dt if not c.loop else self.max_steps
         self.limit = int(min(self.t + left, self.t + self.max_steps))
 
 

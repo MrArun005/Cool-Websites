@@ -28,14 +28,14 @@ on identical states and reference roots, tries with a forced clip switch; alone 
     <cpu python> test_mjx_imitate.py dump-root-global <cases.pkl>   then   <jax python> test_mjx_imitate.py check-root-global <cases.pkl>
 
 The Go2 body with steering (MjxImitate(body="go2"), ImitateEnv(body="go2"), the motor brake on), each with steering off
-and on (steer_max 1, a fixed command of +-0.8 rad/s per try): the 75 inputs, the reward terms (steer included), the total
+and on (steer_max 1, a fixed command of +-0.8 rad/s per try), every clip including jump: the 76 inputs, the reward terms (steer included), the total
 reward and the end-of-try decision on identical states; the reference-state start; one control step of physics; whole
 tries replayed open-loop in MJX with the CPU env's actions (obs, reward and end of try per step); the steering draws; and
 the warm-started Go2 brain against ImitatePolicy.act:
     <cpu python> test_mjx_imitate.py dump-go2 <run dir with policy.zip + vecnormalize.pkl> <warm.pkl> <cases.pkl>
     <jax python> test_mjx_imitate.py check-go2 <warm.pkl> <cases.pkl>
 
-Unit tests (CPU stack; landing and moving starts keep the 75-input layout, rate 0 leaves the env as it was):
+Unit tests (CPU stack; landing and moving starts keep the 76-input layout, rate 0 leaves the env as it was):
     <cpu python> -m unittest test_mjx_imitate
 """
 import pickle
@@ -53,18 +53,18 @@ class LandingStartTest(unittest.TestCase):
     """A landing start (imitate_env landing_rate) is an ordinary try for the brain: same inputs, same order, same size."""
 
     def test_landing_start_obs_layout(self):
-        from imitate_env import ALL_CLIPS, DOG, LANDING_FILE, ImitateEnv
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, DOG, LANDING_FILE, ImitateEnv
         from mjx_imitate import MjxImitatePolicy
-        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, landing_rate=1.0)
-        plain = ImitateEnv(randomize=False, clips=ALL_CLIPS)
+        env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, landing_rate=1.0)
+        plain = ImitateEnv(randomize=False, clips=MOTION_CLIPS)
         self.assertEqual(env.observation_space.shape, plain.observation_space.shape)
-        self.assertEqual(env.observation_space.shape, (75,))
+        self.assertEqual(env.observation_space.shape, (66 + len(ALL_CLIPS),))
         air = np.flatnonzero(np.load(LANDING_FILE)["airborne"])
         self.assertGreater(len(air), 0)
         env.exam_landing = int(air[0])   # a mid-air landing state
         obs, _ = env.reset(seed=0)
         d = env.data
-        self.assertEqual(obs.shape, (75,))
+        self.assertEqual(obs.shape, (66 + len(ALL_CLIPS),))
         self.assertEqual(obs.dtype, np.float32)
         self.assertEqual(env.feet_on_ground().sum(), 0)   # it starts in the air
         np.testing.assert_allclose(obs[9], d.qpos[2], atol=1e-6)                      # body height
@@ -73,23 +73,23 @@ class LandingStartTest(unittest.TestCase):
         np.testing.assert_array_equal(obs[34:46], 0.0)                                 # no previous action
         onehot = np.zeros(len(ALL_CLIPS))
         onehot[ALL_CLIPS.index("canter")] = 1
-        np.testing.assert_array_equal(obs[48:57], onehot)                              # tracking the canter
-        np.testing.assert_allclose(obs[57:69], env.ref("joints", 1) - DOG, atol=1e-6)  # reference joints
-        self.assertEqual(obs[74], 0.0)                                                 # a loop: no clip end
+        np.testing.assert_array_equal(obs[48:48 + len(ALL_CLIPS)], onehot)                              # tracking the canter
+        np.testing.assert_allclose(obs[48 + len(ALL_CLIPS):60 + len(ALL_CLIPS)], env.ref("joints", 1) - DOG, atol=1e-6)  # reference joints
+        self.assertEqual(obs[65 + len(ALL_CLIPS)], 0.0)                                                 # a loop: no clip end
         pol = MjxImitatePolicy(BRAIN_360M)   # the 360M brain (9 slots) runs on it unchanged
         self.assertEqual(pol.slots, 9)
         a = pol.act(obs)
         self.assertEqual(a.shape, (12,))
         obs2, r, fell, done, info = env.step(a)
-        self.assertEqual(obs2.shape, (75,))
+        self.assertEqual(obs2.shape, (66 + len(ALL_CLIPS),))
         self.assertTrue(np.all(np.isfinite(obs2)) and np.isfinite(r))
         np.testing.assert_allclose(obs2[34:46], a, atol=1e-6)                          # previous action
         self.assertEqual(info["clip"], "canter")
         self.assertFalse(fell)   # in the air, ~10 cm above the canter's height: the grace keeps the try going
 
     def test_landing_bridge_switch(self):
-        from imitate_env import ALL_CLIPS, ImitateEnv
-        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, landing_rate=1.0, landing_bridge=0.1)
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+        env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, landing_rate=1.0, landing_bridge=0.1)
         env.exam_landing = 0
         env.reset(seed=1)
         clips = []
@@ -100,8 +100,8 @@ class LandingStartTest(unittest.TestCase):
 
     def test_rate_zero_is_the_old_env(self):
         """landing_rate 0 (the default) draws nothing extra: the same tries, step for step."""
-        from imitate_env import ALL_CLIPS, ImitateEnv
-        a, b = ImitateEnv(seed=3, clips=ALL_CLIPS, switch_rate=0.3), ImitateEnv(seed=3, clips=ALL_CLIPS, switch_rate=0.3, landing_rate=0.0)
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+        a, b = ImitateEnv(seed=3, clips=MOTION_CLIPS, switch_rate=0.3), ImitateEnv(seed=3, clips=MOTION_CLIPS, switch_rate=0.3, landing_rate=0.0)
         rng = np.random.default_rng(0)
         for ep in range(6):
             oa, _ = a.reset(seed=ep if ep % 2 else None)
@@ -120,13 +120,13 @@ class MovingStartTest(unittest.TestCase):
     """A moving-start posture command (imitate_env moving_rate): an ordinary try for the brain, paid by the shared pose test."""
 
     def test_moving_start_obs_layout_and_pay(self):
-        from imitate_env import ALL_CLIPS, DOG, ImitateEnv, closest_moment
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, DOG, ImitateEnv, closest_moment
         from mjx_imitate import MjxImitatePolicy
-        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, moving_rate=1.0)
+        env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, moving_rate=1.0)
         env.exam_moving = ("sit", "walk", 0.2, 1.2)
         obs, _ = env.reset(seed=0)
         d = env.data
-        self.assertEqual(obs.shape, (75,))
+        self.assertEqual(obs.shape, (66 + len(ALL_CLIPS),))
         self.assertEqual(env.clip.name, "sit")
         # the walk's body velocity at that moment, scaled so the clip's pace becomes 1.2 m/s
         self.assertAlmostEqual(np.linalg.norm(d.qvel[0:3]), 1.2 * np.linalg.norm(env.clips["walk"].at(0.2, "v_body")) / env.gait_speed("walk"), places=6)
@@ -135,13 +135,13 @@ class MovingStartTest(unittest.TestCase):
         self.assertEqual(env.pose_until, 200)   # 4 s at 50 Hz (the switch test's sit time)
         onehot = np.zeros(len(ALL_CLIPS))
         onehot[ALL_CLIPS.index("sit")] = 1
-        np.testing.assert_array_equal(obs[48:57], onehot)
-        np.testing.assert_allclose(obs[57:69], env.ref("joints", 1) - DOG, atol=1e-6)
+        np.testing.assert_array_equal(obs[48:48 + len(ALL_CLIPS)], onehot)
+        np.testing.assert_allclose(obs[48 + len(ALL_CLIPS):60 + len(ALL_CLIPS)], env.ref("joints", 1) - DOG, atol=1e-6)
         pol = MjxImitatePolicy(BRAIN_360M)
         hits = 0
         for _ in range(env.limit):
             obs, r, fell, done, info = env.step(pol.act(obs))
-            self.assertEqual(obs.shape, (75,))
+            self.assertEqual(obs.shape, (66 + len(ALL_CLIPS),))
             track = sum(env.weights[k] * info[f"r_{k}"] for k in env.weights)
             self.assertAlmostEqual(r, track + env.pose_weight * (info["pose_hit"] and info["pose_ok"]), places=6)
             self.assertEqual(info["pose_ok"], env.pose_now("sit"))
@@ -163,9 +163,9 @@ class TransitionTermTest(unittest.TestCase):
     """The transition term charges roll/pitch beyond the threshold only in the window after a mid-try switch."""
 
     def test_window_and_charge(self):
-        from imitate_env import ALL_CLIPS, ImitateEnv
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
         from mjx_imitate import MjxImitatePolicy
-        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, transition_weight=0.5, transition_window=0.4, transition_threshold=0.05)
+        env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, transition_weight=0.5, transition_window=0.4, transition_threshold=0.05)
         env.exam_start = ("canter", 0.1)
         obs, _ = env.reset(seed=2)
         pol = MjxImitatePolicy(BRAIN_360M)
@@ -174,7 +174,7 @@ class TransitionTermTest(unittest.TestCase):
             if t == 10:
                 env._switch_to(env.clips["trot"])   # what a drawn switch does (canter -> trot)
             obs, r, fell, done, info = env.step(pol.act(obs))
-            self.assertEqual(obs.shape, (75,))
+            self.assertEqual(obs.shape, (66 + len(ALL_CLIPS),))
             track = sum(env.weights[k] * info[f"r_{k}"] for k in env.weights)
             in_window = info["since_switch"] is not None and info["since_switch"] < 20   # 0.4 s
             self.assertAlmostEqual(r, track - (0.5 * env.transition_excess() if in_window else 0.0), places=6)
@@ -206,8 +206,8 @@ class RealGapTest(unittest.TestCase):
         return seen
 
     def test_latency_queue(self):
-        from imitate_env import ALL_CLIPS, ImitateEnv
-        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, latency_ms=(0, 40))
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+        env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, latency_ms=(0, 40))
         env.exam_latency_ms, env.exam_start = 26.0, ("trot", 0.1)   # 13 substeps: 1 control step + 3 substeps
         env.reset(seed=0)
         self.assertEqual(env.delay_sub, 13)
@@ -237,8 +237,8 @@ class RealGapTest(unittest.TestCase):
             np.testing.assert_allclose(s_, w, atol=1e-12, err_msg=f"substep {i}")
 
     def test_motor_lag(self):
-        from imitate_env import ALL_CLIPS, ImitateEnv
-        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, motor_lag_ms=20.0)
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+        env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, motor_lag_ms=20.0)
         env.exam_start = ("trot", 0.1)
         env.reset(seed=0)
         y = env.data.ctrl.copy()
@@ -252,8 +252,8 @@ class RealGapTest(unittest.TestCase):
             np.testing.assert_allclose(s_, y, atol=1e-12)
 
     def test_obs_noise_bounds(self):
-        from imitate_env import ALL_CLIPS, NOISE, ImitateEnv
-        a, b = ImitateEnv(randomize=False, clips=ALL_CLIPS), ImitateEnv(randomize=False, clips=ALL_CLIPS, obs_noise=1.0)
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, NOISE, ImitateEnv
+        a, b = ImitateEnv(randomize=False, clips=MOTION_CLIPS), ImitateEnv(randomize=False, clips=MOTION_CLIPS, obs_noise=1.0)
         for e in (a, b):
             e.exam_start = ("walk", 0.2)
         oa, _ = a.reset(seed=0)
@@ -270,13 +270,13 @@ class TerrainPushTest(unittest.TestCase):
 
     def test_terrain_start_and_inputs(self):
         from bolt_env import TERRAIN
-        from imitate_env import ALL_CLIPS, DOG, ImitateEnv
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, DOG, ImitateEnv
         from mjx_imitate import MjxImitatePolicy
-        env = ImitateEnv(randomize=False, clips=ALL_CLIPS, terrain_cm=5.0)
+        env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, terrain_cm=5.0)
         env.exam_start = ("trot", 0.2)
         obs, _ = env.reset(seed=0)
         d = env.data
-        self.assertEqual(obs.shape, (75,))
+        self.assertEqual(obs.shape, (66 + len(ALL_CLIPS),))
         self.assertLess(np.abs(d.qpos[:2] - TERRAIN["at"]).max(), env.terrain_spread + 1e-9)   # on the field
         gz = env.ground_z()
         self.assertGreater(gz, 0.0)
@@ -286,7 +286,7 @@ class TerrainPushTest(unittest.TestCase):
         touched = set()
         for _ in range(50):
             obs, r, fell, done, info = env.step(pol.act(obs))
-            self.assertEqual(obs.shape, (75,))
+            self.assertEqual(obs.shape, (66 + len(ALL_CLIPS),))
             touched |= {env.model.geom(c.geom1 if c.geom2 == env.terrain["geom"] else c.geom2).name
                         for c in d.contact[:d.ncon] if env.terrain["geom"] in (c.geom1, c.geom2)}
         self.assertTrue(touched and all(n.endswith("_foot") or n == "" for n in touched), touched)   # paws (shins unnamed)
@@ -296,9 +296,9 @@ class TerrainPushTest(unittest.TestCase):
 
     def test_push(self):
         from bolt_env import apply_shove
-        from imitate_env import ALL_CLIPS, ImitateEnv
-        a = ImitateEnv(randomize=False, clips=ALL_CLIPS)
-        b = ImitateEnv(randomize=False, clips=ALL_CLIPS, push_interval=0.1, push_prob=1.0, push_speed=1.0, push_spin=2.0)
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+        a = ImitateEnv(randomize=False, clips=MOTION_CLIPS)
+        b = ImitateEnv(randomize=False, clips=MOTION_CLIPS, push_interval=0.1, push_prob=1.0, push_speed=1.0, push_spin=2.0)
         for e in (a, b):
             e.exam_start = ("trot", 0.1)
             e.reset(seed=0)
@@ -323,8 +323,8 @@ def dump_terrain(pol, rng):
     """Terrain tries through ImitateEnv (5 cm): start states and 30 steps each, the ground under the body (check_terrain)."""
     import mujoco
     from bolt_env import terrain_field, terrain_xml, MODEL
-    from imitate_env import ALL_CLIPS, ImitateEnv
-    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, terrain_cm=5.0)
+    from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, terrain_cm=5.0)
     starts, steps = [], []
     for k in range(8):
         name = ("walk", "trot")[k % 2]
@@ -442,8 +442,8 @@ def check_shove(M, C):
 
 def dump_real(pol, rng):
     """One control step each with a 26 ms latency and a 20 ms motor lag, from 60 states (check_real)."""
-    from imitate_env import ALL_CLIPS, ImitateEnv
-    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, latency_ms=(0, 40), motor_lag_ms=20.0)
+    from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, latency_ms=(0, 40), motor_lag_ms=20.0)
     steps = []
     for k in range(12):
         env.exam_latency_ms, env.exam_start = 26.0, (ALL_CLIPS[k % 6], float(rng.uniform(0, 0.4)))
@@ -462,8 +462,8 @@ def dump_real(pol, rng):
 def dump_transition(pol, rng):
     """Canter tries with a forced switch to trot at step 15, transition term on (check_transition)."""
     import mujoco
-    from imitate_env import ALL_CLIPS, ImitateEnv
-    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, transition_weight=0.5, transition_window=1.0, transition_threshold=0.1)
+    from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, transition_weight=0.5, transition_window=1.0, transition_threshold=0.1)
     steps = []
     for k in range(6):
         env.exam_start = ("canter", float(rng.uniform(0, env.clips["canter"].length)))
@@ -490,8 +490,8 @@ def dump_transition(pol, rng):
 def dump_moving(pol, rng):
     """Moving starts through ImitateEnv: start states and up to 60 steps each, with the pose decisions (check_moving)."""
     import mujoco
-    from imitate_env import ALL_CLIPS, ImitateEnv
-    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, moving_rate=1.0)
+    from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, moving_rate=1.0)
     starts, steps = [], []
     k = 0
     for post in ("sit", "lie", "getup"):
@@ -534,9 +534,9 @@ def dump_brake(pol, rng):
     at 0-40 rad/s, a random action (check_brake)."""
     import mujoco
     from bolt_env import ACTION_SCALE, physics
-    from imitate_env import ALL_CLIPS, ImitateEnv
-    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, motor_brake=True)
-    off = ImitateEnv(randomize=False, clips=ALL_CLIPS, motor_brake=False)
+    from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+    env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, motor_brake=True)
+    off = ImitateEnv(randomize=False, clips=MOTION_CLIPS, motor_brake=False)
     assert env.motor_brake[0] and not off.motor_brake[0], (env.motor_brake, off.motor_brake)
     steps = []
     for k in range(120):
@@ -573,9 +573,9 @@ def dump_brake(pol, rng):
 def dump_landing(pol, rng):
     """Landing starts through ImitateEnv: start states and 40 steps each (for check_landing)."""
     import mujoco
-    from imitate_env import ALL_CLIPS, LANDING_FILE, ImitateEnv
+    from imitate_env import ALL_CLIPS, MOTION_CLIPS, LANDING_FILE, ImitateEnv
     z = np.load(LANDING_FILE)
-    env = ImitateEnv(randomize=False, clips=ALL_CLIPS, landing_rate=1.0)
+    env = ImitateEnv(randomize=False, clips=MOTION_CLIPS, landing_rate=1.0)
     picks = np.unique(np.concatenate([np.flatnonzero(z["airborne"])[::max(1, int(z["airborne"].sum()) // 6)][:6],
                                       np.flatnonzero(~z["airborne"])[::max(1, int((~z["airborne"]).sum()) // 4)][:4]]))
     starts, steps = [], []
@@ -795,7 +795,7 @@ def check_landing(M, C):
     @jax.jit
     def one_step(qpos, qvel, ctrl, info, a):
         d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel, ctrl=ctrl))
-        st = env.State(pipeline_state=d, obs=jp.zeros(75), reward=jp.float32(0), done=jp.float32(0),
+        st = env.State(pipeline_state=d, obs=jp.zeros(M.MjxImitate.observation_size), reward=jp.float32(0), done=jp.float32(0),
                        metrics={f"r_{k}": jp.float32(0) for k in M.WEIGHTS} | dict(fell=jp.float32(0), canter=jp.float32(0), canter_steps=jp.float32(0)),
                        info=info | dict(rng=jax.random.PRNGKey(0)))
         n = env.step(st, a)
@@ -832,8 +832,8 @@ def dump_root_global(pol, rng):
     """Tries with root_global=1 (Peng's global root terms), a forced clip switch mid-try in some (check_root_global):
     per step the reference root before and after, and the two terms recomputed on up-to-date kinematics."""
     import mujoco
-    from imitate_env import ALL_CLIPS, ImitateEnv
-    clips = [c for c in ALL_CLIPS if c != "getup"]
+    from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv
+    clips = [c for c in MOTION_CLIPS if c != "getup"]
     env = ImitateEnv(randomize=False, clips=clips, slots=8, root_global=1.0)
     steps = []
     for k in range(8):
@@ -907,15 +907,15 @@ def check_root_global(M, C):
 
 def dump(zip_path, warm_path, out):
     import mujoco
-    from imitate_env import ALL_CLIPS, ImitateEnv, ImitatePolicy
+    from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv, ImitatePolicy
     from mjx_imitate import MjxImitatePolicy
     z = Path(zip_path)
     pol = ImitatePolicy(z.parent, z.name, z.name.replace("policy_", "policy_vecnormalize_", 1).replace(".zip", ".pkl"))
     npol = MjxImitatePolicy(warm_path)
     rng = np.random.default_rng(0)
-    env = ImitateEnv(randomize=False, clips=ALL_CLIPS)
+    env = ImitateEnv(randomize=False, clips=MOTION_CLIPS)
     starts, steps, switches = [], [], []
-    for ci, name in enumerate(ALL_CLIPS):
+    for ci, name in enumerate(MOTION_CLIPS):
         c = env.clips[name]
         for k in range(3):
             tau0 = float(rng.uniform(0, c.length if c.loop else c.length + 0.3))
@@ -945,7 +945,7 @@ def dump(zip_path, warm_path, out):
                                   height_err=info["height_err"], tilt=info["tilt"], body_on_floor=env.body_on_floor(), fell=fell,
                                   qpos=d.qpos.copy(), qvel=d.qvel.copy(), legleg=legleg, t=env.t))
                 if t == 20 and (c.loop or env.finished() > 0.5):   # a forced switch from here
-                    env2 = ImitateEnv(randomize=False, clips=ALL_CLIPS, switch_rate=1e9)
+                    env2 = ImitateEnv(randomize=False, clips=MOTION_CLIPS, switch_rate=1e9)
                     env2.data.qpos[:] = d.qpos
                     env2.clip, env2.tau0, env2.t, env2.rng = env.clip, env.tau0, env.t, np.random.default_rng(t + ci)
                     env2._maybe_switch()
@@ -954,7 +954,7 @@ def dump(zip_path, warm_path, out):
                 if fell or done:
                     break
     # 20 observations from training-like tries (randomized), for the policy check
-    envr = ImitateEnv(randomize=True, clips=ALL_CLIPS)
+    envr = ImitateEnv(randomize=True, clips=MOTION_CLIPS)
     obs_set = []
     for k in range(20):
         o, _ = envr.reset(seed=500 + k)
@@ -997,7 +997,7 @@ def check(warm_path, cases):
     @jax.jit
     def one_step(qpos, qvel, ctrl, info, a):
         d = mjx.forward(env.mx, mjx.make_data(env.mx).replace(qpos=qpos, qvel=qvel, ctrl=ctrl))
-        st = env.State(pipeline_state=d, obs=jp.zeros(75), reward=jp.float32(0), done=jp.float32(0),
+        st = env.State(pipeline_state=d, obs=jp.zeros(M.MjxImitate.observation_size), reward=jp.float32(0), done=jp.float32(0),
                        metrics={f"r_{k}": jp.float32(0) for k in M.WEIGHTS} | dict(fell=jp.float32(0), canter=jp.float32(0), canter_steps=jp.float32(0)),
                        info=info | dict(rng=jax.random.PRNGKey(0), limit=jp.int32(10 ** 6)))
         n = env.step(st, a)
@@ -1070,8 +1070,8 @@ def check(warm_path, cases):
     if "root_global" in C:
         check_root_global(M, C["root_global"])
     # 5. warm-started Brax policy vs ImitatePolicy.act
-    W = pickle.loads(Path(warm_path).read_bytes())
-    nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(75, 12)
+    W = M.widen_slots(pickle.loads(Path(warm_path).read_bytes()), M.MjxImitate.observation_size)   # 9 -> 10 clip slots
+    nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(M.MjxImitate.observation_size, 12)
     params = M.to_brax(W)
     act = jax.jit(ppo_networks.make_inference_fn(nets)(params, deterministic=True))
     a = np.array([np.clip(np.asarray(act(jp.array(o), jax.random.PRNGKey(0))[0]), -1, 1) for o in C["obs"]])
@@ -1085,7 +1085,7 @@ class Go2TablesTest(unittest.TestCase):
 
     def test_go2_clip_tables(self):
         import mjx_imitate as M
-        from imitate_env import ALL_CLIPS, Clip
+        from imitate_env import ALL_CLIPS, MOTION_CLIPS, Clip
         T = M.clip_tables(ALL_CLIPS, prefix="go2_")
         for i, name in enumerate(ALL_CLIPS):
             c = Clip(name, "go2_")
@@ -1107,19 +1107,19 @@ def dump_go2(run_dir, warm_path, out, per_clip=2, steps=30, seed=0):
     import os
     import mujoco
     os.environ["BOLT_BODY"] = "go2"   # ImitatePolicy's normalizer env, as train_imitate.py --body go2
-    from imitate_env import ALL_CLIPS, ImitateEnv, ImitatePolicy
+    from imitate_env import ALL_CLIPS, MOTION_CLIPS, ImitateEnv, ImitatePolicy
     from mjx_imitate import MjxImitatePolicy
     pol, npol = ImitatePolicy(run_dir), MjxImitatePolicy(warm_path)
     rng = np.random.default_rng(seed)
     cases = {}
     for steer_max in (0.0, 1.0):
-        env = ImitateEnv(body="go2", randomize=False, clips=ALL_CLIPS, motor_brake=True, steer_max=steer_max)
+        env = ImitateEnv(body="go2", randomize=False, clips=ALL_CLIPS, motor_brake=True, steer_max=steer_max)   # with jump
         assert env.motor_brake[0] and env.body == "go2"
         tries = []
         for ci, name in enumerate(ALL_CLIPS):
             c = env.clips[name]
             for k in range(per_clip):
-                tau0 = float(rng.uniform(0, c.length if c.loop else c.length + 0.3))
+                tau0 = float(rng.uniform(0, c.length if c.loop else c.length + 0.3 * (0.2 if name == "jump" else 1.0)))
                 env.exam_start = (name, tau0)
                 env.exam_steer = (0.8 if k % 2 else -0.8) if steer_max else None
                 obs, _ = env.reset(seed=3000 + 100 * ci + k)
@@ -1167,7 +1167,7 @@ def dump_go2(run_dir, warm_path, out, per_clip=2, steps=30, seed=0):
             fell = abs(err["height_err"]) > env.lost_h or err["tilt"] > 0.8 or (bof and not env.ref("height") < env.floor_ok_h)
             edges.append(dict(clip=r["pre"]["clip"], tau0=env.tau0, t=env.t, qpos=d.qpos.copy(), qvel=d.qvel.copy(), f_fell=bool(fell),
                               f_bof=bool(bof), f_err=err))
-    envr = ImitateEnv(body="go2", randomize=True, clips=ALL_CLIPS, motor_brake=True)
+    envr = ImitateEnv(body="go2", randomize=True, clips=MOTION_CLIPS, motor_brake=True)
     obs_set = []
     for k in range(20):
         o, _ = envr.reset(seed=3500 + k)
@@ -1194,8 +1194,9 @@ def check_go2(warm_path, cases):
     C = pickle.loads(Path(cases).read_bytes())
     out = {}
     for steer_max, tries in C["cases"].items():
-        env = M.MjxImitate(body="go2", randomize=False, switch_rate=0.0, motor_brake=True, steer_max=steer_max)
-        env100 = M.MjxImitate(body="go2", randomize=False, switch_rate=0.0, motor_brake=True, steer_max=steer_max, iterations=100, ls_iterations=50)
+        env = M.MjxImitate(body="go2", randomize=False, switch_rate=0.0, motor_brake=True, steer_max=steer_max, clips=M.ALL_CLIPS)
+        env100 = M.MjxImitate(body="go2", randomize=False, switch_rate=0.0, motor_brake=True, steer_max=steer_max, iterations=100,
+                              ls_iterations=50, clips=M.ALL_CLIPS)
         tag = f"go2, steer {'off' if not steer_max else f'max {steer_max:g}'}"
 
         def info_of(s, e=env):
@@ -1217,7 +1218,7 @@ def check_go2(warm_path, cases):
             metrics = {f"r_{k}": jp.float32(0) for k in M.WEIGHTS} | dict(fell=jp.float32(0), canter=jp.float32(0), canter_steps=jp.float32(0))
             if e.steer_max:
                 metrics["r_steer"] = jp.float32(0)
-            return e.State(pipeline_state=d, obs=jp.zeros(75), reward=jp.float32(0), done=jp.float32(0), metrics=metrics,
+            return e.State(pipeline_state=d, obs=jp.zeros(M.MjxImitate.observation_size), reward=jp.float32(0), done=jp.float32(0), metrics=metrics,
                            info=info | dict(rng=jax.random.PRNGKey(0)))
 
         steps = {}
@@ -1322,7 +1323,7 @@ def check_go2(warm_path, cases):
                   "the command unless 0 -> 0)")
     # 6. the end-of-try decision near its limits (moved and tilted states; MJX's without self-contacts)
     if "edges" in C:
-        env = M.MjxImitate(body="go2", randomize=False, switch_rate=0.0)
+        env = M.MjxImitate(body="go2", randomize=False, switch_rate=0.0, clips=M.ALL_CLIPS)
 
         @jax.jit
         def ends(qpos, qvel, info):
@@ -1344,8 +1345,8 @@ def check_go2(warm_path, cases):
         print(f"[go2: end of try near its limits] {len(C['edges'])} moved/tilted states (CPU ends {n_end}, body on floor {n_bof}): "
               f"end-of-try decision differs in {dis} ({near} within 2 mm / 2 mrad of a limit), body-on-floor in {dbof}")
     # 7. the warm-started Go2 brain in Brax against ImitatePolicy.act
-    W = pickle.loads(Path(warm_path).read_bytes())
-    nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(75, 12)
+    W = M.widen_slots(pickle.loads(Path(warm_path).read_bytes()), M.MjxImitate.observation_size)   # 9 -> 10 clip slots
+    nets = M.make_networks(W["hidden"], float(np.mean(W["log_std"])))(M.MjxImitate.observation_size, 12)
     params = M.to_brax(W)
     act = jax.jit(ppo_networks.make_inference_fn(nets)(params, deterministic=True))
     a = np.array([np.clip(np.asarray(act(jp.array(o), jax.random.PRNGKey(0))[0]), -1, 1) for o in C["obs"]])

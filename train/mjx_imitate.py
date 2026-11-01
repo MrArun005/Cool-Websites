@@ -134,7 +134,9 @@ def apply_shove(qvel, R, speed, spin, side):
     """bolt_env.apply_shove in JAX: body velocity + side x speed along the body's y axis, roll rate - side x spin."""
     return qvel.at[0:3].add(R @ jp.array([0.0, 1.0, 0.0]) * (side * speed)).at[3:6].add(jp.array([-1.0, 0.0, 0.0]) * (side * spin))
 BRAKE = dict(speed=MOTOR["cutoff"], gain=3.5)   # bolt_env: brake_speed default the drive cutoff, BRAKE_GAIN
-ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup"]
+ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup", "jump"]   # as imitate_env
+MOTION_CLIPS = ALL_CLIPS[:9]   # the clips every body has (jump: Go2 only so far)
+CLIP_HOLD = {"jump": 0.2}      # as imitate_env.CLIP_HOLD
 WEIGHTS = dict(pose=0.5, vel=0.05, paw=0.2, root=0.15, root_vel=0.1)
 HOLD, LOOP_SECONDS = 1.0, 5.0
 GAITS = ("walk", "trot", "pace", "canter", "turn_left", "turn_right")
@@ -325,7 +327,7 @@ class MjxImitate:
             field = terrain_field(terrain_seed)
             m.hfield_data[:] = field.ravel()
             self.terrain = dict(field=jp.array(field, jp.float32), cm=float(terrain_cm), geom=m.geom("terrain").id,
-                                clips=jp.array([n in terrain_clips for n in (clips or ALL_CLIPS)]), spread=float(terrain_spread))
+                                clips=jp.array([n in terrain_clips for n in (clips or MOTION_CLIPS)]), spread=float(terrain_spread))
         self.push_steps = int(round(push_interval / (m.opt.timestep * 10))) if push_interval else 0
         self.push_prob, self.push_speed, self.push_spin = float(push_prob), float(push_speed), float(push_spin)
         # contact solver: MuJoCo's 100/50 iterations run to the slowest env under vmap; 5/8 gives the same physics
@@ -340,7 +342,8 @@ class MjxImitate:
         # steering (as ImitateEnv): info["steer"] drawn per try and redrawn mid-try; 0 = not drawn or computed
         self.steer_max, self.steer_share, self.steer_change = float(steer_max), float(steer_share), float(steer_change)
         self.steer_weight = float(steer_weight)
-        self.names = list(clips or ALL_CLIPS)
+        self.names = list(clips or MOTION_CLIPS)
+        self.hold = jp.array([CLIP_HOLD.get(n, HOLD) for n in self.names], jp.float32)
         self.steer_clip = jp.array([n in STEER_CLIPS for n in self.names])
         T = clip_tables(self.names, clip_dir, prefix)
         self.T = {k: jp.array(T[k], jp.float32) for k in KEYS}
@@ -615,7 +618,7 @@ class MjxImitate:
 
     def limit_for(self, c, tau0, t):
         """Last step of the try: loops run 5 s, sit/lie/getup to the end of their 1 s hold (at least 25 steps)."""
-        left = jp.floor((self.length[c] + HOLD - tau0) / self.dt)
+        left = jp.floor((self.length[c] + self.hold[c] - tau0) / self.dt)
         return jp.where(self.loop[c], self.max_steps, jp.maximum(25, jp.minimum(self.max_steps, left)).astype(jp.int32)) + t
 
     def start_info(self, rng):
@@ -651,7 +654,7 @@ class MjxImitate:
             ms = jax.random.uniform(k_lat, minval=self.latency_ms[0], maxval=self.latency_ms[1]) if self.latency_ms[1] > 0 else jp.float32(0.0)
             info["dsub"] = jp.round(ms / 1000.0 / self.sub_dt).astype(jp.int32)
         c = info["clip"]
-        info["tau0"] = jax.random.uniform(k[4]) * jp.where(self.loop[c], self.length[c], self.length[c] + 0.3 * HOLD)
+        info["tau0"] = jax.random.uniform(k[4]) * jp.where(self.loop[c], self.length[c], self.length[c] + 0.3 * self.hold[c])
         info["limit"] = self.limit_for(c, info["tau0"], 0)
         yaw = jax.random.uniform(k[5], minval=-jp.pi, maxval=jp.pi)
         if self.L is not None:
@@ -791,7 +794,7 @@ class MjxImitate:
         dist = jp.where(jp.arange(dist.shape[0]) < self.n[c], dist, jp.inf)
         start = jp.where(self.loop[c], jp.argmin(dist).astype(jp.float32) / self.fps[c], 0.0)
         tau0 = start - info["t"].astype(jp.float32) * self.dt
-        left = jp.where(self.loop[c], float(self.max_steps), jp.floor((self.length[c] + HOLD - start) / self.dt))
+        left = jp.where(self.loop[c], float(self.max_steps), jp.floor((self.length[c] + self.hold[c] - start) / self.dt))
         limit = info["t"] + jp.minimum(left, self.max_steps).astype(jp.int32)
         return tau0, limit
 
@@ -818,7 +821,7 @@ class MjxImitate:
         if self.switch_rate:   # now and then hand over to a clip that may follow this one (NEXT)
             c = info["clip"]
             allowed = self.next[c]
-            ready = self.loop[c] | (self.finished(info) > 0.5 * HOLD)
+            ready = self.loop[c] | (self.finished(info) > 0.5 * self.hold[c])
             go = ready & jp.any(allowed) & (jax.random.uniform(k_sw) < self.switch_rate * self.dt)
             nc = jax.random.categorical(k_pick, jp.where(allowed, 0.0, -1e9)).astype(jp.int32)
             tau0, limit = self.switch_to(info, d.qpos[7:19], nc)
@@ -906,6 +909,21 @@ def make_networks(hidden=(512, 256), log_std=-1.0):
     return factory
 
 
+def widen_slots(P, n_in):
+    """A numpy brain with fewer clip slots (9: from before the jump clip) -> n_in inputs: the new one-hot entries get
+    zero weights in both networks' first layers and a neutral normalizer (mean 0, spread 1), so the widened brain acts
+    exactly as before until training teaches it the new clip (as widen_imitate.py for the CPU brains)."""
+    k = n_in - len(P["mean"])
+    if k <= 0:
+        return P
+    at = 48 + len(P["mean"]) - 66   # right after the brain's own slots
+    ins = lambda a, v: np.insert(np.asarray(a), [at] * k, v, axis=0)   # noqa: E731
+    P = dict(P, mean=ins(P["mean"], 0.0), std=ins(P["std"], 1.0), var=ins(P.get("var", np.asarray(P["std"]) ** 2), 1.0))
+    P["layers"] = [(ins(P["layers"][0][0], 0.0), P["layers"][0][1])] + list(P["layers"][1:])
+    P["value"] = [(ins(P["value"][0][0], 0.0), P["value"][0][1])] + list(P["value"][1:])
+    return P
+
+
 def to_brax(P, count=1e8):
     """numpy brain -> Brax PPO params (normalizer state, policy, value) for ppo.train(restore_params=...)."""
     from brax.training import types
@@ -949,12 +967,17 @@ def train(args):
     out = Path(args.out)
     (out / "checkpoints").mkdir(parents=True, exist_ok=True)
     W = pickle.loads(Path(args.warm).read_bytes()) if args.warm else None
+    if W and len(W["mean"]) < MjxImitate.observation_size:   # a 9-slot brain (before the jump clip): widen it
+        print(f"warm brain widened {len(W['mean'])} -> {MjxImitate.observation_size} inputs (new clip slots start at 0)", flush=True)
+        W = widen_slots(W, MjxImitate.observation_size)
     os.environ["BOLT_BODY"] = args.body   # as train_imitate.py: this process's body
     if W:   # a brain trained on another body would start from the wrong stance and clips
         assert W.get("body", "bolt") == args.body, f"warm brain is for body {W.get('body', 'bolt')}, training {args.body}"
 
     def make_env(cm):
+        cw = {k: float(v) for k, v in (x.split("=") for x in (args.clip_weight or []))}
         return MjxImitate(switch_rate=args.switch_rate, landing_rate=args.landing_rate, landing_file=args.landing_file,
+                          clips=args.clips, clip_weights=cw or None,
                           landing_grace=args.landing_grace, landing_bridge=args.landing_bridge, landing_then=args.landing_then,
                           moving_rate=args.moving_rate, moving_speed=args.moving_speed, moving_gaits=args.moving_gaits, moving_clips=args.moving_clips,
                           pose_time={k: float(v) for k, v in (kv.split("=") for kv in args.pose_time)},
@@ -1113,6 +1136,9 @@ def main():
                    "--brake-speed/--brake-gain apply to bolt only (a real robot has its own)")
     t.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model file's")
     t.add_argument("--blind-vel", action="store_true", help="zero the body-velocity inputs (no velocity sensor on a real robot)")
+    t.add_argument("--clips", nargs="+", choices=ALL_CLIPS, help="the clips to train (default: the 9 motion clips; add "
+                   "jump for a body that has the clip, e.g. --clips walk trot pace canter turn_left turn_right sit lie getup jump)")
+    t.add_argument("--clip-weight", nargs="+", metavar="CLIP=W", help="how often a clip is drawn vs 1 (default canter=3)")
     t.add_argument("--damping-range", type=float, nargs=2, metavar=("LO", "HI"),
                    help="joint damping drawn per try, log-uniform (e.g. 0.1 2.0); default: the body's own")
     t.add_argument("--drop-p", type=float, default=0.0, help="chance per step that the new joint targets are lost (motors keep the old)")

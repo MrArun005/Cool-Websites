@@ -24,7 +24,7 @@ import bolt_env  # noqa: E402
 from bolt_env import ACTION_SCALE, FEET  # noqa: E402
 from export_imitate import clips_json, parity_runs  # noqa: E402
 from export_live import brain, f32, f64  # noqa: E402
-from imitate_env import ALL_CLIPS, DOG, HOLD, NEXT, ImitateEnv  # noqa: E402
+from imitate_env import MOTION_CLIPS as ALL_CLIPS, DOG, HOLD, NEXT, ImitateEnv  # noqa: E402
 from mjx_imitate import MjxImitatePolicy  # noqa: E402
 
 MODELS = HERE.parent / "models"
