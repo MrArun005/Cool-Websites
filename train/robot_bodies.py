@@ -76,7 +76,30 @@ BODIES = {
         lie=dict(front=(0.0, 1.15, -2.65), rear=(0.0, 1.15, -2.65)),   # calves tucked to their limit under the thighs
         sit=dict(front=(0.0, 0.35, -0.9), rear=(0.0, 1.9, -2.65)),     # front legs nearly straight, rear folded under
     ),
-    # "lite3": dict(name="DEEP Robotics Lite3", xml=..., ...)   # planned; see the module docstring for the fields
+    "lite3": dict(
+        name="DEEP Robotics Lite3", xml="robots/deeprobotics_lite3/lite3_nomesh.xml",
+        licence="BSD-3-Clause, (c) DeepRoboticsLab (robots/deeprobotics_lite3/LICENSE); URDF_model repo, Lite3/mjcf",
+        torso="TORSO", feet=("FL_FOOT_collision", "FR_FOOT_collision", "RL_FOOT_collision", "RR_FOOT_collision"),
+        joints=[f"{leg}_{j}_joint" for leg in LEGS for j in ("HipX", "HipY", "Knee")],   # the vendor's HL / HR = RL / RR
+        # Lite3 MotionSDK: fl_leg, fr_leg, hl_leg, hr_leg x (HipX, HipY, Knee) = our order. Its angles are minus ours
+        # (lite3_nomesh.xml flips the axes to Bolt's convention), so the robot program negates every angle and speed.
+        sdk_order=list(range(12)), sdk_sign=-1,
+        # DEEP Robotics' own RL stance (Lite3_rl_deploy dof_pos_default: HipY -0.65, Knee 1.3; ours 0.65 / -1.3): paws
+        # under the hips, body 0.41 x cos 0.65 + 0.022 = 0.35 m up.
+        stance=dict(front=(0.0, 0.65, -1.3), rear=(0.0, 0.65, -1.3)), stand_height=0.348,
+        # The URDF's limits: 24 N·m / 26.2 rad/s hip and thigh, 36 N·m / 17.3 rad/s knee (Lite3_rl_deploy's idle-state
+        # speed guard: 30 / 30 / 20). Peak power ~24 x 26.2 = 629 W, 36 x 17.3 = 623 W. APPROXIMATE as Go2's: the URDF
+        # speed taken as rated, drive out by 25/21 of it, braking gain scaled from the A1 estimate.
+        torque=(24.0, 24.0, 36.0), speed=(26.2, 26.2, 17.3), power=650.0, cutoff_ratio=25.0 / 21.0, brake_gain=None,
+        kp=30.0, kv=1.0,   # DEEP Robotics' RL policy runner: kp 30, kd 1 on every joint
+        joint_damping=None,   # the vendor file has none; training draws it (--damping-range)
+        clip_prefix="lite3_",
+        floor_ok=0.24, lost=0.12,   # Go2's 0.21 / 0.105 x 0.348 / 0.304
+        pose_ok={"sit": dict(height_max=0.31, pitch_min=0.3), "lie": dict(height_max=0.195, up_min=0.9),
+                 "stand": dict(height_min=0.31, up_min=0.9)},
+        lie=dict(front=(0.0, 1.15, -2.65), rear=(0.0, 1.15, -2.65)),
+        sit=dict(front=(0.0, 0.35, -0.9), rear=(0.0, 1.9, -2.65)),
+    ),
 }
 
 
