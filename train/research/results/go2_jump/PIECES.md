@@ -26,3 +26,20 @@ Likely cause: the coach's floor (10 cm x kz = 7 cm) is already a real jump for t
 ~5 cm), so the brain never meets a bar it can simply step over and never finds the paying side of the bar.
 Fix: `--bar-floor` (new; default unchanged for every body) so the coach can start the Go2 at 2-3 cm and raise the bar
 as clean crossings come. Pilot 3 = pilot 2 + --bar-floor 0.02 --bar-start 0.03.
+
+## Pilot 3 (Kaggle bolt-go2-jump-pilot3, 1 Nov): coach down to 2 cm -- still 0 bars; the from-scratch line stops
+
+Pilot 2 + `--bar-floor 0.02 --bar-start 0.03`, 3.5 h, 7.7M steps: **0.0 at every exam height, every checkpoint**;
+the practice-bar coach sat at its 2 cm floor the whole run. Gate (any exam bar > 0 or coach > 7 cm): failed.
+
+What it learned (local rollouts of the last checkpoint, 1.2 m/s from 1.0 m): it no longer refuses. It runs in, takes
+off ~0.2 m before the bar and leaps high (body 0.36 m over a 2 cm bar, 0.32-0.34 m over 10 cm), but almost straight
+up: the body ends only ~0.1 m past the bar's line, all four paws land on the line (paws past -0.18..+0.05 m; "cleared"
+needs all four 6.9 cm past), forward speed is gone, and it tips over (upright 0.84 -> 0.19 within 0.5 s). The reward
+pays height over the bar and paws past it, but nothing makes it keep its run going through the air and land running.
+
+Decision (gate rule): the from-scratch Go2 jump line stops here (3 pilots, ~32M steps, 0 bars). Next approach, the
+one every working Go2 skill came from: **imitate a real dog's jump**. The MANN mocap (dogmotion/SOURCES.md) has
+jumping; retarget a running jump to the Go2 (dogmotion/retarget.py), add it as a clip, and train it with the motion
+brain's imitation recipe (mjx_imitate.py, from 695M) so take-off, flight and a running landing are all in the
+reference. Then the bar exam.
