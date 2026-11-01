@@ -137,6 +137,7 @@ BRAKE = dict(speed=MOTOR["cutoff"], gain=3.5)   # bolt_env: brake_speed default 
 ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup", "jump"]   # as imitate_env
 MOTION_CLIPS = ALL_CLIPS[:9]   # the clips every body has (jump: Go2 only so far)
 CLIP_HOLD = {"jump": 0.2}      # as imitate_env.CLIP_HOLD
+CLIP_LOST = {"jump": 0.35}     # as imitate_env.CLIP_LOST
 WEIGHTS = dict(pose=0.5, vel=0.05, paw=0.2, root=0.15, root_vel=0.1)
 HOLD, LOOP_SECONDS = 1.0, 5.0
 GAITS = ("walk", "trot", "pace", "canter", "turn_left", "turn_right")
@@ -344,6 +345,7 @@ class MjxImitate:
         self.steer_weight = float(steer_weight)
         self.names = list(clips or MOTION_CLIPS)
         self.hold = jp.array([CLIP_HOLD.get(n, HOLD) for n in self.names], jp.float32)
+        self.lost = jp.array([CLIP_LOST.get(n, float("nan")) for n in self.names], jp.float32)   # nan: the body's lost_h
         self.steer_clip = jp.array([n in STEER_CLIPS for n in self.names])
         T = clip_tables(self.names, clip_dir, prefix)
         self.T = {k: jp.array(T[k], jp.float32) for k in KEYS}
@@ -845,7 +847,7 @@ class MjxImitate:
             terms = dict(terms, root=(1 - rg) * terms["root"] + rg * g_root, root_vel=(1 - rg) * terms["root_vel"] + rg * g_vel)
         reward = sum(self.weights.get(k, self.steer_weight) * v for k, v in terms.items())
         floor_ok = self.ref(info, "height") < self.floor_ok_h     # sitting and lying: the body may rest on the floor
-        high = jp.abs(err["height_err"]) > self.lost_h
+        high = jp.abs(err["height_err"]) > jp.where(jp.isnan(self.lost[info["clip"]]), self.lost_h, self.lost[info["clip"]])
         if self.L is not None:   # landing starts: no height check for the first landing_grace s (still in the air)
             high = high & (info["t"] > info["grace"])
         if self.M is not None:   # a moving-start command: paid per step in the pose once reached in time

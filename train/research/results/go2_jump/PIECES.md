@@ -74,3 +74,15 @@ apart (imitate_env.exam on ["jump"], 8 tries, from the clip's start through its 
 draws its 0.01 observation noise over 76 numbers, so its random stream differs from the 75-input exam: 695M scores
 0.819 under it (0.820 recorded); with the env forced back to 75 inputs it reproduces the recorded exam exactly (every
 number, difference 0). New brains are compared under the 76-input exam.
+
+## Kaggle bolt-go2-jump-imitate (1 Nov): the jump never learned -- every try ended at take-off (a rule, fixed)
+
+From 695M widened, 103M steps, 9 motion clips + jump (weight 4). Exam: **track_jump 0.097, fall_jump 1.00** (the
+untrained baseline was 0.095 / 1.00). The other skills held or improved a little: 9-clip mean 0.819 -> 0.822, steer
+0.678 -> 0.705, canter 0.52 -> 0.535, falls 0; rehearsal 0/10; recovery 40/40; knee speed unchanged (1482 steps
+over 1.2x). Cause (checked try by try): every jump try ended at 0.5 s, upright (tilt 0.39), because the reference body
+rises to 0.36 m while Bolt is at 0.24: |height error| 0.12 m > the Go2's "lost" limit 0.105 m. The brain never met a
+take-off or a flight, so it could not learn one. Fix: CLIP_LOST {"jump": 0.35} in imitate_env and mjx_imitate (falls
+still end the try by tilt and body-on-floor). With it the same brain's tries run to 0.92 s (the landing) and end on a
+real tilt error. Next: bolt-go2-jump-imitate2, from this brain, same recipe, with the fix (after the CPU/MJX parity
+check passes).

@@ -137,6 +137,10 @@ STEER = dict(share=0.6, change=0.3, weight=0.15)   # steering defaults (ImitateE
 STEER_CLIPS = ("walk", "trot", "pace", "canter")
 HOLD = 1.0          # s: sit and lie hold their final pose this long
 CLIP_HOLD = {"jump": 0.2}   # s: per-clip hold where it differs (the jump ends running: the controller hands it to trot)
+# m: per-clip "lost" height error where it differs. The jump's reference body rises 0.27 m in 0.3 s (the dog's own jump,
+# more than the Go2's motors can follow): at the usual 0.105 m every try ended at take-off (run bolt-go2-jump-imitate:
+# all tries ended at 0.5 s, upright), so the brain never met the flight. Falls are still caught by tilt and the floor.
+CLIP_LOST = {"jump": 0.35}
 
 
 def hold(name):
@@ -569,7 +573,7 @@ class ImitateEnv(BoltEnv):
             reward -= self.transition_weight * trans
         self.last_action = a
         floor_ok = self.ref("height") < self.floor_ok_h     # sitting and lying: the body may rest on the floor
-        lost = (abs(err["height_err"]) > self.lost_h and self.t > self.grace_steps) or err["tilt"] > 0.8   # grace: landing starts
+        lost = (abs(err["height_err"]) > CLIP_LOST.get(self.clip.name, self.lost_h) and self.t > self.grace_steps) or err["tilt"] > 0.8   # grace: landing starts
         fell = lost or (self.body_on_floor() and not floor_ok)
         done = self.t >= self.limit
         info = dict(err, clip=self.clip.name, tau=self.tau(), fell=fell, **{f"r_{k}": float(v) for k, v in terms.items()})
