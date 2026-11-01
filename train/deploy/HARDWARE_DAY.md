@@ -21,13 +21,12 @@ falls). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
 
 - [ ] Wired Ethernet; laptop on 192.168.123.x (Unitree's subnet). Find the interface name (`ip a`).
 - [ ] Robot lying down, powered on. Sport mode will be released by `--release-sport`.
-- [ ] Read-only check: start `run_go2.py --domain 0 --iface <eth> --release-sport --kp 0 --kd 0 --plan "trot:0.1"`
-      would still send commands; instead run a read-only script first (`deploy/` TODO: `read_go2.py`, prints IMU and
-      joints at 50 Hz). Check by hand:
+- [ ] Read-only check: `python deploy/read_go2.py --iface <eth> --domain 0` (never sends a command; prints the
+      gravity reading, gyro and the 12 joints in OUR order 5 times a second, then the message rate). Check by hand:
   - [ ] Tilt the robot nose-up: the gravity reading changes sign the way the simulator's does.
   - [ ] Move each leg by hand: the joint in OUR order (FL, FR, RL, RR x hip, thigh, calf) changes, with the
         simulator's sign (registry `sdk_order`).
-  - [ ] Message rate ~500 Hz, no gaps over 10 ms.
+  - [ ] Message rate ~500 Hz on the robot (Unitree's simulator: 200 Hz), largest gap under 10 ms.
 - Stop if: any joint maps to the wrong leg or sign, or the IMU frame differs. Fix `robot_bodies.py`, re-run step 0.
 
 ## 2. Hanging in the harness (feet 2-3 cm off the floor)

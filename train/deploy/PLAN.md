@@ -164,5 +164,5 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   delay 1/10; with 5% missed steps 3/10. Cost in our own exam: mean 0.809 vs 0.848, canter 0.485 vs 0.628, trot ->
   sit falls again (4/4). The real-robot candidate; a next blind piece continues it.
 * 1 Nov 06:35: `HARDWARE_DAY.md`, the phase 4 checklist (connect read-only, harness, floor at 0.8 gains, full gains,
-  logs back into the simulator), each step with its stop condition. Missing piece it names: `read_go2.py`, a
-  read-only state printer for step 1.
+  logs back into the simulator), each step with its stop condition. `read_go2.py` (read-only state printer for step 1) tested on
+  Unitree's simulator: 200 Hz, largest gap 9.9 ms, left/right hips mirrored as expected.
