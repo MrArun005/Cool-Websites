@@ -54,3 +54,17 @@ approach -> crouch -> take-off -> flight (Go2 body 0.27 -> 0.54 m) -> front-paws
 (go2_jump_clip_frames.png). Kinematic check: paw target miss 30.6 mm mean (trot 32.9), joint-limit clamping up to
 1.02 rad (canter 0.38: the stretched flight legs), no floor or self penetration. Next: train it (a 10th clip slot in
 the imitation brain, warm-started from 695M by widening its clip one-hot; the jump hands over to trot when it ends).
+
+## Jump as the imitation brain's 10th clip (1 Nov, c2c9aae) -> Kaggle bolt-go2-jump-imitate
+
+Feasibility first (inverse dynamics on the reference, Go2 model): the full dog jump needs up to 1.87x the thigh
+torque, 23 of 76 frames over a limit (canter: 1.34x, 2 of 24 frames -- and canter trains). So the brain has to find a
+smaller jump than the dog's; the residual policy can only use the torque the motors have.
+Plumbing: ALL_CLIPS + "jump" (76 inputs; MOTION_CLIPS = the 9 every body has, Bolt untouched), jump hold 0.2 s
+(it ends running), widened warm start (a 9-slot brain gets zero-weight slots and acts identically: 3.9e-7),
+`--clips`, `--clip-weight`; the controller hands a finished jump to trot. Parity CPU env vs MJX with the jump clip:
+inputs/rewards within 1.1e-6 on 1102 states, 0 end-of-try disagreements. Local smoke of the kernel trained.
+Run: from 695M, blind2's recipe + `--clips (9 motion) jump --clip-weight canter=3 jump=4`, 3.5 h T4, started 11:50
+IST, ends ~15:35; -p scratchpad/kout_go2jumpim. Gate: jump-clip tracking >= 0.5 with falls on jump tries <= 20%,
+the 9 motion clips no worse than 695M (exam), and the rehearsal still 0/10; then a bar test (a hurdle on the jump
+clip's path) before any "jumps work" claim.
