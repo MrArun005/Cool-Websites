@@ -10,11 +10,13 @@ falls). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
 ## 0. Before the robot (the day before)
 
 - [ ] It is a Go2 **EDU** (low-level motor access). Firmware updated with Unitree's app.
-- [ ] Laptop or Jetson: Python 3.11 venv with `cyclonedds` 0.10.x (built from source, as in PLAN.md's log), editable
-      `unitree_sdk2_python`, `numpy`, `mujoco==3.17.0`, `gymnasium`; this repo checked out.
-- [ ] `python deploy/test_deploy.py ../models/bolt-go2-blind-592M/params.pkl` passes on that machine.
-- [ ] Rehearsal on that machine: `sim_vendor.py` + `run_go2.py --plan "trot:6,sit:5,lie:6,getup:6,walk:6"`
-      (no `--truth`) completes; then the same with `--interactive`. Note its "late steps" count: it must be 0.
+- [ ] Laptop or Jetson (Linux; git, cmake, a C compiler, Python 3.11 or uv), this repo checked out:
+      `bash train/deploy/setup_go2.sh --sim` (about 10 minutes the first time, seconds after). It installs everything
+      pinned into `bolt-deps/` and ends with `check_ready.py`: it must print **READY**.
+- [ ] Rehearsal on that machine (`source bolt-deps/env.sh; cd train`): `python deploy/sim_vendor.py --seconds 60 &` then
+      `python deploy/run_go2.py --plan "trot:6,sit:5,lie:6,getup:6,walk:6"` completes; then the same with
+      `--interactive`. Its "late steps" count must be 0.
+- [ ] On the day, robot cabled: `python deploy/check_ready.py --iface <eth>` prints READY (adds the 192.168.123.x check).
 - [ ] Space: flat, high-grip mat at least 4 x 2 m, nothing within 1 m; a harness or gantry to hang the robot.
 
 ## 1. Connect, read only (motors off)

@@ -197,3 +197,13 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   the real Go2's joint damping -- HARDWARE_DAY step 2 (hanging, speed stop on, logs into replay_log.py) measures it
   safely. If it is low, the fix is a training piece with joint damping randomized down to 0.1 and the 5 ms step
   (and a speed term), before the floor steps. The lockstep gate gets a speed check from now on.
+* 1 Nov 09:55-10:15: **one-command setup** (the "one day with the robot" goal: no hand-fixing builds on the day).
+  `setup_go2.sh [--sim]` installs CycloneDDS 0.10.x (built from source), a Python 3.11 venv with cyclonedds 0.10.2,
+  unitree_sdk2_python, numpy, mujoco 3.17.0, gymnasium (and unitree_mujoco with --sim), every repo pinned to the commit
+  the rehearsals ran on, into ./bolt-deps; writes bolt-deps/env.sh; ends with `check_ready.py` (PASS/FAIL per check
+  with the fix: packages, both brains load, parity, step time, DDS, and with --iface the 192.168.123.x link; READY or
+  NOT READY). Parity no longer needs torch on the robot's machine: `test_deploy.py <brain> --save` records the training
+  env's inputs and targets (deploy/golden_bolt-go2-blind-592M.npz, 480 steps), `--golden` replays them through the
+  controller (max diff 1.2e-7 / 4.6e-15). Tested from an empty folder: install ~10 min, READY 7/7; brain + self-right +
+  estimator 0.15 ms median, 0.27 ms 99th percentile of the 20 ms step; then the DDS rehearsal on the fresh install
+  (pushed over mid-plan): recovered, resumed sit, plan done, 0 of 1515 steps late.
