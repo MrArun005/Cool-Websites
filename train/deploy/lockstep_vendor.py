@@ -102,6 +102,7 @@ def main():
     ap.add_argument("--pd-every", type=int, default=1)
     ap.add_argument("--damping", type=float, default=None)
     ap.add_argument("--tries", type=int, default=5)
+    ap.add_argument("--walk-down", type=float, default=0.0, help="s of walk between trot/pace/canter and sit/lie (0: off)")
     ap.add_argument("--stairs", action="store_true", help="keep the scene's bumps and staircase (default: flat floor)")
     ap.add_argument("--delay-ms", type=float, nargs=2, default=[0.0, 0.0], help="per step, the targets arrive U(lo, hi) ms late (< 20)")
     ap.add_argument("--skip-p", type=float, default=0.0, help="chance per step that the brain's step is missed")
@@ -115,7 +116,7 @@ def main():
         flatten(m)
     if a.damping is not None:
         m.dof_damping[6:] = a.damping
-    ctl = Go2Controller(a.brain)
+    ctl = Go2Controller(a.brain, walk_down=a.walk_down)
     kp, kd = ctl.body.entry["kp"], ctl.body.entry["kv"]
     plan = [(c.split(":")[0], float(c.split(":")[1])) for c in a.plan.split(",")]
     total = sum(s for _, s in plan)

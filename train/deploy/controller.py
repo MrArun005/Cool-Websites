@@ -34,6 +34,8 @@ MOTION_CLIPS = ALL_CLIPS[:9]   # what every brain knows; "jump" only for a brain
 THEN = {"jump": ("trot", 0.2)}   # a clip that ends running: hand over to this gait this long after its end (training's
                                  # hold, imitate_env.CLIP_HOLD), joining at the closest pose
 STEER_CLIPS = ("walk", "trot", "pace", "canter")
+FAST = ("trot", "pace", "canter")   # sit / lie commanded in one of these: walk for walk_down s first (walk -> sit / lie
+SLOW_FIRST = ("sit", "lie")         # never fell in 12 moving tries; trot -> sit did, 2-3 of 12)
 DT = 0.02   # s: the brain's step (50 Hz), as BoltEnv (0.002 s physics x 10)
 
 
@@ -83,8 +85,9 @@ class Clip:
 
 
 class Go2Controller:
-    def __init__(self, brain, body="go2", clips=None):
-        """clips None: the motion clips, plus "jump" when the brain has its slot (a 9-slot brain never saw it)."""
+    def __init__(self, brain, body="go2", clips=None, walk_down=0.0):
+        """clips None: the motion clips, plus "jump" when the brain has its slot (a 9-slot brain never saw it).
+        walk_down: seconds of walk between a running gait and sit / lie (0: switch at once, as training's moving starts)."""
         self.brain = MjxImitatePolicy(brain)
         if clips is None:
             clips = MOTION_CLIPS + (["jump"] if self.brain.slots >= 10 else [])
@@ -97,6 +100,7 @@ class Go2Controller:
         self.last_action = np.zeros(12)
         self.steer = 0.0
         self.clip, self.tau = self.clips["trot" if "trot" in self.clips else clips[0]], 0.0
+        self.walk_down, self.queued = float(walk_down), None   # queued: (posture, seconds of walk left)
 
     # ---------- commands ----------
     def command(self, name, steer=None, q=None):
@@ -104,8 +108,14 @@ class Go2Controller:
         sit/lie/getup play from their start). steer: yaw rate (rad/s) added on the gaits; None keeps it."""
         if steer is not None:
             self.steer = float(steer)
+        if self.queued and name != self.queued[0]:
+            self.queued = None          # a new command replaces a posture still waiting for the walk
         if name == self.clip.name:
             return
+        if (name in SLOW_FIRST and self.clip.name in FAST and self.walk_down > 0 and "walk" in self.clips
+                and not self.queued):
+            self.queued = (name, self.walk_down)
+            name = "walk"
         c = self.clips[name]
         if c.loop and q is not None:
             self.tau = float(np.argmin(np.sum((c.joints - np.asarray(q)) ** 2, 1))) / c.fps
@@ -148,6 +158,11 @@ class Go2Controller:
         target = np.clip(self.ref("joints") + ACTION_SCALE * a, self.lo, self.hi)   # residual on the reference
         self.last_action = np.asarray(a, float)
         self.tau += DT
+        if self.queued:
+            self.queued = (self.queued[0], self.queued[1] - DT)
+            if self.queued[1] <= 1e-9:
+                name, self.queued = self.queued[0], None
+                self.command(name, q=q)
         nxt = THEN.get(self.clip.name)
         if nxt and nxt[0] in self.clips and self.finished() >= nxt[1]:
             self.command(nxt[0], q=q)
