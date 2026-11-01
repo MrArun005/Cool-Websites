@@ -96,7 +96,7 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--brain", default=str(HERE.parent.parent / "models" / "bolt-go2-blind-695M" / "params.pkl"))
+    ap.add_argument("--brain", default=str(HERE.parent.parent / "models" / "bolt-go2-damp-798M" / "params.pkl"))
     ap.add_argument("--plan", default="trot:10,sit:5,lie:6")
     ap.add_argument("--dt", type=float, default=0.002)
     ap.add_argument("--pd-every", type=int, default=1)

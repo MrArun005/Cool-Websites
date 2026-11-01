@@ -37,7 +37,7 @@ def euler_quat(roll, pitch, yaw):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--selfright", default=str(HERE.parent.parent / "models" / "bolt-go2-selfright-6.9M"))
-    ap.add_argument("--brain", default=str(HERE.parent.parent / "models" / "bolt-go2-blind-695M" / "params.pkl"))
+    ap.add_argument("--brain", default=str(HERE.parent.parent / "models" / "bolt-go2-damp-798M" / "params.pkl"))
     ap.add_argument("--tries", type=int, default=6)
     ap.add_argument("--damping", type=float, default=0.1)
     ap.add_argument("--dt", type=float, default=0.005)

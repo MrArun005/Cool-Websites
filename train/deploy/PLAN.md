@@ -247,3 +247,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   0.52 -> 0.50: it started from 592M and missed blind2's gains. Still over the speed check (580 steps). Next: the same
   damping range from 695M (Kaggle **bolt-go2-damp2**, started 14:30 IST, ends ~18:15; -p scratchpad/kout_go2damp2),
   same gate. Kept as a result only (scratchpad/kout_go2damp), not in models/.
+- **1 Nov ~21:30 IST: damp2 adopted as the real-robot brain: `models/bolt-go2-damp-798M`.** From 695M + 103M steps,
+  joint damping 0.1-2.0 per try. Rehearsal 695M -> 798M: falls 0/10 -> 0/10; with 5% missed steps 2/10 -> **0/10**; with
+  0-19 ms delay 0/10 -> 0/10; knee steps over 1.2x rated 1448 -> **96** (worst 2.17x -> 1.89x); at damping 0.5 76 -> 11;
+  recovery 40/40 both. Exam mean 0.819 -> 0.817, steer 0.678 -> 0.708, falls 0% -> 1.9%. Re-test, 12 tries per moving
+  posture start: trot -> sit falls 2/12 -> 3/12, trot -> lie 0/12 -> 1/12, walk -> sit/lie 0/12 both: slightly worse on
+  sitting from a trot (within chance at 12 tries), much better on the speed limit that would stop the real robot.
+  Golden parity saved; check_ready READY 7/7; all deploy defaults switched. Open: sitting from a trot (both brains).
+
