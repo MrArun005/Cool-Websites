@@ -68,3 +68,9 @@ Run: from 695M, blind2's recipe + `--clips (9 motion) jump --clip-weight canter=
 IST, ends ~15:35; -p scratchpad/kout_go2jumpim. Gate: jump-clip tracking >= 0.5 with falls on jump tries <= 20%,
 the 9 motion clips no worse than 695M (exam), and the rehearsal still 0/10; then a bar test (a hurdle on the jump
 clip's path) before any "jumps work" claim.
+Exam (scratchpad go2_exam.py): MEAN TRACKING stays on the 9 motion clips; a 10-slot brain also gets the jump exam
+apart (imitate_env.exam on ["jump"], 8 tries, from the clip's start through its 0.2 s hold). Before the run:
+695M widened to 10 slots (never trained on the jump) **track_jump 0.095, fall_jump 1.00 (8/8)**. The 76-input exam
+draws its 0.01 observation noise over 76 numbers, so its random stream differs from the 75-input exam: 695M scores
+0.819 under it (0.820 recorded); with the env forced back to 75 inputs it reproduces the recorded exam exactly (every
+number, difference 0). New brains are compared under the 76-input exam.
