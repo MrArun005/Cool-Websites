@@ -262,3 +262,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   in this plan). No measurable gain in the vendor simulator, so it stays off (default 0); the trot -> sit weakness shows
   only in our exam's instant 1.9 m/s moving starts. Pilots `scratchpad/k_jumppilot`, `k_sitpilot` (40 min each) are
   ready for when the quota resets.
+- **1 Nov ~23:50 IST: paused by the owner.** State to resume from: robot brain `models/bolt-go2-damp-798M` (deploy
+  defaults, check_ready 7/7). Kaggle GPU quota used up for the week; pilots ready to push (`kaggle/make_kernel.py`
+  flags in train/LOCAL_GPU_PROMPT.md: sit-from-trot from 798M, jump from `models/bolt-go2-jump-warm`). Running on
+  Kaggle CPU (free, ~10.5 h): `arunmallikarjuna/bolt-lite3-dog-pilot`, the Lite3's first dog-motion brain
+  (`kaggle kernels output arunmallikarjuna/bolt-lite3-dog-pilot -p runs/kaggle-lite3dog`). Next ideas, after those
+  pilots: a short history of past inputs and a privileged critic (40-min pilots each). Own-GPU route:
+  train/LOCAL_GPU_PROMPT.md.
