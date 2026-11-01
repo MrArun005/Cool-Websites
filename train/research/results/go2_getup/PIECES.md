@@ -17,3 +17,10 @@ the time). Bolt got up from falls with the selfright goal (full motor range) and
 
 Next: pilot 2 (bolt-go2-selfright-pilot, started ~04:45 IST 1 Nov, 3.5 h): selfright goal, then the motion brain's
 getup clip (489M: getup 0.93) to stand. Gate: righted from side or back > 0.
+
+## Pilot 2 (Kaggle bolt-go2-selfright-pilot, 1 Nov): selfright goal -- PASSED
+
+Same falls, the selfright goal (full motor range). Exam righted from side / back / tipped / standing: 1.0 / 1.0 / 1.0
+/ 1.0 already at 1M steps and at 6M (0.86 / 0.96 / 0.70 s). Chained with a motion brain's getup clip it stands back up
+30/30 (side, back, shoved, dropped, ice; 6 each) with both bolt-go2-blind-592M and bolt-go2-gpu-489M. Saved as
+models/bolt-go2-selfright-6.9M. The Go2 recovery step of the plan is done in simulation.

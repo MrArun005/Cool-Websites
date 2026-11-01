@@ -1,0 +1,21 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+body: go2 (motors, brake speeds and gains: robot_bodies.BODIES; --brake-speed/--brake-gain do not apply); sizes kz 0.7, kicks x0.8 m/s x1.0 rad/s: stands at 0.301 m, 'standing' above 0.220 m
+motor brake (on, rad/s, N·m per rad/s): (True, 25.0, 3.5)
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+exam gaps: {'latency_ms': 0.0, 'lag_ms': 0.0, 'drop': 0.0, 'jitter_ms': 0.0, 'spike_p': 0.0}
+motor brake in the training envs (on, rad/s, N·m per rad/s): (True, [35.8, 35.8, 18.7], [1.7, 1.7, 6.3])
+checkpoint 1000000 ready: {'up_side': 1.0, 'secs_side': 1.04, 'up_back': 1.0, 'secs_back': 1.43, 'up_tipped': 1.0, 'secs_tipped': 0.85, 'up_standing': 1.0, 'secs_standing': 0.28}
+new best at 1000000: score 1.00
+checkpoint 2000000 ready: {'up_side': 0.7, 'secs_side': 1.12, 'up_back': 0.8, 'secs_back': 1.11, 'up_tipped': 0.9, 'secs_tipped': 0.88, 'up_standing': 0.9, 'secs_standing': 0.26}
+checkpoint 3000000 ready: {'up_side': 0.9, 'secs_side': 1.04, 'up_back': 0.9, 'secs_back': 1.12, 'up_tipped': 0.7, 'secs_tipped': 1.0, 'up_standing': 0.2, 'secs_standing': 0.26}
+checkpoint 4000000 ready: {'up_side': 1.0, 'secs_side': 0.86, 'up_back': 0.9, 'secs_back': 1.0, 'up_tipped': 1.0, 'secs_tipped': 0.71, 'up_standing': 0.9, 'secs_standing': 0.2}
+checkpoint 5000000 ready: {'up_side': 0.9, 'secs_side': 0.78, 'up_back': 0.9, 'secs_back': 1.2, 'up_tipped': 1.0, 'secs_tipped': 0.72, 'up_standing': 1.0, 'secs_standing': 0.22}
+checkpoint 6000000 ready: {'up_side': 1.0, 'secs_side': 0.86, 'up_back': 1.0, 'secs_back': 0.96, 'up_tipped': 1.0, 'secs_tipped': 0.7, 'up_standing': 1.0, 'secs_standing': 0.24}
+time guard: stopping at 6893256 steps after the time budget
+done: 6,893,256 steps in 209.0 min -> /tmp/bolt/train/runs/go2selfright
