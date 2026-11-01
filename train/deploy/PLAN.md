@@ -214,3 +214,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   inside Unitree's simulator (the bytes the real remote sends, through the real DDS path). Test, real time, damping
   2.0, with --recover: sit -> walk -> trot -> steer 0.3 -> release (sit) -> lie -> getup -> walk -> L2+B stop: every
   command acted on, no fall, 2 of 2349 steps late.
+* 1 Nov 10:35: `mjx_imitate.py --damping-range LO HI` (joint damping drawn per try, log-uniform; CPU smoke test: 8
+  tries drew 0.12-1.82, no NaN). Kaggle **bolt-go2-damp** started: blind2's recipe (from 592M, moving-rate 0.5, blind,
+  5% lost commands, seed 11) + `--damping-range 0.1 2.0`, 3.5 h on a T4, ends ~14:15 IST; -p scratchpad/kout_go2damp.
+  Gate: lockstep_vendor at Unitree's defaults (damping 0.1, 5 ms) 0/10 falls AND its speed line passes (592M: worst
+  2.23x, 367 steps over 1.2x), + --skip-p 0.05 and --delay-ms 0 19 no worse than 592M, + our exam no worse.
