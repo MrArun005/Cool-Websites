@@ -130,7 +130,7 @@ class JumpEnv(BoltEnv):
     def __init__(self, randomize=True, seed=None, max_steps=100, real=False, approach=None, approach_speed=0.0,
                  approach_speed_min=1.0, run_frac=0.5, gait_start=0.0, bar_max=None, motor_brake=None, under_margin=0.0,
                  handover_file=None, handover_rate=0.0, latency_ms=(0.0, 0.0), motor_lag_ms=(0.0, 0.0), drop=(0.0, 0.0),
-                 latency_jitter_ms=0.0, latency_spike_p=0.0, delay_input=False, body=None):
+                 latency_jitter_ms=0.0, latency_spike_p=0.0, delay_input=False, body=None, bar_floor=None):
         # body: "bolt" (default) or a robot of robot_bodies.BODIES ("go2"); None = the BOLT_BODY env var, else "bolt".
         # Lengths, bars and pay are scaled to the body (sizes(), jump_sizes()); approach and bar_max None = the body's
         # (Bolt: 0.45-0.65 m, 50 cm).
@@ -159,6 +159,8 @@ class JumpEnv(BoltEnv):
         self.real = real
         # the body's stance (the action's centre and inputs 13-24) and sizes; Bolt: DOG and BOLT_SIZES
         self.J = jump_sizes(self.body)
+        if bar_floor is not None:   # the coach may lower the practice bar this far (and bars may be drawn this low)
+            self.J = dict(self.J, bar_floor=bar_floor, bar_min=min(self.J["bar_min"], bar_floor))
         self.dog = DOG if self.body == "bolt" else self.robot.stance
         self.effort = self.J["effort"]   # None: Bolt's single 5e-5 for every joint
         assert self.body == "bolt" or self.handover is None, "hand-over states are Bolt's (MasterMind's world)"

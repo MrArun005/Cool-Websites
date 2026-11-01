@@ -193,6 +193,7 @@ def main():
     ap.add_argument("--approach-speed-min", type=float, default=1.0, help="running tries start at this speed or more (jump-trot: 1.2)")
     ap.add_argument("--run-frac", type=float, default=0.5, help="share of tries that start running (jump-trot: 0.85)")
     ap.add_argument("--gait-start", type=float, default=0.0, help="share of running tries that start mid-stride in a trot/canter pose")
+    ap.add_argument("--bar-floor", type=float, help="lowest bar the coach may set (m); default the body's (Bolt 0.10, Go2 0.07)")
     ap.add_argument("--bar-max", type=float, help="highest practice bar (m); default the body's (Bolt 0.50); jump-trot: 0.75")
     ap.add_argument("--exam2", type=float, nargs=2, action="append", default=[], metavar=("SPEED", "DIST"),
                     help="an extra fair exam at SPEED m/s from DIST m (repeatable), e.g. --exam2 2.0 1.5")
@@ -245,7 +246,7 @@ def main():
     venv = make_vec_env(JumpEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(real=args.real, approach=tuple(args.approach), max_steps=args.max_steps,
                                                                                            approach_speed=args.approach_speed,
                                                                                            approach_speed_min=args.approach_speed_min, run_frac=args.run_frac,
-                                                                                           gait_start=args.gait_start, bar_max=args.bar_max,
+                                                                                           gait_start=args.gait_start, bar_max=args.bar_max, bar_floor=args.bar_floor,
                                                                                            handover_file=args.handover_file, handover_rate=args.handover_rate,
                                                                                            latency_ms=(args.latency_min_ms, args.latency_max_ms),
                                                                                            motor_lag_ms=(0.0, args.motor_lag_max_ms), drop=(0.0, args.drop_max),

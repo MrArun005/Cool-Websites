@@ -174,6 +174,17 @@ JOBS = {
               "--gait-start", "0.7", "--exam-speed", "1.2", "--exam-dist", "1.0",
               "--exam-heights", "0.10", "0.14", "0.17", "0.21"],
         finals=[]),
+    "go2-jump-pilot3": dict(
+        # 1 Nov: pilot 2 (running starts) refused the bar: it ran up, stopped ~0.3 m short (research/results/go2_jump/
+        # PIECES.md). The coach's floor (7 cm on the Go2) is already a real jump for it, so it never met a bar it could
+        # step over. Pilot 2's recipe + --bar-floor 0.02 --bar-start 0.03: start at stepping-over bars, the coach raises
+        # them as clean crossings come. Gate (end of 3.5 h): any exam bar > 0, or the coach's bar above 7 cm.
+        name="go2jump3", script="train_jump.py", start=None,
+        args=["--body", "go2", "--latency-min-ms", "0", "--latency-max-ms", "40", "--max-steps", "200",
+              "--approach", "0.6", "1.5", "--approach-speed", "1.8", "--approach-speed-min", "0.8", "--run-frac", "0.85",
+              "--gait-start", "0.7", "--exam-speed", "1.2", "--exam-dist", "1.0",
+              "--exam-heights", "0.10", "0.14", "0.17", "0.21", "--bar-floor", "0.02", "--bar-start", "0.03"],
+        finals=[]),
     "go2-getup-pilot": dict(
         # 31 Oct, owner's Go2 order: motion -> jumps -> shove recovery. First get-up brain on the Go2 body (getup_env
         # body sizes: heights x0.70, "standing" above 0.22 m, shoves x0.80), from scratch, stand goal (selfright needs

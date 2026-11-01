@@ -1,0 +1,28 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+body: go2 (motors, brake speeds and gains: robot_bodies.BODIES; --brake-speed/--brake-gain do not apply); sizes kx 0.86, kz 0.7: approach [0.6, 1.5] m, exam [0.1, 0.14, 0.17, 0.21] m from 1.000 m, bars up to 0.35 m
+motor brake (on, rad/s, N·m per rad/s): (True, 25.0, 3.5)
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+exam gaps: {'latency_ms': 0.0, 'lag_ms': 0.0, 'drop': 0.0, 'jitter_ms': 0.0, 'spike_p': 0.0}
+motor brake in the training envs (on, rad/s, N·m per rad/s): (True, [35.8, 35.8, 18.7], [1.7, 1.7, 6.3])
+best/ picked on the still exam; mid-stride exam: {'speed': 1.2, 'dist': 1.0, 'heights': (0.1, 0.14, 0.17, 0.21), 'episodes': 10, 'seed': 5000}
+checkpoint 1000000 ready: {'jump_10': 0.0, 'jump_14': 0.0, 'jump_17': 0.0, 'jump_21': 0.0, 'strict_10': 0.0, 'strict_14': 0.0, 'strict_17': 0.0, 'strict_21': 0.0, 'mid_v12_10': 0.0, 'mid_v12_14': 0.0, 'mid_v12_17': 0.0, 'mid_v12_21': 0.0, 'mid_mean': 0.0} (practice bars now 7 cm)
+checkpoint 1000000 mid-stride: 1.2 m/s from 1.0 m, legs mid-stride, 0.00 mean over (0.1, 0.14, 0.17, 0.21) m; still-legs mean 0.00; selecting on still
+new best at 1000000: score 0.00
+checkpoint 2000000 ready: {'jump_10': 0.0, 'jump_14': 0.0, 'jump_17': 0.0, 'jump_21': 0.0, 'strict_10': 0.0, 'strict_14': 0.0, 'strict_17': 0.0, 'strict_21': 0.0, 'mid_v12_10': 0.0, 'mid_v12_14': 0.0, 'mid_v12_17': 0.0, 'mid_v12_21': 0.0, 'mid_mean': 0.0} (practice bars now 7 cm)
+checkpoint 2000000 mid-stride: 1.2 m/s from 1.0 m, legs mid-stride, 0.00 mean over (0.1, 0.14, 0.17, 0.21) m; still-legs mean 0.00; selecting on still
+checkpoint 3000000 ready: {'jump_10': 0.0, 'jump_14': 0.0, 'jump_17': 0.0, 'jump_21': 0.0, 'strict_10': 0.0, 'strict_14': 0.0, 'strict_17': 0.0, 'strict_21': 0.0, 'mid_v12_10': 0.0, 'mid_v12_14': 0.0, 'mid_v12_17': 0.0, 'mid_v12_21': 0.0, 'mid_mean': 0.0} (practice bars now 7 cm)
+checkpoint 3000000 mid-stride: 1.2 m/s from 1.0 m, legs mid-stride, 0.00 mean over (0.1, 0.14, 0.17, 0.21) m; still-legs mean 0.00; selecting on still
+checkpoint 4000000 ready: {'jump_10': 0.0, 'jump_14': 0.0, 'jump_17': 0.0, 'jump_21': 0.0, 'strict_10': 0.0, 'strict_14': 0.0, 'strict_17': 0.0, 'strict_21': 0.0, 'mid_v12_10': 0.0, 'mid_v12_14': 0.0, 'mid_v12_17': 0.0, 'mid_v12_21': 0.0, 'mid_mean': 0.0} (practice bars now 7 cm)
+checkpoint 4000000 mid-stride: 1.2 m/s from 1.0 m, legs mid-stride, 0.00 mean over (0.1, 0.14, 0.17, 0.21) m; still-legs mean 0.00; selecting on still
+checkpoint 5000000 ready: {'jump_10': 0.0, 'jump_14': 0.0, 'jump_17': 0.0, 'jump_21': 0.0, 'strict_10': 0.0, 'strict_14': 0.0, 'strict_17': 0.0, 'strict_21': 0.0, 'mid_v12_10': 0.0, 'mid_v12_14': 0.0, 'mid_v12_17': 0.0, 'mid_v12_21': 0.0, 'mid_mean': 0.0} (practice bars now 7 cm)
+checkpoint 5000000 mid-stride: 1.2 m/s from 1.0 m, legs mid-stride, 0.00 mean over (0.1, 0.14, 0.17, 0.21) m; still-legs mean 0.00; selecting on still
+checkpoint 6000000 ready: {'jump_10': 0.0, 'jump_14': 0.0, 'jump_17': 0.0, 'jump_21': 0.0, 'strict_10': 0.0, 'strict_14': 0.0, 'strict_17': 0.0, 'strict_21': 0.0, 'mid_v12_10': 0.0, 'mid_v12_14': 0.0, 'mid_v12_17': 0.0, 'mid_v12_21': 0.0, 'mid_mean': 0.0} (practice bars now 7 cm)
+checkpoint 6000000 mid-stride: 1.2 m/s from 1.0 m, legs mid-stride, 0.00 mean over (0.1, 0.14, 0.17, 0.21) m; still-legs mean 0.00; selecting on still
+time guard: stopping at 6304104 steps after the time budget
+done: 6,304,104 steps in 209.3 min -> /tmp/bolt/train/runs/go2jump2
