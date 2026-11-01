@@ -255,3 +255,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   sitting from a trot (within chance at 12 tries), much better on the speed limit that would stop the real robot.
   Golden parity saved; check_ready READY 7/7; all deploy defaults switched. Open: sitting from a trot (both brains).
 
+- **1 Nov ~22:30 IST: walk before sit/lie (controller `walk_down`), tested, left off.** Kaggle GPU quota for the week is
+  used up (pilots for jump and trot -> sit could not start), so a software-only fix was tried: from trot/pace/canter,
+  walk 1 s before sit or lie. Rehearsal (798M, Unitree defaults, 52 s plan with 4 trot/canter -> sit/lie, 10 tries):
+  falls 0/10 without and 0/10 with; knee steps over 1.2x rated 258 vs 243 (worst 2.27x vs 2.28x; canter is the source
+  in this plan). No measurable gain in the vendor simulator, so it stays off (default 0); the trot -> sit weakness shows
+  only in our exam's instant 1.9 m/s moving starts. Pilots `scratchpad/k_jumppilot`, `k_sitpilot` (40 min each) are
+  ready for when the quota resets.
