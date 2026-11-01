@@ -43,3 +43,14 @@ one every working Go2 skill came from: **imitate a real dog's jump**. The MANN m
 jumping; retarget a running jump to the Go2 (dogmotion/retarget.py), add it as a clip, and train it with the motion
 brain's imitation recipe (mjx_imitate.py, from 695M) so take-off, flight and a running landing are all in the
 reference. Then the bar exam.
+
+## The imitation route: a real dog's jump, retargeted (1 Nov)
+
+A scan of all 51 MANN files for moments with all four paws off the floor found six floor-to-floor running jumps
+(0.28-0.52 s of flight, 2.4-3.0 m/s, the dog's body rising 0.34-0.50 m, landing still running at 1.2-2.3 m/s; the
+long "flights" in D1_ex03 are the dog standing on a platform). `retarget_body.py --only jump` writes
+dogmotion/clips/go2_jump.npz from D1_ex04_KAN02_004 7.9-9.4 s (the other Go2 clips untouched, md5 checked): 1.52 s,
+approach -> crouch -> take-off -> flight (Go2 body 0.27 -> 0.54 m) -> front-paws-first landing -> run-out
+(go2_jump_clip_frames.png). Kinematic check: paw target miss 30.6 mm mean (trot 32.9), joint-limit clamping up to
+1.02 rad (canter 0.38: the stretched flight legs), no floor or self penetration. Next: train it (a 10th clip slot in
+the imitation brain, warm-started from 695M by widening its clip one-hot; the jump hands over to trot when it ends).

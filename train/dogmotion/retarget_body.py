@@ -192,6 +192,12 @@ def pictures(kin, clips, out, n=8, size=(320, 240)):
     return written
 
 
+# Clips beyond Bolt's set (retarget.py CLIPS), for the robot bodies. jump: a running hurdle jump of the MANN dog
+# (D1_ex04_KAN02_004: ~2.5 m/s approach, take-off 8.48 s, 0.30 s of flight with the body 0.34 m up, a running landing at
+# ~2.3 m/s on the same floor), from 0.6 s before take-off to just before its next leap.
+EXTRA_CLIPS = [("jump", "D1_ex04_KAN02_004", 7.9, 9.4, False)]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--body", default="go2", choices=sorted(robot_bodies.BODIES), help="the robot (robot_bodies.BODIES)")
@@ -199,28 +205,35 @@ def main():
     ap.add_argument("--out", default=str(HERE / "clips"))
     ap.add_argument("--check-only", action="store_true", help="re-check the clips already written")
     ap.add_argument("--png", help="also save contact sheets and frames of every clip to this folder")
+    ap.add_argument("--only", nargs="+", help="retarget just these clips (rt.CLIPS or EXTRA_CLIPS names), leaving the "
+                    "others' files untouched (e.g. --only jump)")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     use_body(args.body)
     kin = RobotKin()
-    names = [c[0] for c in rt.CLIPS] + ["getup"]
+    table = rt.CLIPS + EXTRA_CLIPS
+    if args.only:
+        table = [c for c in table if c[0] in args.only]
+        assert table, f"no clip named {args.only}"
+    names = [c[0] for c in table] + ([] if args.only else ["getup"])
     checks = {}
     if not args.check_only:
         assert args.bvh_dir, "--bvh-dir is needed to retarget (or --check-only)"
         cal = rt.calibrate(args.bvh_dir)
         print(f"scale per leg {np.round(cal['scale'], 3)}, planted paw keypoint height {np.round(cal['ground'], 3)} m")
-        for name, file, t0, t1, loop in rt.CLIPS:
+        for name, file, t0, t1, loop in table:
             clip, check = rt.retarget(args.bvh_dir, name, file, t0, t1, loop, cal, kin)
             np.savez_compressed(out / f"{BODY.clip_prefix}{name}.npz", **{k: np.asarray(v) for k, v in clip.items()})
             checks[name] = check
-        np.savez(out / f"{BODY.clip_prefix}getup.npz", **getup(dict(np.load(out / f"{BODY.clip_prefix}lie.npz"))))
+        if not args.only:
+            np.savez(out / f"{BODY.clip_prefix}getup.npz", **getup(dict(np.load(out / f"{BODY.clip_prefix}lie.npz"))))
     clips = {n: dict(np.load(out / f"{BODY.clip_prefix}{n}.npz")) for n in names}
     for n in names:
         checks.setdefault(n, {})["replay"] = replay_check(kin, clips[n])
         print(n, json.dumps(checks[n]))
     report = dict(body=args.body, stance=BODY.stance.tolist(), clips=checks)
-    if not args.check_only:
+    if not args.check_only and not args.only:
         report["calibration"] = {k: v.round(4).tolist() for k, v in cal.items()}
         (out / f"{BODY.clip_prefix}check.json").write_text(json.dumps(report, indent=2))
     if args.png:

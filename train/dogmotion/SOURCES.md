@@ -48,3 +48,10 @@ The code here is our own (no code copied).
 | turn_left | the same, mirrored left-right | | |
 | sit | D1_013_KAN01_001 (dog_sit01) | 7.5-11.0 s | stand 1 s, sit down, hold |
 | lie | D1_061z_KAN01_003 (dog_walk12) | 35.5-41.0 s | stand, sit, lie down, hold |
+
+### Go2-only clips (dogmotion/retarget_body.py EXTRA_CLIPS)
+
+| clip | source file | seconds | notes |
+|---|---|---|---|
+| go2_jump | D1_ex04_KAN02_004 | 7.9-9.4 s | a running hurdle jump: ~2.5 m/s approach, take-off at 8.48 s, 0.30 s of flight, a running landing on the same floor (found by scanning every file for all four paws off the floor; six such jumps in D1_057, D1_058, D1_ex04_*). Go2 body 0.27 -> 0.54 m; not looped |
+
