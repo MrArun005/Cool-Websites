@@ -33,6 +33,9 @@ export const ACTIONS = {
   turn_right:   { kind: "learned",  secs: 2.5, label: "turn right",     how: "dog-motion brain, turn clip" },
   spin:         { kind: "learned",  secs: 8,   label: "spin round",     how: "sharp-turn walk brain, a full circle" },
   zoomies:      { kind: "learned",  secs: 12,   label: "zoomies",        how: "dog-motion brain, trot out and back" },
+  house_walk:   { kind: "learned",  secs: 60,  label: "walk round the house", how: "dog-motion brain, walk, one lap of the house (about 50 m)" },
+  run_lap:      { kind: "learned",  secs: 40,  label: "run round the house",  how: "dog-motion brain, trot, one lap of the house" },
+  canter_lap:   { kind: "learned",  secs: 45,  label: "canter round the big room", how: "canter-switching brain (run 18g): one big circle (it canters a right-hand curve), then walk home" },
   hop:          { kind: "assisted", secs: 1.2, label: "hop",            how: "posture brain holds the legs, an upward kick lifts the body" },
   happy_bounce: { kind: "assisted", secs: 1.8, label: "happy bounce",   how: "three small assisted hops" },
   wiggle:       { kind: "assisted", secs: 1.6, label: "wiggle",         how: "a side-to-side twist torque on the body" },
@@ -50,7 +53,8 @@ const ACTION_ALIASES = {
   sit_down: "sit", sitting: "sit", lie: "lie_down", lay_down: "lie_down", laydown: "lie_down", lie_down_sad: "lie_down", sad_lie_down: "lie_down",
   down: "lie_down", rest: "lie_down", nap: "lie_down", sleep: "lie_down", getup: "get_up", stand_up: "get_up", rise: "get_up", up: "stand",
   walk: "walk_forward", forward: "walk_forward", come: "come_closer", come_here: "come_closer", approach: "come_closer", snuggle: "come_closer",
-  turn: "turn_left", turn_around: "spin", excited_spin: "spin", chase_tail: "spin", spin_around: "spin", run: "zoomies", trot: "zoomies", run_around: "zoomies",
+  turn: "turn_left", turn_around: "spin", excited_spin: "spin", chase_tail: "spin", spin_around: "spin", run: "run_lap", jog: "run_lap", trot: "run_lap", run_around: "zoomies",
+  canter: "canter_lap", gallop: "canter_lap", sprint: "canter_lap", long_walk: "house_walk", walkies: "house_walk", walk_around: "house_walk", lap: "run_lap",
   jump: "hop", leap: "hop", bounce: "happy_bounce", bounce_happy: "happy_bounce", hop_happy: "happy_bounce", happy_hop: "happy_bounce",
   wag: "tail_wag", wag_tail: "tail_wag", tailwag: "tail_wag", butt_wiggle: "wiggle", shimmy: "wiggle", wiggle_body: "wiggle", shake_body: "wiggle",
   bow: "play_bow", playbow: "play_bow", tilt_head: "head_tilt", headtilt: "head_tilt", tilt: "head_tilt", nod_head: "nod", ears: "ears_down", droop_ears: "ears_down",
@@ -62,6 +66,25 @@ export function actionId(a) {
   if (ACTIONS[k]) return k;
   return ACTION_ALIASES[k] || null;
 }
+
+// The house's loop (metres; home is the origin, the person stands on the +x side): a rounded rectangle around the kitchen
+// island, counter-clockwise from the corner nearest home, with 17.6 m straights along the hall. Points about
+// every 0.5 m; the laps follow it by pure pursuit (aim at the point `look` m ahead).
+export const LOOP = (() => {
+  const x0 = 1.2, x1 = 5.0, y0 = -19.0, y1 = 1.6, r = 1.5, pts = [];
+  const seg = (a, b) => { const n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.5)); for (let i = 0; i < n; i++) pts.push([a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n]); };
+  const arc = (cx, cy, a0) => { for (let i = 0; i < 6; i++) { const a = a0 + (i / 6) * (Math.PI / 2); pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } };
+  seg([x0, y1 - r], [x0, y0 + r]); arc(x0 + r, y0 + r, Math.PI);           // down the hall, round the far end
+  seg([x0 + r, y0], [x1 - r, y0]); arc(x1 - r, y0 + r, -Math.PI / 2);
+  seg([x1, y0 + r], [x1, y1 - r]); arc(x1 - r, y1 - r, 0);                // back up the other side
+  seg([x1 - r, y1], [x0 + r, y1]); arc(x0 + r, y1 - r, Math.PI / 2);
+  return pts;
+})();
+export const HOUSE = { x0: -3.2, x1: 16.5, y0: -24.0, y1: 3.4 };
+// The canter: the canter brain (run 18g) cannot be steered and runs a right-hand curve (measured 0.44-0.52 rad/s at
+// ~2.7 m/s, a circle of about 6 m radius), so Bolt canters one circle in the open part of the house: from START facing
+// down the house (-y), the circle's centre is about 6 m to its right (-x), clear of every wall by 2-3 m.
+export const CANTER = { start: [10.0, -8.0], yaw: -Math.PI / 2 - 0.2, trot: 1.1, turn: 2 * Math.PI - 0.7, max: 16 };   // aimed 0.2 rad right: the trot drifts left   // the walls (drawn; the physics has only the floor)
 
 // the guide's settings (assisted moves only; see Pet.guide)
 export const ASSIST = {
@@ -253,6 +276,58 @@ export class Pet {
         if (c.stage === 0) { if (this.turnBy(c, 2 * Math.PI - 0.25) || c.st > 11) c.stage = 1; return false; }
         w.gait = "stand"; w.steer = null; return posture() && B.mode !== "brake";
       }
+      case "canter_lap": {   // walk to the start, line up, trot, canter one circle, walk home
+        c.limit = 110;
+        const p = this.where(), m = B.mode;
+        if (c.stage === 0) { if (this.goTo(c, CANTER.start, 0.5) || c.st > 30) { c.stage = 1; c.go = null; c.turned = undefined; } return false; }
+        if (c.stage === 1) {   // face down the house: a learned turn on the spot (run 12 brain), then settle
+          c.t1 = c.t1 ?? c.st;
+          const err = wrap(CANTER.yaw - p.yaw), still = (m === "stand" || m === "sniff");
+          if (Math.hypot(p.x - CANTER.start[0], p.y - CANTER.start[1]) > 3) { c.stage = 0; c.go = null; c.t1 = undefined; return false; }   // wandered: go back
+          if (still && B.mt > 0.5 && (Math.abs(err) < 0.12 || (c.st - c.t1 > 8 && Math.abs(err) < 0.3))) { c.stage = 2; c.ts = c.st; return false; }
+          if (still && B.mt > 0.3 && Math.abs(err) >= 0.12) { w.gait = "walk"; w.steer = Math.sign(err) * 1.15; return false; }
+          if (m === "sharp" && Math.abs(err) < 0.2) { w.gait = "stand"; w.steer = null; return false; }
+          if (m !== "sharp") { w.gait = "stand"; w.steer = null; }
+          return false;
+        }
+        if (c.stage === 2) {   // walk, then trot straight, then canter
+          w.steer = 0;
+          w.gait = c.st - c.ts < 1.0 ? "walk" : "trot";
+          if (m === "trot" && B.mt > CANTER.trot) { c.stage = 3; c.ts = c.st; c.yaw0 = p.yaw; c.acc = 0; c.prev = p.yaw; }
+          if (c.st - c.ts > 10) c.stage = 4;
+          return false;
+        }
+        if (c.stage === 3) {   // the circle: canter until it closes (or a wall comes close, or time)
+          c.acc += wrap(p.yaw - c.prev); c.prev = p.yaw;
+          const H = HOUSE, cx = Math.cos(p.yaw), cy = Math.sin(p.yaw);
+          const toWall = Math.min(cx > 0.05 ? (H.x1 - p.x) / cx : cx < -0.05 ? (H.x0 - p.x) / cx : 99, cy > 0.05 ? (H.y1 - p.y) / cy : cy < -0.05 ? (H.y0 - p.y) / cy : 99);
+          w.steer = 0; w.gait = "canter";
+          if (Math.abs(c.acc) > CANTER.turn || c.st - c.ts > CANTER.max || toWall < 3.5) {
+            c.stage = 4; c.circle = +Math.abs(c.acc).toFixed(2);
+            if (globalThis.__lapdebug) console.log(`  circle end: turned ${c.circle} in ${(c.st - c.ts).toFixed(1)} s, toWall ${toWall.toFixed(1)}, at ${p.x.toFixed(1)},${p.y.toFixed(1)} yaw ${p.yaw.toFixed(2)} mode ${m}`);
+          }
+          return false;
+        }
+        if (c.stage === 4) {   // come down the way the brains learned it: canter -> trot (18g, 93% in tests), settle, then walk
+          c.down = c.down ?? c.st;
+          if (["canter", "ctrot", "trot", "pace"].includes(m)) { w.steer = 0; w.gait = c.st - c.down < 2.0 ? "trot" : "walk"; return false; }   // 2 s: back on the GPU trot (ctrot hands over at 1.5 s) before the walk
+          // walking off the canter's momentum: keep walking, curving gently toward home, until slow (stopping dead from
+          // ~1 m/s to turn on the spot tipped Bolt over in testing)
+          const v = this.bolt.data.qvel, hx = this.home[0] - p.x, hy = this.home[1] - p.y;
+          w.gait = "walk"; w.steer = clamp(wrap(Math.atan2(hy, hx) - p.yaw), -0.3, 0.3);
+          if (["walk", "turnclip"].includes(m) && B.mt > 2.0 && Math.hypot(v[0], v[1]) < 1.4) { c.stage = 5; c.go = null; }
+          return false;
+        }
+        if (c.stage === 5) { if (this.goTo(c, this.home, 0.6) || c.st > c.limit - 4) c.stage = 6; return false; }
+        w.gait = "stand"; w.steer = null; return posture() && B.mode !== "brake";
+      }
+      case "house_walk": case "run_lap": {   // one lap of the house, then back home and stand
+        c.limit = { house_walk: 100, run_lap: 80 }[c.id];
+        if (c.stage === 0) { if (this.goTo(c, LOOP[0], 0.7) || c.st > 14) { c.stage = 1; c.k = 0; c.done = 0; } return false; }
+        if (c.stage === 1) { if (this.lap(c) || c.st > c.limit - 15) { c.stage = 2; c.go = null; } return false; }
+        if (c.stage === 2) { if (this.goTo(c, this.home, 0.6) || c.st > c.limit - 4) c.stage = 3; return false; }
+        w.gait = "stand"; w.steer = null; return posture() && B.mode !== "brake";
+      }
       case "zoomies": {   // a trot out, then back home (facing it first)
         c.limit = 20;
         if (c.stage === 0) { w.gait = "trot"; w.steer = this.homeSteer(0); if ((["trot", "ctrot"].includes(B.mode) && B.mt > 1.2) || c.st > 4.5) c.stage = 1; return false; }
@@ -290,6 +365,37 @@ export class Pet {
       }
     }
     return true;
+  }
+  // follow the house loop once. The trot and canter brains play their gait with no steering (doglife DogBody: only
+  // the walk turns), so the fast laps run like a dog on a long hall: walk until lined up with the straight, trot (and
+  // canter) dead straight down it, slow to a walk well before the corner, turn the corner walking.
+  lap(c) {
+    const B = this.body, w = B.want, p = this.where(), n = LOOP.length, m = B.mode;
+    let best = c.k, bd = Infinity;   // progress: the nearest loop point within the next few, never backwards
+    for (let j = 0; j < 10; j++) { const q = LOOP[(c.k + j) % n], d = Math.hypot(q[0] - p.x, q[1] - p.y); if (d < bd) { bd = d; best = c.k + j; } }
+    c.done += best - c.k; c.k = best;
+    if (c.done >= n - 2) return true;
+    const pt = (j) => LOOP[(c.k + j) % n];
+    const turnAhead = (mm) => { let tot = 0; for (let j = 0; j < mm / 0.5; j++) { const a = pt(j), b = pt(j + 1), d = pt(j + 2); tot += Math.abs(wrap(Math.atan2(d[1] - b[1], d[0] - b[0]) - Math.atan2(b[1] - a[1], b[0] - a[0]))); } return tot; };
+    const aim = (look) => { const t = pt(Math.round(look / 0.5)); return wrap(Math.atan2(t[1] - p.y, t[0] - p.x) - p.yaw); };
+    const running = ["trot", "ctrot", "canter", "pace"].includes(m);
+    if (c.id === "house_walk") { w.gait = "walk"; w.steer = clamp(aim(1.4), -0.35, 0.35); return false; }
+    // the walls: how far ahead along the heading before one (the physics has no walls; this keeps Bolt in the house)
+    const H = HOUSE, cx = Math.cos(p.yaw), cy = Math.sin(p.yaw);
+    const toWall = Math.min(cx > 0.05 ? (H.x1 - p.x) / cx : cx < -0.05 ? (H.x0 - p.x) / cx : 99, cy > 0.05 ? (H.y1 - p.y) / cy : cy < -0.05 ? (H.y0 - p.y) / cy : 99);
+    if (bd > 2.0 || (running && toWall < (m === "canter" || m === "ctrot" ? 7 : 3))) { w.gait = "walk"; w.steer = running ? 0 : clamp(aim(1.4), -0.5, 0.5); return false; }
+    // a corner within the braking distance: walk it (canter needs longer to come down)
+    if (turnAhead(m === "canter" || m === "ctrot" ? 10 : 4.5) > 0.4) { w.gait = "walk"; w.steer = running ? 0 : clamp(aim(1.4), -0.5, 0.5); return false; }
+    if (running) {   // already going: straight on (no steer: a steer above 0.35 would make the trot slow down to turn)
+      w.steer = 0;
+      w.gait = c.id === "canter_lap" && turnAhead(12) < 0.1 && (m === "canter" || B.mt > 1.0) ? "canter" : "trot";
+      return false;
+    }
+    // walking on a straight: line up (heading along the straight, on the line), then go
+    const dir = Math.atan2(pt(4)[1] - pt(0)[1], pt(4)[0] - pt(0)[0]), herr = wrap(dir - p.yaw);
+    const lined = Math.abs(herr) < 0.06 && bd < 0.3 && ["walk", "turnclip"].includes(m) && B.mt > 0.6;
+    w.gait = lined ? "trot" : "walk"; w.steer = lined ? 0 : clamp(aim(3.0), -0.3, 0.3);
+    return false;
   }
   // straight on, unless Bolt is far from home: then curve back toward it
   homeSteer(bias) {

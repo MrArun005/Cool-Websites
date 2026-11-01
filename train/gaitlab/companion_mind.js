@@ -213,7 +213,13 @@ export function read(text, ctx = {}) {
   return r;
 }
 
-const COMMAND_WORDS = /\b(sit|lie down|lay down|get up|stand( up)?|jump|hop|spin|twirl|turn (left|right|around)|walk|come (here|closer|to me)|zoomies|bow|wiggle|wag|play dead|roll over|shake|beg|backflip|front ?flip|somersault|flip|trick)\b/;
+const COMMAND_WORDS = /\b(sit|lie down|lay down|get up|stand( up)?|jump|hop|spin|twirl|turn (left|right|around)|walk|walkies|run|running|jog|race|sprint|canter|gallop|come (here|closer|to me)|zoomies|bow|wiggle|wag|play dead|roll over|shake|beg|backflip|front ?flip|somersault|flip|trick)\b/;
+// the long moves round the house (companion.js house_walk, run_lap, canter_lap), checked before the short ones
+const HOUSE_MOVES = [
+  [/\b(canter|cantering|gallop|galloping|full speed|as fast as you can|sprint)\b/, "canter_lap", ["Canter time! I need the big room for this. Stand back.", "Watch me canter! It comes out round, I go in a big circle.", "Galloping mode on. Mind the furniture."]],
+  [/\b(run|running|go for a run|jog|jogging|race|racing)\b(?! around)/, "run_lap", ["A run round the house? Let's go!", "Off I go! Down the hall and back.", "Running! Try to keep up."]],
+  [/\b(long walk|walk (a )?long( way)?|go for a walk|take a walk|walkies|walk (around|round|through) the house|walk far|a stroll|stroll)\b/, "house_walk", ["Walkies! A whole lap of the house.", "A long walk? My favourite. Down the hall we go.", "Let's go for a proper walk, all the way round."]],
+];
 function intentOf(low, r, ctx) {
   if (r.safety !== "none") return "safety";
   if (r.cues.includes("no jokes please")) return "nojokes";
@@ -538,6 +544,7 @@ export class RuleMind {
   // trick commands: the Phase 1 rules (pet/js/brain.js) when present, mapped onto what this body can really do
   command(r) {
     const low = r.text.toLowerCase();
+    for (const [re, act, lines] of HOUSE_MOVES) if (re.test(low)) return { say: this.pick(lines), emotion: "excited", actions: [act], tone: "playful" };
     const TRICK = { sit: "sit", lie: "lie_down", stand: "stand", jump: "hop", jumpAround: "zoomies", spin: "spin", turnAround: "spin", bow: "play_bow", dance: "dance", come: "come_closer", wag: "tail_wag", rest: "lie_down", walk: "walk_forward", beg: "sit", shake: "sit", playDead: "lie_down", rollOver: "lie_down" };
     const honest = { backflip: "I'd love to, but this body can't flip. I'll do my best hop instead!", frontflip: "No somersaults in this body, I'm afraid. Here's a hop!", rollOver: "I can't roll over yet, my brains never learned it. I'll lie down, which is like half of it.", playDead: "Bang! *dramatic lie-down*. That's all the acting I've got.", shake: "I'd shake your hand, but my legs only learned walking. Have a sit instead!", beg: "Begging isn't in my training yet. A very polite sit, then." };
     let steps = null;

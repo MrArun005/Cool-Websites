@@ -268,19 +268,38 @@
     for (let i = 0; i < 8; i++) { const y = (i * h) / 8; g.fillStyle = ["#c79a6b", "#bf9161", "#cfa676", "#c39563"][i % 4]; g.fillRect(0, y, w, h / 8);
       for (let k = 0; k < 40; k++) { g.strokeStyle = `rgba(90,55,25,${0.05 + R() * 0.08})`; g.beginPath(); const yy = y + R() * h / 8; g.moveTo(0, yy); g.bezierCurveTo(w / 3, yy + R() * 4 - 2, (2 * w) / 3, yy + R() * 4 - 2, w, yy); g.stroke(); }
       g.fillStyle = "rgba(60,35,15,0.35)"; g.fillRect(0, y, w, 2); g.fillRect((i * 173) % w, y, 2, h / 8); }
-  }, [4, 4]);
+  }, [19.7 / 3.5, 27.4 / 3.5]);
+  // the house (companion.js HOUSE): the living room corner at home, a long hall down -y, an open room for the canter
+  const HW = { x0: -3.2, x1: 16.5, y0: -24.0, y1: 3.4 }, HX = (HW.x0 + HW.x1) / 2, HY = (HW.y0 + HW.y1) / 2, HLX = HW.x1 - HW.x0, HLY = HW.y1 - HW.y0;
   const floorM = std("#ffffff", { map: wood, roughness: 0.55 });
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), floorM); ground.receiveShadow = true; room.add(ground);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(HLX, HLY), floorM); ground.position.set(HX, HY, 0); ground.receiveShadow = true; room.add(ground);
   const rug = new THREE.Mesh(new THREE.CircleGeometry(1.25, 64), std("#d86f52", { map: canvasTex(256, 256, (g, w, h) => { g.fillStyle = "#e4dccd"; g.fillRect(0, 0, w, h); g.strokeStyle = "#c95d43"; for (let r = 20; r < w / 2; r += 18) { g.lineWidth = r % 36 ? 5 : 9; g.beginPath(); g.arc(w / 2, h / 2, r, 0, 7); g.stroke(); } }), roughness: 1 }));
   rug.position.set(0.1, 0, 0.003); rug.receiveShadow = true; room.add(rug);
   const wallM = std("#efe6d8", { roughness: 0.95 });
-  const wall1 = new THREE.Mesh(new THREE.PlaneGeometry(14, 3), wallM); wall1.rotation.set(Math.PI / 2, Math.PI / 2, 0); wall1.position.set(-3.2, 0, 1.5); wall1.receiveShadow = true; room.add(wall1);
-  const wall2 = new THREE.Mesh(new THREE.PlaneGeometry(14, 3), wallM); wall2.rotation.set(Math.PI / 2, 0, 0); wall2.position.set(0, 3.4, 1.5); wall2.receiveShadow = true; room.add(wall2);
+  // four walls, each seen only from inside the house (one-sided), so the following camera sees through the one behind it
+  const wall1 = new THREE.Mesh(new THREE.PlaneGeometry(HLY, 3), wallM); wall1.rotation.set(Math.PI / 2, Math.PI / 2, 0); wall1.position.set(HW.x0, HY, 1.5); wall1.receiveShadow = true; room.add(wall1);
+  const wall2 = new THREE.Mesh(new THREE.PlaneGeometry(HLX, 3), wallM); wall2.rotation.set(Math.PI / 2, 0, 0); wall2.position.set(HX, HW.y1, 1.5); wall2.receiveShadow = true; room.add(wall2);
+  const wall3 = new THREE.Mesh(new THREE.PlaneGeometry(HLY, 3), wallM); wall3.rotation.set(Math.PI / 2, -Math.PI / 2, 0); wall3.position.set(HW.x1, HY, 1.5); wall3.receiveShadow = true; room.add(wall3);
+  const wall4 = new THREE.Mesh(new THREE.PlaneGeometry(HLX, 3), wallM); wall4.rotation.set(Math.PI / 2, Math.PI, 0); wall4.position.set(HX, HW.y0, 1.5); wall4.receiveShadow = true; room.add(wall4);
   const skirting = std("#d9cbb6");
-  room.add(mesh(new THREE.BoxGeometry(0.03, 14, 0.12), skirting, [-3.18, 0, 0.06]), mesh(new THREE.BoxGeometry(14, 0.03, 0.12), skirting, [0, 3.38, 0.06]));
+  room.add(mesh(new THREE.BoxGeometry(0.03, HLY, 0.12), skirting, [HW.x0 + 0.02, HY, 0.06]), mesh(new THREE.BoxGeometry(HLX, 0.03, 0.12), skirting, [HX, HW.y1 - 0.02, 0.06]),
+    mesh(new THREE.BoxGeometry(0.03, HLY, 0.12), skirting, [HW.x1 - 0.02, HY, 0.06]), mesh(new THREE.BoxGeometry(HLX, 0.03, 0.12), skirting, [HX, HW.y0 + 0.02, 0.06]));
+  // the rest of the house, kept to the walls (Bolt's paths: the hall loop x 1.2-5, the canter circle x 2-11, y -7..-17)
+  const woodM = std("#9a6b45", { roughness: 0.7 }), topM = std("#e9e4da", { roughness: 0.4 }), darkM = std("#3b3f45", { roughness: 0.6 });
+  room.add(mesh(new THREE.BoxGeometry(0.65, 6.0, 0.9), woodM, [HW.x1 - 0.35, -3.5, 0.45]), mesh(new THREE.BoxGeometry(0.7, 6.0, 0.05), topM, [HW.x1 - 0.35, -3.5, 0.92]));   // kitchen counter
+  room.add(mesh(new THREE.BoxGeometry(0.6, 0.6, 1.8), std("#d7d9db", { metalness: 0.4, roughness: 0.3 }), [HW.x1 - 0.35, -7.1, 0.9]));   // fridge
+  const table = new THREE.Group(); table.position.set(11.8, 1.2, 0); room.add(table);   // dining table and chairs
+  table.add(mesh(new THREE.BoxGeometry(1.8, 0.9, 0.05), woodM, [0, 0, 0.75]));
+  for (const [x, y] of [[-0.8, -0.38], [0.8, -0.38], [-0.8, 0.38], [0.8, 0.38]]) table.add(mesh(new THREE.BoxGeometry(0.05, 0.05, 0.75), woodM, [x, y, 0.375]));
+  for (const [x, y] of [[-0.5, -0.75], [0.5, -0.75], [-0.5, 0.75], [0.5, 0.75]]) { table.add(mesh(new THREE.BoxGeometry(0.42, 0.42, 0.05), darkM, [x, y, 0.45])); table.add(mesh(new THREE.BoxGeometry(0.42, 0.04, 0.45), darkM, [x, y + Math.sign(y) * 0.2, 0.68])); }
+  room.add(mesh(new THREE.BoxGeometry(2.4, 0.35, 1.9), woodM, [-1.0, HW.y0 + 0.2, 0.95]));   // bookshelf at the far end
+  for (let i = 0; i < 18; i++) room.add(mesh(new THREE.BoxGeometry(0.06 + 0.04 * R(), 0.22, 0.26 + 0.06 * R()), std(["#b5473a", "#2f5d7c", "#c9a227", "#4c7a4c", "#6b4e8c"][i % 5]), [-2.0 + i * 0.11, HW.y0 + 0.24, 1.17 + (i > 8 ? 0.55 : 0)]));
+  room.add(mesh(new THREE.BoxGeometry(1.2, 9.0, 0.006), std("#7a8fb0", { roughness: 1 }), [3.1, -7.0, 0.004]));   // a long runner rug in the hall
+  const hallLight = new THREE.PointLight(lin("#ffd9a8"), 0, 14, 1.4); hallLight.position.set(6.5, -10, 2.7); room.add(hallLight);
   // a window on the back wall: sky by day, a night sky with a moon in the evening
   const winM = new THREE.MeshBasicMaterial({ color: 0xffffff }); const win = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.1), winM);
   win.rotation.set(Math.PI / 2, Math.PI / 2, 0); win.position.set(-3.19, -0.9, 1.45); room.add(win);
+  for (const y of [-8, -15]) { const w2 = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.1), winM); w2.rotation.set(Math.PI / 2, -Math.PI / 2, 0); w2.position.set(HW.x1 - 0.01, y, 1.5); room.add(w2); }   // two more on the far side
   const frameM = std("#f8f4ee"); for (const [w, h, y, z] of [[0.06, 1.62, -0.9, 2.02], [0.06, 1.62, -0.9, 0.88], [0.06, 0.05, -1.68, 1.45], [0.06, 0.05, -0.12, 1.45], [0.06, 0.04, -0.9, 1.45]]) room.add(mesh(new THREE.BoxGeometry(0.05, h, w === 0.06 && h > 1 ? 0.06 : 1.16), frameM, [-3.17, y, z]));
   // a sofa against the side wall, a lamp, a plant and Bolt's bed
   const sofaM = std("#4d6b8a", { roughness: 0.95 }), cushM = std("#6a88a6", { roughness: 0.95 });
@@ -306,11 +325,11 @@
     const eve = evening();
     if (eve) {
       winM.map = canvasTex(256, 192, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#0b1030"); gr.addColorStop(1, "#283668"); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = "#fffbe8"; for (let i = 0; i < 40; i++) g.fillRect(R() * w, R() * h * 0.8, 1.2, 1.2); g.beginPath(); g.arc(w * 0.72, h * 0.3, 16, 0, 7); g.fill(); g.fillStyle = "#283668"; g.beginPath(); g.arc(w * 0.75, h * 0.27, 14, 0, 7); g.fill(); });
-      sun.color = lin("#a9b8ff"); sun.intensity = 0.35; hemi.intensity = 0.25; hemi.color = lin("#ffd9b0"); lampLight.intensity = 2.4; shadeM.emissiveIntensity = 1.6; renderer.toneMappingExposure = 1.05;
+      sun.color = lin("#a9b8ff"); sun.intensity = 0.35; hemi.intensity = 0.25; hemi.color = lin("#ffd9b0"); lampLight.intensity = 2.4; hallLight.intensity = 2.2; shadeM.emissiveIntensity = 1.6; renderer.toneMappingExposure = 1.05;
       wallM.color = lin("#b09a82"); floorM.color = lin("#a98f78");
     } else {
       winM.map = canvasTex(256, 192, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#8fc4f2"); gr.addColorStop(1, "#e6f3ff"); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = "#ffffff"; for (const [x, y, r] of [[60, 70, 18], [82, 64, 22], [104, 72, 16], [180, 110, 14], [198, 104, 18]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); } g.fillStyle = "#7fb37a"; g.fillRect(0, h * 0.82, w, h); });
-      sun.color = lin("#fff1dc"); sun.intensity = 1.5; hemi.intensity = 0.55; hemi.color = lin("#ffffff"); lampLight.intensity = 0; shadeM.emissiveIntensity = 0; renderer.toneMappingExposure = 1.0;
+      sun.color = lin("#fff1dc"); sun.intensity = 1.5; hemi.intensity = 0.55; hemi.color = lin("#ffffff"); lampLight.intensity = 0; hallLight.intensity = 0; shadeM.emissiveIntensity = 0; renderer.toneMappingExposure = 1.0;
       wallM.color = lin("#efe6d8"); floorM.color = lin("#ffffff");
     }
     winM.map.needsUpdate = true; winM.needsUpdate = true;
@@ -421,7 +440,7 @@
   // ---------- state, and the mind (loaded first: talking works before the physics is ready) ----------
   const state = { thinking: false, ctl: null, posture: "standing", lastJokeEl: null, speechRate: null };
   let C = null, MIND = null, mind = null, P = null;
-  const CHIPS = [["Hi Bolt!", "Hi Bolt!"], ["Rough day", "I had a really rough day"], ["Tell me a joke", "Tell me a joke"], ["Let's dance!", "Let's dance!"], ["Do a trick", "Do a trick"], ["I'm bored", "I'm bored"], ["Good boy!", "Good boy!"], ["Are you real?", "Are you real?"]];
+  const CHIPS = [["Hi Bolt!", "Hi Bolt!"], ["Rough day", "I had a really rough day"], ["Tell me a joke", "Tell me a joke"], ["Let's dance!", "Let's dance!"], ["Do a trick", "Do a trick"], ["Go for a run", "Go for a run round the house"], ["Canter!", "Can you canter?"], ["Long walk", "Let's go for a long walk"], ["I'm bored", "I'm bored"], ["Good boy!", "Good boy!"], ["Are you real?", "Are you real?"]];
   for (const [label, text] of CHIPS) { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.addEventListener("click", () => send(text)); $("chips").append(b); }
 
   function feelingChip(f) {

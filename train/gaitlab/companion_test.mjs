@@ -196,6 +196,36 @@ if (what === "beats") {
 }
 
 // ------------------------------------------------------------------------------------------- body
+if (what === "laps") {
+  globalThis.__lapdebug = !!process.env.LAPDEBUG;   // node companion_test.mjs laps <mujoco.js> <data dir>: each lap of the house N times (LAPS, default 4)
+  const live = await import("./live.js"), C = await import("./companion.js");
+  const mj = await (await import(path.resolve(a1))).default();
+  const read = (f) => JSON.parse(fs.readFileSync(path.join(a2, f)));
+  const pet = new C.Pet(live, mj, read("bolt_run.json"), { gpu: read("dog_gpu360.json"), g18: read("dog_18g.json") }, read("dog_clips.json"));
+  for (let i = 0; i < 50; i++) pet.step();
+  const N = +(process.env.LAPS || 4);
+  for (const id of (process.env.ONLY || "house_walk,run_lap,canter_lap").split(",")) {
+    const rows = [];
+    for (let k = 0; k < N; k++) {
+      if (pet.posture() !== "standing") { pet.perform(["stand"]); for (let i = 0; i < 1500 && !(pet.idle && i > 3); i++) pet.step(); }
+      const t0 = pet.t, f0 = pet.stats.falls; let far = 0, vmax = 0, canter = 0, prev = pet.where(), dist = 0, wall = 0;
+      pet.perform([id]);
+      for (let i = 0; i < 7500 && !(pet.idle && i > 3); i++) {
+        pet.step(); const w = pet.where(), v = pet.bolt.data.qvel;
+        far = Math.max(far, -w.y); vmax = Math.max(vmax, Math.hypot(v[0], v[1])); if (pet.body.mode === "canter") canter += pet.bolt.dt;
+        dist += Math.hypot(w.x - prev.x, w.y - prev.y); prev = w;
+        const H = C.HOUSE; if (w.x < H.x0 + 0.3 || w.x > H.x1 - 0.3 || w.y < H.y0 + 0.3 || w.y > H.y1 - 0.3) { if (!wall) console.log(`  wall at x ${w.x.toFixed(1)} y ${w.y.toFixed(1)} mode ${pet.body.mode} stage ${pet.cur && pet.cur.stage} t ${(pet.t - t0).toFixed(1)}`); wall++; }
+      }
+      const w = pet.where(), log = pet.log.filter((e) => e.id === id).at(-1);
+      if (pet.stats.falls > f0) console.log("  fall:", JSON.stringify(pet.body.fallInfo), "stage", pet.cur && pet.cur.stage);
+      rows.push({ secs: +(pet.t - t0).toFixed(1), far: +far.toFixed(1), dist: +dist.toFixed(1), vmax: +vmax.toFixed(2), canter: +canter.toFixed(1), falls: pet.stats.falls - f0, home: +Math.hypot(w.x, w.y).toFixed(2), done: !!(log && !log.skipped), wall });
+    }
+    const falls = rows.reduce((a, r) => a + r.falls, 0), good = rows.filter((r) => r.done && r.falls === 0 && r.far > (id === "canter_lap" ? 12 : 17) && r.home < 1.0 && r.wall === 0 && (id !== "canter_lap" || r.canter > 8)).length;
+    ok(good === N, `${id} x${N}`, `good ${good}/${N}, falls ${falls}; ` + rows.map((r) => `${r.secs}s ${r.dist}m top ${r.vmax}m/s canter ${r.canter}s home ${r.home}m${r.falls ? " FALL" : ""}${r.wall ? " WALL" : ""}${r.done ? "" : " cut"}`).join(" | "));
+    results[id] = rows;
+  }
+}
+
 if (what === "body") {
   const live = await import("./live.js"), C = await import("./companion.js");
   const mj = await (await import(path.resolve(a1))).default();
@@ -208,7 +238,8 @@ if (what === "body") {
     stand: (m) => m.zEnd > 0.38, sit: (m) => m.zEnd < 0.28 && m.pitchMax > 0.4, lie_down: (m) => m.zEnd < 0.18, get_up: (m) => m.zEnd > 0.38,
     walk_forward: (m) => m.moved > 0.4, come_closer: (m) => m.closer > 0.4, turn_left: (m) => m.yaw > 0.8, turn_right: (m) => m.yaw < -0.8, spin: (m) => Math.abs(m.turned) > 5.5,
     zoomies: (m) => m.far > 1.2 && m.homeEnd < 0.8, hop: (m) => m.rise > 0.15, happy_bounce: (m) => m.rise > 0.04, wiggle: (m) => m.yawSwing > 0.12, play_bow: (m) => m.pitchMin < -0.3,
-    twirl: (m) => m.rise > 0.12, dance: (m) => m.rise > 0.04, head_tilt: () => true, nod: () => true, tail_wag: () => true, ears_down: () => true,
+    twirl: (m) => m.rise > 0.12, dance: (m) => m.rise > 0.04,
+    house_walk: (m) => m.far > 17 && m.homeEnd < 1.0, run_lap: (m) => m.far > 17 && m.homeEnd < 1.0, canter_lap: (m) => m.far > 12 && m.homeEnd < 1.0, head_tilt: () => true, nod: () => true, tail_wag: () => true, ears_down: () => true,
   };
   const table = [];
   for (const id of Object.keys(C.ACTIONS)) {
@@ -218,7 +249,7 @@ if (what === "body") {
     const w0 = pet.where(), z0 = w0.z, t0 = pet.t, f0 = pet.stats.falls, dv0 = Math.hypot(w0.x - pet.viewer[0], w0.y - pet.viewer[1]);
     const m = { zMax: z0, pitchMin: 9, pitchMax: -9, turned: 0, yawSwing: 0, far: 0 }; let prev = w0.yaw, ymin = 0, ymax = 0, acc = 0;
     pet.perform([id]);
-    run(1500, () => { const w = pet.where(); m.zMax = Math.max(m.zMax, w.z); const p = pet.pitch(); m.pitchMin = Math.min(m.pitchMin, p); m.pitchMax = Math.max(m.pitchMax, p); acc += Math.atan2(Math.sin(w.yaw - prev), Math.cos(w.yaw - prev)); prev = w.yaw; ymin = Math.min(ymin, acc); ymax = Math.max(ymax, acc); m.far = Math.max(m.far, Math.hypot(w.x - pet.home[0], w.y - pet.home[1])); });
+    run(/_lap|house_walk/.test(id) ? 7500 : 1500, () => { const w = pet.where(); m.zMax = Math.max(m.zMax, w.z); const p = pet.pitch(); m.pitchMin = Math.min(m.pitchMin, p); m.pitchMax = Math.max(m.pitchMax, p); acc += Math.atan2(Math.sin(w.yaw - prev), Math.cos(w.yaw - prev)); prev = w.yaw; ymin = Math.min(ymin, acc); ymax = Math.max(ymax, acc); m.far = Math.max(m.far, Math.hypot(w.x - pet.home[0], w.y - pet.home[1])); });
     const w = pet.where(), log = pet.log.filter((e) => e.id === id).at(-1);
     Object.assign(m, { zEnd: w.z, rise: m.zMax - z0, yaw: acc, turned: acc, yawSwing: ymax - ymin, moved: Math.hypot(w.x - w0.x, w.y - w0.y), closer: dv0 - Math.hypot(w.x - pet.viewer[0], w.y - pet.viewer[1]), homeEnd: Math.hypot(w.x - pet.home[0], w.y - pet.home[1]) });
     const kind = C.ACTIONS[id].kind, falls = pet.stats.falls - f0, done = log && !log.skipped;
