@@ -24,6 +24,10 @@ a cleared cage on a real robot (HARDWARE_DAY.md).
 --remote: drive it with the Go2's own wireless remote (deploy/remote.py: left stick walk/trot, R1 + full stick canter,
 right stick steer, A sit, B lie, Y get up, L2+B or SELECT stop); starts sitting. Works together with --interactive.
 
+--pet: talk to it (deploy/pet_go2.py: "hi Bolt", "sit then dance", "tell me a joke", "good boy"...): it answers
+(--speak: aloud, if espeak-ng is installed) and acts with its trained skills; mood, memory and your feedback persist in
+--pet-memory. "stop" cuts the current trick short. A line starting with "!" is a raw command ("!trot"). Starts sitting.
+
 --interactive: type commands while it runs (a clip name, "steer 0.4", "stop"). Late brain steps (> 25 ms) are counted;
 3 in a row over 40 ms put the robot in damping mode.
 
@@ -128,6 +132,9 @@ def main():
     ap.add_argument("--truth", action="store_true", help="simulator only: true velocity/height from rt/sportmodestate")
     ap.add_argument("--release-sport", action="store_true", help="real robot: release Unitree's sport mode first")
     ap.add_argument("--interactive", action="store_true", help="read commands from the keyboard (clip names, steer X, stop)")
+    ap.add_argument("--pet", action="store_true", help="talk to it: the pet brain (deploy/pet_go2.py) reads what you type")
+    ap.add_argument("--pet-memory", default="~/.bolt/pet.json")
+    ap.add_argument("--speak", action="store_true", help="--pet: say the answers aloud with espeak-ng (local)")
     ap.add_argument("--remote", action="store_true", help="the Go2's wireless remote drives it (deploy/remote.py)")
     ap.add_argument("--recover", action="store_true", help="on a fall: self-right, get up, resume (instead of stopping)")
     ap.add_argument("--selfright", default=str(HERE.parent.parent / "models" / "bolt-go2-selfright-6.9M"))
@@ -171,7 +178,44 @@ def main():
         time.sleep(DT)
     plan = [(c.split(":")[0], float(c.split(":")[1])) for c in a.plan.split(",")] if a.plan else []
     cmds = queue.Queue()
-    if a.interactive:   # type a clip name (trot, sit, ...), "steer 0.4" or "stop" + Enter while it runs
+    if a.pet:   # what you say -> the pet brain -> lines + timed moves (the same commands as --interactive)
+        from pet_go2 import PetBrain
+        pet = PetBrain(a.pet_memory, speak=a.speak)
+        moves, moves_lock, cut = [], threading.Lock(), threading.Event()
+
+        def listener():
+            for line in sys.stdin:
+                line = line.strip()
+                if line.startswith("!"):
+                    cmds.put(line[1:])
+                    continue
+                if not line:
+                    continue
+                steps = pet.understand(line)
+                with moves_lock:
+                    if any(st["trick"] == "stop" for st in steps):
+                        moves.clear()
+                        cut.set()   # cut the move being held short
+                    for st in steps:
+                        moves.append(("say", st["say"]))
+                        moves.extend(st["moves"])
+
+        def performer():   # says each line, then sends each move and holds it for its seconds
+            while True:
+                with moves_lock:
+                    item = moves.pop(0) if moves else None
+                if item is None:
+                    time.sleep(0.05)
+                elif item[0] == "say":
+                    pet.speak(item[1])
+                else:
+                    cut.clear()
+                    cmds.put(item[1])
+                    cut.wait(float(item[0]))
+        threading.Thread(target=listener, daemon=True).start()
+        threading.Thread(target=performer, daemon=True).start()
+        plan = [("sit", 1e9)]
+    if a.interactive and not a.pet:   # type a clip name (trot, sit, ...), "steer 0.4" or "stop" + Enter while it runs
         def reader():
             for line in sys.stdin:
                 cmds.put(line.strip())
@@ -190,14 +234,14 @@ def main():
                     cmds.put(c)
                 time.sleep(DT)
         threading.Thread(target=poller, daemon=True).start()
-        plan = [("sit", 1e9)] if not a.interactive else plan
+        plan = [("sit", 1e9)] if not (a.interactive or a.pet) else plan
     est = LegEstimator(body.key) if not a.truth else None
     rec = None
     if a.recover:
         from recovery import Recovery
         rec = Recovery(ctl, a.selfright)
     print(f"brain {Path(a.brain).parent.name}{' (no velocity input)' if ctl.brain.blind_vel else ''}, kp {kp:g} kd {kd:g}, "
-          f"plan {plan}{', interactive' if a.interactive else ''}{', remote' if a.remote else ''}", flush=True)
+          f"plan {plan}{', interactive' if a.interactive else ''}{', remote' if a.remote else ''}{', pet' if a.pet else ''}", flush=True)
     late = late_run = 0
     for name, secs in plan:
         quat, gyro, q, dq, age = bot.read()

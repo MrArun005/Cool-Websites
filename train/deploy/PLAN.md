@@ -228,3 +228,14 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   now points at 695M -- run_go2.py and lockstep_vendor.py defaulted to 489M, a brain that needs a velocity sensor the
   real Go2 lacks (a forgotten --brain would have run it). Golden parity record for 695M saved; check_ready READY 7/7;
   DDS run with the default brain, the scripted remote and a push: recovered, resumed walk, stopped by L2+B.
+* 1 Nov 11:15-11:40: **pet intelligence on the Go2** (`pet_go2.py`, `run_go2.py --pet [--speak]`): the browser pet's
+  brain (pet/js/brain.js: 29 language rules, lines, jokes, mood, memory, feedback labels) ported to Python, built
+  in-house, no external AI service. Every trick maps onto trained Go2 skills (dance = walk/trot/pace with steering,
+  ends sitting; spin = steered gait; come, walk left/right, turn around, zoomies, bow, play dead, stand = getup);
+  tricks this body has not learned (flips, roll over, shake, beg, jump) get an honest line and a safe substitute.
+  Mood changes lines and moves (grumpy: walks, no zoomies; fantastic: a happy wiggle). Battery: the robot's real
+  charge when passed in. Memory + feedback labels in a JSON file (training data). Voice out: espeak-ng if installed
+  (local). Selftest: every move is a real robot-program command. DDS test, real time (damping 2.0): "hi Bolt", "sit
+  then dance", joke, "good boy" (labelled the dance as liked), "walk left", "do a backflip" (-> spin, said so),
+  "stop" (cut the spin short, sat), "lie down", "how are you" (mood fantastic), "!stop": all acted on, no fall,
+  2 of 2796 steps late. Not yet: voice input (an offline speech recognizer on the robot), the browser-only tricks.
