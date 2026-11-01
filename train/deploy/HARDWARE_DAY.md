@@ -35,6 +35,9 @@ falls). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
       Startup blend to the stance (2.5 s), hold 1 s, then 3 s of trot in the air.
 - [ ] Watch: legs move smoothly in trot order, no buzzing, no joint near its limit; motor temperatures (LowState) flat.
 - [ ] Repeat at `--gain-scale 0.8` and `1.0`.
+- Known risk: in Unitree's simulator with its default joint damping (0.1) the 592M brain shakes its calves past
+  their rated speed (PLAN.md log, 1 Nov 09:40); with damping 0.5-2.0 it does not. The hanging run tells which the
+  real robot is: `replay_log.py hang1.npz --damping 0.1` vs `2.0`, and the calf speeds in the log.
 - Stop if: oscillation, a safety stop, or a joint over its rated speed. Compare `hang1.npz` against the same plan in
   `lockstep_vendor.py` before going on.
 
@@ -50,6 +53,8 @@ falls). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
 - [ ] `--gain-scale 1.0`, `--interactive`: walk, trot, steer 0.3, sit, lie, getup, stop. Video every run.
 - [ ] Only then canter, on the longest clear stretch.
 - Not today: jumps (need a camera to see the bar), self-righting (needs a cleared cage), MasterMind.
+- A later session, in a cleared cage: `--recover` (a fall -> self-right -> get up -> resume; rehearsed on Unitree's
+  simulator with pushes, PLAN.md log). First with the robot laid on its side by hand, gains 0.8, remote in hand.
 
 ## 5. After the session
 

@@ -35,6 +35,8 @@ def main():
     ap.add_argument("--damping", type=float, default=None, help="override the model's joint damping (ours trains with 2.0)")
     ap.add_argument("--dt", type=float, default=0.005, help="physics step (the vendor's 0.005; ours trains at 0.002)")
     ap.add_argument("--stairs", action="store_true", help="keep the scene's bumps and staircase (default: flat floor)")
+    ap.add_argument("--shove-at", type=float, nargs="*", default=[], help="sim times (s) to push the dog over sideways")
+    ap.add_argument("--shove", type=float, default=3.0, help="the push: sideways m/s, plus a roll kick of 8 rad/s")
     a = ap.parse_args()
     root = Path(os.environ["UNITREE_MUJOCO"]) / "simulate_python"
     # the vendor bridge reads a module named config: give it ours (no gamepad, Go2, the vendor's 5 ms step)
@@ -58,9 +60,16 @@ def main():
     ChannelFactoryInitialize(cfg.DOMAIN_ID, cfg.INTERFACE)
     UnitreeSdk2Bridge(m, d)
     print(f"vendor sim up: Go2, dt {m.opt.timestep}, joint damping {m.dof_damping[6]:g}, domain {a.domain} on {a.iface}", flush=True)
+    shoves = sorted(a.shove_at)
     t0 = time.perf_counter()
     while time.perf_counter() - t0 < a.seconds:
         s = time.perf_counter()
+        if shoves and d.time >= shoves[0]:   # a push: sideways speed and a roll kick, in the body frame
+            shoves.pop(0)
+            side = 1 if len(shoves) % 2 == 0 else -1
+            d.qvel[0:3] += d.xmat[1].reshape(3, 3) @ [0, side * a.shove, 0]
+            d.qvel[3:6] += [side * -8.0, 0, 0]
+            print(f"shove at {d.time:.1f} s", flush=True)
         mujoco.mj_step(m, d)
         left = m.opt.timestep - (time.perf_counter() - s)
         if left > 0:

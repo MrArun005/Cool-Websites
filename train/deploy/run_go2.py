@@ -16,6 +16,11 @@ which Unitree's simulator fills with the true values: a rehearsal-only shortcut,
 estimator.LegEstimator gives them from the IMU rotation and the joints: kinematic height (0.3 cm off in the rehearsal)
 and leg-odometry velocity (0.2-0.3 m/s off; a brain trained with --blind-vel ignores it).
 
+--recover: a fall (tilt past 60 degrees) no longer stops the run: recovery.Recovery rolls the dog belly-down with the
+self-right brain (numpy, models/bolt-go2-selfright-6.9M/brain.npz), stands it up with the getup clip and resumes the
+command; the plan clock waits meanwhile. Damping mode if it is not righted in 4 s or falls 3 times in a row. Only with
+a cleared cage on a real robot (HARDWARE_DAY.md).
+
 --interactive: type commands while it runs (a clip name, "steer 0.4", "stop"). Late brain steps (> 25 ms) are counted;
 3 in a row over 40 ms put the robot in damping mode.
 
@@ -120,6 +125,8 @@ def main():
     ap.add_argument("--truth", action="store_true", help="simulator only: true velocity/height from rt/sportmodestate")
     ap.add_argument("--release-sport", action="store_true", help="real robot: release Unitree's sport mode first")
     ap.add_argument("--interactive", action="store_true", help="read commands from the keyboard (clip names, steer X, stop)")
+    ap.add_argument("--recover", action="store_true", help="on a fall: self-right, get up, resume (instead of stopping)")
+    ap.add_argument("--selfright", default=str(HERE.parent.parent / "models" / "bolt-go2-selfright-6.9M"))
     ap.add_argument("--log")
     a = ap.parse_args()
     if a.truth and a.domain == 0:
@@ -167,6 +174,10 @@ def main():
         threading.Thread(target=reader, daemon=True).start()
         plan = plan or [("trot", 1e9)]
     est = LegEstimator(body.key) if not a.truth else None
+    rec = None
+    if a.recover:
+        from recovery import Recovery
+        rec = Recovery(ctl, a.selfright)
     print(f"brain {Path(a.brain).parent.name}{' (no velocity input)' if ctl.brain.blind_vel else ''}, kp {kp:g} kd {kd:g}, "
           f"plan {plan}{', interactive' if a.interactive else ''}", flush=True)
     late = late_run = 0
@@ -196,9 +207,12 @@ def main():
                 height = float(bot.sport.position[2])
             else:   # what a real Go2 can know: kinematic height; leg-odometry velocity (a --blind-vel brain ignores it)
                 v_body, height = est.update(quat, q)
+            rtgt = rec.step(quat, gyro, q, dq, v_body, height, resume=name) if rec is not None else None
             if reason != "plan done":
                 pass
-            elif R[2, 2] < FALL_TILT:
+            elif rec is not None and rec.failed:
+                reason = f"recovery gave up: {rec.failed}"
+            elif rec is None and R[2, 2] < FALL_TILT:
                 reason = "tilt past 60 degrees"
             elif age > 0.06:
                 reason = f"state {age * 1000:.0f} ms old"
@@ -209,10 +223,14 @@ def main():
                 reason = "3 brain steps in a row over 40 ms (the loop is too slow for this machine)"
             if reason != "plan done":
                 break
-            tgt = np.clip(ctl.step(quat, gyro, q, dq, v_body, height), lo, hi)
+            if rtgt is not None:   # recovering: self-right or getup targets; the plan clock waits
+                tgt = np.clip(rtgt, lo, hi)
+                n -= 1
+            else:
+                tgt = np.clip(ctl.step(quat, gyro, q, dq, v_body, height), lo, hi)
             bot.set(tgt)
             log.append(np.concatenate([[time.perf_counter() - t0], quat, gyro, q, dq, tgt, v_body, [height],
-                                       [ALL.index(ctl.clip.name)]]))
+                                       [-1 if rec is not None and rec.mode == "selfright" else ALL.index(ctl.clip.name)]]))
             took = time.perf_counter() - t
             time.sleep(max(0.0, DT - took))
             step = time.perf_counter() - t
@@ -226,7 +244,8 @@ def main():
     bot.running = False
     up = quat_to_mat(bot.read()[0])[2, 2]
     print(f"stopped: {reason}; {len(log) * DT:.1f} s under the brain; body up-component at the end {up:.2f}; "
-          f"late steps (> 25 ms) {late} of {len(log)}", flush=True)
+          f"late steps (> 25 ms) {late} of {len(log)}"
+          + (f"; falls recovered {rec.recovered}, events {rec.events}" if rec is not None else ""), flush=True)
     if a.log:
         np.savez(a.log, frames=np.array(log), reason=reason, plan=a.plan)
 

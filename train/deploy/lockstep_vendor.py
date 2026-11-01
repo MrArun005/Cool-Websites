@@ -35,7 +35,10 @@ from controller import DT, Go2Controller  # noqa: E402
 FALL_UP = np.cos(np.radians(60))
 
 
-def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, est=None, errs=None):
+RATED = np.tile([30.1, 30.1, 15.7], 4)   # Go2 joint speed limits (rad/s): hip, thigh, calf
+
+
+def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, est=None, errs=None, speeds=None):
     d = mujoco.MjData(m)
     mujoco.mj_resetDataKeyframe(m, d, 0) if m.nkey else None
     rng = np.random.default_rng(seed)
@@ -66,6 +69,8 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
             q_ours, dq_ours = np.zeros(12), np.zeros(12)
             q_ours[ours], dq_ours[ours] = d.qpos[qadr], d.qvel[vadr]
             v_true, h_true = R.T @ d.qvel[0:3], float(d.qpos[2])
+            if speeds is not None:   # joint speed / rated, as run_go2.py's speed stop sees it every 20 ms
+                speeds.append(float(np.max(np.abs(dq_ours) / RATED)))
             if est == "ref":      # velocity = what the clip asks for (no measurement); height measured by kinematics
                 v_use, h_use = ctl.ref("v_body", 0), h_true
                 errs.append(np.concatenate([v_use - v_true, [0.0]]))
@@ -114,11 +119,11 @@ def main():
     kp, kd = ctl.body.entry["kp"], ctl.body.entry["kv"]
     plan = [(c.split(":")[0], float(c.split(":")[1])) for c in a.plan.split(",")]
     total = sum(s for _, s in plan)
-    errs = []
+    errs, speeds = [], []
     if a.estimate:
         from estimator import LegEstimator
     res = [run(ctl, m, plan, a.pd_every, kp, kd, seed, a.delay_ms, a.skip_p,
-               "ref" if a.vel_ref else (LegEstimator() if a.estimate else None), errs) for seed in range(a.tries)]
+               "ref" if a.vel_ref else (LegEstimator() if a.estimate else None), errs, speeds) for seed in range(a.tries)]
     if errs:
         e = np.abs(np.array(errs))
         print(f"estimator error (mean abs): velocity x/y/z {e[:, 0].mean():.3f} / {e[:, 1].mean():.3f} / {e[:, 2].mean():.3f} m/s, "
@@ -127,6 +132,9 @@ def main():
     print(f"dt {a.dt} pd every {a.pd_every} damping {m.dof_damping[6]:g} delay {a.delay_ms} ms skip {a.skip_p}{' estimated v/h' if a.estimate else ''}{' v = reference' if a.vel_ref else ''}: {len(falls)}/{a.tries} fell; "
           f"time under the brain {np.mean([r[0] for r in res]):.1f}/{total:g} s; "
           f"falls in {[r[1] for r in falls]}; end heights {[round(r[2], 2) for r in res]}")
+    sp = np.array(speeds)
+    print(f"joint speed / rated: worst {sp.max():.2f}; steps over 1.2x (run_go2.py would stop) {int((sp > 1.2).sum())} of "
+          f"{len(sp)}{' -- FAILS the speed check' if (sp > 1.2).any() else ''}")
 
 
 if __name__ == "__main__":

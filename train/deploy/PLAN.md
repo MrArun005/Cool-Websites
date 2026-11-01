@@ -176,3 +176,24 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   belly-down, then bolt-go2-blind-592M's getup clip stands it up -- **18/18** (side 6/6, back 6/6, tipped 6/6) in all
   three velocity variants. Next: the hand-over in run_go2.py (tilt > 60 deg -> self-right -> getup -> resume), which
   needs the self-right brain without torch (numpy export).
+* 1 Nov 09:20-10:00: **fall hand-over in the robot program.** `selfright.py`: the self-right brain as numpy
+  (models/bolt-go2-selfright-6.9M/brain.npz, 46 -> 256 -> 256 -> 12 ELU), parity with the SB3 brain over 400 steps of
+  real self-right inputs: worst action gap 7e-7. `recovery.py` (Recovery): tilt past 60 deg -> self-right -> upright
+  > 0.9 held 0.3 s -> getup clip -> back to the command; gives up after 4 s unrighted or 3 falls in a row. ("Still"
+  cannot use the gyro: the brain keeps rocking on its belly at 3-7 rad/s; training's test was body speed, which a real
+  Go2 cannot measure well.) `run_go2.py --recover` uses it (plan clock paused while recovering); `sim_vendor.py
+  --shove-at T...` pushes the dog over. Results, robot-only inputs, no torch anywhere:
+  - lockstep_recovery.py (Unitree's go2.xml, damping 0.1, 5 ms), fall -> roll -> stand -> trotting again, 10 tries
+    each: side 10/10, back 10/10, tipped 10/10, shoved over while trotting 10/10 (push 2.5 and 3.5 m/s); median
+    6.7 s from the fall to trotting again.
+  - DDS rehearsal, real time (sim_vendor damping 2.0, 5 ms, shoves at 13 s and 30 s, plan trot 14 s + walk 8 s,
+    speed stop on): both falls recovered, resumed trot then walk, plan done, 2 late steps of 1735.
+* 1 Nov 09:40: **found while doing it: 592M shakes its calves at low joint damping.** The DDS rehearsal with
+  Unitree's default physics (damping 0.1, 5 ms) stops at the second brain step on the joint-speed stop (FR calf 22
+  rad/s, rated 15.7): with the stop off, calves reach 2.0-2.6x rated, alternating sign step to step (a chatter), 84
+  of 750 steps over 1.2x. Calf peak / rated: damping 2.0 & 2 ms (ours) 0.45-0.69; 2.0 & 5 ms 0.56-0.76; 0.5 & 5 ms
+  0.91-1.28; 0.1 & 2 ms 0.73-1.25; 0.1 & 5 ms 2.0-2.6. Our own env (randomized or not): <= 0.51. The lockstep gate
+  missed it (it has no speed check); run f's brain ran the same defaults on 03:15 without tripping it. Not known yet:
+  the real Go2's joint damping -- HARDWARE_DAY step 2 (hanging, speed stop on, logs into replay_log.py) measures it
+  safely. If it is low, the fix is a training piece with joint damping randomized down to 0.1 and the 5 ms step
+  (and a speed term), before the floor steps. The lockstep gate gets a speed check from now on.
