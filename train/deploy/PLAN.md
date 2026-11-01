@@ -171,3 +171,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   simulator, damping 0.1): hip / thigh / calf 0.019 / 0.034 / 0.045 rad after 0.5 s; replayed with the wrong damping
   (2.0) the thigh gap is 0.091 -- it finds a motor-model mismatch. On a real Go2's logs this is how the simulator
   gets fixed (damping, delay, motor strength), joint type by joint type.
+* 1 Nov 08:55: `lockstep_recovery.py`: fall recovery on Unitree's go2.xml (damping 0.1, 5 ms), robot-only inputs
+  (kinematic height; self-right velocity from leg odometry, zero, or true): models/bolt-go2-selfright-6.9M rolls it
+  belly-down, then bolt-go2-blind-592M's getup clip stands it up -- **18/18** (side 6/6, back 6/6, tipped 6/6) in all
+  three velocity variants. Next: the hand-over in run_go2.py (tilt > 60 deg -> self-right -> getup -> resume), which
+  needs the self-right brain without torch (numpy export).
