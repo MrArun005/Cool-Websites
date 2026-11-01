@@ -219,3 +219,12 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   5% lost commands, seed 11) + `--damping-range 0.1 2.0`, 3.5 h on a T4, ends ~14:15 IST; -p scratchpad/kout_go2damp.
   Gate: lockstep_vendor at Unitree's defaults (damping 0.1, 5 ms) 0/10 falls AND its speed line passes (592M: worst
   2.23x, 367 steps over 1.2x), + --skip-p 0.05 and --delay-ms 0 19 no worse than 592M, + our exam no worse.
+* 1 Nov 10:40-11:05: **Kaggle bolt-go2-blind2 -> models/bolt-go2-blind-695M, the new real-robot brain** (592M + 103M
+  steps, moving sit/lie starts 0.5). Rehearsal (Unitree defaults, robot-only inputs, 41 s, 10 tries) 592M -> 695M:
+  falls plain 0/10 -> 0/10; 0-19 ms delay 1/10 -> 0/10; 5% missed steps 3/10 -> 2/10; recovery 40/40 -> 40/40.
+  Exam: mean 0.809 -> 0.820, falls 9.6% -> 0.0% (every moving sit/lie reached), trot 0.758 -> 0.790, canter 0.485 ->
+  0.524, steer canter 0.41 -> 0.54. Knee shaking unchanged at damping 0.1 (steps over 1.2x rated 1257 -> 1448 of
+  20500), better at 0.5 (132 -> 76): bolt-go2-damp (started from 592M) is still the piece for it. Every deploy default
+  now points at 695M -- run_go2.py and lockstep_vendor.py defaulted to 489M, a brain that needs a velocity sensor the
+  real Go2 lacks (a forgotten --brain would have run it). Golden parity record for 695M saved; check_ready READY 7/7;
+  DDS run with the default brain, the scripted remote and a push: recovered, resumed walk, stopped by L2+B.

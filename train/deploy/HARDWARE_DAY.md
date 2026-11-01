@@ -4,8 +4,8 @@ PLAN.md phase 4, as a checklist. Every step has a stop condition; do not skip ah
 keyboard, one next to the robot with the remote (its emergency stop) in hand. Nothing here calls an external AI
 service; everything runs on the robot's Jetson or a laptop on wired Ethernet.
 
-Brain: `models/bolt-go2-blind-592M/params.pkl` (no velocity input; passed the rehearsal with robot-only inputs, 0/10
-falls). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
+Brain: `models/bolt-go2-blind-695M/params.pkl` (no velocity input; rehearsal with robot-only inputs: 0/10 falls,
+0/10 with 0-19 ms delay, 2/10 with 5% missed steps; recovery 40/40). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
 
 ## 0. Before the robot (the day before)
 
@@ -37,7 +37,7 @@ falls). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
       Startup blend to the stance (2.5 s), hold 1 s, then 3 s of trot in the air.
 - [ ] Watch: legs move smoothly in trot order, no buzzing, no joint near its limit; motor temperatures (LowState) flat.
 - [ ] Repeat at `--gain-scale 0.8` and `1.0`.
-- Known risk: in Unitree's simulator with its default joint damping (0.1) the 592M brain shakes its calves past
+- Known risk: in Unitree's simulator with its default joint damping (0.1) the 592M and 695M brains shake their calves past
   their rated speed (PLAN.md log, 1 Nov 09:40); with damping 0.5-2.0 it does not. The hanging run tells which the
   real robot is: `replay_log.py hang1.npz --damping 0.1` vs `2.0`, and the calf speeds in the log.
 - Stop if: oscillation, a safety stop, or a joint over its rated speed. Compare `hang1.npz` against the same plan in

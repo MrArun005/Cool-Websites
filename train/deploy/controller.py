@@ -2,7 +2,7 @@
 targets out, every 20 ms, exactly as imitate_env.ImitateEnv builds the inputs and turns the brain's output into motor
 targets during training.
 
-    c = Go2Controller("models/bolt-go2-gpu-489M/params.pkl")
+    c = Go2Controller("models/bolt-go2-blind-695M/params.pkl")
     c.command("trot", steer=0.3)                      # any clip of the brain; steer: yaw rate (rad/s) on the gaits
     q_target = c.step(quat, gyro, q, dq, v_body, height)   # all in OUR joint order (FL, FR, RL, RR x hip, thigh, calf)
 

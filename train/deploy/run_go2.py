@@ -1,7 +1,7 @@
 """Run a Bolt Go2 brain on a Go2 through unitree_sdk2 (PLAN.md phase 1 steps 5-7): the same program for Unitree's
 simulator (sim_vendor.py, --iface lo --domain 1) and for the real robot (--iface <ethernet> --domain 0).
 
-    python deploy/run_go2.py --brain ../models/bolt-go2-gpu-489M/params.pkl --plan "trot:6,sit:5,lie:6,getup:6,walk:6" \
+    python deploy/run_go2.py --brain ../models/bolt-go2-blind-695M/params.pkl --plan "trot:6,sit:5,lie:6,getup:6,walk:6" \
         --iface lo --domain 1 --truth --log /tmp/run.npz
 
 Loop: rt/lowstate in (our joint order via robot_bodies' sdk_order) -> every 20 ms Go2Controller.step -> joint targets
@@ -112,7 +112,7 @@ class Robot:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--brain", default=str(HERE.parent.parent / "models" / "bolt-go2-gpu-489M" / "params.pkl"))
+    ap.add_argument("--brain", default=str(HERE.parent.parent / "models" / "bolt-go2-blind-695M" / "params.pkl"))
     ap.add_argument("--plan", default="trot:6,sit:5,lie:6,getup:6,walk:6", help="clip:seconds[,clip:seconds...]")
     ap.add_argument("--steer", type=float, default=0.0)
     ap.add_argument("--iface", default="lo")
