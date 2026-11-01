@@ -54,7 +54,8 @@ falls). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
 ## 5. After the session
 
 - [ ] Copy every `.npz` log and video into `research/results/real_go2/<date>/` with a short note per run.
-- [ ] Measure from the logs: real loop delay, motor response (target vs reached angle), foot slip. These go back into
+- [ ] Measure from the logs: `python deploy/replay_log.py <log>.npz --damping 0.1` (and 2.0, 0.5: the setting with
+      the smallest joint gap is the robot's), real loop delay, motor response (target vs reached angle), foot slip. These go back into
       the simulator (PLAN.md phase 5) before the next training run.
 - [ ] Write what happened, falls included, in PLAN.md's log. Real-robot numbers replace "simulation" only for what
       was actually run.

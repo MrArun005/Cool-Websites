@@ -166,3 +166,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
 * 1 Nov 06:35: `HARDWARE_DAY.md`, the phase 4 checklist (connect read-only, harness, floor at 0.8 gains, full gains,
   logs back into the simulator), each step with its stop condition. `read_go2.py` (read-only state printer for step 1) tested on
   Unitree's simulator: 200 Hz, largest gap 9.9 ms, left/right hips mirrored as expected.
+* 1 Nov 07:10: `replay_log.py` (phase 5 tool): replays a run_go2.py log's targets open-loop in Unitree's model from
+  the logged state every 0.2-0.5 s and reports the joint gap per joint type. On the interactive DDS log (Unitree's
+  simulator, damping 0.1): hip / thigh / calf 0.019 / 0.034 / 0.045 rad after 0.5 s; replayed with the wrong damping
+  (2.0) the thigh gap is 0.091 -- it finds a motor-model mismatch. On a real Go2's logs this is how the simulator
+  gets fixed (damping, delay, motor strength), joint type by joint type.
