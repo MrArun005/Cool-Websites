@@ -159,3 +159,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   step watchdog (counts steps > 25 ms; damping mode after 3 in a row > 40 ms). Test in Unitree's simulator through DDS,
   real time, run f's blind brain, no truth: trot -> walk -> steer 0.4 -> sit -> lie -> stop by typed commands, 23 s,
   no fall, 0 of 1152 steps late; an unknown command is refused with the list of valid ones.
+* 1 Nov 06:15: **phase 3 gate PASSED.** Kaggle bolt-go2-blind (103M blind steps from 489M, T4 3.5 h) ->
+  models/bolt-go2-blind-592M: rehearsal with robot-only inputs **0/10 falls** (489M 4/10, run f 3/10); with 0-19 ms
+  delay 1/10; with 5% missed steps 3/10. Cost in our own exam: mean 0.809 vs 0.848, canter 0.485 vs 0.628, trot ->
+  sit falls again (4/4). The real-robot candidate; a next blind piece continues it.
