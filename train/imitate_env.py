@@ -686,6 +686,7 @@ def exam(policy, clips=None, episodes=4, seed=9000, latency_sweep=LATENCY_SWEEP)
         for k in range(episodes):
             env.exam_start = (name, (k / episodes) * c.length if c.loop else 0.0)
             obs, _ = env.reset(seed=seed + k)
+            getattr(policy, "reset", lambda: None)()   # a brain with a history of inputs starts it afresh
             if c.loop:
                 env.limit = 200
             total, fell, done_by, yaw = 0.0, False, 0.0, 0.0
@@ -720,6 +721,7 @@ def exam(policy, clips=None, episodes=4, seed=9000, latency_sweep=LATENCY_SWEEP)
                 else:
                     env.exam_start, env.exam_moving = None, (name, gait, (k / episodes) * env.clips[gait].length, env.gait_speed(gait))
                 obs, _ = env.reset(seed=seed + k)
+                getattr(policy, "reset", lambda: None)()   # a brain with a history of inputs starts it afresh
                 until = int(round(env.pose_time[name] / env.dt))
                 env.limit = max(env.limit, until + 1)
                 hit, fell = False, False
@@ -744,6 +746,7 @@ def exam(policy, clips=None, episodes=4, seed=9000, latency_sweep=LATENCY_SWEEP)
             for k in range(episodes):
                 env.exam_start = (name, (k / episodes) * c.length if c.loop else 0.0)
                 obs, _ = env.reset(seed=seed + k)
+                getattr(policy, "reset", lambda: None)()   # a brain with a history of inputs starts it afresh
                 if c.loop:
                     env.limit = 200
                 total, fell = 0.0, False
@@ -786,6 +789,7 @@ def exam_steer(policy, clips=("trot", "canter"), rates=(-1.0, -0.5, 0.5, 1.0), e
                 env.exam_start = (name, (k / episodes) * c.length)
                 env.exam_steer = rate
                 obs, _ = env.reset(seed=seed + k)
+                getattr(policy, "reset", lambda: None)()   # a brain with a history of inputs starts it afresh
                 env.limit = steps
                 R = env._rotation()
                 h, yaw, total, fell = np.arctan2(R[1, 0], R[0, 0]), 0.0, 0.0, False
@@ -825,6 +829,7 @@ def exam_terrain(policy, cm, clip="trot", tries=30, seconds=4.0, seed=9000, push
     for k in range(tries):
         env.exam_start = (clip, (k / tries) * c.length)
         obs, _ = env.reset(seed=seed + k)
+        getattr(policy, "reset", lambda: None)()   # a brain with a history of inputs starts it afresh
         env.limit = steps
         R = env._rotation()
         h0, p0 = np.arctan2(R[1, 0], R[0, 0]), env.data.qpos[:2].copy()

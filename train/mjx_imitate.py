@@ -230,8 +230,14 @@ class MjxImitatePolicy:
         P = pickle.loads(Path(path).read_bytes()) if not isinstance(path, dict) else path
         self.P = P
         self.mean, self.std, self.layers = np.asarray(P["mean"]), np.asarray(P["std"]), P["layers"]
-        self.slots = len(self.mean) - 66
+        self.history = int(P.get("history", 0))
+        self.slots = len(self.mean) - 66 - self.history * len(HIST_SEL)
         self.blind_vel = bool(P.get("blind_vel", False))
+        self.hist = None
+
+    def reset(self):
+        """A new try (or the robot program starting): the input history starts over."""
+        self.hist = None
 
     def act(self, obs):
         obs = np.asarray(obs, np.float32)
@@ -240,6 +246,12 @@ class MjxImitatePolicy:
             obs[6:9] = 0.0
         if len(obs) > 66 + self.slots:   # an older brain: drop the clip slots it never had
             obs = np.concatenate([obs[:48 + self.slots], obs[48 + len(ALL_CLIPS):]])
+        if self.history:   # the last `history` frames before this step (a fresh start: this frame repeated)
+            f = obs[HIST_SEL]
+            if self.hist is None:
+                self.hist = np.tile(f, (self.history, 1))
+            obs = np.concatenate([obs, self.hist.ravel()])
+            self.hist = np.concatenate([self.hist[1:], f[None]])
         x = np.clip((obs - self.mean) / self.std, -10.0, 10.0).astype(np.float32)
         for i, (W, b) in enumerate(self.layers):
             x = x @ W + b
@@ -275,6 +287,13 @@ def from_sb3(zip_path, stats_path):
 
 
 # ---------- the environment ----------
+# input history (--history K): the brain also reads its last K steps' frames of what a robot measures: gravity in the
+# body (3), gyro (3), joint angles and speeds (24), its own previous action (12) = inputs 0-5 and 10-45 of a step,
+# oldest first. A real robot's speed, the floor and its own motors show in how these change; one frame cannot show it.
+HIST_SEL = np.r_[0:6, 10:46]
+PRIV_EXTRA = 8   # privileged critic inputs past the brain's: friction, kp, mass, log damping factors; 4 paw contacts
+
+
 class MjxImitate:
     """Brax-style env (reset(rng) -> State, step(State, action) -> State) equal to imitate_env.ImitateEnv."""
 
@@ -293,7 +312,7 @@ class MjxImitate:
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"], push_speed=PUSH["speed"],
                  push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"], root_global=0.0,
                  steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"],
-                 body=None, joint_damping=None, blind_vel=False, drop_p=0.0, damping_range=None):
+                 body=None, joint_damping=None, blind_vel=False, drop_p=0.0, damping_range=None, privileged=False, history=0):
         from brax.envs.base import State
         self.State = State
         # joint damping drawn per try, log-uniform in [lo, hi] (N·m·s/rad): the real robot's is unknown (deploy/PLAN.md
@@ -387,6 +406,16 @@ class MjxImitate:
         # velocity sensor; leg odometry was 0.2-0.3 m/s off); drop_p: chance per step that the new targets never reach
         # the motors (they keep the old ones; the brain's previous-action input still says what it sent)
         self.blind_vel, self.drop_p = bool(blind_vel), float(drop_p)
+        # privileged critic (asymmetric actor-critic): the value network alone also sees what a real robot cannot
+        # measure: the true body velocity (even with blind_vel), the try's friction, servo gain, trunk mass and joint
+        # damping factors, and which paws touch the floor. The brain (policy) keeps the robot-only inputs, so a
+        # params.pkl exports and deploys exactly as before; only training's value estimate gets better information.
+        self.privileged, self.history = bool(privileged), int(history)
+        n = MjxImitate.observation_size + self.history * len(HIST_SEL)
+        if self.privileged:
+            self.observation_size = {"state": (n,), "privileged_state": (n + PRIV_EXTRA,)}
+        elif self.history:
+            self.observation_size = n
         self.real_on = self.latency_ms[1] > 0 or self.motor_lag_ms > 0
         self.sub_dt = float(m.opt.timestep)
         self.queue_len = int(round(self.latency_ms[1] / 1000.0 / self.sub_dt)) // 10 + 2   # control steps of sent targets kept
@@ -523,9 +552,28 @@ class MjxImitate:
             o = o.at[:34].add(k * scale * u)
         if self.randomize and key is not None:
             o = o + 0.01 * jax.random.normal(key, o.shape)
+        full = o
         if self.blind_vel:
             o = o.at[6:9].set(0.0)
-        return o
+        if not self.privileged:
+            return o
+        paw_z = d.geom_xpos[self.feet][:, 2] - (0.0 if self.terrain is None else self.ground_z(d))
+        damp = jp.log(info["damp"]) if self.damping_range is not None else jp.float32(0.0)
+        extra = jp.concatenate([jp.stack([info["fric"], info["kp"], info["mass"], damp]).astype(jp.float32),
+                                (paw_z < 0.04).astype(jp.float32)])
+        return {"state": o, "privileged_state": jp.concatenate([full, extra])}
+
+    def with_hist(self, o, hist):
+        """The base inputs + the history (K frames, oldest first); privileged: the critic gets it too."""
+        if not self.history:
+            return o
+        h = hist.ravel()
+        if isinstance(o, dict):
+            return {"state": jp.concatenate([o["state"], h]), "privileged_state": jp.concatenate([o["privileged_state"], h])}
+        return jp.concatenate([o, h])
+
+    def hist_frame(self, o):
+        return (o["state"] if isinstance(o, dict) else o)[HIST_SEL]
 
     def heading_paws(self, d):
         R = d.xmat[self.torso]
@@ -770,7 +818,11 @@ class MjxImitate:
         metrics = {**{f"r_{k}": z for k in WEIGHTS}, "fell": z, "canter": z, "canter_steps": z}
         if self.steer_max:
             metrics["r_steer"] = z
-        return self.State(pipeline_state=d, obs=self.obs(d, info, k3), reward=z, done=z, metrics=metrics, info=info)
+        o = self.obs(d, info, k3)
+        if self.history:
+            info["hist"] = jp.tile(self.hist_frame(o), (self.history, 1))
+            o = self.with_hist(o, info["hist"])
+        return self.State(pipeline_state=d, obs=o, reward=z, done=z, metrics=metrics, info=info)
 
     def pose_term(self, d, info):
         """(bonus, reached in time so far, in the pose now) of a moving-start command (pose_reached.pose_ok)."""
@@ -868,6 +920,9 @@ class MjxImitate:
         on_canter = (info["clip"] == self.canter).astype(jp.float32)
         info.update(last_action=a, trunc=trunc.astype(jp.float32), rng=rng)
         obs = self.obs(d, info, k_obs)
+        if self.history:   # this step's inputs carry the frames before it; then this frame joins the history
+            hist = info["hist"]
+            obs, info["hist"] = self.with_hist(obs, hist), jp.concatenate([hist[1:], self.hist_frame(obs)[None]])
         # a finished try starts afresh: a new clip, moment, heading and physics (as ImitateEnv.reset)
         new_info, yaw = self.start_info(k_new)
         new_d = self.start_data(new_info, yaw)
@@ -875,10 +930,13 @@ class MjxImitate:
             new_info = self.real_init(new_info, new_d)
         new_info.update(rng=rng, trunc=info["trunc"])
         new_obs = self.obs(new_d, new_info, k_obs2)
+        if self.history:
+            new_info["hist"] = jp.tile(self.hist_frame(new_obs), (self.history, 1))
+            new_obs = self.with_hist(new_obs, new_info["hist"])
         sel = lambda x, y: jp.where(done, x, y)
         d = jax.tree_util.tree_map(sel, new_d, d)
         info.update({k: jax.tree_util.tree_map(sel, v, info[k]) for k, v in new_info.items()})   # (wrappers' keys untouched)
-        obs = sel(new_obs, obs)
+        obs = jax.tree_util.tree_map(sel, new_obs, obs)
         metrics = dict(state.metrics)   # keep what the training wrappers added
         metrics.update({f"r_{k}": v for k, v in terms.items()}, fell=fell.astype(jp.float32), canter=on_canter * reward, canter_steps=on_canter)
         return state.replace(pipeline_state=d, obs=obs, reward=reward, done=done.astype(jp.float32), metrics=metrics, info=info)
@@ -907,7 +965,8 @@ def make_networks(hidden=(512, 256), log_std=-1.0):
         return ppo_networks.make_ppo_networks(
             observation_size, action_size, preprocess_observations_fn=functools.partial(running_statistics.normalize, max_abs_value=10.0),
             policy_hidden_layer_sizes=tuple(hidden), value_hidden_layer_sizes=tuple(hidden), activation=jax.nn.elu,
-            distribution_type="normal", noise_std_type="log", init_noise_std=float(np.exp(log_std)))
+            distribution_type="normal", noise_std_type="log", init_noise_std=float(np.exp(log_std)),
+            **({"policy_obs_key": "state", "value_obs_key": "privileged_state"} if isinstance(observation_size, dict) else {}))
     return factory
 
 
@@ -926,15 +985,63 @@ def widen_slots(P, n_in):
     return P
 
 
-def to_brax(P, count=1e8):
-    """numpy brain -> Brax PPO params (normalizer state, policy, value) for ppo.train(restore_params=...)."""
+def add_history(P, k):
+    """A brain without input history -> one with k frames: zero weights for the new inputs in both networks (it acts
+    exactly as before until training uses them), their normalizer statistics copied from the frame's own inputs."""
+    if not k or P.get("history", 0) == k:
+        return P
+    assert not P.get("history", 0), "change of history length"
+    n0 = len(P["mean"])
+    sel = np.tile(HIST_SEL, k)
+    app = lambda a: np.concatenate([np.asarray(a), np.asarray(a)[sel]])   # noqa: E731
+    P = dict(P, mean=app(P["mean"]), std=app(P["std"]), var=app(P.get("var", np.asarray(P["std"]) ** 2)), history=k)
+    z = lambda W: np.concatenate([np.asarray(W), np.zeros((len(sel), np.asarray(W).shape[1]), np.asarray(W).dtype)])   # noqa: E731
+    P["layers"] = [(z(P["layers"][0][0]), P["layers"][0][1])] + list(P["layers"][1:])
+    P["value"] = [(z(P["value"][0][0]), P["value"][0][1])] + list(P["value"][1:])   # value: base, [privileged extras,] history
+    return P
+
+
+def value_inputs(P, privileged):
+    """The value network's first layer for a plain or a privileged critic: its inputs are the brain's base inputs,
+    then (privileged) the PRIV_EXTRA ones, then the history. Extras added with zero weights, or dropped. The policy is
+    untouched."""
+    n = len(P["mean"])
+    h = int(P.get("history", 0)) * len(HIST_SEL)
+    W0, b0 = P["value"][0]
+    W0 = np.asarray(W0)
+    has = len(W0) - n
+    assert has in (0, PRIV_EXTRA), (len(W0), n)
+    if privileged and not has:
+        W0 = np.insert(W0, [n - h] * PRIV_EXTRA, 0.0, axis=0)
+    elif has and not privileged:
+        W0 = np.delete(W0, np.arange(n - h, n - h + PRIV_EXTRA), axis=0)
+    return dict(P, value=[(W0, b0)] + list(P["value"][1:]))
+
+
+def to_brax(P, count=1e8, privileged=False):
+    """numpy brain -> Brax PPO params (normalizer state, policy, value) for ppo.train(restore_params=...).
+    privileged: the normalizer is a dict (state = the brain's inputs, privileged_state = the critic's: the brain's
+    statistics, with the velocity inputs and the PRIV_EXTRA ones neutral, mean 0 spread 1)."""
     from brax.training import types
     from brax.training.acme import running_statistics, specs
     n = len(P["mean"])
+
+    def stats(mean, std, var):   # arrays, or dicts of arrays (one state, nested fields: Brax's dict observations)
+        tm = jax.tree_util.tree_map
+        spec = tm(lambda m: specs.Array((len(m),), jp.dtype("float32")), mean)
+        st = running_statistics.init_state(spec, mode="welford")
+        return st.replace(mean=tm(lambda m: jp.array(m, jp.float32), mean), std=tm(lambda m: jp.array(m, jp.float32), std),
+                          summed_variance=tm(lambda v: jp.array(np.asarray(v, np.float32) * np.float32(count), jp.float32), var),
+                          count=types.UInt64(hi=int(count) >> 32, lo=int(count) & 0xFFFFFFFF))
     var = np.asarray(P.get("var", np.asarray(P["std"], np.float64) ** 2), np.float32)
-    st = running_statistics.init_state(specs.Array((n,), jp.dtype("float32")), mode="welford")
-    st = st.replace(mean=jp.array(P["mean"], jp.float32), std=jp.array(P["std"], jp.float32),
-                    summed_variance=jp.array(var * np.float32(count), jp.float32), count=types.UInt64(hi=int(count) >> 32, lo=int(count) & 0xFFFFFFFF))
+    st = stats(np.asarray(P["mean"]), np.asarray(P["std"]), var)
+    P = value_inputs(P, privileged)
+    if privileged:
+        b = n - int(P.get("history", 0)) * len(HIST_SEL)   # base inputs, then the extras, then the history
+        pm, ps, pv = (np.insert(np.asarray(a, np.float32), [b] * PRIV_EXTRA, f) for a, f in ((P["mean"], 0.0), (P["std"], 1.0), (var, 1.0)))
+        pm[6:9], ps[6:9], pv[6:9] = 0.0, 1.0, 1.0   # true velocity (the brain's copy may be blind: all zeros)
+        st = stats({"state": np.asarray(P["mean"]), "privileged_state": pm}, {"state": np.asarray(P["std"]), "privileged_state": ps},
+                   {"state": var, "privileged_state": pv})
     hid = lambda layers: {f"hidden_{i}": dict(kernel=jp.array(W), bias=jp.array(b)) for i, (W, b) in enumerate(layers)}
     policy = {"params": {"MLP_0": hid(P["layers"][:-1]), "Dense_0": dict(kernel=jp.array(P["layers"][-1][0]), bias=jp.array(P["layers"][-1][1])),
                          "std_logparam": {"log_value": jp.array(P["log_std"])}}}
@@ -945,6 +1052,8 @@ def to_brax(P, count=1e8):
 def to_numpy(params, extra=None):
     """Brax PPO params (normalizer, policy, value) -> the numpy brain (params.pkl)."""
     st, pol, val = params
+    if isinstance(st.mean, dict):   # privileged critic: the brain's own normalizer
+        st = st.replace(mean=st.mean["state"], std=st.std["state"], summed_variance=st.summed_variance["state"])
     p, v = pol["params"], val["params"]
     hidden = sorted(p["MLP_0"], key=lambda s: int(s.split("_")[-1]))
     layers = [(np.asarray(p["MLP_0"][k]["kernel"]), np.asarray(p["MLP_0"][k]["bias"])) for k in hidden]
@@ -972,6 +1081,10 @@ def train(args):
     if W and len(W["mean"]) < MjxImitate.observation_size:   # a 9-slot brain (before the jump clip): widen it
         print(f"warm brain widened {len(W['mean'])} -> {MjxImitate.observation_size} inputs (new clip slots start at 0)", flush=True)
         W = widen_slots(W, MjxImitate.observation_size)
+    if W and args.history:
+        if not W.get("history"):
+            print(f"warm brain given {args.history} frames of input history (new inputs start at 0)", flush=True)
+        W = add_history(W, args.history)
     os.environ["BOLT_BODY"] = args.body   # as train_imitate.py: this process's body
     if W:   # a brain trained on another body would start from the wrong stance and clips
         assert W.get("body", "bolt") == args.body, f"warm brain is for body {W.get('body', 'bolt')}, training {args.body}"
@@ -992,7 +1105,8 @@ def train(args):
                           root_global=args.root_global, steer_max=args.steer_max, steer_share=args.steer_share,
                           steer_change=args.steer_change, steer_weight=args.steer_weight, body=args.body,
                           joint_damping=args.joint_damping, iterations=args.iterations, ls_iterations=args.ls_iterations,
-                          blind_vel=args.blind_vel, drop_p=args.drop_p, damping_range=args.damping_range)
+                          blind_vel=args.blind_vel, drop_p=args.drop_p, damping_range=args.damping_range,
+                          privileged=args.privileged_critic, history=args.history)
 
     phases = curriculum(args.terrain_cm, args.terrain_at, args.steps)
     hidden = W["hidden"] if W else (512, 256)
@@ -1000,7 +1114,7 @@ def train(args):
     start, log, base0 = time.time(), [], int(W["steps"]) if W else 0
     done_steps = 0   # steps of the finished phases
     q = args.quick
-    tags = {k: v for k, v in (("body", args.body), ("steer_max", args.steer_max), ("blind_vel", args.blind_vel))
+    tags = {k: v for k, v in (("body", args.body), ("steer_max", args.steer_max), ("blind_vel", args.blind_vel), ("history", args.history))
             if v not in ("bolt", 0.0, False)}   # what the brain is for
     try:
         for k, (cm, n_steps) in enumerate(phases):
@@ -1016,7 +1130,7 @@ def train(args):
             if len(phases) > 1:
                 print(f"phase {k + 1}/{len(phases)}: terrain {cm:g} cm for {n_steps:,} steps", flush=True)
             base = base0 + done_steps
-            restore = to_brax(W) if W else None
+            restore = to_brax(W, privileged=args.privileged_critic) if W else None
             last = [0]   # the steps this phase actually ran (Brax rounds up to whole iterations)
 
             def progress(n, m, cm=cm, base=base, off=done_steps):
@@ -1137,6 +1251,10 @@ def main():
                    help="bolt (bolt.xml) or a real robot of robot_bodies.BODIES (go2); default BOLT_BODY, else bolt. "
                    "--brake-speed/--brake-gain apply to bolt only (a real robot has its own)")
     t.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model file's")
+    t.add_argument("--history", type=int, default=0, help="K: the brain also reads its last K steps of measured inputs "
+                   "(gravity, gyro, joints, previous action; HIST_SEL)")
+    t.add_argument("--privileged-critic", action="store_true", help="the value network also sees true velocity, the physics "
+                   "factors and paw contacts (training only; the brain's inputs are unchanged)")
     t.add_argument("--blind-vel", action="store_true", help="zero the body-velocity inputs (no velocity sensor on a real robot)")
     t.add_argument("--clips", nargs="+", choices=ALL_CLIPS, help="the clips to train (default: the 9 motion clips; add "
                    "jump for a body that has the clip, e.g. --clips walk trot pace canter turn_left turn_right sit lie getup jump)")
