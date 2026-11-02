@@ -27,7 +27,7 @@ class LegEstimator:
         self.m = b.model()
         self.d = mujoco.MjData(self.m)
         names = [mujoco.mj_id2name(self.m, mujoco.mjtObj.mjOBJ_GEOM, g) for g in range(self.m.ngeom)]
-        self.paws = [names.index(n) for n in ("FL", "FR", "RL", "RR") if n in names] or \
+        self.paws = [names.index(n) for n in ("FL_foot", "FR_foot", "RL_foot", "RR_foot") if n in names] or \
                     [g for g in range(self.m.ngeom) if self.m.geom_priority[g] == 1]
         self.r = float(self.m.geom_size[self.paws[0]][0])
         self.band, self.alpha = contact_band, alpha
