@@ -293,3 +293,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
     shows why, it is not robust to 5-15 ms of command delay on DEEP's undamped model (3/3 falls; 0/3 at 1-4 ms, 0/3
     lying-start, 0/3 DEEP's simulator stepped in lockstep). The queued Lite3 GPU run trains 0-40 ms delay and joint
     damping 0.1-2.0, the recipe that fixed both on the Go2.
+- **3 Nov ~02:45 IST: Lite3 CPU results.** dog-2 (38.8M): tracking 0.771 -> 0.813, canter 0.36 -> 0.49, falls on the 9
+  clips 1/36 -> 0/36, no falls at 10/20/40 ms delay; moving sit/lie still weak (trot -> sit 3/4). But on DEEP's own
+  model (lockstep, estimated v/h, 41 s plan) it falls 3/3 at sit -> lie, where 20.9M fell 0/3: better in our exam, worse
+  in the vendor rehearsal, so 20.9M stays the Lite3 robot candidate for now. Self-right 28M: 10/10 from side, back and
+  tipped (0.64 s). Running: lite3-dog-3 (moving sit/lie starts, steering), Kaggle CPU. GPU quota still out.
