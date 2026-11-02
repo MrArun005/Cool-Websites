@@ -1,0 +1,1 @@
+checkpoint 28000000 ready: {'up_side': 1.0, 'secs_side': 0.64, 'up_back': 1.0, 'secs_back': 0.65, 'up_tipped': 1.0, 'secs_tipped': 0.63, 'up_standing': 1.0, 'secs_standing': 0.26}
