@@ -277,3 +277,19 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   runs pass for both flags and for neither. (3) Lite3 on the GPU trainer: the 20.9M brain's numpy export scores 0.772
   on the CPU exam (SB3 original 0.771); a GPU-trainer smoke run on the Lite3 body passes. Queued for the quota reset:
   privhist vs base798 A/B (40 min each), Lite3 GPU run 1 (3.5 h), sit and jump pilots.
+- **2 Nov evening: real-time rehearsal fix (Go2) and the Lite3 robot program.**
+  * Found: since the speed stop went in (1 Nov), `run_go2.py` against `sim_vendor.py` stopped on the brain's first or
+    second step (695M and 798M alike: a knee at 19-22 rad/s, rated 15.7): a gait's first targets from a standstill, and
+    single 20 ms spikes (1.5-2.4x rated) at switches between moves. On hardware day it would have stopped every run.
+    Fix: ease in from the stance over 0.5 s at the start (--ramp; easing at every switch was tried and made trot -> sit
+    fall, so not); the speed stop now trips on 3 steps in a row over 1.2x rated (60 ms: a shake or runaway) or any step
+    over 3x (--speed-steps, --speed-hard). Result: the 29 s plan trot / sit / lie / getup / walk runs to the end in
+    Unitree's simulator over DDS (15 steps over 1.2x, none sustained). A second try stopped on "state 63 ms old": this
+    1.3-core machine running simulator and program together.
+  * Lite3: `run_go2.py --body lite3` speaks DEEP Robotics' UDP joint protocol (`lite3_link.py`, selftest PASS) to their
+    own simulator (`sim_lite3.py`, headless, real-time factor 0.97) or, on the robot, to `lite3_bridge/bridge.cpp`
+    (their Lite3_MotionSDK; compiles and links against their x86_64 library; it cannot start off the robot's network).
+    Stand-up from lying works with the right joint signs. The 20.9M CPU brain falls 0.9 s into a live trot: lockstep
+    shows why, it is not robust to 5-15 ms of command delay on DEEP's undamped model (3/3 falls; 0/3 at 1-4 ms, 0/3
+    lying-start, 0/3 DEEP's simulator stepped in lockstep). The queued Lite3 GPU run trains 0-40 ms delay and joint
+    damping 0.1-2.0, the recipe that fixed both on the Go2.

@@ -31,6 +31,11 @@ right stick steer, A sit, B lie, Y get up, L2+B or SELECT stop); starts sitting.
 --interactive: type commands while it runs (a clip name, "steer 0.4", "stop"). Late brain steps (> 25 ms) are counted;
 3 in a row over 40 ms put the robot in damping mode.
 
+--body lite3: the DEEP Robotics Lite3, through DEEP's UDP joint protocol (deploy/lite3_link.py) instead of
+unitree_sdk2: their own simulator (deploy/sim_lite3.py) or, on the robot, our bridge to their Lite3_MotionSDK
+(deploy/lite3_bridge/). --host is where that listens for commands. Velocity and height from LegEstimator(lite3);
+--truth, --remote and --recover are Go2-only so far.
+
 On a real robot: release sport mode first (--release-sport); start lying down, robot clear, e-stop in hand.
 """
 import argparse
@@ -116,7 +121,9 @@ class Robot:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--brain", default=str(HERE.parent.parent / "models" / "bolt-go2-damp-798M" / "params.pkl"))
+    ap.add_argument("--body", default="go2", choices=["go2", "lite3"])
+    ap.add_argument("--host", default="127.0.0.1", help="lite3: the simulator's or bridge's address")
+    ap.add_argument("--brain", default=None, help="default: the body's current brain (go2 damp-798M, lite3 dog-20.9M)")
     ap.add_argument("--plan", default="trot:6,sit:5,lie:6,getup:6,walk:6", help="clip:seconds[,clip:seconds...]")
     ap.add_argument("--steer", type=float, default=0.0)
     ap.add_argument("--iface", default="lo")
@@ -126,9 +133,15 @@ def main():
     ap.add_argument("--gain-scale", type=float, default=1.0, help="first floor runs: 0.8")
     ap.add_argument("--blend", type=float, default=2.5)
     ap.add_argument("--hold", type=float, default=1.0)
+    ap.add_argument("--ramp", type=float, default=0.5, help="s to ease from the stance into the brain's targets at the start (0: none)")
     ap.add_argument("--margin", type=float, default=0.05)
     ap.add_argument("--damp-kd", type=float, default=2.0)
-    ap.add_argument("--speed-stop", type=float, default=1.2, help="damping mode above this x rated joint speed (0: off)")
+    ap.add_argument("--speed-stop", type=float, default=1.2, help="damping mode when a joint stays above this x its rated speed "
+                    "for --speed-steps brain steps in a row (0: off)")
+    ap.add_argument("--speed-steps", type=int, default=3, help="consecutive 20 ms steps over --speed-stop that stop the run (60 ms)")
+    ap.add_argument("--speed-hard", type=float, default=3.0, help="any single step over this x rated stops the run at once "
+                    "(single 20 ms spikes of 1.5-2.4x come with switches between moves in the rehearsal; a runaway or a shake "
+                    "stays fast, which --speed-steps catches)")
     ap.add_argument("--truth", action="store_true", help="simulator only: true velocity/height from rt/sportmodestate")
     ap.add_argument("--release-sport", action="store_true", help="real robot: release Unitree's sport mode first")
     ap.add_argument("--interactive", action="store_true", help="read commands from the keyboard (clip names, steer X, stop)")
@@ -142,9 +155,14 @@ def main():
     a = ap.parse_args()
     if a.truth and a.domain == 0:
         sys.exit("--truth is a simulator-only shortcut (the real robot has no true velocity/height)")
-    from unitree_sdk2py.core.channel import ChannelFactoryInitialize
-    ChannelFactoryInitialize(a.domain, a.iface)
-    if a.release_sport:
+    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-20.9M" if a.body == "lite3" else "bolt-go2-damp-798M") / "params.pkl")
+    if a.body == "lite3":
+        if a.truth or a.remote or a.recover or a.release_sport:
+            sys.exit("--truth, --remote, --recover and --release-sport are Go2-only so far")
+    else:
+        from unitree_sdk2py.core.channel import ChannelFactoryInitialize
+        ChannelFactoryInitialize(a.domain, a.iface)
+    if a.release_sport and a.body == "go2":
         from unitree_sdk2py.comm.motion_switcher.motion_switcher_client import MotionSwitcherClient
         msc = MotionSwitcherClient()
         msc.SetTimeout(5.0)
@@ -155,17 +173,21 @@ def main():
             time.sleep(1)
             _, r = msc.CheckMode()
 
-    ctl = Go2Controller(a.brain)
+    ctl = Go2Controller(a.brain, body=a.body)
     body = ctl.body
     kp = (a.kp or body.entry["kp"]) * a.gain_scale
     kd = (a.kd or body.entry["kv"]) * a.gain_scale
     lo, hi = ctl.lo + a.margin, ctl.hi - a.margin
     rated = np.tile(np.asarray(body.entry["speed"], float), 4)
-    bot = Robot(body.entry["sdk_order"], kp, kd)
+    if a.body == "lite3":
+        from lite3_link import Lite3Robot
+        bot = Lite3Robot(body.entry.get("sdk_sign", 1), kp, kd, host=a.host)
+    else:
+        bot = Robot(body.entry["sdk_order"], kp, kd)
     t0 = time.perf_counter()
     while bot.read() is None:
         if time.perf_counter() - t0 > 5:
-            sys.exit("no rt/lowstate after 5 s: is the simulator / robot up on this interface and domain?")
+            sys.exit("no robot state after 5 s: is the simulator / robot (lite3: the bridge) up on this interface and domain?")
         time.sleep(0.01)
 
     log, reason = [], "plan done"
@@ -242,7 +264,8 @@ def main():
         rec = Recovery(ctl, a.selfright)
     print(f"brain {Path(a.brain).parent.name}{' (no velocity input)' if ctl.brain.blind_vel else ''}, kp {kp:g} kd {kd:g}, "
           f"plan {plan}{', interactive' if a.interactive else ''}{', remote' if a.remote else ''}{', pet' if a.pet else ''}", flush=True)
-    late = late_run = 0
+    late = late_run = fast_run = n_fast = 0
+    n_brain, n_ramp = 0, int(round(a.ramp / DT))
     for name, secs in plan:
         quat, gyro, q, dq, age = bot.read()
         ctl.command(name, steer=a.steer, q=q)
@@ -263,6 +286,8 @@ def main():
                 else:
                     print(f"? {' '.join(c)} (clips: {', '.join(ctl.clips)}; steer X; stop)", flush=True)
             quat, gyro, q, dq, age = bot.read()
+            fast = bool(np.any(np.abs(dq) > rated * a.speed_stop)) if a.speed_stop else False
+            fast_run, n_fast = (fast_run + 1 if fast else 0), n_fast + fast
             R = quat_to_mat(quat)
             if a.truth and bot.sport is not None:
                 v_body = R.T @ np.array(bot.sport.velocity, float)
@@ -278,9 +303,10 @@ def main():
                 reason = "tilt past 60 degrees"
             elif age > 0.06:
                 reason = f"state {age * 1000:.0f} ms old"
-            elif a.speed_stop and np.any(np.abs(dq) > rated * a.speed_stop):
+            elif a.speed_stop and (fast_run >= a.speed_steps or np.any(np.abs(dq) > rated * a.speed_hard)):
                 k = int(np.argmax(np.abs(dq) / rated))
-                reason = f"joint {k} at {dq[k]:+.1f} rad/s, over its rated {rated[k]:g}"
+                reason = (f"joint {k} at {dq[k]:+.1f} rad/s ({abs(dq[k]) / rated[k]:.2f}x its rated {rated[k]:g}; "
+                          f"{fast_run} steps in a row over {a.speed_stop:g}x)")
             elif late_run >= 3:
                 reason = "3 brain steps in a row over 40 ms (the loop is too slow for this machine)"
             if reason != "plan done":
@@ -290,6 +316,10 @@ def main():
                 n -= 1
             else:
                 tgt = np.clip(ctl.step(quat, gyro, q, dq, v_body, height), lo, hi)
+                if n_brain < n_ramp:   # ease in, once, from the stance to the brain's targets: a gait's first targets from a
+                    s = (n_brain + 1) / n_ramp   # standstill whip the knees past their rated speed in one step (sim_vendor
+                    tgt = (1 - s) * ctl.stance + s * tgt   # rehearsal, 2 Nov). Not at later switches: blending a gait's
+                n_brain += 1                               # pose into a posture's targets made it fall (tried, 2 Nov)
             bot.set(tgt)
             log.append(np.concatenate([[time.perf_counter() - t0], quat, gyro, q, dq, tgt, v_body, [height],
                                        [-1 if rec is not None and rec.mode == "selfright" else ALL.index(ctl.clip.name)]]))
@@ -306,7 +336,7 @@ def main():
     bot.running = False
     up = quat_to_mat(bot.read()[0])[2, 2]
     print(f"stopped: {reason}; {len(log) * DT:.1f} s under the brain; body up-component at the end {up:.2f}; "
-          f"late steps (> 25 ms) {late} of {len(log)}"
+          f"late steps (> 25 ms) {late} of {len(log)}; steps with a joint over {a.speed_stop:g}x rated {n_fast}"
           + (f"; falls recovered {rec.recovered}, events {rec.events}" if rec is not None else ""), flush=True)
     if a.log:
         np.savez(a.log, frames=np.array(log), reason=reason, plan=a.plan)
