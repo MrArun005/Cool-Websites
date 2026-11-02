@@ -269,3 +269,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   (`kaggle kernels output arunmallikarjuna/bolt-lite3-dog-pilot -p runs/kaggle-lite3dog`). Next ideas, after those
   pilots: a short history of past inputs and a privileged critic (40-min pilots each). Own-GPU route:
   train/LOCAL_GPU_PROMPT.md.
+- **2 Nov: work while the Kaggle GPU quota is out.** (1) Lite3 on Kaggle's free CPU: `bolt-lite3-dog-2` (20.9M brain
+  continued; win: mean tracking >= 0.80, canter >= 0.45) and `bolt-lite3-selfright-pilot` (win: righted from side and
+  back >= 0.5), both ~10.5 h. (2) GPU trainer: `--privileged-critic` (value net sees true velocity, physics factors,
+  paw contacts) and `--history K` (brain reads its last K measured frames; MjxImitatePolicy keeps the history, so the
+  robot program is unchanged). Warm start from 798M with history 3 acts identically (max action diff 0); CPU smoke
+  runs pass for both flags and for neither. (3) Lite3 on the GPU trainer: the 20.9M brain's numpy export scores 0.772
+  on the CPU exam (SB3 original 0.771); a GPU-trainer smoke run on the Lite3 body passes. Queued for the quota reset:
+  privhist vs base798 A/B (40 min each), Lite3 GPU run 1 (3.5 h), sit and jump pilots.
