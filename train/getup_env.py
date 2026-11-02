@@ -84,8 +84,10 @@ EXAM_LATENCY_MS = 0.0   # fixed control delay (ms) in exams (fair_exam.py --late
 # (relative). The effort cost 1e-5 x force^2 is per joint x (33.5 / that joint's peak torque)^2 (Bolt: 33.5 N·m on
 # every joint), so full effort costs the same: Go2 hip/thigh 2.0e-5 (23.7 N·m), calf 5.4e-6 (45.43 N·m).
 BOLT_STAND, BOLT_TORQUE = 0.436, 33.5
-GETUP_KICK = {"go2": (0.80, 1.0)}   # (kv, kw) per body: see above
-GETUP_STANDING_Z = {"go2": 0.22}    # m: "standing" height per body (Bolt: 0.38 x kz); see above
+GETUP_KICK = {"go2": (0.80, 1.0), "lite3": (0.90, 1.0)}   # (kv, kw) per body: see above. Lite3 (11.9 kg, as Bolt): the
+# same boot gives the same speed, Froude for a body 0.80 x as tall sqrt(0.80) = 0.89 -> 0.90; spins Bolt's (as Go2)
+GETUP_STANDING_Z = {"go2": 0.22, "lite3": 0.22}    # m: "standing" height per body (Bolt: 0.38 x kz); see above. Lite3's
+# kp 30 servos hold its 0.348 m stance at ~0.26-0.29 m with no brain (measured, 1-3 s), so Go2's 0.22 fits it too
 
 
 def sizes(kz=1.0, kv=1.0, kw=1.0, torque=None, standing_z=None):
