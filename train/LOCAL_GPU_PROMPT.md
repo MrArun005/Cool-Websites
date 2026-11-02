@@ -42,6 +42,15 @@ python mjx_imitate.py train $COMMON --seed 43 --warm ../models/bolt-go2-jump-war
 ```
 (`--moving-rate` given twice in a: the later 0.75 wins. If argparse complains, drop it from COMMON for that run.)
 
+c. New training ideas (A/B, same seed and length; only the flags differ):
+```
+python mjx_imitate.py train $COMMON --seed 61 --warm ../models/bolt-go2-damp-798M/params.pkl --out runs/base798
+python mjx_imitate.py train $COMMON --seed 61 --warm ../models/bolt-go2-damp-798M/params.pkl --out runs/privhist --privileged-critic --history 3
+```
+`--privileged-critic`: the training-only value network sees true speed, friction and paw contacts. `--history 3`: the
+brain reads its last 3 steps of sensor inputs. Score both with go2_exam.py (full and --moving); privhist wins only if it
+beats base798, not just 798M.
+
 ## 4. Score (CPU is fine; set `export BOLT_BODY=go2 OMP_NUM_THREADS=1 MUJOCO_GL=egl`)
 - Sit pilot vs the current brain, both: `python go2_exam.py <params.pkl> --moving` and `python go2_exam.py <params.pkl>`
   on `runs/sitpilot/params.pkl` and `../models/bolt-go2-damp-798M/params.pkl`.
