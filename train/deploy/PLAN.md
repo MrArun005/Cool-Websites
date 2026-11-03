@@ -342,3 +342,9 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   6/12 -> 4/12, recovery 20/20 both, moving sit/lie 0/48 both; our exam tracking 0.812 -> 0.803. The A/B with 4x faster
   motors (4b): routine 2/3 falls, 5-15 ms 6/12: not the fix. Next Kaggle CPU job lite3-dog-5: 0-80 ms delay from 63.8M.
   Workers (cloud sessions) running: w1 motor speed x2, w2 10-60 ms delay.
+- **4 Nov ~05:00 IST: Lite3 robot brain -> `bolt-lite3-dog-87.3M`** (the final checkpoint of lite3-dog-4). Lesson: the
+  run's "best" (63.8M) is picked by our exam, which has no delay; later checkpoints handle delay better on DEEP's model.
+  Under realistic delay (DEEP's MJCF): 41 s routine with 3-6 ms 3/6 -> 1/6 falls, trot -> sit with 5-15 ms 4/24 -> 2/24;
+  recovery 20/20 and moving sit/lie 0/48 both; our exam tracking 0.803 -> 0.780; no-delay routine 0/3 -> 1/6. Blends of
+  63.8M and 87.3M and a four-checkpoint average did not beat it. From now on every run's late checkpoints are tested on
+  DEEP's model with delay, not only its exam-best. Open: the canter under delay (every remaining routine fall).
