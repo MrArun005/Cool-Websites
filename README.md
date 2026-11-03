@@ -1,9 +1,70 @@
-# Bolt: a learned robot dog, built in simulation
+<p align="center">
+  <img src="docs/media/go2_trot_sit.gif" alt="A Unitree Go2 in simulation trotting, then sitting down, driven by Bolt's trained brain" width="640">
+</p>
 
-**Created and directed by Arun Mallikarjun.** Arun set the goals, the targets and the rules, chose what to keep and what
-to drop, and owns the project. The code, training and write-ups were produced with AI assistance under his direction.
+# Bolt: a robot dog brain, trained in simulation
 
-A 12 kg simulated quadruped with real Unitree A1 motor limits (torque, power, joint speed), trained with reinforcement learning (PPO) in MuJoCo and MuJoCo MJX: 4,096 parallel robots on free Colab and Kaggle GPUs. Nine learned gaits and postures (walk, trot, pace, turn, sit, lie, get up) score 91–97% on seeded exams with zero falls; a canter runs at ~2 m/s; a run-up jump clears 40 cm; self-righting from any fall takes under a second. Every trained policy ships in [`models/`](models/) with a model card, exam results and the command that produced them.
+Brains for two real quadrupeds, the **Unitree Go2 EDU** and the **DEEP Robotics Lite3**, learned from real dog motion
+capture with reinforcement learning in MuJoCo, plus the robot program that runs them through each maker's own SDK.
+Walk, trot, pace, canter, turns, sit, lie, get up, steering, and getting back up after a fall. Everything here is
+**simulation**: neither robot has run it yet.
+
+[![Status](https://img.shields.io/badge/status-simulation-555?style=for-the-badge)](train/deploy/PLAN.md)
+[![Robots](https://img.shields.io/badge/robots-Go2%20EDU%20%C2%B7%20Lite3-2b6cb0?style=for-the-badge)](train/deploy/HARDWARE_DAY.md)
+[![Brains](https://img.shields.io/badge/brains-in%20the%20repo-2f855a?style=for-the-badge)](models/)
+[![GPU](https://img.shields.io/badge/train-free%20Colab%20%2F%20Kaggle%20GPU-e37400?style=for-the-badge)](train/colab/bolt_gpu.ipynb)
+
+**Created and directed by Arun Mallikarjun**, who set the goals, the targets and the rules and owns the project. The
+code, training and write-ups were produced with AI assistance under his direction.
+
+## Try it in a few minutes
+
+```bash
+git clone -b claude/robot-build-memory-ju76nt https://github.com/MrArun005/Cool-Websites && cd Cool-Websites
+bash train/deploy/setup_go2.sh --sim --lite3      # pinned installs into ./bolt-deps, ends with the readiness check
+source bolt-deps/env.sh && cd train
+python deploy/sim_vendor.py --seconds 60 &        # Unitree's own Go2 simulator
+python deploy/run_go2.py --plan "trot:6,sit:5,lie:6,getup:6,walk:6"
+```
+
+Train on a free GPU: open [`train/colab/bolt_gpu.ipynb`](train/colab/bolt_gpu.ipynb) in Google Colab, pick a run,
+Runtime -> Run all.
+
+## What's in it
+
+| | |
+|---|---|
+| **Brains** | One brain per robot for all the motion (Go2 `damp-798M`, Lite3 `dog-61.8M`), a self-right brain each; numpy only on the robot, no torch |
+| **Robot program** | `run_go2.py`: Unitree's unitree_sdk2 (DDS) or DEEP's UDP joint protocol through a C++ bridge to their MotionSDK; one setting switches simulator and robot |
+| **Safety** | eases in from the stance, keeps targets inside the joint limits, damping mode on a tilt, a stale state or a sustained over-speed |
+| **Recovery** | fall -> self-right -> tuck -> get up -> carry on, on both robots |
+| **Talk to it** | `--pet`: a local pet mind (moods, memory, jokes, tricks); `--remote`: the Go2's own wireless remote |
+| **Training** | MuJoCo MJX + Brax PPO on 4,096 robots per GPU; delay, damping, motor-speed and push randomization; privileged critic and input history as options |
+| **Checks** | one-command setup, readiness check, controller-vs-training parity to 1e-7, rehearsals on each maker's own model |
+
+**Measured, not claimed.** On each maker's own MuJoCo model, stepped in lockstep with the robot program's inputs:
+the Go2 brain finishes a 41 s trot / sit / lie / get-up / walk / canter routine 10 times out of 10 (also 10/10 with
+5% of control steps lost and with 0-19 ms of command delay); both robots recover from 40 falls out of 40 (side, back,
+tipped, shoved); the full routine also runs live, in real time, in Unitree's simulator. The Lite3 brain still falls
+when commands arrive 3-15 ms late on DEEP's model, and the Go2's knees go past 1.2x their rated speed in ~0.5% of control steps at
+Unitree's default joint damping. Every number, with the command that made it, is in
+[`train/deploy/PLAN.md`](train/deploy/PLAN.md).
+
+| Go2: trot, then sit | Lite3: trot, then canter | Lite3: lie down, get up, walk |
+|---|---|---|
+| <img src="docs/media/go2_trot_sit.gif" alt="Go2 trotting then sitting" width="260"> | <img src="docs/media/lite3_trot_canter.gif" alt="Lite3 trotting then cantering" width="260"> | <img src="docs/media/lite3_lie_getup.gif" alt="Lite3 lying down, getting up and walking" width="260"> |
+
+<sub>Rendered from the simulator with `train/research/render_gif.py`. Dog motion capture: CC BY-NC 4.0, so these
+brains are for non-commercial use. Robot models: Unitree Go2 (BSD-3-Clause, MuJoCo Menagerie), DEEP Robotics Lite3
+(BSD-3-Clause; MotionSDK MIT), copyright notices kept.</sub>
+
+## Contact
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-arunmallikarjun-0a66c2?style=for-the-badge)](https://linkedin.com/in/arunmallikarjun)
+[![Email](https://img.shields.io/badge/Email-arunmallikarjun005%40gmail.com-c5221f?style=for-the-badge)](mailto:arunmallikarjun005@gmail.com)
+[![Portfolio](https://img.shields.io/badge/Portfolio-vercel-000?style=for-the-badge)](https://arun-portfolio-kappa.vercel.app)
+
+---
 
 ## Target robots: Unitree Go2 EDU and DEEP Robotics Lite3 (decided 30 Oct 2026)
 
