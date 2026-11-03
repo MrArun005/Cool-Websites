@@ -50,7 +50,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from controller import DT, Go2Controller, quat_to_mat  # noqa: E402
+from controller import DT, Go2Controller, predict, quat_to_mat  # noqa: E402
 from estimator import LegEstimator  # noqa: E402
 
 FALL_TILT = np.cos(np.radians(60))   # body z-axis below this up-component: fallen
@@ -133,6 +133,8 @@ def main():
     ap.add_argument("--gain-scale", type=float, default=1.0, help="first floor runs: 0.8")
     ap.add_argument("--blend", type=float, default=2.5)
     ap.add_argument("--hold", type=float, default=1.0)
+    ap.add_argument("--predict-ms", type=float, default=None, help="latency compensation: the brain answers for the state this "
+                    "many ms ahead (default: Lite3 5, Go2 0; PLAN.md 3 Nov: Lite3 on DEEP's model, 5-15 ms of delay, 6/12 -> 2/12 falls)")
     ap.add_argument("--ramp", type=float, default=0.5, help="s to ease from the stance into the brain's targets at the start (0: none)")
     ap.add_argument("--margin", type=float, default=0.05)
     ap.add_argument("--damp-kd", type=float, default=2.0)
@@ -155,6 +157,8 @@ def main():
     a = ap.parse_args()
     if a.truth and a.domain == 0:
         sys.exit("--truth is a simulator-only shortcut (the real robot has no true velocity/height)")
+    if a.predict_ms is None:
+        a.predict_ms = 5.0 if a.body == "lite3" else 0.0
     a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-61.8M" if a.body == "lite3" else "bolt-go2-damp-798M") / "params.pkl")
     a.selfright = a.selfright or str(HERE.parent.parent / "models" / ("bolt-lite3-selfright-28M" if a.body == "lite3" else "bolt-go2-selfright-6.9M"))
     if a.body == "lite3":
@@ -317,7 +321,8 @@ def main():
                 tgt = np.clip(rtgt, lo, hi)
                 n -= 1
             else:
-                tgt = np.clip(ctl.step(quat, gyro, q, dq, v_body, height), lo, hi)
+                pq, pj = predict(quat, gyro, q, dq, a.predict_ms / 1000.0)   # latency compensation (0: off)
+                tgt = np.clip(ctl.step(pq, gyro, pj, dq, v_body, height), lo, hi)
                 if n_brain < n_ramp:   # ease in, once, from the stance to the brain's targets: a gait's first targets from a
                     s = (n_brain + 1) / n_ramp   # standstill whip the knees past their rated speed in one step (sim_vendor
                     tgt = (1 - s) * ctl.stance + s * tgt   # rehearsal, 2 Nov). Not at later switches: blending a gait's
