@@ -75,7 +75,7 @@ robot-only inputs: 0/10 falls, 0/10 with 0-19 ms delay, 0/10 with 5% missed step
 
 ## Lite3 (DEEP Robotics), the second robot: what differs
 
-- Brain: `models/bolt-lite3-dog-61.8M/params.pkl` (0/3 falls on DEEP's model, sits and lies down from a walk or trot) until a GPU-trained Lite3 brain beats it (PLAN.md log).
+- Brain: `models/bolt-lite3-dog-63.8M/params.pkl` (0/3 falls on DEEP's model, sits and lies down from a walk or trot) until a GPU-trained Lite3 brain beats it (PLAN.md log).
   It reads body velocity, from LegEstimator on the robot. Self-right brain: `models/bolt-lite3-selfright-28M`.
 - Link: DEEP's Lite3_MotionSDK through our bridge, not unitree_sdk2. Build `deploy/lite3_bridge/bridge.cpp` on the
   robot's motion host (or a laptop on its network; the build line is at the top of the file), run `./lite3_bridge

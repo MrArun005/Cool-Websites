@@ -123,7 +123,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--body", default="go2", choices=["go2", "lite3"])
     ap.add_argument("--host", default="127.0.0.1", help="lite3: the simulator's or bridge's address")
-    ap.add_argument("--brain", default=None, help="default: the body's current brain (go2 damp-798M, lite3 dog-61.8M)")
+    ap.add_argument("--brain", default=None, help="default: the body's current brain (go2 damp-798M, lite3 dog-63.8M)")
     ap.add_argument("--plan", default="trot:6,sit:5,lie:6,getup:6,walk:6", help="clip:seconds[,clip:seconds...]")
     ap.add_argument("--steer", type=float, default=0.0)
     ap.add_argument("--iface", default="lo")
@@ -160,7 +160,7 @@ def main():
         sys.exit("--truth is a simulator-only shortcut (the real robot has no true velocity/height)")
     if a.predict_ms is None:   # off: over-predicting is as bad as the delay (no delay, 5 ms ahead: 6/12 falls); set it to
         a.predict_ms = 0.0     # the delay measured on the robot (HARDWARE_DAY.md)
-    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-61.8M" if a.body == "lite3" else "bolt-go2-damp-798M") / "params.pkl")
+    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-63.8M" if a.body == "lite3" else "bolt-go2-damp-798M") / "params.pkl")
     a.selfright = a.selfright or str(HERE.parent.parent / "models" / ("bolt-lite3-selfright-28M" if a.body == "lite3" else "bolt-go2-selfright-6.9M"))
     if a.body == "lite3":
         if a.truth or a.remote or a.release_sport:

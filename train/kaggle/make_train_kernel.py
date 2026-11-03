@@ -42,7 +42,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -197,6 +197,14 @@ JOBS = {
         args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
               "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.5", "--steer-max", "0.8",
               "--motor-speed-x", "4"],
+        finals=[]),
+    "lite3-dog-5": dict(
+        # 3 Nov evening: lite3-dog-4 (63.8M, 0-60 ms delay) became the Lite3 brain: 5-15 ms delay on DEEP's model 6/12 ->
+        # 4/12 falls, 3-6 ms 1/24 -> 0/24; the faster-motor A/B (4b) did not help. More of what worked: from 63.8M, delay
+        # 0-80 ms per try. Win: DEEP-model 5-15 ms falls <= 2/12 with the routine 0/3 and moving sit/lie 0/48.
+        name="lite3dog5", script="train_imitate.py", start="../models/bolt-lite3-dog-63.8M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
+              "--switch-rate", "0.3", "--latency-ms", "0", "80", "--moving-rate", "0.5", "--steer-max", "0.8"],
         finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above

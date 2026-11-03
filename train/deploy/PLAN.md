@@ -337,3 +337,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   model, trot -> sit: 3-6 ms delay 1/24 -> 0/24 falls (4.5 ms ahead); 5-15 ms delay 6/12 -> 2/12 (20 ms), 3/12 (10 ms);
   but with no delay, 5 ms ahead gives 6/12 falls (0/12 without). Over-predicting is as harmful as the delay, so the
   default is off; set it to the delay measured on the robot (HARDWARE_DAY.md).
+- **3 Nov ~00:45 IST: Lite3 robot brain -> `bolt-lite3-dog-63.8M`** (lite3-dog-4: corrected leg shapes, 0-60 ms delay).
+  DEEP's model, 61.8M -> 63.8M: routine 0/3 -> 0/3, over-speed steps 342 -> 296, 3-6 ms delay 1/24 -> 0/24, 5-15 ms
+  6/12 -> 4/12, recovery 20/20 both, moving sit/lie 0/48 both; our exam tracking 0.812 -> 0.803. The A/B with 4x faster
+  motors (4b): routine 2/3 falls, 5-15 ms 6/12: not the fix. Next Kaggle CPU job lite3-dog-5: 0-80 ms delay from 63.8M.
+  Workers (cloud sessions) running: w1 motor speed x2, w2 10-60 ms delay.
