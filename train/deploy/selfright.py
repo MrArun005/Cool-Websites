@@ -2,6 +2,7 @@
 
     python deploy/selfright.py export [models/bolt-go2-selfright-6.9M]   # policy.zip + vecnormalize.pkl -> brain.npz (needs SB3)
     python deploy/selfright.py test   [models/bolt-go2-selfright-6.9M]   # parity vs GetUpPolicy.act (needs SB3)
+    (a folder named bolt-lite3-* is a Lite3 brain)
 
 SelfRighter(folder).step(quat, gyro, q, dq, v_body, height) -> the 12 joint targets (our order) for the next 20 ms.
 Inputs as getup_env._obs (46): gravity in the body frame, gyro x 0.25, body velocity, height, joints minus the stance,
@@ -54,9 +55,9 @@ class SelfRighter:
         return np.clip(self.stance + self.scale * a, self.lo, self.hi)
 
 
-def export(folder):
+def export(folder, body="go2"):
     from getup_env import GetUpPolicy
-    p = GetUpPolicy(folder, body="go2")
+    p = GetUpPolicy(folder, body=body)
     assert not p.delay_input, "a delay-input brain (47 inputs) needs the delay added to inputs()"
     act = p.model.policy_kwargs.get("activation_fn")
     assert act is not None and act.__name__ == "ELU", act
@@ -73,11 +74,11 @@ def export(folder):
     print(f"wrote {Path(folder) / 'brain.npz'}: {len(layers)} layers {[W.shape for W, _ in layers]}")
 
 
-def test(folder):
+def test(folder, body="go2"):
     """Same action as the SB3 brain on real self-right inputs (the getup env's own episodes, all fall kinds)."""
     from getup_env import GetUpEnv, GetUpPolicy
-    ref, ours = GetUpPolicy(folder, body="go2"), SelfRighter(folder)
-    env = GetUpEnv(randomize=True, goal="selfright", body="go2")
+    ref, ours = GetUpPolicy(folder, body=body), SelfRighter(folder, body=body)
+    env = GetUpEnv(randomize=True, goal="selfright", body=body)
     worst, n = 0.0, 0
     for k, kind in enumerate(("side", "back", "tipped", "standing")):
         env.exam_start = kind
@@ -96,4 +97,5 @@ def test(folder):
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "test"
     folder = sys.argv[2] if len(sys.argv) > 2 else str(DEFAULT)
-    {"export": export, "test": test}[cmd](folder)
+    body = "lite3" if "lite3" in Path(folder).name else "go2"   # (models/bolt-<body>-selfright-...)
+    {"export": export, "test": test}[cmd](folder, body)

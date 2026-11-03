@@ -18,6 +18,9 @@ from selfright import DEFAULT, SelfRighter
 
 FALL_UP, RIGHT_UP, STILL_STEPS = 0.5, 0.9, 15
 SR_TIMEOUT, MAX_FALLS = 4.0, 3
+TUCK, TUCK_HOLD = 1.0, 0.3   # s: after the self-right, legs blended into the body's lie pose, then held, before the getup
+# clip starts from that pose (3 Nov: the Lite3 on DEEP's model fell during getup 16 times in 20 when the getup took over
+# from wherever the self-right left the legs; from a settled lie pose its getup never tilts past 38 degrees)
 
 
 class Recovery:
@@ -41,15 +44,21 @@ class Recovery:
             self.t += 1
             self.still = self.still + 1 if up > RIGHT_UP else 0
             if self.still >= STILL_STEPS:
-                self.mode = "getup"
-                self.ctl.last_action[:] = 0.0
-                self.ctl.start_at("getup", 0.0)
+                self.mode, self.k, self.q0 = "tuck", 0, np.asarray(q, float).copy()
                 self.events.append(("righted", self.t * DT))
             elif self.t * DT > SR_TIMEOUT:
                 self.failed = f"not righted after {SR_TIMEOUT:g} s of self-right"
                 return None
             else:
                 return self.sr.step(quat, gyro, q, dq, v_body, height)
+        if self.mode == "tuck":
+            self.k += 1
+            s = min(1.0, self.k * DT / TUCK)
+            if self.k * DT < TUCK + TUCK_HOLD:
+                return (1 - s) * self.q0 + s * self.ctl.body.lie
+            self.mode = "getup"
+            self.ctl.last_action[:] = 0.0
+            self.ctl.start_at("getup", 0.0)
         if self.mode == "getup":
             if self.ctl.tau < self.ctl.clips["getup"].length:
                 return self.ctl.step(quat, gyro, q, dq, v_body, height)

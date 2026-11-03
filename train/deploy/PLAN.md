@@ -314,3 +314,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   DEEP's MJCF 0/3 falls over the 41 s plan (38.8M 3/3, 20.9M 0/3) with a third of 20.9M's over-speed steps. Still 3/3
   falls with 5-15 ms delay there. Also new: `--motor-speed-range` in the GPU trainer; the queued Lite3 GPU run now
   warms from 61.8M with damping 0.1-2.0, motor speed x1-4, 0-40 ms delay and the corrected leg collision shapes.
+- **3 Nov: fall recovery for the Lite3, 40/40 on DEEP's model; Go2 still 40/40.** Lite3 self-right 28M exported to numpy
+  (selfright.py export/test take a Lite3 folder; parity 9.5e-7). lockstep_recovery.py --body lite3 (DEEP's MJCF, joint
+  sign, HL/HR names): first 4/20: the self-right rolled it over every time (0.5-2.3 s), but the getup clip took over from
+  wherever the legs were and it tipped past 60 degrees. recovery.py now tucks the legs into the body's lie pose (1.0 s
+  blend + 0.3 s hold) before the getup: 0.4 s gave 11/20 (falls during the tuck), 1.0 s 20/20, then 10 tries each:
+  Lite3 side / back / tipped / shove 10/10 each (fall to trotting again median 7.9 s); Go2 10/10 each (median 7.9 s,
+  was 6.8). run_go2.py --body lite3 --recover now allowed (self-right brain models/bolt-lite3-selfright-28M).

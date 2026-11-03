@@ -36,20 +36,31 @@ def euler_quat(roll, pitch, yaw):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--selfright", default=str(HERE.parent.parent / "models" / "bolt-go2-selfright-6.9M"))
-    ap.add_argument("--brain", default=str(HERE.parent.parent / "models" / "bolt-go2-damp-798M" / "params.pkl"))
+    ap.add_argument("--body", default="go2", choices=["go2", "lite3"], help="lite3: DEEP Robotics' MJCF (LITE3_MJCF)")
+    ap.add_argument("--selfright", default=None, help="default: the body's self-right brain")
+    ap.add_argument("--brain", default=None, help="default: the body's motion brain")
     ap.add_argument("--tries", type=int, default=6)
-    ap.add_argument("--damping", type=float, default=0.1)
+    ap.add_argument("--damping", type=float, default=None, help="joint damping (default: Go2 0.1, Unitree's; Lite3 the file's, 0)")
     ap.add_argument("--dt", type=float, default=0.005)
     ap.add_argument("--shove", type=float, default=2.5, help="sideways push (m/s) plus a roll kick, for the shove tries")
     a = ap.parse_args()
-    ctl = Go2Controller(a.brain)
-    m = mujoco.MjModel.from_xml_path(str(Path(os.environ["UNITREE_MUJOCO"]) / "unitree_robots" / "go2" / "scene.xml"))
+    M = HERE.parent.parent / "models"
+    lite = a.body == "lite3"
+    a.brain = a.brain or str(M / ("bolt-lite3-dog-61.8M" if lite else "bolt-go2-damp-798M") / "params.pkl")
+    a.selfright = a.selfright or str(M / ("bolt-lite3-selfright-28M" if lite else "bolt-go2-selfright-6.9M"))
+    ctl = Go2Controller(a.brain, body=a.body)
+    if lite:
+        m = mujoco.MjModel.from_xml_path(os.environ["LITE3_MJCF"])
+    else:
+        m = mujoco.MjModel.from_xml_path(str(Path(os.environ["UNITREE_MUJOCO"]) / "unitree_robots" / "go2" / "scene.xml"))
+        flatten(m)
     m.opt.timestep = a.dt
-    flatten(m)
-    m.dof_damping[6:] = a.damping
+    if a.damping is not None or not lite:
+        m.dof_damping[6:] = 0.1 if a.damping is None else a.damping
+    sign = float(ctl.body.entry.get("sdk_sign", 1))   # the vendor's joint angles = sign x ours
     lo, hi = m.actuator_ctrlrange[:, 0], m.actuator_ctrlrange[:, 1]
-    act = np.array([ctl.body.joints.index(mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, m.actuator_trnid[i, 0]))
+    ren = lambda n: "R" + n[1:] if n[:3] in ("HL_", "HR_") else n   # noqa: E731  (DEEP's rear legs HL/HR = our RL/RR)
+    act = np.array([ctl.body.joints.index(ren(mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, m.actuator_trnid[i, 0])))
                     for i in range(m.nu)])
     stance = ctl.stance
     n_sub = int(round(DT / m.opt.timestep))
@@ -65,17 +76,17 @@ def main():
         for k in range(a.tries):
             d = mujoco.MjData(m)
             if kind == "shove":   # trotting, then pushed over sideways
-                d.qpos[2], d.qpos[3:7], d.qpos[7:19] = 0.30, euler_quat(0, 0, rng.uniform(-np.pi, np.pi)), stance
+                d.qpos[2], d.qpos[3:7], d.qpos[7:19] = ctl.body.stand_height, euler_quat(0, 0, rng.uniform(-np.pi, np.pi)), sign * stance
                 ctl.start_at("trot", 0.0)
             else:   # dropped from 0.35 m in a fallen pose
                 roll, pitch = draw()
                 d.qpos[2], d.qpos[3:7] = 0.35, euler_quat(roll, pitch, rng.uniform(-np.pi, np.pi))
-                d.qpos[7:19] = stance + rng.normal(0, 0.1, 12)
+                d.qpos[7:19] = sign * (stance + rng.normal(0, 0.1, 12))
                 ctl.start_at("lie", 0.0)
             ctl.last_action[:] = 0
             mujoco.mj_forward(m, d)
-            target = d.qpos[7:19].copy()
-            rec, est = Recovery(ctl, a.selfright), LegEstimator()
+            target = sign * d.qpos[7:19].copy()
+            rec, est = Recovery(ctl, a.selfright), LegEstimator(body=a.body)
             resume, pushed, t_fall, back_at = "trot", False, None, None
             for t in range(int(14.0 / DT)):
                 if kind == "shove" and not pushed and t * DT >= 2.0:   # the push: sideways speed and a roll kick
@@ -84,7 +95,7 @@ def main():
                     d.qvel[0:3] += R @ np.array([0, side * a.shove, 0])
                     d.qvel[3:6] += np.array([side * -8.0, 0, 0])
                     pushed = True
-                quat, gyro, q, dq = d.qpos[3:7].copy(), d.qvel[3:6].copy(), d.qpos[7:19].copy(), d.qvel[6:18].copy()
+                quat, gyro, q, dq = d.qpos[3:7].copy(), d.qvel[3:6].copy(), sign * d.qpos[7:19].copy(), sign * d.qvel[6:18].copy()
                 v, h = est.update(quat, q, dq, gyro)
                 if kind != "shove" and t < int(0.6 / DT):
                     tgt = target   # landing
@@ -107,7 +118,7 @@ def main():
                 target = np.clip(tgt, ctl.lo, ctl.hi)
                 for _ in range(n_sub):
                     qq, vv = d.qpos[7:19], d.qvel[6:18]
-                    d.ctrl[:] = np.clip(kp * (target[act] - qq[act]) - kd * vv[act], lo, hi)
+                    d.ctrl[:] = np.clip(kp * (sign * target[act] - qq[act]) - kd * vv[act], lo, hi)
                     mujoco.mj_step(m, d)
                 if back_at is not None and t > back_at + int(3.0 / DT):   # 3 s of trot after getting back up
                     break
@@ -122,7 +133,7 @@ def main():
             if fallen:
                 print(f"  shove try {k}: the push did not tip it over (counted as a fail of the test, not the robot)")
         out[kind] = f"{ok}/{a.tries}"
-    print(f"Unitree go2.xml, damping {a.damping}, dt {a.dt}, robot-only inputs, numpy self-right + Recovery hand-over: "
+    print(f"{'DEEP Lite3.xml' if lite else 'Unitree go2.xml'}, damping {m.dof_damping[6]:g}, dt {a.dt}, robot-only inputs, numpy self-right + Recovery hand-over: "
           f"fall -> roll -> stand -> trot again {out}; fall to trotting again median {np.median(times):.1f} s")
 
 

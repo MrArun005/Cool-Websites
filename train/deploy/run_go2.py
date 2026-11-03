@@ -34,7 +34,7 @@ right stick steer, A sit, B lie, Y get up, L2+B or SELECT stop); starts sitting.
 --body lite3: the DEEP Robotics Lite3, through DEEP's UDP joint protocol (deploy/lite3_link.py) instead of
 unitree_sdk2: their own simulator (deploy/sim_lite3.py) or, on the robot, our bridge to their Lite3_MotionSDK
 (deploy/lite3_bridge/). --host is where that listens for commands. Velocity and height from LegEstimator(lite3);
---truth, --remote and --recover are Go2-only so far.
+--truth and --remote are Go2-only; --recover uses models/bolt-lite3-selfright-28M.
 
 On a real robot: release sport mode first (--release-sport); start lying down, robot clear, e-stop in hand.
 """
@@ -150,15 +150,16 @@ def main():
     ap.add_argument("--speak", action="store_true", help="--pet: say the answers aloud with espeak-ng (local)")
     ap.add_argument("--remote", action="store_true", help="the Go2's wireless remote drives it (deploy/remote.py)")
     ap.add_argument("--recover", action="store_true", help="on a fall: self-right, get up, resume (instead of stopping)")
-    ap.add_argument("--selfright", default=str(HERE.parent.parent / "models" / "bolt-go2-selfright-6.9M"))
+    ap.add_argument("--selfright", default=None, help="default: the body's (go2 selfright-6.9M, lite3 selfright-28M)")
     ap.add_argument("--log")
     a = ap.parse_args()
     if a.truth and a.domain == 0:
         sys.exit("--truth is a simulator-only shortcut (the real robot has no true velocity/height)")
     a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-61.8M" if a.body == "lite3" else "bolt-go2-damp-798M") / "params.pkl")
+    a.selfright = a.selfright or str(HERE.parent.parent / "models" / ("bolt-lite3-selfright-28M" if a.body == "lite3" else "bolt-go2-selfright-6.9M"))
     if a.body == "lite3":
-        if a.truth or a.remote or a.recover or a.release_sport:
-            sys.exit("--truth, --remote, --recover and --release-sport are Go2-only so far")
+        if a.truth or a.remote or a.release_sport:
+            sys.exit("--truth, --remote and --release-sport are Go2-only (Unitree's sport state, remote and mode switcher)")
     else:
         from unitree_sdk2py.core.channel import ChannelFactoryInitialize
         ChannelFactoryInitialize(a.domain, a.iface)
