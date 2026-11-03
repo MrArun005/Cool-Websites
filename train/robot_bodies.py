@@ -118,8 +118,10 @@ class Body:
         self.stance, self.lie, self.sit = legs(e["stance"]), legs(e["lie"]), legs(e["sit"])
         self.floor_ok, self.lost, self.pose_ok, self.stand_height = e["floor_ok"], e["lost"], e["pose_ok"], e["stand_height"]
         T, W = np.tile(e["torque"], 4).astype(float), np.tile(e["speed"], 4).astype(float)
+        fx = float(os.environ.get("BOLT_MOTOR_SPEED_X", "1"))   # experiments: rated speed, cutoff and power x fx (a
+        W = W * fx                                              # vendor simulator's unlimited motors: fx >> 1)
         gain = np.round(A1_BRAKE * T / W, 1) if e["brake_gain"] is None else np.tile(e["brake_gain"], 4).astype(float)
-        self.motor = dict(torque=T, speed=W, cutoff=W * e["cutoff_ratio"], power=np.full(12, float(e["power"])),
+        self.motor = dict(torque=T, speed=W, cutoff=W * e["cutoff_ratio"], power=np.full(12, float(e["power"]) * fx),
                           brake_speed=W * e["cutoff_ratio"], brake_gain=gain)
         damping = os.environ.get("BOLT_JOINT_DAMPING")
         self.joint_damping = float(damping) if damping else e["joint_damping"]

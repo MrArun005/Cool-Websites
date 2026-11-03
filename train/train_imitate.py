@@ -117,6 +117,8 @@ def main():
     ap.add_argument("--threads", type=int, default=2, help="torch threads")
     ap.add_argument("--root-vel-weight", type=float, help="reward weight of body velocity tracking (default 0.1, "
                     "DeepMimic); raise it if the exam's speed_ stays low while tracking is good")
+    ap.add_argument("--motor-speed-x", type=float, help="a real-robot body's motor speed, cutoff and power x this (an "
+                    "experiment: vendor simulators' motors have no speed limit); sets BOLT_MOTOR_SPEED_X")
     ap.add_argument("--moving-rate", type=float, default=0.0, help="share of tries starting in a walk or trot told at once "
                     "to sit or lie down (ImitateEnv moving_rate; 0: none)")
     ap.add_argument("--steer-max", type=float, default=0.0, help="yaw-rate command range (rad/s) for steering at walk/trot/"
@@ -150,6 +152,8 @@ def main():
     out = Path(__file__).with_name("runs") / args.name
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(args.threads)
+    if args.motor_speed_x:
+        os.environ["BOLT_MOTOR_SPEED_X"] = str(args.motor_speed_x)   # read by robot_bodies in every env process
     venv = make_vec_env(ImitateEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(
         clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None, root_global=args.root_global, steer_max=args.steer_max,
         steer_share=args.steer_share, steer_change=args.steer_change, steer_weight=args.steer_weight,

@@ -188,6 +188,16 @@ JOBS = {
         args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
               "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.5", "--steer-max", "0.8"],
         finals=[]),
+    "lite3-dog-4b": dict(
+        # 3 Nov, A/B with lite3-dog-4: the same, but the Lite3's motors 4x faster (rated speed, cutoff, power), i.e. close
+        # to DEEP's simulator, whose motors give 30 N·m at any speed. Question: is the brain's sensitivity to 3-15 ms of
+        # delay on DEEP's model the motor model? If 4b survives that delay there and 4 does not, the GPU run's
+        # --motor-speed-range is the right fix. Not a robot brain by itself (real motors are speed-limited).
+        name="lite3dog4b", script="train_imitate.py", start="../models/bolt-lite3-dog-61.8M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
+              "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.5", "--steer-max", "0.8",
+              "--motor-speed-x", "4"],
+        finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.
