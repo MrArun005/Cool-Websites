@@ -84,6 +84,26 @@ class Clip:
         return (tau / self.length) % 1.0 if self.loop else min(tau / self.length, 1.0)
 
 
+def predict(quat, gyro, q, dq, ahead):
+    """Latency compensation: the state `ahead` seconds from now, extrapolated at constant speed (joint angles with
+    their speeds; body rotation with the body-frame gyro). The brain then answers for the moment its command lands,
+    not the moment it was measured (PLAN.md 3 Nov: the Lite3 brain falls with 3-15 ms of command delay)."""
+    if ahead <= 0:
+        return quat, q
+    w = np.asarray(gyro, float) * ahead          # body-frame rotation vector
+    ang = float(np.linalg.norm(w))
+    if ang > 1e-9:
+        ax = w / ang
+        dqt = np.array([np.cos(ang / 2), *(np.sin(ang / 2) * ax)])
+        a, b = np.asarray(quat, float), dqt       # q_new = q * dq (body-frame increment)
+        quat = np.array([a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+                         a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+                         a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+                         a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0]])
+        quat = quat / np.linalg.norm(quat)
+    return quat, np.asarray(q, float) + np.asarray(dq, float) * ahead
+
+
 class Go2Controller:
     def __init__(self, brain, body="go2", clips=None, walk_down=0.0):
         """clips None: the motion clips, plus "jump" when the brain has its slot (a 9-slot brain never saw it).

@@ -35,7 +35,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from controller import DT, Go2Controller  # noqa: E402
+from controller import DT, Go2Controller, predict  # noqa: E402
 
 FALL_UP = np.cos(np.radians(60))
 
@@ -43,7 +43,7 @@ FALL_UP = np.cos(np.radians(60))
 RATED = np.tile([30.1, 30.1, 15.7], 4)   # Go2 joint speed limits (rad/s): hip, thigh, calf
 
 
-def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, est=None, errs=None, speeds=None, sign=1.0, rated=RATED):
+def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, est=None, errs=None, speeds=None, sign=1.0, rated=RATED, predict_ms=0.0):
     d = mujoco.MjData(m)
     mujoco.mj_resetDataKeyframe(m, d, 0) if m.nkey else None
     rng = np.random.default_rng(seed)
@@ -87,7 +87,8 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
                 errs.append(np.concatenate([v_use - v_true, [h_use - h_true]]))
             else:
                 v_use, h_use = v_true, h_true
-            new = ctl.step(d.qpos[3:7].copy(), d.qvel[3:6].copy(), q_ours, dq_ours, v_use, h_use)
+            pq, pj = predict(d.qpos[3:7].copy(), d.qvel[3:6].copy(), q_ours, dq_ours, predict_ms / 1000.0)
+            new = ctl.step(pq, d.qvel[3:6].copy(), pj, dq_ours, v_use, h_use)
             if rng.random() < skip_p:   # a missed brain step: the motors keep the old targets for another 20 ms
                 new = target
             lag = int(round(rng.uniform(*delay_ms) / 1000 / m.opt.timestep))   # the new targets reach the motors this late
@@ -111,6 +112,7 @@ def main():
     ap.add_argument("--pd-every", type=int, default=1)
     ap.add_argument("--damping", type=float, default=None)
     ap.add_argument("--tries", type=int, default=5)
+    ap.add_argument("--predict-ms", type=float, default=0.0, help="latency compensation: the brain sees the state this many ms ahead")
     ap.add_argument("--walk-down", type=float, default=0.0, help="s of walk between trot/pace/canter and sit/lie (0: off)")
     ap.add_argument("--stairs", action="store_true", help="keep the scene's bumps and staircase (default: flat floor)")
     ap.add_argument("--delay-ms", type=float, nargs=2, default=[0.0, 0.0], help="per step, the targets arrive U(lo, hi) ms late (< 20)")
@@ -140,7 +142,7 @@ def main():
     if a.estimate:
         from estimator import LegEstimator
     res = [run(ctl, m, plan, a.pd_every, kp, kd, seed, a.delay_ms, a.skip_p,
-               "ref" if a.vel_ref else (LegEstimator(body=a.body) if a.estimate else None), errs, speeds, sign, rated) for seed in range(a.tries)]
+               "ref" if a.vel_ref else (LegEstimator(body=a.body) if a.estimate else None), errs, speeds, sign, rated, a.predict_ms) for seed in range(a.tries)]
     if errs:
         e = np.abs(np.array(errs))
         print(f"estimator error (mean abs): velocity x/y/z {e[:, 0].mean():.3f} / {e[:, 1].mean():.3f} / {e[:, 2].mean():.3f} m/s, "
