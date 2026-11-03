@@ -41,6 +41,9 @@ robot-only inputs: 0/10 falls, 0/10 with 0-19 ms delay, 0/10 with 5% missed step
 - Known risk: in Unitree's simulator with its default joint damping (0.1) the 592M and 695M brains shake their calves past
   their rated speed (798M much less: 96 steps over 1.2x in 41 s, worst 1.89x) (PLAN.md log, 1 Nov 09:40); with damping 0.5-2.0 it does not. The hanging run tells which the
   real robot is: `replay_log.py hang1.npz --damping 0.1` vs `2.0`, and the calf speeds in the log.
+- run_go2.py's speed stop (2 Nov): damping mode when a joint stays over 1.2x its rated speed for 3 brain steps in a
+  row (60 ms) or goes over 3x once; the brain is eased in from the stance over its first 0.5 s (--ramp). Single
+  20 ms spikes at switches between moves are counted ("steps with a joint over 1.2x rated" at the end), not stopped.
 - Stop if: oscillation, a safety stop, or a joint over its rated speed. Compare `hang1.npz` against the same plan in
   `lockstep_vendor.py` before going on.
 
@@ -69,3 +72,20 @@ robot-only inputs: 0/10 falls, 0/10 with 0-19 ms delay, 0/10 with 5% missed step
       the simulator (PLAN.md phase 5) before the next training run.
 - [ ] Write what happened, falls included, in PLAN.md's log. Real-robot numbers replace "simulation" only for what
       was actually run.
+
+## Lite3 (DEEP Robotics), the second robot: what differs
+
+- Brain: `models/bolt-lite3-dog-20.9M/params.pkl` until a GPU-trained Lite3 brain passes the rehearsal (PLAN.md log).
+  It reads body velocity, from LegEstimator on the robot. Self-right brain: `models/bolt-lite3-selfright-28M`.
+- Link: DEEP's Lite3_MotionSDK through our bridge, not unitree_sdk2. Build `deploy/lite3_bridge/bridge.cpp` on the
+  robot's motion host (or a laptop on its network; the build line is at the top of the file), run `./lite3_bridge
+  --robot <robot ip> --bolt <laptop ip>`, then `python deploy/run_go2.py --body lite3 --host <bridge host>`.
+- Before the robot: `sim_lite3.py` (DEEP's own simulator) + `run_go2.py --body lite3` must stand the robot up from
+  lying; `lockstep_vendor.py --body lite3 --estimate` over the 41 s plan.
+- First check on the robot (motors off): turn it 90 degrees by hand and read the logged yaw rate. DEEP's header says
+  degrees/s, their own deploy code treats it as rad/s; if the log shows ~90 instead of ~1.6, restart the bridge with
+  `--gyro-deg`. Then lift a leg by hand: our joint angles are minus DEEP's (lite3_link.py), the logged thigh angle must
+  grow as the leg swings back.
+- Known gaps (PLAN.md 3 Nov): DEEP's simulator gives every motor a flat 30 N·m at any speed; the 38.8M brain falls
+  sit -> lie there (less with speed-limited motors).
+
