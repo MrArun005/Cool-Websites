@@ -148,18 +148,32 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
   </div>
 
   <section>
-    <h2>Bolt and the Go2</h2>
+    <h2>Bolt, the Go2 and the Lite3</h2>
     <div class="tbl"><table>
-      <tr><th>Item</th><th>Bolt</th><th>Unitree Go2</th></tr>
-      <tr><td>Knee directions</td><td class="v">&gt; &lt; (rear forward, front back)</td><td class="v diff">&lt; &lt; (all back)</td></tr>
-      <tr><td>Mass</td><td class="v">12.0 kg (most in the body)</td><td class="v diff">~15 kg (more in the legs)</td></tr>
-      <tr><td>Thigh / shin</td><td class="v">200 / 200 mm</td><td class="v diff">213 / 213 mm</td></tr>
-      <tr><td>Body centre when standing</td><td class="v">440 mm</td><td class="v diff">~300 mm</td></tr>
-      <tr><td>Peak torque, hip / knee</td><td class="v">33.5 / 33.5 N·m</td><td class="v diff">23.7 / 45.4 N·m</td></tr>
-      <tr><td>Speed, hip / knee</td><td class="v">21 / 21 rad/s</td><td class="v diff">30.1 / 15.7 rad/s</td></tr>
-      <tr><td>Where it exists</td><td class="v">simulation (our design)</td><td class="v diff">a robot you can buy</td></tr>
+      <tr><th>Item</th><th>Bolt</th><th>Unitree Go2</th><th>DEEP Robotics Lite3</th></tr>
+      <tr><td>Knee directions</td><td class="v">&gt; &lt; (rear forward, front back)</td><td class="v diff">&lt; &lt; (all back)</td><td class="v diff">&lt; &lt; (all back)</td></tr>
+      <tr><td>Mass</td><td class="v">12.0 kg (most in the body)</td><td class="v diff">~15 kg (more in the legs)</td><td class="v diff">11.9 kg</td></tr>
+      <tr><td>Thigh / shin</td><td class="v">200 / 200 mm</td><td class="v diff">213 / 213 mm</td><td class="v diff">200 / 210 mm</td></tr>
+      <tr><td>Body centre when standing</td><td class="v">440 mm</td><td class="v diff">~300 mm</td><td class="v diff">~350 mm</td></tr>
+      <tr><td>Peak torque, hip / knee</td><td class="v">33.5 / 33.5 N·m</td><td class="v diff">23.7 / 45.4 N·m</td><td class="v diff">24 / 36 N·m</td></tr>
+      <tr><td>Speed, hip / knee</td><td class="v">21 / 21 rad/s</td><td class="v diff">30.1 / 15.7 rad/s</td><td class="v diff">26.2 / 17.3 rad/s</td></tr>
+      <tr><td>Where it exists</td><td class="v">simulation (our design)</td><td class="v diff">a robot you can buy</td><td class="v diff">a robot you can buy</td></tr>
     </table></div>
-    <p class="sub" style="font-size:13.5px">The Go2 work uses a separate model and its own brains; Bolt's model and brains are untouched by it.</p>
+    <p class="sub" style="font-size:13.5px">The Go2 and Lite3 work uses each maker's own model and separate brains; Bolt's model and brains are untouched by it.</p>
+  </section>
+
+  <section>
+    <h2>Ready for a real robot? (simulation, 3 Nov 2026)</h2>
+    <div class="tbl"><table>
+      <tr><th>Check</th><th>Unitree Go2</th><th>DEEP Robotics Lite3</th></tr>
+      <tr><td>Robot brain</td><td class="v">damp-798M (no speed sensor needed)</td><td class="v">dog-61.8M (speed from the legs)</td></tr>
+      <tr><td>Maker's own model, 41 s routine</td><td class="v">0/10 falls</td><td class="v">0/3 falls</td></tr>
+      <tr><td>Falls recovered (side, back, tipped, shove)</td><td class="v">40/40</td><td class="v">40/40</td></tr>
+      <tr><td>Live run, maker's simulator</td><td class="v">29 s routine done</td><td class="v diff">done with 1 fall recovered; trot start weak</td></tr>
+      <tr><td>One-command setup and readiness check</td><td class="v">7/7</td><td class="v">8/8</td></tr>
+      <tr><td>Open</td><td class="v diff">sitting from a trot; jump</td><td class="v diff">a few ms of command delay at the trot start</td></tr>
+    </table></div>
+    <p class="sub" style="font-size:13.5px">All numbers are from simulation: neither robot has been run yet.</p>
   </section>
 
   <section>
