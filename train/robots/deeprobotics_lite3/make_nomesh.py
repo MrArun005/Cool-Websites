@@ -8,9 +8,10 @@ Changed:
     angles. The vendor uses -x / -y, so each axis is negated and its range negated and swapped: thigh [-2.67, 0.314] ->
     [-0.314, 2.67], knee [0.524, 2.792] -> [-2.792, -0.524]. A Bolt angle is minus the vendor's (the robot program
     flips the signs back).
-  * the STL collision meshes -> boxes / capsules sized from the meshes' bounds (the GPU trainer, MJX, is slow with
-    meshes; Go2's nomesh file does the same): trunk box 0.54 x 0.21 x 0.13 m, hip cylinder, thigh capsule along the
-    0.20 m thigh, shank capsule along the 0.21 m shank.
+  * the STL collision meshes -> boxes / capsules sized from the meshes' bounds in each body's frame (the GPU trainer,
+    MJX, is slow with meshes; Go2's nomesh file does the same): trunk box, hip cylinder, a thick thigh capsule offset
+    toward the body, and a shank capsule down to the foot (SHAPES below; the first version's thin, short legs never
+    touched the floor where DEEP's do, and a brain trained on it fell going sit -> lie on DEEP's model).
   * meshes, cameras, the lidar / depth sites and sensors dropped (robot_bodies adds Bolt's floor, light and servos);
     the IMU site kept. Rear legs renamed HL_ / HR_ -> RL_ / RR_ (Bolt finds a leg's geoms by that prefix). armature 0.01 added on every joint (rotor inertia; the vendor file has none, Go2's 0.01).
 """
@@ -41,11 +42,16 @@ def flip(j):
     j.set("range", f"{-hi:g} {-lo:g}")
 
 
-SHAPES = {   # body suffix -> collision geoms (attributes)
-    "TORSO": [dict(type="box", size="0.27 0.105 0.065")],
+# body suffix -> collision geoms; sizes from the vendor meshes' bounds in each body's own frame (measured 3 Nov: trunk x
+# -0.269..0.279, z -0.054..0.073; thigh y -0.090..0.027 on a left leg (the motor housing sits toward the body), z down
+# to -0.215; shank x -0.022..0.028, z down to -0.233, i.e. the shank mesh runs down over the foot: on DEEP's model the
+# shanks, not only the foot spheres, carry the robot whenever a leg is angled, and folded rear legs sit on them).
+# "{y}" = the thigh's inward offset, -0.031 on left legs, +0.031 on right.
+SHAPES = {
+    "TORSO": [dict(type="box", size="0.274 0.108 0.0635", pos="0.005 0 0.0095")],
     "HIP": [dict(type="cylinder", size="0.045 0.03", quat="0.707107 0.707107 0 0")],
-    "THIGH": [dict(type="capsule", fromto="0 0 -0.02 0 0 -0.17", size="0.03")],
-    "SHANK": [dict(type="capsule", fromto="0 0 -0.02 0 0 -0.185", size="0.016")],
+    "THIGH": [dict(type="capsule", fromto="0 {y} -0.01 0 {y} -0.18", size="0.042")],
+    "SHANK": [dict(type="capsule", fromto="0.003 0 0.0 0 0 -0.206", size="0.021")],   # ends where the foot ball takes over
 }
 for b in wb.iter("body"):
     name = b.get("name")
@@ -58,6 +64,8 @@ for b in wb.iter("body"):
             flip(c)
     kind = name.split("_")[-1]
     for i, a in enumerate(SHAPES.get(kind, [])):
+        y = "-0.031" if name[1:2] == "L" else "0.031"
+        a = {k: v.replace("{y}", y) for k, v in a.items()}
         g = ET.Element("geom", dict(name=f"{name}_col{i}", **a), **{"class": "collision"})
         b.insert(0 if kind != "TORSO" else 3, g)
 for e in root.iter():   # rear legs HL / HR -> Bolt's RL / RR (Bolt's envs tell legs apart by the name prefix)

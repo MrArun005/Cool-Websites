@@ -40,7 +40,7 @@ def check_golden(brain):
     """Torch-free parity (the robot's machine): replay the recorded steps through the controller and compare its inputs
     and joint targets with what the training env produced (recorded by a full run of this test, --save)."""
     g = np.load(golden_path(brain))
-    ctl = Go2Controller(brain)
+    ctl = Go2Controller(brain, body=brain_body(brain))
     worst_obs = worst_tgt = 0.0
     for i in range(len(g["tau"])):
         ctl.start_at(str(g["clip"][i]), float(g["tau"][i]))
@@ -62,14 +62,20 @@ def check_golden(brain):
     sys.exit(0 if ok else 1)
 
 
+def brain_body(brain):
+    """The body a params.pkl was trained for (mjx_imitate records it; brains from before that are Go2 brains)."""
+    import pickle
+    return pickle.loads(Path(brain).read_bytes()).get("body", "go2")
+
+
 def main():
     brain = next((x for x in sys.argv[1:] if not x.startswith("--")),
                  str(HERE.parent.parent / "models" / "bolt-go2-damp-798M" / "params.pkl"))
     if "--golden" in sys.argv:
         return check_golden(brain)
     from imitate_env import ImitateEnv
-    ctl = Go2Controller(brain)
-    env = ImitateEnv(randomize=False, seed=3, clips=MOTION_CLIPS, body="go2")
+    ctl = Go2Controller(brain, body=brain_body(brain))
+    env = ImitateEnv(randomize=False, seed=3, clips=MOTION_CLIPS, body=brain_body(brain))
     rec = {k: [] for k in ("clip", "tau", "steer", "last_action", "quat", "gyro", "q", "dq", "v_body", "height", "obs",
                            "target")}
     switch = None

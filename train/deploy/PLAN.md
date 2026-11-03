@@ -298,3 +298,14 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   model (lockstep, estimated v/h, 41 s plan) it falls 3/3 at sit -> lie, where 20.9M fell 0/3: better in our exam, worse
   in the vendor rehearsal, so 20.9M stays the Lite3 robot candidate for now. Self-right 28M: 10/10 from side, back and
   tipped (0.64 s). Running: lite3-dog-3 (moving sit/lie starts, steering), Kaggle CPU. GPU quota still out.
+- **3 Nov morning: why the Lite3 38.8M brain falls sit -> lie on DEEP's model (3/3) but not on ours (0/8).** Ruled
+  out, each by a direct test: the robot program's inputs (test_deploy.py now takes the brain's body: Lite3 inputs match
+  training to 1.2e-7, targets 4.8e-15, PASS), the velocity/height estimate (3/3 falls with true, estimated or reference
+  velocity), torque limits (24/24/36 as the URDF: 3/3), armature (3/3), the trunk mesh (collision off: 3/3). Found:
+  (1) our Lite3 collision legs were too thin and short: DEEP's shank mesh runs down over the foot (to -0.233 m) and its
+  thigh is thick and offset toward the body; lite3_nomesh.xml now matches their bounds (thigh capsule r 0.042 offset
+  0.031 inward, shank capsule r 0.021 down to the foot; clip check: no self-penetration, legs resting on the floor only
+  when sitting/lying, 1-8 mm). (2) DEEP's simulator gives every motor a flat 30 N·m at any speed; with a torque-speed
+  curve like ours (full to rated speed, 0 at 25/21 of it) 38.8M falls 1/3 at sit -> lie instead of 3/3: the brain
+  rises from sitting much harder on DEEP's unlimited motors. The real Lite3's motors are speed-limited (URDF 26.2 /
+  17.3 rad/s), so DEEP's model is the pessimistic case. Remaining gap: unexplained, small.
