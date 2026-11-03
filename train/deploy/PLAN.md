@@ -327,3 +327,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   the 29 s plan: run 1 fell at the trot start, rolled over, got up, resumed and finished the plan (37.6 s, standing);
   run 2 recovered a fall the same way, then stopped on a sustained knee over-speed at 10 s. The trot start on DEEP's
   undamped, unlimited motors is the Lite3's open problem: the queued GPU run trains delay, damping and motor speed.
+- **3 Nov: weight-space averaging/blending of Lite3 brains (train/weight_space.py), CPU only. Verdict: not adopted.**
+  DEEP's model: 61.8M | soup of last 5 checkpoints | soup of last 3 | 0.7 x 61.8M + 0.3 x 38.8M: 41 s plan falls 0/3 |
+  1/3 | 1/3 | 0/3; 3-6 ms delay 1/6 | 0/6 | 0/6 | 0/6. Confirmation, 61.8M vs the blend: 3-6 ms 1/12 vs 0/12, 5-15 ms
+  1/6 vs 3/6, recovery 20/20 both, moving sit/lie (12 tries each, our model) 0/48 vs 8/48 falls. The blend trades the
+  moving postures and long delays for short delays: worse overall, so 61.8M stays.
