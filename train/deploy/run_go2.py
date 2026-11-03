@@ -123,7 +123,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--body", default="go2", choices=["go2", "lite3"])
     ap.add_argument("--host", default="127.0.0.1", help="lite3: the simulator's or bridge's address")
-    ap.add_argument("--brain", default=None, help="default: the body's current brain (go2 damp-798M, lite3 dog-20.9M)")
+    ap.add_argument("--brain", default=None, help="default: the body's current brain (go2 damp-798M, lite3 dog-61.8M)")
     ap.add_argument("--plan", default="trot:6,sit:5,lie:6,getup:6,walk:6", help="clip:seconds[,clip:seconds...]")
     ap.add_argument("--steer", type=float, default=0.0)
     ap.add_argument("--iface", default="lo")
@@ -155,7 +155,7 @@ def main():
     a = ap.parse_args()
     if a.truth and a.domain == 0:
         sys.exit("--truth is a simulator-only shortcut (the real robot has no true velocity/height)")
-    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-20.9M" if a.body == "lite3" else "bolt-go2-damp-798M") / "params.pkl")
+    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-61.8M" if a.body == "lite3" else "bolt-go2-damp-798M") / "params.pkl")
     if a.body == "lite3":
         if a.truth or a.remote or a.recover or a.release_sport:
             sys.exit("--truth, --remote, --recover and --release-sport are Go2-only so far")

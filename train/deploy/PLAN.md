@@ -309,3 +309,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   curve like ours (full to rated speed, 0 at 25/21 of it) 38.8M falls 1/3 at sit -> lie instead of 3/3: the brain
   rises from sitting much harder on DEEP's unlimited motors. The real Lite3's motors are speed-limited (URDF 26.2 /
   17.3 rad/s), so DEEP's model is the pessimistic case. Remaining gap: unexplained, small.
+- **3 Nov ~09:00 IST: Lite3 robot brain -> `bolt-lite3-dog-61.8M`** (lite3-dog-3, CPU, moving sit/lie starts + steering):
+  sit/lie from a moving walk or trot 0 falls in 16 (38.8M: 11), exam fall rate 0.00, tracking 0.812, canter 0.52; on
+  DEEP's MJCF 0/3 falls over the 41 s plan (38.8M 3/3, 20.9M 0/3) with a third of 20.9M's over-speed steps. Still 3/3
+  falls with 5-15 ms delay there. Also new: `--motor-speed-range` in the GPU trainer; the queued Lite3 GPU run now
+  warms from 61.8M with damping 0.1-2.0, motor speed x1-4, 0-40 ms delay and the corrected leg collision shapes.
