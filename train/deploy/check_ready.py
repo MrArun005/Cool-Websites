@@ -40,17 +40,24 @@ def check(name, fix):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--iface", help="the robot's Ethernet interface (e.g. enp3s0); omit before the robot is connected")
+    ap.add_argument("--body", default="go2", choices=["go2", "lite3"])
     a = ap.parse_args()
+    global BRAIN, SELFRIGHT
+    lite = a.body == "lite3"
+    if lite:
+        BRAIN, SELFRIGHT = MODELS / "bolt-lite3-dog-61.8M" / "params.pkl", MODELS / "bolt-lite3-selfright-28M"
 
     @check("Python 3.10+", "use setup_go2.sh's venv (Python 3.11)")
     def _():
         assert sys.version_info >= (3, 10), sys.version
         return sys.version.split()[0]
 
-    @check("packages numpy, mujoco, gymnasium, cyclonedds, unitree_sdk2py", "re-run setup_go2.sh; source bolt-deps/env.sh")
+    mods = ("numpy", "mujoco", "gymnasium") + (() if lite else ("cyclonedds", "unitree_sdk2py"))
+
+    @check("packages " + ", ".join(mods), "re-run setup_go2.sh; source bolt-deps/env.sh")
     def _():
         v = {}
-        for m in ("numpy", "mujoco", "gymnasium", "cyclonedds", "unitree_sdk2py"):
+        for m in mods:
             v[m] = getattr(importlib.import_module(m), "__version__", "?")
         assert v["mujoco"].startswith("3."), v
         return ", ".join(f"{k} {x}" for k, x in v.items())
@@ -58,14 +65,16 @@ def main():
     @check("motion brain loads", f"is {BRAIN} in this checkout (git lfs / full clone)?")
     def _():
         from controller import Go2Controller
-        ctl = Go2Controller(str(BRAIN))
+        ctl = Go2Controller(str(BRAIN), body=a.body)
+        if lite:   # reads body velocity: from LegEstimator on the robot (0/3 falls on DEEP's model with it, PLAN.md)
+            return f"{BRAIN.parent.name}, velocity from the leg estimator"
         assert ctl.brain.blind_vel, "not a --blind-vel brain: it needs a velocity sensor a real Go2 lacks"
         return f"{BRAIN.parent.name}, no velocity input"
 
     @check("self-right brain loads (numpy)", f"run: python deploy/selfright.py export {SELFRIGHT} (needs SB3) or pull brain.npz")
     def _():
         from selfright import SelfRighter
-        sr = SelfRighter(SELFRIGHT)
+        sr = SelfRighter(SELFRIGHT, body=a.body)
         assert len(sr.layers) == 3
         return SELFRIGHT.name
 
@@ -83,8 +92,8 @@ def main():
         from controller import Go2Controller
         from estimator import LegEstimator
         from recovery import Recovery
-        ctl = Go2Controller(str(BRAIN))
-        rec, est = Recovery(ctl, SELFRIGHT), LegEstimator()
+        ctl = Go2Controller(str(BRAIN), body=a.body)
+        rec, est = Recovery(ctl, SELFRIGHT), LegEstimator(body=a.body)
         quat, q = np.array([1.0, 0, 0, 0]), ctl.stance.copy()
         ts = []
         for k in range(200):
@@ -99,13 +108,26 @@ def main():
         assert p99 < 10.0, f"99th percentile {p99:.1f} ms of the 20 ms budget"
         return f"motion + self-right + estimator: median {np.median(ts) * 1000:.2f} ms, 99% {p99:.2f} ms of 20 ms"
 
+    if lite:
+        @check("Lite3 link: DEEP's UDP protocol and model", "setup_go2.sh --lite3; source bolt-deps/env.sh (LITE3_MJCF)")
+        def _():
+            import os
+            import mujoco
+            out = subprocess.run([sys.executable, str(HERE / "lite3_link.py"), "selftest"], capture_output=True, text=True, timeout=60)
+            assert "PASS" in out.stdout, (out.stdout + out.stderr)[-300:]
+            m = mujoco.MjModel.from_xml_path(os.environ["LITE3_MJCF"])
+            assert m.nu == 12, m.nu
+            return "protocol selftest PASS; DEEP's Lite3.xml loads (12 motors)"
+
     @check("CycloneDDS opens a channel", "source bolt-deps/env.sh (CYCLONEDDS_HOME, LD_LIBRARY_PATH)")
     def _():
+        if lite:
+            return "not needed for the Lite3"
         out = subprocess.run([sys.executable, "-c", "from unitree_sdk2py.core.channel import ChannelFactoryInitialize;"
                               "ChannelFactoryInitialize(7, 'lo'); print('ok')"], capture_output=True, text=True, timeout=30)
         assert "ok" in out.stdout, (out.stdout + out.stderr)[-300:]
 
-    if a.iface:
+    if a.iface and not lite:
         @check(f"network {a.iface} on Unitree's subnet 192.168.123.x", f"set {a.iface} to e.g. 192.168.123.222/24")
         def _():
             import fcntl
