@@ -42,7 +42,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -178,6 +178,15 @@ JOBS = {
         name="lite3dog3", script="train_imitate.py", start="../models/bolt-lite3-dog-38.8M",
         args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
               "--switch-rate", "0.3", "--latency-ms", "0", "40", "--moving-rate", "0.5", "--steer-max", "0.8"],
+        finals=[]),
+    "lite3-dog-4": dict(
+        # 3 Nov: lite3-dog-3's brain (61.8M: moving sit/lie 0/16 falls, 0/3 falls on DEEP's MJCF) on the corrected leg
+        # collision shapes (lite3_nomesh.xml, 3 Nov) with up to 60 ms of control delay: on DEEP's model it still falls
+        # 3/3 with 5-15 ms of delay. Win: DEEP-model rehearsal with 5-15 ms delay <= 1/3 falls, plain 0/3, exam tracking
+        # >= 0.81, moving sit/lie falls <= 1 in 16.
+        name="lite3dog4", script="train_imitate.py", start="../models/bolt-lite3-dog-61.8M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
+              "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.5", "--steer-max", "0.8"],
         finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
