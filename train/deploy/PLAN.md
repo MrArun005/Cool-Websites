@@ -321,3 +321,9 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   blend + 0.3 s hold) before the getup: 0.4 s gave 11/20 (falls during the tuck), 1.0 s 20/20, then 10 tries each:
   Lite3 side / back / tipped / shove 10/10 each (fall to trotting again median 7.9 s); Go2 10/10 each (median 7.9 s,
   was 6.8). run_go2.py --body lite3 --recover now allowed (self-right brain models/bolt-lite3-selfright-28M).
+- **3 Nov: live Lite3 run in DEEP's simulator with --recover.** 61.8M falls 1/3 on DEEP's model with 3-6 ms of delay
+  (0/3 at 1-3 ms), so the live link now sends each new target at once (lite3_link.set) instead of on the next 2 ms
+  resend; the speed stop ignores the self-right and tuck (fast by design; --speed-hard still applies). Live, 2 runs of
+  the 29 s plan: run 1 fell at the trot start, rolled over, got up, resumed and finished the plan (37.6 s, standing);
+  run 2 recovered a fall the same way, then stopped on a sustained knee over-speed at 10 s. The trot start on DEEP's
+  undamped, unlimited motors is the Lite3's open problem: the queued GPU run trains delay, damping and motor speed.

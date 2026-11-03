@@ -287,7 +287,8 @@ def main():
                 else:
                     print(f"? {' '.join(c)} (clips: {', '.join(ctl.clips)}; steer X; stop)", flush=True)
             quat, gyro, q, dq, age = bot.read()
-            fast = bool(np.any(np.abs(dq) > rated * a.speed_stop)) if a.speed_stop else False
+            rolling = rec is not None and rec.mode in ("selfright", "tuck")   # rolling over is fast by design: only
+            fast = bool(np.any(np.abs(dq) > rated * a.speed_stop)) if a.speed_stop and not rolling else False   # --speed-hard
             fast_run, n_fast = (fast_run + 1 if fast else 0), n_fast + fast
             R = quat_to_mat(quat)
             if a.truth and bot.sport is not None:

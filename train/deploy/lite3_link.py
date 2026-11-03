@@ -98,21 +98,24 @@ class Lite3Robot:
             self.target = None if target is None else np.asarray(target, float).copy()
             if kp is not None:
                 self.kp, self.kd = kp, kd
+            tgt, kp, kd = self.target, self.kp, self.kd
+        self._send(tgt, kp, kd)   # at once: the writer's next resend could be up to 2 ms away, and every ms of delay
+                                  # counts on the Lite3 (PLAN.md 3 Nov: 61.8M falls 1/3 with 3-6 ms on DEEP's model)
 
-    def _writer(self):
+    def _send(self, tgt, kp, kd):
         z = np.zeros(12)
+        msg = pack_cmd(0.0, z, kd, z, z) if tgt is None else pack_cmd(kp, self.sign * tgt, kd, z, z)
+        try:
+            self.tx.sendto(msg, self.addr)
+        except OSError:
+            pass
+
+    def _writer(self):   # resends the newest command every 2 ms (DEEP's SDK drops control after 50 ms of silence)
         while self.running:
             t = time.perf_counter()
             with self.lock:
                 tgt, kp, kd = self.target, self.kp, self.kd
-            if tgt is None:   # damping mode: no position gain, only kd
-                msg = pack_cmd(0.0, z, kd, z, z)
-            else:
-                msg = pack_cmd(kp, self.sign * tgt, kd, z, z)
-            try:
-                self.tx.sendto(msg, self.addr)
-            except OSError:
-                pass
+            self._send(tgt, kp, kd)   # damping mode (tgt None): no position gain, only kd
             time.sleep(max(0.0, 0.002 - (time.perf_counter() - t)))
 
 
