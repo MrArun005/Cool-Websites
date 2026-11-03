@@ -82,6 +82,10 @@ robot-only inputs: 0/10 falls, 0/10 with 0-19 ms delay, 0/10 with 5% missed step
   --robot <robot ip> --bolt <laptop ip>`, then `python deploy/run_go2.py --body lite3 --host <bridge host>`.
 - Before the robot: `sim_lite3.py` (DEEP's own simulator) + `run_go2.py --body lite3` must stand the robot up from
   lying; `lockstep_vendor.py --body lite3 --estimate` over the 41 s plan.
+- Measure the command delay in the hanging test (log a small target step on one joint and the time until the joint
+  angle starts to move, minus the motor's own response in sim_lite3.py), then run with `--predict-ms <that delay>`.
+  Only with a measured value: on DEEP's model 20 ms of prediction cut falls at 5-15 ms delay from 6/12 to 2/12, but
+  5 ms of prediction with no delay caused 6/12 (PLAN.md 3 Nov).
 - First check on the robot (motors off): turn it 90 degrees by hand and read the logged yaw rate. DEEP's header says
   degrees/s, their own deploy code treats it as rad/s; if the log shows ~90 instead of ~1.6, restart the bridge with
   `--gyro-deg`. Then lift a leg by hand: our joint angles are minus DEEP's (lite3_link.py), the logged thigh angle must

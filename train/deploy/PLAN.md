@@ -332,3 +332,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   1/3 | 1/3 | 0/3; 3-6 ms delay 1/6 | 0/6 | 0/6 | 0/6. Confirmation, 61.8M vs the blend: 3-6 ms 1/12 vs 0/12, 5-15 ms
   1/6 vs 3/6, recovery 20/20 both, moving sit/lie (12 tries each, our model) 0/48 vs 8/48 falls. The blend trades the
   moving postures and long delays for short delays: worse overall, so 61.8M stays.
+- **3 Nov evening: latency compensation (controller.predict; run_go2 / lockstep_vendor --predict-ms).** The brain gets the
+  state extrapolated by the expected command delay (joints at their speed, body by its gyro). Lite3 61.8M on DEEP's
+  model, trot -> sit: 3-6 ms delay 1/24 -> 0/24 falls (4.5 ms ahead); 5-15 ms delay 6/12 -> 2/12 (20 ms), 3/12 (10 ms);
+  but with no delay, 5 ms ahead gives 6/12 falls (0/12 without). Over-predicting is as harmful as the delay, so the
+  default is off; set it to the delay measured on the robot (HARDWARE_DAY.md).
