@@ -364,3 +364,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   w4 119.6M (87.3M continued): collapsed, routine 4/6 (all in the trot), 5-15 ms 19/24, though its own exam still read
   0.772: long CPU fine-tuning with delay drifts past ~105M, and the exam does not see it. 87.3M stays. New workers w5
   (moving sit/lie 0.75) and w6 (switch rate 0.6), both from 87.3M with 0-60 ms; their checkpoints are tested as they come.
+- **4 Nov ~22:30 IST.** With the canter off (as run_go2 now does on the Lite3), 87.3M on DEEP's model: a no-canter
+  41 s routine with 3-6 ms delay 0/12 falls; trot -> sit 5-15 ms 2/24 again (4/48 over two runs). w5 93M (moving 0.75):
+  no-canter routine 2/12 (trot), trot -> sit 1/24 + 1/24 = 2/48: better sits, worse routine, not adopted. w6 92M
+  (switch 0.6): routine 1/6, 5-15 ms 5/24, no. 87.3M stays; CPU fine-tuning has plateaued since 87.3M.
