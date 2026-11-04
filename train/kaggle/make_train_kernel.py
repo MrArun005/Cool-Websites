@@ -214,6 +214,24 @@ JOBS = {
         args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "canter", "turn_left", "turn_right", "sit", "lie",
               "getup", "--switch-rate", "0.3", "--latency-ms", "0", "80", "--moving-rate", "0.5", "--steer-max", "0.8"],
         finals=[]),
+    "lite3-dog-7": dict(
+        # 4 Nov night: fine-tunes from 87.3M at lr 1e-4 have plateaued (dog-5/6, workers 1-6: none beat it on DEEP's
+        # model; w4 collapsed past ~105M). A gentler step: lr 3e-5 and target-kl 0.01, the delay DEEP's model needs
+        # (0-40 ms), the canter left as is. Win: trot->sit 5-15 ms < 2/24 with the no-canter routine 0/12.
+        name="lite3dog7", script="train_imitate.py", start="../models/bolt-lite3-dog-87.3M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
+              "--switch-rate", "0.3", "--latency-ms", "0", "40", "--moving-rate", "0.5", "--steer-max", "0.8",
+              "--lr", "3e-5", "--target-kl", "0.01"],
+        finals=[]),
+    "lite3-dog-8": dict(
+        # 4 Nov night: as lite3-dog-7 (lr 3e-5, target-kl 0.01) with the sit drawn 2x and moving starts 0.6: the
+        # remaining 87.3M falls under delay are trot -> sit (2/24 twice). Win: trot->sit 5-15 ms <= 1/24 on two runs,
+        # no-canter routine 0/12.
+        name="lite3dog8", script="train_imitate.py", start="../models/bolt-lite3-dog-87.3M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "sit", "lie",
+              "getup", "--switch-rate", "0.3", "--latency-ms", "0", "40", "--moving-rate", "0.6", "--steer-max", "0.8",
+              "--lr", "3e-5", "--target-kl", "0.01"],
+        finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.
