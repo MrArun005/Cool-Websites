@@ -348,3 +348,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   recovery 20/20 and moving sit/lie 0/48 both; our exam tracking 0.803 -> 0.780; no-delay routine 0/3 -> 1/6. Blends of
   63.8M and 87.3M and a four-checkpoint average did not beat it. From now on every run's late checkpoints are tested on
   DEEP's model with delay, not only its exam-best. Open: the canter under delay (every remaining routine fall).
+- **4 Nov ~08:00 IST: workers.** w1 (61.8M + motor speed x2): best stayed at its start (exam 0.808), dead end, closed.
+  w2 (61.8M + 10-60 ms delay): its last checkpoint (109.4M) on DEEP's model with delay: routine with 3-6 ms 3/6 falls,
+  5-15 ms 5/24 (87.3M: 1/6, 2/24): not adopted. Started w3 (87.3M + canter drawn 3x + 0-60 ms) and w4 (87.3M continued,
+  0-60 ms), 9.5 h each, pushing best and latest checkpoints.
