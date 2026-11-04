@@ -360,3 +360,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   the self-right stuck at ~57 degrees (8 s timeout did not help, back to 4 s). The self-right brain predates the leg-shape
   fix: Kaggle job lite3-selfright-2 fine-tunes it on the corrected body. Kaggle lite3-dog-6 (87.3M + canter x2 + 0-80 ms)
   running.
+- **4 Nov evening: worker finals under delay (DEEP's model).** w3 115.6M (canter x3): routine with 3-6 ms 1/6, 5-15 ms 8/24.
+  w4 119.6M (87.3M continued): collapsed, routine 4/6 (all in the trot), 5-15 ms 19/24, though its own exam still read
+  0.772: long CPU fine-tuning with delay drifts past ~105M, and the exam does not see it. 87.3M stays. New workers w5
+  (moving sit/lie 0.75) and w6 (switch rate 0.6), both from 87.3M with 0-60 ms; their checkpoints are tested as they come.
