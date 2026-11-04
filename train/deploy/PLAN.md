@@ -368,3 +368,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   41 s routine with 3-6 ms delay 0/12 falls; trot -> sit 5-15 ms 2/24 again (4/48 over two runs). w5 93M (moving 0.75):
   no-canter routine 2/12 (trot), trot -> sit 1/24 + 1/24 = 2/48: better sits, worse routine, not adopted. w6 92M
   (switch 0.6): routine 1/6, 5-15 ms 5/24, no. 87.3M stays; CPU fine-tuning has plateaued since 87.3M.
+- **4 Nov ~22:25 IST (16:55 UTC).** Live pet mode on DEEP's simulator (run_go2 --body lite3 --pet --recover) answers and
+  acts; its 2 falls were sit commanded while lying. Lockstep on DEEP's model: trot:4,lie:6,sit:5 fell 6/6 (in sit, with
+  or without delay), trot:4,lie:6,getup:6,sit:5 0/6 - training only leaves lie by getup. Controller now plays the get-up
+  first for any move commanded while lying (or mid-get-up), then the move 0.2 s after it ends: trot:4,lie:6,sit:5 0/6,
+  and 0/6 with 3-6 ms delay; Go2 trot/lie/sit/walk 0/4; test_deploy PASS.

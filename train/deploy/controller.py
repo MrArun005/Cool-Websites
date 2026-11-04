@@ -31,6 +31,7 @@ CLIP_DIR = HERE.parent / "dogmotion" / "clips"
 # as imitate_env (copied, not imported: imitate_env pulls in torch and SB3, which the robot does not need)
 ALL_CLIPS = ["walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup", "jump"]
 MOTION_CLIPS = ALL_CLIPS[:9]   # what every brain knows; "jump" only for a brain with the 10th slot
+GETUP_DONE = 0.2                   # seconds past the get-up's end before a move commanded while lying starts
 THEN = {"jump": ("trot", 0.2)}   # a clip that ends running: hand over to this gait this long after its end (training's
                                  # hold, imitate_env.CLIP_HOLD), joining at the closest pose
 STEER_CLIPS = ("walk", "trot", "pace", "canter")
@@ -121,6 +122,7 @@ class Go2Controller:
         self.steer = 0.0
         self.clip, self.tau = self.clips["trot" if "trot" in self.clips else clips[0]], 0.0
         self.walk_down, self.queued = float(walk_down), None   # queued: (posture, seconds of walk left)
+        self.after_getup = None   # a move commanded while lying: played once the get-up has finished (see command)
 
     # ---------- commands ----------
     def command(self, name, steer=None, q=None):
@@ -130,6 +132,13 @@ class Go2Controller:
             self.steer = float(steer)
         if self.queued and name != self.queued[0]:
             self.queued = None          # a new command replaces a posture still waiting for the walk
+        self.after_getup = None         # a new command replaces a move still waiting for the get-up
+        # lying (or still getting up), any move but lie / getup goes through the get-up first: training only ever
+        # leaves lie by getup, and sit straight from lie fell 6 of 6 times on DEEP's Lite3 model (PLAN.md 4 Nov)
+        if (name not in ("lie", "getup") and "getup" in self.clips
+                and (self.clip.name == "lie" or (self.clip.name == "getup" and self.finished() < GETUP_DONE))):
+            self.after_getup = name
+            name = "getup"
         if name == self.clip.name:
             return
         if (name in SLOW_FIRST and self.clip.name in FAST and self.walk_down > 0 and "walk" in self.clips
@@ -183,6 +192,8 @@ class Go2Controller:
             if self.queued[1] <= 1e-9:
                 name, self.queued = self.queued[0], None
                 self.command(name, q=q)
+        if self.after_getup and self.clip.name == "getup" and self.finished() >= GETUP_DONE:
+            self.command(self.after_getup, q=q)
         nxt = THEN.get(self.clip.name)
         if nxt and nxt[0] in self.clips and self.finished() >= nxt[1]:
             self.command(nxt[0], q=q)
