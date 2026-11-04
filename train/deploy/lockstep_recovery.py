@@ -80,12 +80,12 @@ def main():
             d = mujoco.MjData(m)
             if kind == "shove":   # trotting, then pushed over sideways
                 d.qpos[2], d.qpos[3:7], d.qpos[7:19] = ctl.body.stand_height, euler_quat(0, 0, rng.uniform(-np.pi, np.pi)), sign * stance
-                ctl.start_at("trot", 0.0)
+                ctl.reset("trot")
             else:   # dropped from 0.35 m in a fallen pose
                 roll, pitch = draw()
                 d.qpos[2], d.qpos[3:7] = 0.35, euler_quat(roll, pitch, rng.uniform(-np.pi, np.pi))
                 d.qpos[7:19] = sign * (stance + rng.normal(0, 0.1, 12))
-                ctl.start_at("lie", 0.0)
+                ctl.reset("lie")
             ctl.last_action[:] = 0
             mujoco.mj_forward(m, d)
             target = sign * d.qpos[7:19].copy()

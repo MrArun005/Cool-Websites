@@ -58,7 +58,7 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
     ours = [ctl.body.joints.index(ren(mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, j))) for j in act_joint]
     n_sub = int(round(DT / m.opt.timestep))
     target = ctl.stance.copy()
-    ctl.last_action[:] = 0
+    ctl.reset()   # every try starts fresh: a try that fell lying must not leave the next one lying (or waiting on a get-up)
     for k in range(int(1.0 / DT)):   # settle 1 s on the stance
         for s in range(n_sub):
             if s % pd_every == 0:

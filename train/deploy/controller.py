@@ -152,6 +152,14 @@ class Go2Controller:
             self.tau = 0.0
         self.clip = c
 
+    def reset(self, name="trot"):
+        """A fresh start (a new try in the rehearsals): clip `name` from its start, nothing queued, no last action."""
+        self.clip, self.tau, self.steer = self.clips[name], 0.0, 0.0
+        self.queued = self.after_getup = None
+        self.last_action[:] = 0.0
+        if hasattr(self.brain, "reset"):
+            self.brain.reset()
+
     def start_at(self, name, tau):
         """Set the clip and its time directly (tests, and starting from a known state)."""
         self.clip, self.tau = self.clips[name], float(tau)
