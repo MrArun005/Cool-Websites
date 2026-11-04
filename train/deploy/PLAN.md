@@ -352,3 +352,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   w2 (61.8M + 10-60 ms delay): its last checkpoint (109.4M) on DEEP's model with delay: routine with 3-6 ms 3/6 falls,
   5-15 ms 5/24 (87.3M: 1/6, 2/24): not adopted. Started w3 (87.3M + canter drawn 3x + 0-60 ms) and w4 (87.3M continued,
   0-60 ms), 9.5 h each, pushing best and latest checkpoints.
+- **4 Nov afternoon.** Tested on DEEP's model with delay: w3 101M (canter x3) routine 1/6, 5-15 ms 6/24; w4 104M routine
+  0/6, 5-15 ms 2/24, but on 12 more delayed routines 4/12 vs 87.3M's 3/12 (with no delay 0/6 vs 1/6): a tie, 87.3M
+  stays; lite3-dog-5 (63.8M + 0-80 ms) late checkpoints 3/6 and 6-10/24: worse, dropped. Nearly every fall under delay
+  is in the canter, so run_go2.py now runs canter requests as trot on the Lite3 by default (--no-canter / --allow-canter).
+  Live in DEEP's simulator (5 runs, --recover): 2 finished the plan after a recovered fall; 3 fell at the trot start and
+  the self-right stuck at ~57 degrees (8 s timeout did not help, back to 4 s). The self-right brain predates the leg-shape
+  fix: Kaggle job lite3-selfright-2 fine-tunes it on the corrected body. Kaggle lite3-dog-6 (87.3M + canter x2 + 0-80 ms)
+  running.

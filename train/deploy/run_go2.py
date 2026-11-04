@@ -136,6 +136,9 @@ def main():
     ap.add_argument("--predict-ms", type=float, default=None, help="latency compensation: the brain answers for the state this "
                     "many ms ahead; set it to the robot's measured command delay (default 0: off). PLAN.md 3 Nov: Lite3, DEEP's model, 5-15 ms "
                     "of delay 6/12 -> 2/12 falls with 20 ms; but with no delay 5 ms ahead makes 6/12 falls")
+    ap.add_argument("--no-canter", dest="no_canter", action="store_true", default=None,
+                    help="every canter request (plan, keyboard, pet, remote) runs as a trot; default on for the Lite3")
+    ap.add_argument("--allow-canter", dest="no_canter", action="store_false", help="let the brain canter (Lite3 default off)")
     ap.add_argument("--ramp", type=float, default=0.5, help="s to ease from the stance into the brain's targets at the start (0: none)")
     ap.add_argument("--margin", type=float, default=0.05)
     ap.add_argument("--damp-kd", type=float, default=2.0)
@@ -180,6 +183,12 @@ def main():
             _, r = msc.CheckMode()
 
     ctl = Go2Controller(a.brain, body=a.body)
+    if a.no_canter is None:   # Lite3: on until a brain canters reliably with command delay (PLAN.md 4 Nov: nearly every
+        a.no_canter = a.body == "lite3"   # fall under 3-6 ms delay on DEEP's model is in the canter)
+    if a.no_canter:
+        _command = ctl.command
+        ctl.command = lambda name, *args, **kw: _command("trot" if name == "canter" else name, *args, **kw)
+        print("canter requests run as trot (--no-canter)", flush=True)
     body = ctl.body
     kp = (a.kp or body.entry["kp"]) * a.gain_scale
     kd = (a.kd or body.entry["kv"]) * a.gain_scale

@@ -42,7 +42,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M", "bolt-lite3-selfright-28M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -218,6 +218,14 @@ JOBS = {
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.
         name="lite3selfright", script="train_getup.py", start=None,
+        args=["--body", "lite3", "--goal", "selfright", "--hard", "--latency-min-ms", "0", "--latency-max-ms", "40"],
+        finals=[]),
+    "lite3-selfright-2": dict(
+        # 4 Nov: the Lite3 self-right brain (28M) was trained before the leg collision shapes were corrected (3 Nov:
+        # thicker thighs, shanks down to the foot). Live in DEEP's simulator, after a fall from a trot, it twice got stuck
+        # at ~57 degrees for 4-8 s. Fine-tune it on the corrected body with tough falls and 0-40 ms delay. Win: still
+        # 10/10 from side, back and tipped, and no stuck tries in lockstep_recovery on DEEP's model.
+        name="lite3selfright2", script="train_getup.py", start="../models/bolt-lite3-selfright-28M",
         args=["--body", "lite3", "--goal", "selfright", "--hard", "--latency-min-ms", "0", "--latency-max-ms", "40"],
         finals=[]),
     "go2-jump-pilot": dict(
