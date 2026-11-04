@@ -390,3 +390,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   earlier 7/12 for 103M's canter routine was a test artifact: the rehearsal reused the controller between tries, so a
   try that fell lying started the next one in lie, and the new lie rule sent its trot through a get-up from standing.
   Rehearsals now reset the controller every try.)
+- **5 Nov ~04:50 IST (4 Nov 23:20 UTC). New Lite3 brain: worker 5's final, 112M (models/bolt-lite3-dog-112M).** Workers
+  5 and 6 finished (9.5 h, ~112M). On DEEP's model: w5 112M no-canter routine 3-6 ms 0/12 + 0/12, trot->sit 5-15 ms
+  0/24 + 0/24 (87.3M 4/48), canter routine 5/12 (87.3M 2/12), recovery 20/20, moving 0/48; exam tracking 0.756 / steer
+  0.456 (87.3M 0.780 / 0.449); live on DEEP's simulator without the canter 4/4 with no fall and no stop. w6 111.5M:
+  steer 0.509 but trot->sit 5/24, no. Adopted 112M as the default (run_go2, lockstep_vendor, lockstep_recovery,
+  check_ready; golden recorded; check_ready --body lite3 8/8) since the Lite3 canter already runs as a trot; 87.3M
+  stays in models/ for --allow-canter runs. Workers 7 (lr 3e-5, steer weight 0.25, 0-40 ms) and 8 (lr 3e-5, canter x2,
+  0-80 ms) started from 87.3M at 22:38 UTC.
