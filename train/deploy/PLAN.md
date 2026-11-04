@@ -375,3 +375,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   and 0/6 with 3-6 ms delay; Go2 trot/lie/sit/walk 0/4; test_deploy PASS.
   Live on DEEP's simulator in real time (sim_lite3 + run_go2 --recover, getup:4,trot:4,lie:6,sit:5,walk:5): 3/3 runs with
   no fall and nothing to recover (body up 0.91-0.94 at the end; 0-5 of 1200 steps late; 4-8 steps over 1.2x rated).
+- **4 Nov ~02:30 IST 5 Nov (21:00 UTC).** Kaggle lite3-dog-6 (87.3M + canter x2 + 0-80 ms) on DEEP's model, no-canter
+  routine 3-6 ms (12) / trot->sit 5-15 ms (24): best/ 88.3M 1/12, 7/24; 98M 0/12, 2/24; **103M 0/12, 1/24** (being
+  confirmed); 108M 1/12, 7/24. Worker 5 104M 1/12, 1/24. Kaggle lite3-selfright-2 (28M fine-tuned on the corrected legs):
+  its exam saturates (best/ stays 28M); the faster 67M checkpoint recovers 32/40 on DEEP's model (1 ms) against 39/40 for
+  28M: not adopted. lockstep_recovery at 5 ms physics fails most Lite3 tries (12/40) because the motion brain's get-up
+  tips over at 5 ms, with either controller; DEEP's simulator steps 1 ms, so the Lite3 default is now --dt 0.001.
+  Kaggle GPU quota still out. Started lite3-dog-7/8: gentler fine-tunes of 87.3M (lr 3e-5, target-kl 0.01, 0-40 ms;
+  8 with sit x2, moving 0.6).

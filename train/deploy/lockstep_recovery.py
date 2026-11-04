@@ -41,7 +41,8 @@ def main():
     ap.add_argument("--brain", default=None, help="default: the body's motion brain")
     ap.add_argument("--tries", type=int, default=6)
     ap.add_argument("--damping", type=float, default=None, help="joint damping (default: Go2 0.1, Unitree's; Lite3 the file's, 0)")
-    ap.add_argument("--dt", type=float, default=0.005)
+    ap.add_argument("--dt", type=float, default=None, help="physics step (default: Go2 0.005; Lite3 0.001, DEEP's own "
+                    "simulator's: at 5 ms the Lite3 motion brain's get-up tips over, 3/12, and 39/40 at 1 ms, PLAN.md 4 Nov)")
     ap.add_argument("--shove", type=float, default=2.5, help="sideways push (m/s) plus a roll kick, for the shove tries")
     a = ap.parse_args()
     M = HERE.parent.parent / "models"
@@ -54,6 +55,8 @@ def main():
     else:
         m = mujoco.MjModel.from_xml_path(str(Path(os.environ["UNITREE_MUJOCO"]) / "unitree_robots" / "go2" / "scene.xml"))
         flatten(m)
+    if a.dt is None:
+        a.dt = 0.001 if lite else 0.005
     m.opt.timestep = a.dt
     if a.damping is not None or not lite:
         m.dof_damping[6:] = 0.1 if a.damping is None else a.damping
