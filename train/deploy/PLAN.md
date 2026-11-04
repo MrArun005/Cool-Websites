@@ -373,3 +373,5 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   or without delay), trot:4,lie:6,getup:6,sit:5 0/6 - training only leaves lie by getup. Controller now plays the get-up
   first for any move commanded while lying (or mid-get-up), then the move 0.2 s after it ends: trot:4,lie:6,sit:5 0/6,
   and 0/6 with 3-6 ms delay; Go2 trot/lie/sit/walk 0/4; test_deploy PASS.
+  Live on DEEP's simulator in real time (sim_lite3 + run_go2 --recover, getup:4,trot:4,lie:6,sit:5,walk:5): 3/3 runs with
+  no fall and nothing to recover (body up 0.91-0.94 at the end; 0-5 of 1200 steps late; 4-8 steps over 1.2x rated).
