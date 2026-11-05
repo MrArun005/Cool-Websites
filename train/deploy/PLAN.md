@@ -412,3 +412,9 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   trot->sit 9/24, exam tracking 0.800 / steer 0.583 (best tracking and steering yet, worst sits); w8 106M routine 0/12,
   trot->sit 0/24, 0.754 / 0.471. Blends of 112M with w7 109M: 25% routine 2/12 (trot), sits 0/24, 0.776 / 0.442; 35%
   routine 1/12, sits 4/24. w7 has drifted too far from 112M for a blend to keep both; the current blend stays.
+- **5 Nov 05:25 UTC: paused.** No robot to test on yet, and simulation training has reached diminishing returns, so
+  the paid compute is stopped: the 4-hourly loop is disabled and workers 7/8 were stopped and archived (their last
+  checkpoints, w7 109M and w8 106M, are on claude/bolt-worker-7/-8). Kaggle dog-7/8 (free) finish on their own; their
+  outputs can be fetched later with `kaggle kernels output arunmallikarjuna/bolt-lite3-dog-7` (and -8). Robot brains as
+  of now: Go2 models/bolt-go2-damp-798M, Lite3 models/bolt-lite3-dog-blend-112M-w7. Next real step: a hardware day
+  (HARDWARE_DAY.md) on a borrowed or owned robot.
