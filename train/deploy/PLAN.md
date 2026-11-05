@@ -398,3 +398,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   check_ready; golden recorded; check_ready --body lite3 8/8) since the Lite3 canter already runs as a trot; 87.3M
   stays in models/ for --allow-canter runs. Workers 7 (lr 3e-5, steer weight 0.25, 0-40 ms) and 8 (lr 3e-5, canter x2,
   0-80 ms) started from 87.3M at 22:38 UTC.
+- **5 Nov 01:30 UTC check.** Kaggle dog-7/8 running; GPU quota still out. First worker checkpoints on DEEP's model:
+  w7 92M (lr 3e-5, steer weight 0.25, 0-40 ms) no-canter routine 0/12, trot->sit 5-15 ms 6/24, but our exam tracking
+  0.788 / steer 0.506 (best yet; 112M 0.756 / 0.456); w8 94M (lr 3e-5, canter x2, 0-80 ms) routine 1/12 (trot),
+  trot->sit 0/24, tracking 0.764 / steer 0.439. Neither replaces 112M; later checkpoints are tested as they come.
