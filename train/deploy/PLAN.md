@@ -418,3 +418,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   outputs can be fetched later with `kaggle kernels output arunmallikarjuna/bolt-lite3-dog-7` (and -8). Robot brains as
   of now: Go2 models/bolt-go2-damp-798M, Lite3 models/bolt-lite3-dog-blend-112M-w7. Next real step: a hardware day
   (HARDWARE_DAY.md) on a borrowed or owned robot.
+- **5 Nov ~10:30 UTC. Free-compute training (this session + Kaggle).** Local keepalive job l1 (112M + canter x2,
+  lr 3e-5, 0-60 ms, 9 h) and Kaggle lite3-dog-9 (112M + steer weight 0.25, lr 2e-5) and -10 (112M + canter x3, lr 2e-5)
+  running. Kaggle dog-7/8 done: on DEEP's model with delay, dog-7 best 105M routine 3/12, trot->sit 4/24 (tracking
+  0.807 / steer 0.485); dog-8 104M 2/12, 4/24; dog-8 108M 4/12, 9/24. Blend robot brain + 25% dog-7 105M: routine 0/24,
+  trot->sit 2/48, **canter routine 0/12** (robot brain 2/12), recovery 20/20, moving 0/48, 0.791 / 0.475: not the
+  default (sits), kept as models/bolt-lite3-dog-canter-candidate for --allow-canter runs. 15% blend: trot->sit 1/48,
+  canter 2/12: nothing gained.
