@@ -1,4 +1,4 @@
-# bolt-lite3-dog-112M (the Lite3 robot brain from 5 Nov)
+# bolt-lite3-dog-112M (the Lite3 robot brain 4 Nov 23:20 - 5 Nov 03:00 UTC; now 75% of the blend bolt-lite3-dog-blend-112M-w7)
 
 DEEP Robotics Lite3 motion brain, simulation only. Cloud worker 5: fine-tuned from bolt-lite3-dog-87.3M with moving
 sit/lie starts 0.75 and 0-60 ms of command delay; its final checkpoint, 111,981,608 steps (policy.zip +

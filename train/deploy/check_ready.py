@@ -45,7 +45,7 @@ def main():
     global BRAIN, SELFRIGHT
     lite = a.body == "lite3"
     if lite:
-        BRAIN, SELFRIGHT = MODELS / "bolt-lite3-dog-112M" / "params.pkl", MODELS / "bolt-lite3-selfright-28M"
+        BRAIN, SELFRIGHT = MODELS / "bolt-lite3-dog-blend-112M-w7" / "params.pkl", MODELS / "bolt-lite3-selfright-28M"
 
     @check("Python 3.10+", "use setup_go2.sh's venv (Python 3.11)")
     def _():

@@ -47,7 +47,7 @@ the Go2 brain finishes a 41 s trot / sit / lie / get-up / walk / canter routine 
 5% of control steps lost and with 0-19 ms of command delay); both robots recover from 40 falls out of 40 (side, back,
 tipped, shoved); the full routine also runs live, in real time, in Unitree's simulator. The Lite3 brain, with commands
 3-15 ms late on DEEP's model, finishes 24 of 24 routines and 48 of 48 trot -> sit without a fall, but still falls in
-the canter (5 of 12), so the robot program runs its canter as a trot; and the Go2's knees go past 1.2x their rated speed in ~0.5% of control steps at
+the canter (2 of 12), so the robot program runs its canter as a trot; and the Go2's knees go past 1.2x their rated speed in ~0.5% of control steps at
 Unitree's default joint damping. Every number, with the command that made it, is in
 [`train/deploy/PLAN.md`](train/deploy/PLAN.md).
 

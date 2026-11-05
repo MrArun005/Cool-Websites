@@ -402,3 +402,9 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   w7 92M (lr 3e-5, steer weight 0.25, 0-40 ms) no-canter routine 0/12, trot->sit 5-15 ms 6/24, but our exam tracking
   0.788 / steer 0.506 (best yet; 112M 0.756 / 0.456); w8 94M (lr 3e-5, canter x2, 0-80 ms) routine 1/12 (trot),
   trot->sit 0/24, tracking 0.764 / steer 0.439. Neither replaces 112M; later checkpoints are tested as they come.
+- **5 Nov ~03:00 UTC. New Lite3 brain: a weight-space blend, 0.75 x 112M + 0.25 x worker 7's 92M
+  (models/bolt-lite3-dog-blend-112M-w7).** w7 92M tracks and steers best (0.788 / 0.506) but trot->sit 6/24; 50/50
+  blend 0.789 / 0.477 but 3/24; 75/25 blend: no-canter routine 0/12 + 0/12, trot->sit 0/24 + 0/24, canter routine 2/12
+  (112M 5/12), recovery 20/20, moving 0/48, tracking 0.775 / steer 0.441 (112M 0.756 / 0.456), live 4/4 with no fall
+  and no stop. Adopted (defaults swapped, golden recorded, check_ready --body lite3 8/8). First weight-space win: the
+  blend keeps one parent's delay robustness and takes part of the other's tracking.
