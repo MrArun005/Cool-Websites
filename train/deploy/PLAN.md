@@ -408,3 +408,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   (112M 5/12), recovery 20/20, moving 0/48, tracking 0.775 / steer 0.441 (112M 0.756 / 0.456), live 4/4 with no fall
   and no stop. Adopted (defaults swapped, golden recorded, check_ready --body lite3 8/8). First weight-space win: the
   blend keeps one parent's delay robustness and takes part of the other's tracking.
+- **5 Nov 05:30 UTC check.** Kaggle dog-7/8 still running; GPU quota out. On DEEP's model: w7 109M routine 0/12,
+  trot->sit 9/24, exam tracking 0.800 / steer 0.583 (best tracking and steering yet, worst sits); w8 106M routine 0/12,
+  trot->sit 0/24, 0.754 / 0.471. Blends of 112M with w7 109M: 25% routine 2/12 (trot), sits 0/24, 0.776 / 0.442; 35%
+  routine 1/12, sits 4/24. w7 has drifted too far from 112M for a blend to keep both; the current blend stays.
