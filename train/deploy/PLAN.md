@@ -425,3 +425,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   trot->sit 2/48, **canter routine 0/12** (robot brain 2/12), recovery 20/20, moving 0/48, 0.791 / 0.475: not the
   default (sits), kept as models/bolt-lite3-dog-canter-candidate for --allow-canter runs. 15% blend: trot->sit 1/48,
   canter 2/12: nothing gained.
+- **5 Nov ~22:30 UTC.** Kaggle dog-9/10 (from 112M, lr 2e-5) on DEEP's model with delay: dog-9 132M (steer weight
+  0.25) routine 0/12, trot->sit 3/24, steer 0.580; dog-9 122M 0/12, 1/24, 0.475; dog-10 120M 0/12, 2/24; **dog-10 130M
+  (canter x3) routine 0/24, trot->sit 0/48, recovery 20/20, moving 0/48, tracking 0.777 / steer 0.516, but canter
+  routine 7/12 and live 17-25 steps over 1.2x rated (robot brain 7-14)**: kept as
+  models/bolt-lite3-dog-steer-candidate-130M, not the default. Blends with the robot brain: +25% dog-9 132M sits 2/24;
+  50/50 with 130M sits 0/48, canter 4/12, 0.782 / 0.462: no. Robot brain unchanged. Started Kaggle lite3-dog-11
+  (steering + sit x2) and -12 (canter x2, 2-20 ms) from 112M. The local job only trains while this session is busy
+  (the idle cloud machine is reclaimed ~20 min after a check), so Kaggle carries the training.
