@@ -250,6 +250,24 @@ JOBS = {
               "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.75",
               "--steer-max", "0.8", "--lr", "2e-5", "--target-kl", "0.01"],
         finals=[]),
+    "lite3-dog-11": dict(
+        # 5 Nov night: lite3-dog-9 (112M + steer weight 0.25, lr 2e-5) steered best (0.580) but lost sits (trot->sit 3/24
+        # under 5-15 ms on DEEP's model); lite3-dog-10 (canter x3) kept sits 0/48 and steered 0.516. The steering push
+        # with the sit drawn 2x to hold the sits. Win: steer >= 0.52 with trot->sit 0/24 and the routine 0/12.
+        name="lite3dog11", script="train_imitate.py", start="../models/bolt-lite3-dog-112M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "sit", "lie",
+              "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.75", "--steer-max", "0.8",
+              "--steer-weight", "0.2", "--lr", "2e-5", "--target-kl", "0.01"],
+        finals=[]),
+    "lite3-dog-12": dict(
+        # 5 Nov night: canter falls under delay on DEEP's model stay (current brain 2/12; dog-10's canter x3 made it worse,
+        # 7/12). The canter falls come with 3-6 ms of delay, so: delay drawn only in the range a real robot has, 2-20 ms
+        # (not 0-60), canter x2, lr 2e-5, from 112M. Win: canter routine <= 1/12 with sits 0/24 and the routine 0/12.
+        name="lite3dog12", script="train_imitate.py", start="../models/bolt-lite3-dog-112M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "canter", "turn_left", "turn_right", "sit", "lie",
+              "getup", "--switch-rate", "0.3", "--latency-ms", "2", "20", "--moving-rate", "0.75", "--steer-max", "0.8",
+              "--lr", "2e-5", "--target-kl", "0.01"],
+        finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.
