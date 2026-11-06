@@ -445,3 +445,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   excess. New: imitate_env overspeed_weight / train_imitate --overspeed-weight (reward minus weight x summed excess over
   rated). Kaggle lite3-dog-15: 130M with a x1.3 drive + overspeed weight 0.5, lr 1e-5. (dog-13/14 run the opposite
   test, a x0.85 drive.)
+- **6 Nov 21:30 UTC. Slower training motors make over-speed worse (confirms the training-gap reading).** Kaggle dog-13
+  (112M + canter x3 + motors x0.85) and dog-14 (130M + same) on DEEP's model with delay: dog-14 150M routine 0/12,
+  trot->sit 0/24, steer 0.462, but live over-speed 35-41 steps a run (130M 17-25, robot brain 7-14); dog-13 126M 0/12,
+  0/24, steer 0.486, live 14-16; dog-13 118M sits 1/24; dog-14 140M sits 1/24. A harder speed cap in training teaches
+  harder commands, which an uncapped motor turns into more over-speed. No change of brain. The direction is the
+  opposite: Kaggle lite3-dog-15 (130M, drive x1.3, overspeed 0.5), -16 (112M, drive x1.3, overspeed 0.5, steer 0.2)
+  and -17 (130M, drive x1.5, overspeed 1.0) are running.
