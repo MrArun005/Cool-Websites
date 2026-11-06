@@ -298,6 +298,24 @@ JOBS = {
               "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.3",
               "--overspeed-weight", "0.5"],
         finals=[]),
+    "lite3-dog-16": dict(
+        # 6 Nov: lite3-dog-15's idea (a DEEP-like faster drive + the over-speed penalty) from the sit-safe 112M instead of
+        # the steerer, with a mild steering push (weight 0.2), lr 2e-5. Win: steer >= 0.50, live over-speed <= 14, sits
+        # 0/24, routine 0/12.
+        name="lite3dog16", script="train_imitate.py", start="../models/bolt-lite3-dog-112M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
+              "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.75", "--steer-max", "0.8",
+              "--steer-weight", "0.2", "--lr", "2e-5", "--target-kl", "0.01", "--motor-speed-x", "1.3",
+              "--overspeed-weight", "0.5"],
+        finals=[]),
+    "lite3-dog-17": dict(
+        # 6 Nov: the stronger form of lite3-dog-15: 130M with a x1.5 drive and overspeed weight 1.0, lr 1e-5. Win: as 15.
+        name="lite3dog17", script="train_imitate.py", start="../models/bolt-lite3-dog-steer-candidate-130M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter", "turn_left", "turn_right",
+              "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.75",
+              "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "1.0"],
+        finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.
