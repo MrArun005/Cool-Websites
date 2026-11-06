@@ -438,3 +438,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   6/12, 14/24; dog-12 124M 2/12, 6/24 - training without short delays (2-20 ms instead of 0-60) hurts badly. No new
   default. Started Kaggle lite3-dog-13 (dog-10's recipe with motors x0.85, from 112M) and -14 (same from the steering
   candidate 130M, lr 1e-5) to cut the steerer's joint over-speed.
+- **6 Nov 17:45 UTC. Over-speed: a training gap, not a brain trait.** In our training env (overspeed measured per
+  step, 6 tries x 400 steps with switching and steering), 130M has joints over rated in 6.6% of steps (robot brain
+  9.5%), yet live on DEEP's simulator it over-speeds twice as often. Our motor model fades the drive above rated speed
+  (robot_bodies cutoff), DEEP's model has flat +-30 N·m with no speed limit, so training never showed the brain its
+  excess. New: imitate_env overspeed_weight / train_imitate --overspeed-weight (reward minus weight x summed excess over
+  rated). Kaggle lite3-dog-15: 130M with a x1.3 drive + overspeed weight 0.5, lr 1e-5. (dog-13/14 run the opposite
+  test, a x0.85 drive.)

@@ -135,6 +135,8 @@ def main():
     ap.add_argument("--body", choices=["bolt"] + sorted(BODIES), default=os.environ.get("BOLT_BODY", "bolt"),
                     help="the robot: bolt (default) or a real robot of robot_bodies.BODIES, e.g. go2 (the Unitree Go2: "
                          "its own clips, motors and stance)")
+    ap.add_argument("--overspeed-weight", type=float, default=0.0, help="real-robot bodies: reward minus this x the summed "
+                    "excess of joint speed over rated (fraction of rated); 0 = off")
     ap.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model "
                     "file's (robot_bodies BOLT_JOINT_DAMPING; Go2's Menagerie value 2.0 is an assumption, not a measurement)")
     args = ap.parse_args()
@@ -158,7 +160,8 @@ def main():
         clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None, root_global=args.root_global, steer_max=args.steer_max,
         steer_share=args.steer_share, steer_change=args.steer_change, steer_weight=args.steer_weight,
         **({"latency_ms": tuple(args.latency_ms)} if args.latency_ms[1] > 0 else {}),
-        **({"moving_rate": args.moving_rate} if args.moving_rate else {})))
+        **({"moving_rate": args.moving_rate} if args.moving_rate else {}),
+        **({"overspeed_weight": args.overspeed_weight} if args.overspeed_weight else {})))
     if args.init_from and not args.resume:
         src = Path(args.init_from)
         venv = VecNormalize.load(str(src / "vecnormalize.pkl"), venv)

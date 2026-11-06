@@ -258,7 +258,7 @@ class ImitateEnv(BoltEnv):
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"],
                  push_speed=PUSH["speed"], push_spin=PUSH["spin"], motor_brake=None, root_global=0.0,
                  steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"],
-                 body=None):
+                 body=None, overspeed_weight=0.0):
         super().__init__(randomize=randomize, max_steps=int(LOOP_SECONDS * 50), seed=seed, gait_generator="dog",
                          skills=["stand"], motor_brake=motor_brake, terrain_cm=terrain_cm, terrain_seed=terrain_seed,
                          body=body)
@@ -268,6 +268,13 @@ class ImitateEnv(BoltEnv):
             r = self.robot
             self.dog, prefix, self.floor_ok_h, self.lost_h, self.poses = r.stance, r.clip_prefix, r.floor_ok, r.lost, r.pose_ok
             assert not landing_rate, "landing starts are Bolt's (recorded from Bolt's jump brain)"
+        # overspeed_weight: reward minus this x the summed excess of |joint speed| over the body's RATED speed (fraction
+        # of rated, joints at or under rated cost nothing). The robot program stops on 3 control steps in a row over 1.2x
+        # rated (run_go2 --speed-steps); brains that steer well drove the Lite3's joints past 1.2x rated twice as often
+        # live on DEEP's simulator (PLAN.md 5-6 Nov), and nothing in the reward told them not to. 0: off (old rewards).
+        self.overspeed_weight = float(overspeed_weight)
+        self.rated = (np.tile(self.robot.entry["speed"], 4).astype(float) if self.body != "bolt" and self.overspeed_weight
+                      else None)
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
         # root_global (0..1): blend of our two root terms (height + tilt, body-frame velocity) with Peng et al. 2020's
         # Eq. 8-9 (GLOBAL root position, full rotation incl. heading, global velocity), the reference root integrated
@@ -567,6 +574,10 @@ class ImitateEnv(BoltEnv):
             self.pose_hit = self.pose_hit or (pose and self.t <= self.pose_until)
             if self.pose_hit and pose:
                 reward += self.pose_weight
+        over = 0.0
+        if self.rated is not None:
+            over = float(np.sum(np.maximum(0.0, np.abs(self.data.qvel[6:18]) / self.rated - 1.0)))
+            reward -= self.overspeed_weight * over
         trans = None
         if self.transition_weight and self.switch_t is not None and self.t - self.switch_t < self.transition_steps:
             trans = self.transition_excess()
@@ -577,6 +588,8 @@ class ImitateEnv(BoltEnv):
         fell = lost or (self.body_on_floor() and not floor_ok)
         done = self.t >= self.limit
         info = dict(err, clip=self.clip.name, tau=self.tau(), fell=fell, **{f"r_{k}": float(v) for k, v in terms.items()})
+        if self.rated is not None:
+            info["overspeed"] = over
         if pose is not None:
             info.update(pose_ok=bool(pose), pose_hit=bool(self.pose_hit))
         if self.transition_weight:

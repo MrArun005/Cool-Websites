@@ -286,6 +286,18 @@ JOBS = {
               "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.75",
               "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "0.85"],
         finals=[]),
+    "lite3-dog-15": dict(
+        # 6 Nov: the steering candidate 130M over-speeds live on DEEP's simulator (17-25 steps a run over 1.2x rated vs
+        # 7-14) but not in our training env (6.6% of steps over rated vs the robot brain's 9.5%): our motor model fades
+        # the drive above rated speed, DEEP's model has no speed limit, so training never saw the excess. Train it with a
+        # faster drive (x1.3, closer to DEEP's) AND the new over-speed penalty (imitate_env overspeed_weight), lr 1e-5.
+        # Win: live over-speed <= 14 with steer >= 0.50, sits 0/24, routine 0/12.
+        name="lite3dog15", script="train_imitate.py", start="../models/bolt-lite3-dog-steer-candidate-130M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter", "turn_left", "turn_right",
+              "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.75",
+              "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.3",
+              "--overspeed-weight", "0.5"],
+        finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.
