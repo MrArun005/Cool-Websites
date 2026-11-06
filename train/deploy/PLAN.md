@@ -433,3 +433,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   50/50 with 130M sits 0/48, canter 4/12, 0.782 / 0.462: no. Robot brain unchanged. Started Kaggle lite3-dog-11
   (steering + sit x2) and -12 (canter x2, 2-20 ms) from 112M. The local job only trains while this session is busy
   (the idle cloud machine is reclaimed ~20 min after a check), so Kaggle carries the training.
+- **6 Nov ~09:30 UTC.** Kaggle dog-11 (112M + steer weight 0.2 + sit x2) and dog-12 (112M + canter x2, delay 2-20 ms)
+  on DEEP's model: dog-11 134M routine 0/12, trot->sit 2/24, steer 0.559; dog-11 124M 0/12, 1/24, 0.481; dog-12 134M
+  6/12, 14/24; dog-12 124M 2/12, 6/24 - training without short delays (2-20 ms instead of 0-60) hurts badly. No new
+  default. Started Kaggle lite3-dog-13 (dog-10's recipe with motors x0.85, from 112M) and -14 (same from the steering
+  candidate 130M, lr 1e-5) to cut the steerer's joint over-speed.
