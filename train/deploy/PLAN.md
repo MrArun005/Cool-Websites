@@ -458,3 +458,5 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   stability: 147M routine 1/12, trot->sit 2/24; 140M 0/12, 1/24 (live 9-16). Blend robot brain + 25% 147M: 0/12, 1/24,
   steer 0.458: no. Robot brain unchanged. dog-16 (the same fix from the sit-safe 112M) and the GPU run (from the robot
   brain) test the fix on bases that hold the sits.
+  dog-15 140M confirmation: trot->sit 5-15 ms 1/48 more (2/72 in all), canter routine 5/12: kept as
+  models/bolt-lite3-dog-steer-candidate-140M (steering 0.517 at the robot brain's joint speeds), not the default.
