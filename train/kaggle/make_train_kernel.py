@@ -316,6 +316,25 @@ JOBS = {
               "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
               "--overspeed-weight", "1.0"],
         finals=[]),
+    "lite3-dog-18": dict(
+        # 7 Nov: lite3-dog-17's strong over-speed fix (drive x1.5, overspeed weight 1.0) gave 149M: sits 0/24, routine
+        # 0/12, steer 0.534, live over-speed 5-12. The same fix from the sit-safe 112M with a mild steering push (0.2),
+        # lr 1e-5 (dog-16 at x1.3 / 0.5 / lr 2e-5 lost sits 1-2/24). Win: as dog-17's 149M, sits 0/48.
+        name="lite3dog18", script="train_imitate.py", start="../models/bolt-lite3-dog-112M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
+              "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.75", "--steer-max", "0.8",
+              "--steer-weight", "0.2", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "1.0"],
+        finals=[]),
+    "lite3-dog-19": dict(
+        # 7 Nov: lite3-dog-17 again from 130M with a stronger penalty (1.5) and a faster drive (x1.7): does more of the
+        # fix keep helping? Win: as dog-17's 149M with live over-speed lower still.
+        name="lite3dog19", script="train_imitate.py", start="../models/bolt-lite3-dog-steer-candidate-130M",
+        args=["--body", "lite3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter", "turn_left", "turn_right",
+              "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.75",
+              "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.7",
+              "--overspeed-weight", "1.5"],
+        finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.
