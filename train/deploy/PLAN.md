@@ -452,3 +452,9 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   harder commands, which an uncapped motor turns into more over-speed. No change of brain. The direction is the
   opposite: Kaggle lite3-dog-15 (130M, drive x1.3, overspeed 0.5), -16 (112M, drive x1.3, overspeed 0.5, steer 0.2)
   and -17 (130M, drive x1.5, overspeed 1.0) are running.
+- **7 Nov 05:30 UTC. The over-speed fix works.** Kaggle dog-15 (the steering candidate 130M trained with a x1.3 drive
+  and overspeed weight 0.5, lr 1e-5): live on DEEP's simulator 147M has 7-15 steps a run over 1.2x rated (130M 17-25,
+  robot brain 7-14) and keeps the steering (exam 0.778 / 0.508). But under delay on DEEP's model it lost some
+  stability: 147M routine 1/12, trot->sit 2/24; 140M 0/12, 1/24 (live 9-16). Blend robot brain + 25% 147M: 0/12, 1/24,
+  steer 0.458: no. Robot brain unchanged. dog-16 (the same fix from the sit-safe 112M) and the GPU run (from the robot
+  brain) test the fix on bases that hold the sits.
