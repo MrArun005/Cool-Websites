@@ -475,3 +475,13 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   (candidates: torque limits 24/24/36 vs DEEP's flat 30 N·m, our speed fade, MJX's floor-only collisions, float32).
   CPU-trained Lite3 brains and GPU-trained Go2 brains do transfer. No more Lite3 GPU time until the gap is found;
   dog-20 re-pushed (its first push ran before the dataset version with 149M was ready).
+- **7 Nov ~15:00 UTC. Go2: GPU privileged critic + history (privhist) beats 798M; both trip the speed stop live.**
+  Kaggle GPU bolt-go2-privhist (from 798M, --privileged-critic --history 3): our exam tracking 0.833 / falls 0% / steer
+  0.750 (798M 0.817 / 1.9% / 0.708). On Unitree's go2.xml (lockstep, 21 s routine, 10 tries each): plain 0/10 both,
+  0-19 ms 0/10 both, 5% skipped steps 0/10 both, 15-19 ms 0/12 both, 15% skips 1/12 both; steps over 1.2x rated 10 of
+  10500 (798M 20), worst 1.65x (1.84x); recovery 20/20. BUT live in Unitree's simulator in real time (sim_vendor.py,
+  damping 0.1) both trip run_go2's speed stop (3 steps in a row over 1.2x rated) within 6-10 s: 798M at 6.3 s (1.81x)
+  and 10.1 s (1.58x); privhist at 10.1 s twice (1.49x, 1.30x). The lockstep tests never apply the speed stop, so the
+  "10/10" rehearsals hid this. The Lite3's over-speed fix applies: Kaggle GPU bolt-go2-gpu-overspeed (warm = privhist,
+  same flags + --overspeed-weight 1.0 --motor-speed-range 1.0 1.5, 5 h) started. Win: live in Unitree's simulator the
+  full routine with no speed stop, and the lockstep results kept.
