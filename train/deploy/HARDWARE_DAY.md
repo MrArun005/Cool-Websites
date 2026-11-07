@@ -75,7 +75,7 @@ robot-only inputs: 0/10 falls, 0/10 with 0-19 ms delay, 0/10 with 5% missed step
 
 ## Lite3 (DEEP Robotics), the second robot: what differs
 
-- Brain: `models/bolt-lite3-dog-blend-112M-w7/params.pkl` (on DEEP's model with 3-15 ms of delay: no falls in 24 routines and 48 trot -> sit, 2/12 in a canter routine; the canter still runs as a trot by default). `models/bolt-lite3-dog-112M` and `-87.3M` are the earlier brains.
+- Brain: `models/bolt-lite3-dog-149M/params.pkl` (on DEEP's model with 3-15 ms of delay: no falls in 24 routines and 48 trot -> sit; steering 0.534; live joint over-speed 5-12 steps a run; the canter runs as a trot by default). `models/bolt-lite3-dog-canter-candidate` for runs with `--allow-canter`; `-blend-112M-w7` is the previous brain.
   It reads body velocity, from LegEstimator on the robot. Self-right brain: `models/bolt-lite3-selfright-28M`.
 - Link: DEEP's Lite3_MotionSDK through our bridge, not unitree_sdk2. Build `deploy/lite3_bridge/bridge.cpp` on the
   robot's motion host (or a laptop on its network; the build line is at the top of the file), run `./lite3_bridge

@@ -460,3 +460,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   brain) test the fix on bases that hold the sits.
   dog-15 140M confirmation: trot->sit 5-15 ms 1/48 more (2/72 in all), canter routine 5/12: kept as
   models/bolt-lite3-dog-steer-candidate-140M (steering 0.517 at the robot brain's joint speeds), not the default.
+- **7 Nov ~10:00 UTC. New Lite3 brain: 149M (models/bolt-lite3-dog-149M), the over-speed fix.** Kaggle dog-17 (130M with
+  a x1.5 drive and overspeed weight 1.0, lr 1e-5): 149M on DEEP's model routine 3-6 ms 0/12 + 0/12, trot->sit 5-15 ms
+  0/24 + 0/24, recovery 20/20, moving 0/48, exam 0.778 / steer 0.534 (robot brain 0.775 / 0.441), live 4/4 with no fall
+  and 5-12 steps a run over 1.2x rated (robot brain 7-14); canter routine 9/12 (robot brain 2/12; the canter runs as a
+  trot by default). Adopted: defaults swapped, golden recorded, check_ready --body lite3 8/8. Others: dog-17 141M live
+  13-18 and one live fall; dog-16 (from 112M, x1.3 / 0.5) 140M steer 0.533 but sits 2/24, 127M sits 1/24. Started
+  Kaggle dog-18 (the strong fix from 112M) and dog-19 (stronger still from 130M).
