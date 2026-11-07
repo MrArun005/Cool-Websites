@@ -467,3 +467,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   trot by default). Adopted: defaults swapped, golden recorded, check_ready --body lite3 8/8. Others: dog-17 141M live
   13-18 and one live fall; dog-16 (from 112M, x1.3 / 0.5) 140M steer 0.533 but sits 2/24, 127M sits 1/24. Started
   Kaggle dog-18 (the strong fix from 112M) and dog-19 (stronger still from 130M).
+- **7 Nov 13:30 UTC. First Lite3 GPU run: does not transfer to DEEP's model.** Kaggle GPU bolt-lite3-gpu-overspeed
+  (MJX, warm = the robot brain blend-112M-w7, drive x1.0-1.5, overspeed 0.5, 0-60 ms, 8 h, 823M steps at 28k steps/s).
+  Our exam (CPU env): final 0.813 / steer 0.572, no falls. On DEEP's model (trot -> sit, 3-6 ms, 4 tries): checkpoint 0
+  (= the robot brain, export identical) 0/3; 51M 1/4; 103M 0/4; 206M 3/4; 412M 4/4; 823M routine 12/12 and trot->sit
+  23/24, all within ~3 s of trotting. The brain learns something the MJX and CPU envs allow and DEEP's model does not
+  (candidates: torque limits 24/24/36 vs DEEP's flat 30 N·m, our speed fade, MJX's floor-only collisions, float32).
+  CPU-trained Lite3 brains and GPU-trained Go2 brains do transfer. No more Lite3 GPU time until the gap is found;
+  dog-20 re-pushed (its first push ran before the dataset version with 149M was ready).
