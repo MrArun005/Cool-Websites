@@ -312,7 +312,8 @@ class MjxImitate:
                  terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"], push_speed=PUSH["speed"],
                  push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"], root_global=0.0,
                  steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"],
-                 body=None, joint_damping=None, blind_vel=False, drop_p=0.0, damping_range=None, privileged=False, history=0, motor_speed_range=None):
+                 body=None, joint_damping=None, blind_vel=False, drop_p=0.0, damping_range=None, privileged=False, history=0, motor_speed_range=None,
+                 overspeed_weight=0.0):
         from brax.envs.base import State
         self.State = State
         # joint damping drawn per try, log-uniform in [lo, hi] (N·m·s/rad): the real robot's is unknown (deploy/PLAN.md
@@ -415,6 +416,11 @@ class MjxImitate:
         # vendor simulators' motors have no speed limit at all (DEEP's Lite3: a flat 30 N·m at any speed), a real robot's
         # some; a brain trained over the range depends on neither (PLAN.md 3 Nov)
         self.motor_speed_range = None if motor_speed_range is None else tuple(float(x) for x in motor_speed_range)
+        # over-speed penalty (ImitateEnv overspeed_weight): reward minus weight x the summed excess of |joint speed| over
+        # the body's RATED speed (fraction of rated); real-robot bodies only, 0 = off (old rewards and metrics)
+        self.overspeed_weight = float(overspeed_weight)
+        self.rated = (jp.array(np.tile(self.robot.entry["speed"], 4), jp.float32)
+                      if self.robot is not None and self.overspeed_weight else None)
         n = MjxImitate.observation_size + self.history * len(HIST_SEL)
         if self.privileged:
             self.observation_size = {"state": (n,), "privileged_state": (n + PRIV_EXTRA,)}
@@ -829,6 +835,8 @@ class MjxImitate:
         metrics = {**{f"r_{k}": z for k in WEIGHTS}, "fell": z, "canter": z, "canter_steps": z}
         if self.steer_max:
             metrics["r_steer"] = z
+        if self.rated is not None:
+            metrics["overspeed"] = z
         o = self.obs(d, info, k3)
         if self.history:
             info["hist"] = jp.tile(self.hist_frame(o), (self.history, 1))
@@ -920,6 +928,10 @@ class MjxImitate:
         if self.transition_weight:   # after a mid-try switch: roll and pitch beyond the threshold cost
             on = info["t"] - info["swt"] < self.transition_steps
             reward = reward - self.transition_weight * jp.where(on, self.transition_excess(d, info), 0.0)
+        over = None
+        if self.rated is not None:
+            over = jp.sum(jp.maximum(0.0, jp.abs(d.qvel[6:18]) / self.rated - 1.0))
+            reward = reward - self.overspeed_weight * over
         lost = high | (err["tilt"] > 0.8)
         # a blown-up simulation (non-finite state or reward) ends the try at no reward, so one robot cannot poison the batch
         bad = ~(jp.all(jp.isfinite(d.qpos)) & jp.all(jp.isfinite(d.qvel)) & jp.isfinite(reward))
@@ -950,6 +962,8 @@ class MjxImitate:
         obs = jax.tree_util.tree_map(sel, new_obs, obs)
         metrics = dict(state.metrics)   # keep what the training wrappers added
         metrics.update({f"r_{k}": v for k, v in terms.items()}, fell=fell.astype(jp.float32), canter=on_canter * reward, canter_steps=on_canter)
+        if over is not None:
+            metrics["overspeed"] = over
         return state.replace(pipeline_state=d, obs=obs, reward=reward, done=done.astype(jp.float32), metrics=metrics, info=info)
 
 
@@ -1117,7 +1131,8 @@ def train(args):
                           steer_change=args.steer_change, steer_weight=args.steer_weight, body=args.body,
                           joint_damping=args.joint_damping, iterations=args.iterations, ls_iterations=args.ls_iterations,
                           blind_vel=args.blind_vel, drop_p=args.drop_p, damping_range=args.damping_range,
-                          privileged=args.privileged_critic, history=args.history, motor_speed_range=args.motor_speed_range)
+                          privileged=args.privileged_critic, history=args.history, motor_speed_range=args.motor_speed_range,
+                          overspeed_weight=args.overspeed_weight)
 
     phases = curriculum(args.terrain_cm, args.terrain_at, args.steps)
     hidden = W["hidden"] if W else (512, 256)
@@ -1257,6 +1272,8 @@ def main():
                    "0 = none, as before (train_imitate.py --steer-max)")
     t.add_argument("--steer-share", type=float, default=STEER["share"], help="share of tries (and redraws) with a command")
     t.add_argument("--steer-change", type=float, default=STEER["change"], help="chance per second of a new command")
+    t.add_argument("--overspeed-weight", type=float, default=0.0, help="real-robot bodies: reward minus this x the summed "
+                   "excess of joint speed over rated (fraction of rated); 0 = off. Pair with --motor-speed-range above 1")
     t.add_argument("--steer-weight", type=float, default=STEER["weight"], help="reward weight of the steer term")
     t.add_argument("--body", default=os.environ.get("BOLT_BODY", "bolt"),
                    help="bolt (bolt.xml) or a real robot of robot_bodies.BODIES (go2); default BOLT_BODY, else bolt. "
