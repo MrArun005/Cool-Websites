@@ -512,3 +512,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   GPU brain learned to lean on our exact limits (commands past them and lets the motor clip). New: mjx_imitate
   --motor-torque-range LO HI (per try and joint type, peak torque and power x log-uniform factor). Short Kaggle GPU
   check started from 149M with --motor-torque-range 0.8 1.4.
+- **8 Nov 13:30 UTC. Lite3 GPU torque check: half the gap.** Kaggle GPU bolt-lite3-gpu-torque (warm 149M, torque
+  x0.8-1.4 per joint type, drive x1.0-1.5, overspeed 1.0, 0-60 ms, 2.3 h, 316M steps). Trot 6 s at 3-6 ms on DEEP's
+  model: 105M 0/6, 211M 1/6, 316M 0/6 (the earlier GPU run: 206M 2/6 here, 412M 4/4, 823M 6/6): the drift no longer grows
+  as fast. But 316M on the full tests: no-canter routine 3-6 ms 7/12 (trot), trot->sit 5-15 ms 9/24 (149M 0/12, 0/24).
+  Varying the torque limit is part of the fix, not all of it. Next suspects for the rest: our motor model's speed fade
+  (DEEP's model has none), the capsule legs vs DEEP's meshes, MJX's floor-only contacts. No more Lite3 GPU runs until a
+  probe finds the next cause; the robot brain stays 149M.
