@@ -4,9 +4,11 @@ PLAN.md phase 4, as a checklist. Every step has a stop condition; do not skip ah
 keyboard, one next to the robot with the remote (its emergency stop) in hand. Nothing here calls an external AI
 service; everything runs on the robot's Jetson or a laptop on wired Ethernet.
 
-Brain: `models/bolt-go2-damp-798M/params.pkl` (no velocity input; trained on joint damping 0.1-2.0; rehearsal with
-robot-only inputs: 0/10 falls, 0/10 with 0-19 ms delay, 0/10 with 5% missed steps; recovery 40/40; 96 knee steps over
-1.2x rated in 41 s at damping 0.1, down from 1448 for 695M). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
+Brain: `models/bolt-go2-overspeed-211M/params.pkl` (no velocity input; 3 steps of input history; trained on joint damping
+0.1-2.0 with a faster motor drive and a penalty on joint speed above rated; on Unitree's model with robot-only inputs: 0/10
+falls, 0/10 with 0-19 ms delay, 0/10 with 5% missed steps, recovery 20/20, and live in Unitree's simulator in real time the
+full routine 3/3 with no speed stop (2-5 steps over 1.2x rated a run). The previous brain, `bolt-go2-damp-798M`, tripped the
+speed stop live within 6-10 s). Program: `train/deploy/run_go2.py`. All numbers so far are simulation.
 
 ## 0. Before the robot (the day before)
 

@@ -125,7 +125,7 @@ def main():
         a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-lite3-dog-149M" / "params.pkl")
     else:
         xml = Path(os.environ["UNITREE_MUJOCO"]) / "unitree_robots" / "go2" / "scene.xml"
-        a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-go2-damp-798M" / "params.pkl")
+        a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-go2-overspeed-211M" / "params.pkl")
     m = mujoco.MjModel.from_xml_path(str(xml))
     m.opt.timestep = a.dt
     if not a.stairs:

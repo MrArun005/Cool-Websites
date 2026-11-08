@@ -485,3 +485,12 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   "10/10" rehearsals hid this. The Lite3's over-speed fix applies: Kaggle GPU bolt-go2-gpu-overspeed (warm = privhist,
   same flags + --overspeed-weight 1.0 --motor-speed-range 1.0 1.5, 5 h) started. Win: live in Unitree's simulator the
   full routine with no speed stop, and the lockstep results kept.
+- **8 Nov 01:30 UTC. New Go2 brain: 211M (models/bolt-go2-overspeed-211M), the first Go2 brain that runs the live
+  routine in Unitree's simulator without the speed stop.** Kaggle GPU bolt-go2-gpu-overspeed (warm = privhist, drive
+  x1.0-1.5, overspeed weight 1.0, 5 h): live 3/3 full routines, no stop, 2-5 steps over 1.2x rated a run (its 105M
+  checkpoint: stop at 10.1 s twice of 3). Lockstep on go2.xml: routine 0/10, 0-19 ms 0/10, 5% skips 0/10, 15-19 ms 0/12,
+  15% skips 1/12 (as 798M), over 1.2x 11 of 10500 (798M 20), worst 1.48x (1.84x), recovery 20/20, exam 0.840 / 0% /
+  steer 0.686 (798M 0.817 / 1.9% / 0.708). Adopted: go2 defaults swapped in run_go2/lockstep_vendor/lockstep_recovery/
+  check_ready; test_deploy fixed for brains with input history (it called act() twice per step, advancing the history
+  twice; now the brain runs once, inside the controller, and resets per try; the golden records the try starts);
+  goldens re-checked for 211M, 798M and Lite3 149M; check_ready Go2 7/7, Lite3 8/8.

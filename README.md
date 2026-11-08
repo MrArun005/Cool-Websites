@@ -34,7 +34,7 @@ Runtime -> Run all.
 
 | | |
 |---|---|
-| **Brains** | One brain per robot for all the motion (Go2 `damp-798M`, Lite3 `dog-61.8M`), a self-right brain each; numpy only on the robot, no torch |
+| **Brains** | One brain per robot for all the motion (Go2 `overspeed-211M`, Lite3 `dog-149M`), a self-right brain each; numpy only on the robot, no torch |
 | **Robot program** | `run_go2.py`: Unitree's unitree_sdk2 (DDS) or DEEP's UDP joint protocol through a C++ bridge to their MotionSDK; one setting switches simulator and robot |
 | **Safety** | eases in from the stance, keeps targets inside the joint limits, damping mode on a tilt, a stale state or a sustained over-speed |
 | **Recovery** | fall -> self-right -> tuck -> get up -> carry on, on both robots |
@@ -45,10 +45,10 @@ Runtime -> Run all.
 **Measured, not claimed.** On each maker's own MuJoCo model, stepped in lockstep with the robot program's inputs:
 the Go2 brain finishes a 41 s trot / sit / lie / get-up / walk / canter routine 10 times out of 10 (also 10/10 with
 5% of control steps lost and with 0-19 ms of command delay); both robots recover from 40 falls out of 40 (side, back,
-tipped, shoved); the full routine also runs live, in real time, in Unitree's simulator. The Lite3 brain, with commands
+tipped, shoved); the full routine also runs live, in real time, in Unitree's simulator, with no joint-speed stop. The Lite3 brain, with commands
 3-15 ms late on DEEP's model, finishes 24 of 24 routines and 48 of 48 trot -> sit without a fall, and steers 21% better
-than last week's at lower joint speeds; it still falls in the canter, so the robot program runs its canter as a trot; and the Go2's knees go past 1.2x their rated speed in ~0.5% of control steps at
-Unitree's default joint damping. Every number, with the command that made it, is in
+than last week's at lower joint speeds; it still falls in the canter, so the robot program runs its canter as a trot. Both brains were trained with
+a penalty on joint speed above rated, after live runs showed the earlier brains tripping the robot program's speed stop. Every number, with the command that made it, is in
 [`train/deploy/PLAN.md`](train/deploy/PLAN.md).
 
 | Go2: trot, then sit | Lite3: trot, then canter | Lite3: lie down, get up, walk |

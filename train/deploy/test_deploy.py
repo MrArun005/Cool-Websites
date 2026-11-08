@@ -1,7 +1,7 @@
 """Gate for PLAN.md phase 1 steps 3-4: the robot-side controller builds the same 75 inputs and sends the same joint
 targets as imitate_env.ImitateEnv does in training, for the same robot state.
 
-    cd train && BOLT_BODY=go2 MUJOCO_GL=osmesa python deploy/test_deploy.py [../models/bolt-go2-damp-798M/params.pkl]
+    cd train && BOLT_BODY=go2 MUJOCO_GL=osmesa python deploy/test_deploy.py [../models/bolt-go2-overspeed-211M/params.pkl]
     ... test_deploy.py <brain> --save     # + record deploy/golden_<brain folder>.npz (the reference below)
     ... test_deploy.py <brain> --golden   # torch-free: replay that record through the controller (the robot's machine)
 
@@ -43,6 +43,8 @@ def check_golden(brain):
     ctl = Go2Controller(brain, body=brain_body(brain))
     worst_obs = worst_tgt = 0.0
     for i in range(len(g["tau"])):
+        if "new" in g and g["new"][i] and hasattr(ctl.brain, "reset"):   # a fresh try: input history starts over
+            ctl.brain.reset()
         ctl.start_at(str(g["clip"][i]), float(g["tau"][i]))
         ctl.steer, ctl.last_action[:] = float(g["steer"][i]), g["last_action"][i]
         r = {k: (float(g[k][i]) if k == "height" else g[k][i]) for k in ("quat", "gyro", "q", "dq", "v_body", "height")}
@@ -70,14 +72,14 @@ def brain_body(brain):
 
 def main():
     brain = next((x for x in sys.argv[1:] if not x.startswith("--")),
-                 str(HERE.parent.parent / "models" / "bolt-go2-damp-798M" / "params.pkl"))
+                 str(HERE.parent.parent / "models" / "bolt-go2-overspeed-211M" / "params.pkl"))
     if "--golden" in sys.argv:
         return check_golden(brain)
     from imitate_env import ImitateEnv
     ctl = Go2Controller(brain, body=brain_body(brain))
     env = ImitateEnv(randomize=False, seed=3, clips=MOTION_CLIPS, body=brain_body(brain))
     rec = {k: [] for k in ("clip", "tau", "steer", "last_action", "quat", "gyro", "q", "dq", "v_body", "height", "obs",
-                           "target")}
+                           "target", "new")}
     switch = None
     worst_obs = worst_tgt = 0.0
     steps = 0
@@ -87,6 +89,8 @@ def main():
         env.steer = 0.4 if name in ("trot", "canter") else 0.0
         ctl.steer = env.steer
         ctl.last_action[:] = env.last_action
+        if hasattr(ctl.brain, "reset"):   # a fresh try: the brain's input history starts over
+            ctl.brain.reset()
         for t in range(60):
             if name == "walk" and t == 30:   # a mid-try switch: the env's rule and the controller's must agree
                 ctl.start_at(env.clip.name, env.tau())
@@ -100,12 +104,13 @@ def main():
             o_env = env._obs()
             o_ctl = ctl.inputs(**r)
             worst_obs = max(worst_obs, float(np.abs(o_env - o_ctl).max()))
-            a = ctl.brain.act(o_env)
-            for k, x in (("clip", ctl.clip.name), ("tau", ctl.tau), ("steer", ctl.steer),
+            for k, x in (("clip", ctl.clip.name), ("tau", ctl.tau), ("steer", ctl.steer), ("new", t == 0),
                          ("last_action", ctl.last_action.copy()), ("obs", o_env), *r.items()):
                 rec[k].append(x)
+            # the brain runs once per step, inside the controller: a brain with input history (--history) keeps state,
+            # so a second act() would advance it twice
             tgt = ctl.step(**r)
-            env.step(a)
+            env.step(ctl.last_action.copy())
             worst_tgt = max(worst_tgt, float(np.abs(env.data.ctrl - tgt).max()))
             rec["target"].append(env.data.ctrl.copy())
             steps += 1
