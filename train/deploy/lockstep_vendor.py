@@ -141,14 +141,18 @@ def main():
     else:
         xml = Path(os.environ["UNITREE_MUJOCO"]) / "unitree_robots" / "go2" / "scene.xml"
         a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-go2-overspeed-211M" / "params.pkl")
-    m = mujoco.MjModel.from_xml_path(str(xml))
+    if os.environ.get("LOCKSTEP_OURS"):   # diagnosis: OUR training body (robot_bodies) in the same loop, Bolt's signs
+        import robot_bodies
+        m = robot_bodies.Body(a.body).model()
+    else:
+        m = mujoco.MjModel.from_xml_path(str(xml))
     m.opt.timestep = a.dt
     if not a.stairs:
         flatten(m)
     if a.damping is not None:
         m.dof_damping[6:] = a.damping
     ctl = Go2Controller(a.brain, body=a.body, walk_down=a.walk_down)
-    sign = float(ctl.body.entry.get("sdk_sign", 1))
+    sign = 1.0 if os.environ.get("LOCKSTEP_OURS") else float(ctl.body.entry.get("sdk_sign", 1))
     rated = np.tile(ctl.body.entry["speed"], 4)
     kp, kd = ctl.body.entry["kp"], ctl.body.entry["kv"]
     plan = [(c.split(":")[0], float(c.split(":")[1])) for c in a.plan.split(",")]

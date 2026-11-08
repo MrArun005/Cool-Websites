@@ -524,3 +524,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   our torque limits 2/8, our full motor model 2/8 (149M with our motor model 0/8). With the torque range in training, the
   rest of the gap is the body: DEEP's mesh legs and contacts vs our capsules and MJX's floor-only contacts, or mass /
   inertia / joint friction. Next probe: the GPU brain on our own lite3_nomesh.xml through the same lockstep loop.
+- **8 Nov 21:30 UTC. Lite3 GPU gap probe 3: not DEEP's body.** New lockstep_vendor diagnostic LOCKSTEP_OURS=1 (our training
+  body, Bolt's signs, same deploy loop). gtq_316 trot -> sit at 5-15 ms, 8 tries: our body 3/8 (estimated vel/height) and
+  2/8 (true); DEEP's body 2/8 (estimated), 0/8 (true); 149M 0/8 everywhere. In our training env (ImitateEnv, trot 8 s ->
+  sit, 10 tries): gtq_316 0/10 with no delay and with 5-15 ms, as 149M. So the GPU brains are fine in the training env and
+  fragile in the DEPLOY LOOP on either body: the gap sits between how training and the robot program drive the robot (PD
+  torques computed every 1 ms from the controller's inputs vs the env's actuators, the leg estimator, settle-in start),
+  not in DEEP's model; CPU-trained brains absorb it. That matters for the real robot too. Next: make the deploy loop's
+  actuation selectable (env-style actuators at 2 ms) and find which piece flips gtq_316.
