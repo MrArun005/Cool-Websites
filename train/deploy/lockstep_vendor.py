@@ -51,6 +51,9 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
     d.qpos[7:19] = sign * (ctl.stance + rng.normal(0, 0.02, 12))
     # vendor model joint order: FL, FR, RL, RR (as ours): checked by name below
     lo, hi = m.actuator_ctrlrange[:, 0], m.actuator_ctrlrange[:, 1]
+    if os.environ.get("LOCKSTEP_TORQUE"):   # diagnosis: the vendor model with OUR body's torque limits (abd, thigh, knee)
+        T = np.tile([float(x) for x in os.environ["LOCKSTEP_TORQUE"].split(",")], 4)
+        lo, hi = -T, T
     act_joint = [m.actuator_trnid[i, 0] for i in range(m.nu)]   # actuator i drives joint act_joint[i]
     qadr = np.array([m.jnt_qposadr[j] for j in act_joint])
     vadr = np.array([m.jnt_dofadr[j] for j in act_joint])

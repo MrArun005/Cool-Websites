@@ -313,7 +313,7 @@ class MjxImitate:
                  push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"], root_global=0.0,
                  steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"],
                  body=None, joint_damping=None, blind_vel=False, drop_p=0.0, damping_range=None, privileged=False, history=0, motor_speed_range=None,
-                 overspeed_weight=0.0):
+                 overspeed_weight=0.0, motor_torque_range=None):
         from brax.envs.base import State
         self.State = State
         # joint damping drawn per try, log-uniform in [lo, hi] (N·m·s/rad): the real robot's is unknown (deploy/PLAN.md
@@ -416,6 +416,10 @@ class MjxImitate:
         # vendor simulators' motors have no speed limit at all (DEEP's Lite3: a flat 30 N·m at any speed), a real robot's
         # some; a brain trained over the range depends on neither (PLAN.md 3 Nov)
         self.motor_speed_range = None if motor_speed_range is None else tuple(float(x) for x in motor_speed_range)
+        # motor torque drawn per try and per joint, log-uniform factor on the peak torque (1 = the body's model): a brain
+        # trained at one torque limit learns to lean on it (it commands past the limit and lets the motor clip), and fell on
+        # DEEP's Lite3 model (flat 30 N·m) at 3-6 ms of delay 6/6, against 3/6 with our 24/24/36 N·m (PLAN.md 8 Nov)
+        self.motor_torque_range = None if motor_torque_range is None else tuple(float(x) for x in motor_torque_range)
         # over-speed penalty (ImitateEnv overspeed_weight): reward minus weight x the summed excess of |joint speed| over
         # the body's RATED speed (fraction of rated); real-robot bodies only, 0 = off (old rewards and metrics)
         self.overspeed_weight = float(overspeed_weight)
@@ -501,8 +505,8 @@ class MjxImitate:
                           body_mass=mx.body_mass.at[self.torso].set(self.mass0 * info["mass"]),
                           **({} if self.damping_range is None else {"dof_damping": mx.dof_damping.at[6:].set(info["damp"])}))
 
-    def physics(self, mx, d, n=10, ms=1.0):
-        return jax.lax.scan(lambda d, _: (self.substep(mx, d, ms), None), d, None, length=n)[0]
+    def physics(self, mx, d, n=10, ms=1.0, mt=1.0):
+        return jax.lax.scan(lambda d, _: (self.substep(mx, d, ms, mt), None), d, None, length=n)[0]
 
     def physics_real(self, mx, d, info):
         """One control step with the latency and motor lag (ImitateEnv._delayed_physics): substep i gets the target sent
@@ -519,7 +523,7 @@ class MjxImitate:
             if self.motor_lag_ms:
                 y = y + g * (want - y)
                 want = y
-            return (self.substep(mx, d.replace(ctrl=want), info.get("mspd", 1.0)), y), None
+            return (self.substep(mx, d.replace(ctrl=want), info.get("mspd", 1.0), info.get("mtrq", 1.0)), y), None
 
         (d, y), _ = jax.lax.scan(one, (d, info["lagy"]), jp.arange(10))
         return d.replace(ctrl=sent), dict(info, qhist=hist, lagy=y)
@@ -528,12 +532,14 @@ class MjxImitate:
         """The latency queue and lag state of a fresh try: the robot holds its first targets."""
         return dict(info, qhist=jp.tile(d.ctrl[None], (self.queue_len, 1)), lagy=d.ctrl)
 
-    def substep(self, mx, d, ms=1.0):
+    def substep(self, mx, d, ms=1.0, mt=1.0):
         """One physics substep (2 ms) with the motor model (Bolt: the A1's; a real robot: its own, per joint) and, if on,
         the brake. ms: this try's motor speed factor (--motor-speed-range): rated speed, cutoff and power x ms."""
         M = self.motor
         if not isinstance(ms, float) or ms != 1.0:
             M = dict(M, speed=M["speed"] * ms, cutoff=M["cutoff"] * ms, power=M["power"] * ms)
+        if not isinstance(mt, float) or mt != 1.0:   # this try's torque factors (--motor-torque-range), per joint
+            M = dict(M, torque=M["torque"] * mt, power=M["power"] * mt)
         if self.brake is not None:   # back-EMF braking above brake speed, against the motion (bolt_env.brake_torque)
             speed, gain = self.brake
             v = d.qvel[6:18]
@@ -698,6 +704,8 @@ class MjxImitate:
             rng, k_dmp = jax.random.split(rng)
         if self.motor_speed_range is not None:
             rng, k_msp = jax.random.split(rng)
+        if self.motor_torque_range is not None:
+            rng, k_mtq = jax.random.split(rng)
         k = jax.random.split(rng, 6)
         one = jp.float32(1.0)
         info = dict(kp=jax.random.uniform(k[0], minval=0.85, maxval=1.15) if self.randomize else one,
@@ -711,6 +719,9 @@ class MjxImitate:
         if self.motor_speed_range is not None:
             lo, hi = np.log(self.motor_speed_range[0]), np.log(self.motor_speed_range[1])
             info["mspd"] = jp.exp(jax.random.uniform(k_msp, minval=lo, maxval=hi))
+        if self.motor_torque_range is not None:   # one factor per joint TYPE (abduction, thigh, knee), as the motors differ
+            lo, hi = np.log(self.motor_torque_range[0]), np.log(self.motor_torque_range[1])
+            info["mtrq"] = jp.tile(jp.exp(jax.random.uniform(k_mtq, (3,), minval=lo, maxval=hi)), 4)
         if self.transition_weight:
             info["swt"] = jp.int32(-10 ** 6)   # step of the last mid-try switch (none yet)
         if self.steer_max:   # a yaw-rate command for steer_share of the tries (ImitateEnv.reset)
@@ -889,7 +900,7 @@ class MjxImitate:
         if self.real_on:
             d, info = self.physics_real(mx, d, info)
         else:
-            d = self.physics(mx, d, ms=info.get("mspd", 1.0))
+            d = self.physics(mx, d, ms=info.get("mspd", 1.0), mt=info.get("mtrq", 1.0))
         info["t"] = info["t"] + 1
         if self.switch_rate:   # now and then hand over to a clip that may follow this one (NEXT)
             c = info["clip"]
@@ -1132,6 +1143,7 @@ def train(args):
                           joint_damping=args.joint_damping, iterations=args.iterations, ls_iterations=args.ls_iterations,
                           blind_vel=args.blind_vel, drop_p=args.drop_p, damping_range=args.damping_range,
                           privileged=args.privileged_critic, history=args.history, motor_speed_range=args.motor_speed_range,
+                          motor_torque_range=args.motor_torque_range,
                           overspeed_weight=args.overspeed_weight)
 
     phases = curriculum(args.terrain_cm, args.terrain_at, args.steps)
@@ -1279,6 +1291,8 @@ def main():
                    help="bolt (bolt.xml) or a real robot of robot_bodies.BODIES (go2); default BOLT_BODY, else bolt. "
                    "--brake-speed/--brake-gain apply to bolt only (a real robot has its own)")
     t.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model file's")
+    t.add_argument("--motor-torque-range", type=float, nargs=2, metavar=("LO", "HI"),
+                   help="per try and joint type, the motors' peak torque (and power) x a factor drawn log-uniform in [LO, HI]")
     t.add_argument("--motor-speed-range", type=float, nargs=2, metavar=("LO", "HI"),
                    help="per try, the motors' rated speed, cutoff and power x a factor drawn log-uniform in [LO, HI] (e.g. 1 4)")
     t.add_argument("--history", type=int, default=0, help="K: the brain also reads its last K steps of measured inputs "

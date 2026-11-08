@@ -505,3 +505,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   mostly about delay: the MJX trainer's latency (whole 2 ms substeps of the sent targets, drawn 0-60 ms per try,
   mjx_imitate _delayed_physics) is not teaching what the CPU trainer's does. Next: compare the two latency
   implementations step by step on one state (test_mjx_imitate.py style) before any more Lite3 GPU time.
+- **8 Nov 09:30 UTC. Lite3 GPU gap: the torque limit, not the delay code.** mjx_imitate's latency is the same as
+  imitate_env's (same queue, same substep split, same lag). The GPU brain 823M in our CPU env: trot 0/8 falls at 0, 3-6 and
+  10-15 ms (149M also 0/8): it is robust there. On DEEP's model at 3-6 ms (lockstep_vendor, new diagnostic env var
+  LOCKSTEP_TORQUE): DEEP's flat 30 N·m 6/6 falls; our limits 24/24/36 3/6; 36/36/36 6/6; 149M with our limits 0/6. The
+  GPU brain learned to lean on our exact limits (commands past them and lets the motor clip). New: mjx_imitate
+  --motor-torque-range LO HI (per try and joint type, peak torque and power x log-uniform factor). Short Kaggle GPU
+  check started from 149M with --motor-torque-range 0.8 1.4.
