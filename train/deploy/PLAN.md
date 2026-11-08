@@ -519,3 +519,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   Varying the torque limit is part of the fix, not all of it. Next suspects for the rest: our motor model's speed fade
   (DEEP's model has none), the capsule legs vs DEEP's meshes, MJX's floor-only contacts. No more Lite3 GPU runs until a
   probe finds the next cause; the robot brain stays 149M.
+- **8 Nov 17:00 UTC. Lite3 GPU gap probe 2: not the motor model.** lockstep_vendor gains LOCKSTEP_FADE (our robot_bodies
+  motor model: torque, power and speed fade, on DEEP's model). gtq_316 trot -> sit at 5-15 ms, 8 tries: DEEP's motors 2/8,
+  our torque limits 2/8, our full motor model 2/8 (149M with our motor model 0/8). With the torque range in training, the
+  rest of the gap is the body: DEEP's mesh legs and contacts vs our capsules and MJX's floor-only contacts, or mass /
+  inertia / joint friction. Next probe: the GPU brain on our own lite3_nomesh.xml through the same lockstep loop.

@@ -51,6 +51,10 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
     d.qpos[7:19] = sign * (ctl.stance + rng.normal(0, 0.02, 12))
     # vendor model joint order: FL, FR, RL, RR (as ours): checked by name below
     lo, hi = m.actuator_ctrlrange[:, 0], m.actuator_ctrlrange[:, 1]
+    FADE = None
+    if os.environ.get("LOCKSTEP_FADE"):   # diagnosis: our body's full motor model (robot_bodies), in our joint order
+        import robot_bodies
+        FADE = {k: np.asarray(v, float) for k, v in robot_bodies.Body(ctl.body.key).motor.items()}
     if os.environ.get("LOCKSTEP_TORQUE"):   # diagnosis: the vendor model with OUR body's torque limits (abd, thigh, knee)
         T = np.tile([float(x) for x in os.environ["LOCKSTEP_TORQUE"].split(",")], 4)
         lo, hi = -T, T
@@ -100,7 +104,15 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
                     target = new
                 if s % pd_every == 0:
                     q, dq = d.qpos[qadr], d.qvel[vadr]
-                    d.ctrl[:] = np.clip(kp * (sign * target[ours] - q) - kd * dq, lo, hi)
+                    u = kp * (sign * target[ours] - q) - kd * dq
+                    if FADE is not None:   # diagnosis: OUR motor model (torque, power, speed fade) on the vendor model
+                        T, P, W, C = (FADE[k][ours] for k in ("torque", "power", "speed", "cutoff"))
+                        w = np.abs(dq)
+                        drive = np.minimum(T, P / np.maximum(w, 1e-6)) * np.clip((C - w) / (C - W), 0.0, 1.0)
+                        u = np.clip(u, np.where(dq < 0, -drive, -T), np.where(dq >= 0, drive, T))
+                        d.ctrl[:] = u
+                    else:
+                        d.ctrl[:] = np.clip(u, lo, hi)
                 mujoco.mj_step(m, d)
             t_brain += DT
     return t_brain, None, float(d.qpos[2])
