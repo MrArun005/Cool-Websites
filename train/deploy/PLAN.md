@@ -499,3 +499,9 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   0.774 / steer 0.520 and 0.519, live 6-11 steps over 1.2x; dog-19 150M 0/12, 0/24, 0.779 / 0.507, live 5-13; dog-20 169M
   0/12, 1/24, steer 0.569; dog-20 168M 1/12, 1/24. Blend 149M + 50% dog-20 169M: trot->sit 0/48 but routine 2/12 (trot).
   None beats 149M (0.778 / 0.534, live 5-12). The penalty strength (x1.3/0.5 to x1.7/1.5) changes little once on.
+- **8 Nov 05:00 UTC. Lite3 GPU gap, first probe.** The GPU brain (gpu-overspeed 823M) on DEEP's model, trot 6 s, 6 tries:
+  falls 2/6 with no delay, 4/6 at 1-2 ms, 6/6 at 3-6 ms and 10-15 ms (CPU-trained brains: 0/6 at all of these); joint
+  damping 1.0 makes it worse (4/4), 2 ms physics no different from 1 ms, true velocity input no better. So the gap is
+  mostly about delay: the MJX trainer's latency (whole 2 ms substeps of the sent targets, drawn 0-60 ms per try,
+  mjx_imitate _delayed_physics) is not teaching what the CPU trainer's does. Next: compare the two latency
+  implementations step by step on one state (test_mjx_imitate.py style) before any more Lite3 GPU time.
