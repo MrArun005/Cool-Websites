@@ -494,3 +494,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   check_ready; test_deploy fixed for brains with input history (it called act() twice per step, advancing the history
   twice; now the brain runs once, inside the controller, and resets per try; the golden records the try starts);
   goldens re-checked for 211M, 798M and Lite3 149M; check_ready Go2 7/7, Lite3 8/8.
+- **8 Nov 03:00 UTC. Lite3: no change.** Kaggle dog-18 (112M, drive x1.5, overspeed 1.0, steer 0.2), dog-19 (130M, x1.7,
+  1.5), dog-20 (149M + canter x3 + the fix) on DEEP's model: dog-18 131M and 123M routine 0/12, trot->sit 0/24, exam
+  0.774 / steer 0.520 and 0.519, live 6-11 steps over 1.2x; dog-19 150M 0/12, 0/24, 0.779 / 0.507, live 5-13; dog-20 169M
+  0/12, 1/24, steer 0.569; dog-20 168M 1/12, 1/24. Blend 149M + 50% dog-20 169M: trot->sit 0/48 but routine 2/12 (trot).
+  None beats 149M (0.778 / 0.534, live 5-12). The penalty strength (x1.3/0.5 to x1.7/1.5) changes little once on.
