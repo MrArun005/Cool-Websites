@@ -140,7 +140,7 @@ def main():
         a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-lite3-dog-149M" / "params.pkl")
     else:
         xml = Path(os.environ["UNITREE_MUJOCO"]) / "unitree_robots" / "go2" / "scene.xml"
-        a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-go2-overspeed-211M" / "params.pkl")
+        a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-go2-torque-steer" / "params.pkl")
     if os.environ.get("LOCKSTEP_OURS"):   # diagnosis: OUR training body (robot_bodies) in the same loop, Bolt's signs
         import robot_bodies
         m = robot_bodies.Body(a.body).model()

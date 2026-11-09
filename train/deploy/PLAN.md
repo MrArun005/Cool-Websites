@@ -532,3 +532,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   torques computed every 1 ms from the controller's inputs vs the env's actuators, the leg estimator, settle-in start),
   not in DEEP's model; CPU-trained brains absorb it. That matters for the real robot too. Next: make the deploy loop's
   actuation selectable (env-style actuators at 2 ms) and find which piece flips gtq_316.
+- **9 Nov 06:00 UTC. New Go2 brain: torque-steer (models/bolt-go2-torque-steer).** Kaggle GPU (slug bolt-go2-privhist
+  v3): 211M + torque limits x0.8-1.4 per joint type + steer weight 0.8, 5 h. Live in Unitree's simulator 3/3 full
+  routines, no speed stop, 3-4 steps over 1.2x a run. go2.xml lockstep: 0/10 plain, 0-19 ms, 5% skips; 15-19 ms 0/12,
+  15% skips 1/12; over 1.2x 12 of 10500, worst 1.38x (211M 1.48x); recovery 20/20; exam 0.845 / 0% / steer 0.702 (211M
+  0.840 / 0% / 0.686). Adopted: go2 defaults swapped, golden recorded, check_ready 7/7.

@@ -34,7 +34,7 @@ Runtime -> Run all.
 
 | | |
 |---|---|
-| **Brains** | One brain per robot for all the motion (Go2 `overspeed-211M`, Lite3 `dog-149M`), a self-right brain each; numpy only on the robot, no torch |
+| **Brains** | One brain per robot for all the motion (Go2 `torque-steer`, Lite3 `dog-149M`), a self-right brain each; numpy only on the robot, no torch |
 | **Robot program** | `run_go2.py`: Unitree's unitree_sdk2 (DDS) or DEEP's UDP joint protocol through a C++ bridge to their MotionSDK; one setting switches simulator and robot |
 | **Safety** | eases in from the stance, keeps targets inside the joint limits, damping mode on a tilt, a stale state or a sustained over-speed |
 | **Recovery** | fall -> self-right -> tuck -> get up -> carry on, on both robots |

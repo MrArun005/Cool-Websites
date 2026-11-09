@@ -1,7 +1,7 @@
 """Gate for PLAN.md phase 1 steps 3-4: the robot-side controller builds the same 75 inputs and sends the same joint
 targets as imitate_env.ImitateEnv does in training, for the same robot state.
 
-    cd train && BOLT_BODY=go2 MUJOCO_GL=osmesa python deploy/test_deploy.py [../models/bolt-go2-overspeed-211M/params.pkl]
+    cd train && BOLT_BODY=go2 MUJOCO_GL=osmesa python deploy/test_deploy.py [../models/bolt-go2-torque-steer/params.pkl]
     ... test_deploy.py <brain> --save     # + record deploy/golden_<brain folder>.npz (the reference below)
     ... test_deploy.py <brain> --golden   # torch-free: replay that record through the controller (the robot's machine)
 
@@ -72,7 +72,7 @@ def brain_body(brain):
 
 def main():
     brain = next((x for x in sys.argv[1:] if not x.startswith("--")),
-                 str(HERE.parent.parent / "models" / "bolt-go2-overspeed-211M" / "params.pkl"))
+                 str(HERE.parent.parent / "models" / "bolt-go2-torque-steer" / "params.pkl"))
     if "--golden" in sys.argv:
         return check_golden(brain)
     from imitate_env import ImitateEnv

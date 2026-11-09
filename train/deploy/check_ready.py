@@ -3,7 +3,7 @@
     python deploy/check_ready.py [--iface <eth>]        # --iface: also check the robot's network link
 
 Each check prints PASS / FAIL and what to do on a FAIL; the last line is READY or NOT READY. Read-only: never sends a
-command to a robot. Checks: Python and packages; both brains load (motion: models/bolt-go2-overspeed-211M, self-right:
+command to a robot. Checks: Python and packages; both brains load (motion: models/bolt-go2-torque-steer, self-right:
 models/bolt-go2-selfright-6.9M brain.npz); the motion brain's parity test (controller vs the training env); the brain
 step time on this machine (the loop has 20 ms; HARDWARE_DAY wants it well under); CycloneDDS can open a channel; with
 --iface, that interface exists and has a 192.168.123.x address (Unitree's subnet).
@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
 MODELS = HERE.parent.parent / "models"
-BRAIN = MODELS / "bolt-go2-overspeed-211M" / "params.pkl"
+BRAIN = MODELS / "bolt-go2-torque-steer" / "params.pkl"
 SELFRIGHT = MODELS / "bolt-go2-selfright-6.9M"
 results = []
 
