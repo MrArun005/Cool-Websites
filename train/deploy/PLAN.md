@@ -559,5 +559,6 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   9/12 at 3-6 ms (falls ~10 s in); clip reference velocity (no measurement) 4/12. 149M with the estimate at 3-6 ms 0/12.
   The GPU-trained Lite3 brain leans on its velocity input; the estimate's errors plus delay tip it. The Go2's GPU brains
   are trained blind to velocity (--blind-vel) and transfer: the Lite3 GPU run gets the same. Earlier "trot passes" were
-  without --estimate or shorter than ~8 s. Kaggle GPU bolt-lite3-gpu-blind started: warm 149M, --blind-vel, torque
-  x0.8-1.4, drive x1.0-1.5, overspeed 1.0, 0-60 ms, 3 h.
+  without --estimate or shorter than ~8 s. Kaggle GPU bolt-lite3-gpu-blind prepared: warm 149M, --blind-vel, torque
+  x0.8-1.4, drive x1.0-1.5, overspeed 1.0, 0-60 ms, 3 h -- NOT started: the weekly GPU quota ran out (30 h; the
+  accidental privhist re-run of 8 Nov cost part of it). Kernel kept in scratchpad/k_lite3bl for the next reset.
