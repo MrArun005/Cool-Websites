@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
       - run: pip install numpy==2.5.4 mujoco==4.0.0 gymnasium==1.4.0
       - name: Robot program gives the trained answers (Go2 and Lite3 brains, recorded references)
         working-directory: train
