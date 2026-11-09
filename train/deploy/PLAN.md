@@ -554,3 +554,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   (LOCKSTEP_INTEGRATOR switch); on DEEP's model gtq_316's 13 s trot at a fixed 15 ms is 0/12 with either integrator,
   while the 41 s routine (7/12) and trot -> sit (9/24) fail. The failures are in the transitions and longer routines,
   not in a steady trot. Next: probe on DEEP's model only, with the routine and trot -> sit plans.
+- **9 Nov 17:30 UTC. Lite3 GPU gap FOUND: the velocity estimate.** On DEEP's model, gtq_316, 14 s trot, 12 tries: true
+  velocity and height 0/12 at 0 ms and 0/12 at 3-6 ms; the robot program's leg estimate (--estimate) 1/12 at 0 ms and
+  9/12 at 3-6 ms (falls ~10 s in); clip reference velocity (no measurement) 4/12. 149M with the estimate at 3-6 ms 0/12.
+  The GPU-trained Lite3 brain leans on its velocity input; the estimate's errors plus delay tip it. The Go2's GPU brains
+  are trained blind to velocity (--blind-vel) and transfer: the Lite3 GPU run gets the same. Earlier "trot passes" were
+  without --estimate or shorter than ~8 s. Kaggle GPU bolt-lite3-gpu-blind started: warm 149M, --blind-vel, torque
+  x0.8-1.4, drive x1.0-1.5, overspeed 1.0, 0-60 ms, 3 h.
