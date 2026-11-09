@@ -66,7 +66,7 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
     n_sub = int(round(DT / m.opt.timestep))
     target = ctl.stance.copy()
     ctl.reset()   # every try starts fresh: a try that fell lying must not leave the next one lying (or waiting on a get-up)
-    for k in range(int(1.0 / DT)):   # settle 1 s on the stance
+    for k in range(0 if os.environ.get("LOCKSTEP_NOSETTLE") else int(1.0 / DT)):   # settle 1 s on the stance
         for s in range(n_sub):
             if s % pd_every == 0:
                 q, dq = d.qpos[qadr], d.qvel[vadr]

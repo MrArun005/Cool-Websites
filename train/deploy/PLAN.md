@@ -537,3 +537,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   routines, no speed stop, 3-4 steps over 1.2x a run. go2.xml lockstep: 0/10 plain, 0-19 ms, 5% skips; 15-19 ms 0/12,
   15% skips 1/12; over 1.2x 12 of 10500, worst 1.38x (211M 1.48x); recovery 20/20; exam 0.845 / 0% / steer 0.702 (211M
   0.840 / 0% / 0.686). Adopted: go2 defaults swapped, golden recorded, check_ready 7/7.
+- **9 Nov 09:30 UTC. Lite3 GPU gap probe 4 (deploy loop on our body, true inputs, 12 tries each).** gtq_316: no delay
+  0/12; 5-15 ms per-step jitter 2/12 (trot 13 s, the falls are in the trot); fixed 10 ms 1/12; fixed 15 ms 4/12. So it
+  is the delay itself in the deploy loop, not its jitter. 149M also 1/12 at 5-15 ms on a 13 s trot here (0/8 before on
+  8 s): the deploy loop is harsher for every brain, the GPU ones more. Ruled out so far: DEEP's body, our motor model
+  (fade, power), torque limits beyond the first half, 1 vs 2 ms physics, delay jitter. Left: the loop's actuation (an
+  explicit PD torque each substep clipped at the ctrl range, vs the training env's actuators and motor model), and the
+  start (1 s settled on the stance vs the env's start inside the clip). (A no-settle switch, LOCKSTEP_NOSETTLE, only
+  shows a t=0 drop artifact.)
