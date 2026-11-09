@@ -43,6 +43,7 @@ def main():
     ap.add_argument("--switch-rate", type=float, default=0.3)
     ap.add_argument("--motor-speed-x", type=float, default=1.5)
     ap.add_argument("--hours", type=float)
+    ap.add_argument("--student", help="continue from this student folder (default: start from the teacher's own network)")
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     os.environ["BOLT_BODY"] = a.body
@@ -65,7 +66,7 @@ def main():
     norm = VecNormalize.load(str(src / "vecnormalize.pkl"), venv)
     mean, std, clip = norm.obs_rms.mean, np.sqrt(norm.obs_rms.var + norm.epsilon), norm.clip_obs
     teacher = PPO.load(src / "policy.zip", device="cpu")
-    student = PPO.load(src / "policy.zip", device="cpu")
+    student = PPO.load(Path(a.student or src) / "policy.zip", device="cpu")
     tp, sp = teacher.policy, student.policy
     tp.set_training_mode(False)
     opt = torch.optim.Adam(sp.parameters(), lr=a.lr)
@@ -88,7 +89,7 @@ def main():
     t0 = time.time()
     for it in range(a.iters):
         falls, n = 0, 0
-        drive_teacher = np.arange(a.envs) < round(a.envs * a.teacher_share) if it == 0 else np.zeros(a.envs, bool)
+        drive_teacher = np.arange(a.envs) < round(a.envs * a.teacher_share) if it == 0 and not a.student else np.zeros(a.envs, bool)
         sigma = a.noise * np.exp(sp.log_std.detach().numpy())
         while n < a.steps:
             with torch.no_grad():
