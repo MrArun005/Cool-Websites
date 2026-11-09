@@ -562,13 +562,13 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   without --estimate or shorter than ~8 s. Kaggle GPU bolt-lite3-gpu-blind prepared: warm 149M, --blind-vel, torque
   x0.8-1.4, drive x1.0-1.5, overspeed 1.0, 0-60 ms, 3 h -- NOT started: the weekly GPU quota ran out (30 h; the
   accidental privhist re-run of 8 Nov cost part of it). Kernel kept in scratchpad/k_lite3bl for the next reset.
-- **9 Nov 20:00 UTC. Probe before training: 149M without its velocity input.** DEEP's model, leg estimate, 3-6 ms, 12
+- **9 Nov 19:30 UTC. Probe before training: 149M without its velocity input.** DEEP's model, leg estimate, 3-6 ms, 12
   tries: 149M as is, 14 s trot 0/12 and the routine 0/12; the same brain with inputs 6:9 zeroed falls 12/12 in both, at
   ~2.5 s. So a --blind-vel run warm-started from 149M starts from a brain that falls at once. Instead of spending GPU
   hours on relearning: `train/distill_blind.py` copies 149M into a student that never sees velocity (the student drives,
   149M with true velocity labels every step; DAgger). `--blind-vel` now also exists in the CPU trainer
   (BOLT_BLIND_VEL=1 zeroes inputs 6:9 in ImitateEnv for training and exams). Results below when measured.
-- **9 Nov 20:00 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
+- **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
   kinematics); a 10 s shadow run of the brain with its answers thrown away (timing, limits). Writes report.json +

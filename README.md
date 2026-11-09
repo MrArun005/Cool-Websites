@@ -12,6 +12,7 @@ Walk, trot, pace, canter, turns, sit, lie, get up, steering, and getting back up
 [![Status](https://img.shields.io/badge/status-simulation-555?style=for-the-badge)](train/deploy/PLAN.md)
 [![Robots](https://img.shields.io/badge/robots-Go2%20EDU%20%C2%B7%20Lite3-2b6cb0?style=for-the-badge)](train/deploy/HARDWARE_DAY.md)
 [![Brains](https://img.shields.io/badge/brains-in%20the%20repo-2f855a?style=for-the-badge)](models/)
+[![Checks](https://github.com/MrArun005/Cool-Websites/actions/workflows/bolt-checks.yml/badge.svg?branch=claude/robot-build-memory-ju76nt)](.github/workflows/bolt-checks.yml)
 [![GPU](https://img.shields.io/badge/train-free%20Colab%20%2F%20Kaggle%20GPU-e37400?style=for-the-badge)](train/colab/bolt_gpu.ipynb)
 
 **Created and directed by Arun Mallikarjun**, who set the goals, the targets and the rules and owns the project. The
@@ -41,6 +42,7 @@ Runtime -> Run all.
 | **Talk to it** | `--pet`: a local pet mind (moods, memory, jokes, tricks); `--remote`: the Go2's own wireless remote |
 | **Training** | MuJoCo MJX + Brax PPO on 4,096 robots per GPU; delay, damping, motor-speed and push randomization; privileged critic and input history as options |
 | **Checks** | one-command setup, readiness check, controller-vs-training parity to 1e-7, rehearsals on each maker's own model |
+| **First contact** | `first_run.py`: a guided check on the real Go2 that only listens (no command publisher): link, IMU frame, joint order and signs, and a shadow run of the brain; PASS/FAIL report to send back |
 
 **Measured, not claimed.** On each maker's own MuJoCo model, stepped in lockstep with the robot program's inputs:
 the Go2 brain finishes a 41 s trot / sit / lie / get-up / walk / canter routine 10 times out of 10 (also 10/10 with
@@ -50,6 +52,23 @@ tipped, shoved); the full routine also runs live, in real time, in Unitree's sim
 than last week's at lower joint speeds; it still falls in the canter, so the robot program runs its canter as a trot. Both brains were trained with
 a penalty on joint speed above rated, after live runs showed the earlier brains tripping the robot program's speed stop. Every number, with the command that made it, is in
 [`train/deploy/PLAN.md`](train/deploy/PLAN.md).
+
+**Results so far (all simulation, each maker's own MuJoCo model, robot-program inputs):**
+
+| Test | Go2 `torque-steer` | Lite3 `dog-149M` |
+|---|---|---|
+| 41 s routine: trot, sit, lie, get up, walk (+ canter on Go2) | 10 / 10 | 24 / 24 with commands 3-15 ms late (canter run as a trot) |
+| With late commands | routine 10 / 10 at 0-19 ms | trot -> sit 48 / 48 at 5-15 ms |
+| 5% of control steps lost | 10 / 10 | not measured |
+| Back on its feet after a fall (side, back, tipped, shoved) | 20 / 20 | 20 / 20 |
+| Live in the maker's simulator, real time | routine 3 / 3, no speed stop | runs through DEEP's protocol bridge |
+| Canter | in the routine above | **falls: not usable yet** |
+| On the real robot | **not run** | **not run** |
+
+**Have a Go2 EDU?** The first step needs no motion at all: `python deploy/first_run.py --iface <eth> --domain 0`
+listens for five minutes while you tilt the robot and move its legs by hand, and writes a report. Sending that
+report back (an issue here, or the email below) is the most useful thing anyone can do for this project.
+The full, staged procedure is [`train/deploy/HARDWARE_DAY.md`](train/deploy/HARDWARE_DAY.md).
 
 | Go2: trot, then sit | Lite3: trot, then canter | Lite3: lie down, get up, walk |
 |---|---|---|
