@@ -568,6 +568,15 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   hours on relearning: `train/distill_blind.py` copies 149M into a student that never sees velocity (the student drives,
   149M with true velocity labels every step; DAgger). `--blind-vel` now also exists in the CPU trainer
   (BOLT_BLIND_VEL=1 zeroes inputs 6:9 in ImitateEnv for training and exams). Results below when measured.
+- **9 Nov 20:00 UTC. Blind student, snapshot at iteration 7 of 60 (still copying).** Falls on DEEP's Lite3 model with
+  the leg estimate, 149M -> student: trot 20 s at 10-19 ms 2/24 -> 0/24; trot 20 s at 3-6 ms with 5% missed steps
+  7/24 -> 0/24; routine at 10-19 ms 2/24 -> 0/24; canter routine at 3-6 ms 9/12 -> 2/12; trot -> sit 1/48 -> 0/48;
+  routine at 3-6 ms 0/24 both. Our exam (true physics): tracking 0.778 -> 0.762, steer 0.534 -> 0.521, canter
+  tracking 0.453 -> 0.349 with canter falls 0 -> 0.25, moving sit/lie 0/48 both. DEEP's simulator live (41 s routine):
+  steps with a joint over 1.2x rated 12 and 15 (149M, 2 runs) against 11 and 11 (student, 2 runs); all finished.
+  Reading: not seeing velocity makes the brain sturdier under delay and missed steps (the estimate's error can no
+  longer reach it) at a small cost in tracking; the canter is the open part. Final snapshot is tested before any
+  change of the default brain. All simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
