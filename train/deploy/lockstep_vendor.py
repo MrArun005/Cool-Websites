@@ -144,9 +144,15 @@ def main():
     if os.environ.get("LOCKSTEP_OURS"):   # diagnosis: OUR training body (robot_bodies) in the same loop, Bolt's signs
         import robot_bodies
         m = robot_bodies.Body(a.body).model()
+        # our model drives position servos (gain kp, bias -kp q - kv qd); this loop writes torques: make them plain motors
+        m.actuator_gaintype[:], m.actuator_biastype[:] = 0, 0
+        m.actuator_gainprm[:, 0], m.actuator_biasprm[:, :3] = 1.0, 0.0
+        m.actuator_ctrlrange[:] = m.actuator_forcerange
     else:
         m = mujoco.MjModel.from_xml_path(str(xml))
     m.opt.timestep = a.dt
+    if os.environ.get("LOCKSTEP_INTEGRATOR"):   # diagnosis: 0 Euler (DEEP's), 3 implicitfast (our training model's)
+        m.opt.integrator = int(os.environ["LOCKSTEP_INTEGRATOR"])
     if not a.stairs:
         flatten(m)
     if a.damping is not None:

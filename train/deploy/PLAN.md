@@ -545,3 +545,12 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   explicit PD torque each substep clipped at the ctrl range, vs the training env's actuators and motor model), and the
   start (1 s settled on the stance vs the env's start inside the clip). (A no-settle switch, LOCKSTEP_NOSETTLE, only
   shows a t=0 drop artifact.)
+- **9 Nov 13:30 UTC. CORRECTION to probes 3 and 4.** LOCKSTEP_OURS=1 was invalid: this loop writes motor TORQUES into
+  d.ctrl, but our training model's actuators are position servos (gain kp, bias -kp q - kv qd, ctrlrange = joint range),
+  so the "our body" numbers of 8 Nov 21:30 and 9 Nov 09:30 measured a broken robot; disregard them. Converting our
+  actuators to plain motors (now in the switch) still gives gtq_316 11/12 falls on a 13 s trot at 15 ms with either
+  integrator, so the switch is still not a faithful copy of our training body: do not use it until it reproduces the
+  training env (149M and gtq_316 0/12 there). Facts that stand: our model uses the implicitfast integrator, DEEP's Euler
+  (LOCKSTEP_INTEGRATOR switch); on DEEP's model gtq_316's 13 s trot at a fixed 15 ms is 0/12 with either integrator,
+  while the 41 s routine (7/12) and trot -> sit (9/24) fail. The failures are in the transitions and longer routines,
+  not in a steady trot. Next: probe on DEEP's model only, with the routine and trot -> sit plans.
