@@ -1,0 +1,30 @@
+# Bolt robot-side checks, on every push that touches the robot code or the brains. No GPU, about a minute.
+# They prove only that the robot-side program still matches what the brains were trained on (simulation).
+name: bolt-checks
+on:
+  push:
+    paths: ["train/**", "models/**", ".github/workflows/bolt-checks.yml"]
+  pull_request:
+    paths: ["train/**", "models/**"]
+permissions:
+  contents: read
+jobs:
+  robot-side:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy==2.5.4 mujoco==4.0.0 gymnasium==1.4.0
+      - name: Robot program gives the trained answers (Go2 and Lite3 brains, recorded references)
+        working-directory: train
+        env:
+          MUJOCO_GL: osmesa
+        run: |
+          python deploy/test_deploy.py ../models/bolt-go2-torque-steer/params.pkl --golden
+          python deploy/test_deploy.py ../models/bolt-lite3-dog-149M/params.pkl --golden
+      - name: First-run check rejects swapped legs, flipped signs and a wrong IMU frame (made-up data)
+        working-directory: train
+        run: python deploy/first_run.py --selftest

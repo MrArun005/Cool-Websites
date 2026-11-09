@@ -112,6 +112,7 @@ same; the body's own stance replaces DOG (inputs 10 and 57, residual=False), and
 height instead of 15 cm; its own sit/lie/stand poses for pose_reached). Landing starts and terrain are Bolt-only; the GPU
 env (mjx_imitate.py --body go2) has the Go2 too (test_mjx_imitate.py dump-go2 / check-go2: the parity).
 """
+import os
 from pathlib import Path
 
 import gymnasium as gym
@@ -273,6 +274,10 @@ class ImitateEnv(BoltEnv):
         # rated (run_go2 --speed-steps); brains that steer well drove the Lite3's joints past 1.2x rated twice as often
         # live on DEEP's simulator (PLAN.md 5-6 Nov), and nothing in the reward told them not to. 0: off (old rewards).
         self.overspeed_weight = float(overspeed_weight)
+        # BOLT_BLIND_VEL=1 (train_imitate --blind-vel): the body-velocity inputs are always 0. A real robot has no
+        # velocity sensor; the Lite3's 149M brain leans on them (zeroed: 12/12 falls within 2.5 s on DEEP's model,
+        # PLAN.md 9 Nov). Read from the environment, as BOLT_BODY, so the training envs and the exams agree.
+        self.blind_vel = os.environ.get("BOLT_BLIND_VEL", "") == "1"
         self.rated = (np.tile(self.robot.entry["speed"], 4).astype(float) if self.body != "bolt" and self.overspeed_weight
                       else None)
         self.slots = slots   # clip one-hot size: 8 for brains from before the getup clip (74 inputs)
@@ -398,6 +403,8 @@ class ImitateEnv(BoltEnv):
             obs[9] += k * NOISE["height"] * u(1)[0]
             obs[10:22] += k * NOISE["qpos"] * u(12)
             obs[22:34] += k * NOISE["qvel"] * 0.1 * u(12)
+        if self.blind_vel:   # a brain without the body-velocity inputs (--blind-vel): always 0, as in mjx_imitate
+            obs[6:9] = 0.0
         return obs.astype(np.float32)
 
     def reset(self, seed=None, options=None):

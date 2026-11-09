@@ -139,7 +139,11 @@ def main():
                     "excess of joint speed over rated (fraction of rated); 0 = off")
     ap.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model "
                     "file's (robot_bodies BOLT_JOINT_DAMPING; Go2's Menagerie value 2.0 is an assumption, not a measurement)")
+    ap.add_argument("--blind-vel", action="store_true", help="zero the body-velocity inputs in training and exams (a real "
+                    "robot has no velocity sensor); for a brain made blind by distill_blind.py, or from scratch")
     args = ap.parse_args()
+    if args.blind_vel:
+        os.environ["BOLT_BLIND_VEL"] = "1"   # read by every ImitateEnv (training subprocesses and exams)
     if args.joint_damping is not None:
         os.environ["BOLT_JOINT_DAMPING"] = repr(args.joint_damping)   # read when each env builds its model
     os.environ["BOLT_BODY"] = args.body   # the training envs (subprocesses), the exams and ImitatePolicy all read it

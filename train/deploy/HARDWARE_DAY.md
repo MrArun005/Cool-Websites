@@ -26,12 +26,18 @@ routine 3/3 with no speed stop. Earlier brains: `bolt-go2-overspeed-211M` (same 
 
 - [ ] Wired Ethernet; laptop on 192.168.123.x (Unitree's subnet). Find the interface name (`ip a`).
 - [ ] Robot lying down, powered on. Sport mode will be released by `--release-sport`.
-- [ ] Read-only check: `python deploy/read_go2.py --iface <eth> --domain 0` (never sends a command; prints the
-      gravity reading, gyro and the 12 joints in OUR order 5 times a second, then the message rate). Check by hand:
-  - [ ] Tilt the robot nose-up: the gravity reading changes sign the way the simulator's does.
-  - [ ] Move each leg by hand: the joint in OUR order (FL, FR, RL, RR x hip, thigh, calf) changes, with the
-        simulator's sign (registry `sdk_order`).
-  - [ ] Message rate ~500 Hz on the robot (Unitree's simulator: 200 Hz), largest gap under 10 ms.
+- [ ] Guided check, listens only: `python deploy/first_run.py --iface <eth> --domain 0` (about 5 minutes; it has no
+      command publisher at all). It prints PASS or FAIL for each of:
+  - [ ] link: state messages at 400/s or more, no gap of 20 ms.
+  - [ ] still: gravity straight down, gyro and joint speeds near 0, joints in range.
+  - [ ] tilt: you lift the nose, then the right side; gravity must move as in our simulator and agree with the gyro.
+  - [ ] legs: you move each joint by hand when asked (12 moves; `--quick`: 4); the right joint must change, in our
+        sign. Legs lying in sport mode are damped: move slowly, about a hand's width.
+  - [ ] shadow: the brain runs on the live readings for 10 s, its answers thrown away: 0 late steps, answers inside
+        the joint limits.
+- [ ] It ends with "ready for the hanging test" and writes `first_run_<time>/report.json` + `samples.npz`. Keep the
+      folder. Rehearse it the day before with `--selftest` (no robot) and against `sim_vendor.py` with
+      `--domain 1 --auto`. `read_go2.py` still prints the raw readings if you want to look by hand.
 - Stop if: any joint maps to the wrong leg or sign, or the IMU frame differs. Fix `robot_bodies.py`, re-run step 0.
 
 ## 2. Hanging in the harness (feet 2-3 cm off the floor)
