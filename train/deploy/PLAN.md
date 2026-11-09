@@ -587,6 +587,12 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   1 of 8; so the canter stays a trot by default. Defaults switched in run_go2, check_ready, lockstep_vendor,
   lockstep_recovery; golden recorded and in the push checks; 149M kept. Next: Kaggle CPU fine-tune with
   `--blind-vel` from this brain, canter drawn 3x, to win back the steered canter. All simulation.
+- **9 Nov 21:50 UTC. More copying does not fix the canter (not adopted).** 60 more rounds from the blind brain with
+  the canter drawn 3x (`distill_blind.py --student`): action error 0.024 -> 0.023; our exam tracking 0.766, canter
+  falls 1 of 4, steered canter 0.318 with 3 of 8 falling (blind brain: 0.255, 4 of 8; 149M: 0.433, 1 of 8); canter
+  routine on DEEP's model 2/24 (blind brain 1/24). Within the noise of 8 tries: no gain. The copy is as close to
+  149M as it gets; a canter that works without velocity has to be learned, which is what Kaggle lite3-dog-21..23
+  (PPO with --blind-vel, pushed 20:38 UTC) are for. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
