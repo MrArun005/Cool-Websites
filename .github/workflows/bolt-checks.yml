@@ -22,6 +22,7 @@ jobs:
         working-directory: train
         run: |
           python deploy/test_deploy.py ../models/bolt-go2-torque-steer/params.pkl --golden
+          python deploy/test_deploy.py ../models/bolt-lite3-dog-blind-149M/params.pkl --golden
           python deploy/test_deploy.py ../models/bolt-lite3-dog-149M/params.pkl --golden
       - name: First-run check rejects swapped legs, flipped signs and a wrong IMU frame (made-up data)
         working-directory: train

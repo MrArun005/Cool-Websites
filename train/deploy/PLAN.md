@@ -577,6 +577,16 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   Reading: not seeing velocity makes the brain sturdier under delay and missed steps (the estimate's error can no
   longer reach it) at a small cost in tracking; the canter is the open part. Final snapshot is tested before any
   change of the default brain. All simulation.
+- **9 Nov 20:40 UTC. Blind student, final (60 rounds, 68 min on 4 cores): adopted as the Lite3 robot brain,
+  `models/bolt-lite3-dog-blind-149M`.** Falls on DEEP's model with the leg estimate, 149M -> blind: trot 20 s at
+  10-19 ms 2/24 -> 0/24; trot 20 s at 3-6 ms with 5% missed steps 7/24 -> 0/24; routine at 10-19 ms 2/24 -> 0/24;
+  routine at 3-6 ms 0/24 both; routine ending in a canter at 3-6 ms 13/24 -> 1/24; trot -> sit at 5-15 ms 1/48 ->
+  0/48; pace/walk/turns 0/12 both; recovery 48/48. Live in DEEP's simulator, steps with a joint over 1.2x rated per
+  41 s run: 12, 15, 12 -> 5, 7, 4. Our exam: tracking 0.778 -> 0.775, falls 0 both, moving sit/lie 0/48 both, trot
+  steering 0.636 -> 0.633. Worse: steering in a canter 0.433 -> 0.255, with 4 of 8 steered canters falling against
+  1 of 8; so the canter stays a trot by default. Defaults switched in run_go2, check_ready, lockstep_vendor,
+  lockstep_recovery; golden recorded and in the push checks; 149M kept. Next: Kaggle CPU fine-tune with
+  `--blind-vel` from this brain, canter drawn 3x, to win back the steered canter. All simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
