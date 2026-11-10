@@ -670,17 +670,71 @@ class ImitateEnv(BoltEnv):
         self.limit = int(min(self.t + left, self.t + self.max_steps))
 
 
+HIST_SEL = np.r_[0:6, 10:46]   # the inputs kept from earlier steps (as mjx_imitate.HIST_SEL): gravity, gyro, joints, last action
+
+
+def history_steps():
+    """BOLT_HISTORY=K (train_imitate --history K): the brain also reads its last K steps' HIST_SEL inputs."""
+    return int(os.environ.get("BOLT_HISTORY", "0") or 0)
+
+
+class HistoryEnv(gym.Wrapper):
+    """ImitateEnv with the last K steps' HIST_SEL inputs appended, oldest first; a new try starts with its first frame
+    repeated. The same layout MjxImitatePolicy builds on the robot, so a brain trained here exports unchanged."""
+
+    def __init__(self, env, k):
+        super().__init__(env)
+        self.k = int(k)
+        n = env.observation_space.shape[0] + self.k * len(HIST_SEL)
+        self.observation_space = gym.spaces.Box(-np.inf, np.inf, (n,), np.float32)
+        self.hist = None
+
+    def _with(self, obs):
+        f = obs[HIST_SEL]
+        if self.hist is None:
+            self.hist = np.tile(f, (self.k, 1))
+        out = np.concatenate([obs, self.hist.ravel()]).astype(np.float32)
+        self.hist = np.concatenate([self.hist[1:], f[None]])
+        return out
+
+    def reset(self, **kw):
+        obs, info = self.env.reset(**kw)
+        self.hist = None
+        return self._with(obs), info
+
+    def step(self, action):
+        obs, r, term, trunc, info = self.env.step(action)
+        return self._with(obs), r, term, trunc, info
+
+
+def make_env(**kw):
+    """The training env: ImitateEnv, wrapped with the input history when BOLT_HISTORY is set."""
+    env, k = ImitateEnv(**kw), history_steps()
+    return HistoryEnv(env, k) if k else env
+
+
 class ImitatePolicy:
     def __init__(self, run_dir, zip_name="policy.zip", stats_name="vecnormalize.pkl"):
         run_dir = Path(run_dir)
         self.model = PPO.load(run_dir / zip_name, device="cpu")
-        self.slots = self.model.observation_space.shape[0] - 66   # 8: a brain from before the getup clip
-        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: ImitateEnv(slots=self.slots)]))
+        self.history = history_steps()
+        self.slots = self.model.observation_space.shape[0] - 66 - self.history * len(HIST_SEL)   # 8: a brain from before the getup clip
+        self.norm = VecNormalize.load(str(run_dir / stats_name), DummyVecEnv([lambda: make_env(slots=self.slots)]))
         self.norm.training = False
+        self.hist = None
+
+    def reset(self):
+        self.hist = None
 
     def act(self, obs):
         if len(obs) > 66 + self.slots:   # an older brain: drop the clip slots it never had (they are 0)
             obs = np.concatenate([obs[:48 + self.slots], obs[48 + len(ALL_CLIPS):]])
+        if self.history:   # as MjxImitatePolicy: the exams' env has one frame; the history is kept here
+            f = obs[HIST_SEL]
+            if self.hist is None:
+                self.hist = np.tile(f, (self.history, 1))
+            obs = np.concatenate([obs, self.hist.ravel()]).astype(np.float32)
+            self.hist = np.concatenate([self.hist[1:], f[None]])
         return self.model.predict(self.norm.normalize_obs(obs), deterministic=True)[0]
 
 

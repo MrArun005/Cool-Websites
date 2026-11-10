@@ -264,10 +264,11 @@ def from_sb3(zip_path, stats_path):
     """An SB3 PPO brain (policy zip + VecNormalize pkl) -> the numpy dict params.pkl uses (needs torch + SB3)."""
     from stable_baselines3 import PPO
     from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
-    from imitate_env import ImitateEnv
+    from imitate_env import history_steps, make_env
     model = PPO.load(zip_path, device="cpu")
-    slots = model.observation_space.shape[0] - 66
-    norm = VecNormalize.load(str(stats_path), DummyVecEnv([lambda: ImitateEnv(slots=slots)]))
+    hist = history_steps()   # BOLT_HISTORY: a CPU brain trained with --history
+    slots = model.observation_space.shape[0] - 66 - hist * len(HIST_SEL)
+    norm = VecNormalize.load(str(stats_path), DummyVecEnv([lambda: make_env(slots=slots)]))
     sd = {k: v.detach().numpy().astype(np.float32) for k, v in model.policy.state_dict().items()}
 
     def mlp(prefix, head):
@@ -283,7 +284,7 @@ def from_sb3(zip_path, stats_path):
                 value=mlp("mlp_extractor.value_net", "value_net"),
                 reward_scale=float(1.0 / np.sqrt(norm.ret_rms.var + norm.epsilon)) if norm.norm_reward else 1.0,
                 hidden=tuple(int(W.shape[1]) for W, _ in mlp("mlp_extractor.policy_net", "action_net")[:-1]),
-                steps=int(model.num_timesteps), source=str(zip_path))
+                steps=int(model.num_timesteps), source=str(zip_path), **({"history": hist} if hist else {}))
 
 
 # ---------- the environment ----------

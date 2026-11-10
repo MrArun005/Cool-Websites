@@ -28,7 +28,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
-from imitate_env import ALL_CLIPS, DEFAULT_CLIPS, STEER, STEER_CLIPS, ImitateEnv, ImitatePolicy, exam, exam_steer, score
+from imitate_env import ALL_CLIPS, DEFAULT_CLIPS, STEER, STEER_CLIPS, ImitateEnv, ImitatePolicy, exam, exam_steer, make_env, score
 from bolt_env import add_brake_args, set_motor_brake, set_motor_speed
 from robot_bodies import BODIES
 
@@ -139,9 +139,13 @@ def main():
                     "excess of joint speed over rated (fraction of rated); 0 = off")
     ap.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model "
                     "file's (robot_bodies BOLT_JOINT_DAMPING; Go2's Menagerie value 2.0 is an assumption, not a measurement)")
+    ap.add_argument("--history", type=int, default=0, help="the brain also reads its last K steps of gravity, gyro, joints and "
+                    "previous action (imitate_env.HistoryEnv; a blind brain needs it to know its speed, PLAN.md 10 Nov)")
     ap.add_argument("--blind-vel", action="store_true", help="zero the body-velocity inputs in training and exams (a real "
                     "robot has no velocity sensor); for a brain made blind by distill_blind.py, or from scratch")
     args = ap.parse_args()
+    if args.history:
+        os.environ["BOLT_HISTORY"] = str(args.history)   # read by make_env (training subprocesses) and ImitatePolicy (exams)
     if args.blind_vel:
         os.environ["BOLT_BLIND_VEL"] = "1"   # read by every ImitateEnv (training subprocesses and exams)
     if args.joint_damping is not None:
@@ -160,7 +164,7 @@ def main():
     torch.set_num_threads(args.threads)
     if args.motor_speed_x:
         os.environ["BOLT_MOTOR_SPEED_X"] = str(args.motor_speed_x)   # read by robot_bodies in every env process
-    venv = make_vec_env(ImitateEnv, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(
+    venv = make_vec_env(make_env, n_envs=args.envs, vec_env_cls=SubprocVecEnv, env_kwargs=dict(
         clips=args.clips, slots=args.slots, switch_rate=args.switch_rate, weights={"root_vel": args.root_vel_weight} if args.root_vel_weight else None, root_global=args.root_global, steer_max=args.steer_max,
         steer_share=args.steer_share, steer_change=args.steer_change, steer_weight=args.steer_weight,
         **({"latency_ms": tuple(args.latency_ms)} if args.latency_ms[1] > 0 else {}),
