@@ -614,6 +614,14 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   8-12 a run (blind brain 4-7, 149M 12-15). Not made the default: the Lite3's canter runs as a trot anyway, and for
   the default routine the blind brain is as safe at lower joint speeds. Next: when the GPU quota is back, train
   from this brain with history, the over-speed penalty and --blind-vel. Simulation.
+- **10 Nov 16:15 UTC. The CPU trainer learns with input history; Kaggle lite3-dog-24..26 pushed.** `train_imitate.py
+  --history K` (imitate_env.HistoryEnv: the last K steps' gravity, gyro, joints and previous action, the layout the
+  robot program already builds); `distill_hist.py` now also copies the value head and writes an SB3 folder, checked
+  equal to its params.pkl (differences 0). Start brain `models/bolt-lite3-dog-blind-hist-start` (25 more copying
+  rounds; fresh-seed steered canter 0.349 with 6 falls of 24, the candidate 0.385 with 5: the same within noise).
+  Jobs, ~10.5 h each on Kaggle CPU: 24 = 149M's settings with --history 3 --blind-vel; 25 = over-speed penalty x2
+  (the history brain runs its joints faster live: 8-12 steps against the blind brain's 4-7); 26 = lr 3e-5. To be
+  judged on fresh seeds. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
