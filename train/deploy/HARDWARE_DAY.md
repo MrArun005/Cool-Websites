@@ -87,7 +87,8 @@ routine 3/3 with no speed stop. Earlier brains: `bolt-go2-overspeed-211M` (same 
   estimator's error cannot reach it. On DEEP's model with the robot's inputs: no falls in 24 routines at 3-6 ms and
   24 at 10-19 ms, 48 trot -> sit, 24 trots of 20 s with 5% of steps missed; routine ending in a canter 1/24; live
   joint over-speed 4-7 steps a run. The canter still runs as a trot by default. `models/bolt-lite3-dog-149M` is the
-  previous brain (reads velocity from LegEstimator; steers better in a canter). Self-right brain:
+  previous brain (reads velocity from LegEstimator; steers better in a canter). `models/bolt-lite3-dog-blind-hist-candidate`
+  (blind, with 3 frames of input history) steers in a canter almost as well as 149M; live joint over-speed 8-12 steps a run. Self-right brain:
   `models/bolt-lite3-selfright-28M`.
 - Link: DEEP's Lite3_MotionSDK through our bridge, not unitree_sdk2. Build `deploy/lite3_bridge/bridge.cpp` on the
   robot's motion host (or a laptop on its network; the build line is at the top of the file), run `./lite3_bridge

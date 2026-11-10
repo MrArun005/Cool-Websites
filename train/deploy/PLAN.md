@@ -605,6 +605,15 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   3 (0.360, as untouched); forward and sideways 23. A brain that sees one frame cannot know how fast it runs. The Go2
   brain has the same blindness but sees its last 3 frames. Next: `distill_hist.py`, the copy with 3 frames of history
   (the runtime already supports it). Simulation.
+- **10 Nov 08:50 UTC. Blind copy with 3 frames of history: the steered canter comes back; kept as a candidate.**
+  `distill_hist.py` from 149M, 60 rounds, 54 min on 4 cores, action error 0.018 (blind copy: 0.024):
+  `models/bolt-lite3-dog-blind-hist-candidate`. Fresh-seed steered canter (24 tries): 0.385 with 5 falls (149M 0.392
+  with 3; blind brain 0.270 with 8). Our exam: tracking 0.777, steering 0.540 (149M 0.778 / 0.534), no falls, moving
+  sit/lie 0/48. DEEP's model with the leg estimate: 0 falls in all the trot, routine and sit tests; routine ending in
+  a canter 4/36 (blind brain 2/36, 149M 13/24); recovery 48/48. Live in DEEP's simulator 3/3, steps over 1.2x rated
+  8-12 a run (blind brain 4-7, 149M 12-15). Not made the default: the Lite3's canter runs as a trot anyway, and for
+  the default routine the blind brain is as safe at lower joint speeds. Next: when the GPU quota is back, train
+  from this brain with history, the over-speed penalty and --blind-vel. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
