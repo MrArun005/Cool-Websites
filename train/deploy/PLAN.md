@@ -593,6 +593,18 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   routine on DEEP's model 2/24 (blind brain 1/24). Within the noise of 8 tries: no gain. The copy is as close to
   149M as it gets; a canter that works without velocity has to be learned, which is what Kaggle lite3-dog-21..23
   (PPO with --blind-vel, pushed 20:38 UTC) are for. Simulation.
+- **10 Nov 07:30 UTC. Kaggle lite3-dog-21..23 (PPO with --blind-vel from the blind brain, 24-28M steps each): not
+  adopted, and why the first look misled.** Each run's best/ showed the steered canter fixed (steer_canter 0.42-0.45,
+  falls 0-2 of 8), but best/ is picked on that same 8-try exam. On fresh seeds (exam_steer seed 7777, 24 tries):
+  149M 0.392 with 3 falls; blind brain 0.270 with 8; dog-21 0.273 with 6; dog-22 0.309 with 7; dog-23 0.278 with 6;
+  last checkpoints no better. So no gain. On DEEP's model dog-23 has no fall in all 7 stress tests (canter routine
+  0/12), dog-21 one trot fall in 24 routines, dog-22 one canter fall in 12: the same record as the blind brain.
+  Lesson: a brain picked on an exam must be judged on other seeds.
+- **10 Nov 07:50 UTC. Cause of the steered-canter falls: the forward-speed input.** 149M in the fresh-seed steered
+  canter with single inputs zeroed: forward speed 14 falls of 24 (steer 0.151); sideways speed 5 (0.289); vertical
+  3 (0.360, as untouched); forward and sideways 23. A brain that sees one frame cannot know how fast it runs. The Go2
+  brain has the same blindness but sees its last 3 frames. Next: `distill_hist.py`, the copy with 3 frames of history
+  (the runtime already supports it). Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
