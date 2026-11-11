@@ -622,7 +622,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   Jobs, ~10.5 h each on Kaggle CPU: 24 = 149M's settings with --history 3 --blind-vel; 25 = over-speed penalty x2
   (the history brain runs its joints faster live: 8-12 steps against the blind brain's 4-7); 26 = lr 3e-5. To be
   judged on fresh seeds. Simulation.
-- **11 Nov 04:30 UTC. Kaggle lite3-dog-24..26 (PPO with history, 15-23M steps): a real gain, judged on fresh seeds.**
+- **11 Nov 03:50 UTC. Kaggle lite3-dog-24..26 (PPO with history, 15-23M steps): a real gain, judged on fresh seeds.**
   Fresh-seed steered canter (24 tries; blind robot brain 0.270 / 8 falls, 149M 0.392 / 3): dog-24 0.402 / 2, dog-25
   (over-speed penalty x2) 0.408 / 6, dog-26 (lr 3e-5) 0.457 / 1. Live in DEEP's simulator, steps over 1.2x rated a run
   (robot brain 4-7): dog-24 12-18 and ONE SPEED STOP at 8 s (joint 11 at 1.37x rated), dog-26 13-21, dog-25 5-9 over 6
