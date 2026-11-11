@@ -35,7 +35,7 @@ Runtime -> Run all.
 
 | | |
 |---|---|
-| **Brains** | One brain per robot for all the motion (Go2 `torque-steer`, Lite3 `dog-blind-149M`), a self-right brain each; numpy only on the robot, no torch |
+| **Brains** | One brain per robot for all the motion (Go2 `torque-steer`, Lite3 `dog-hist-196M`), a self-right brain each; numpy only on the robot, no torch |
 | **Robot program** | `run_go2.py`: Unitree's unitree_sdk2 (DDS) or DEEP's UDP joint protocol through a C++ bridge to their MotionSDK; one setting switches simulator and robot |
 | **Safety** | eases in from the stance, keeps targets inside the joint limits, damping mode on a tilt, a stale state or a sustained over-speed |
 | **Recovery** | fall -> self-right -> tuck -> get up -> carry on, on both robots |
@@ -48,23 +48,24 @@ Runtime -> Run all.
 the Go2 brain finishes a 41 s trot / sit / lie / get-up / walk / canter routine 10 times out of 10 (also 10/10 with
 5% of control steps lost and with 0-19 ms of command delay); both robots recover from every fall tried (Go2 20 of 20, Lite3 48 of 48: side, back,
 tipped, shoved); the full routine also runs live, in real time, in Unitree's simulator, with no joint-speed stop. The Lite3 brain does not read body velocity (a real robot has no
-velocity sensor): it was copied from the previous brain with those inputs zeroed (`train/distill_blind.py`). On DEEP's
-model it finishes 24 of 24 routines with commands 10-19 ms late, 24 of 24 trots with 5% of steps lost and 48 of 48
-trot -> sit, where the previous brain fell in 2, 7 and 1; it still falls when steered in a canter, so the robot program
-runs its canter as a trot. Both brains were trained with
+velocity sensor); it reads its last 3 frames of inputs instead, which is how it knows its speed. It was copied from a
+brain that read velocity (`train/distill_hist.py`) and then trained on free Kaggle CPU. On DEEP's model it finishes 24
+of 24 routines with commands 10-19 ms late, 24 of 24 trots with 5% of steps lost, 48 of 48 trot -> sit and 36 of 36
+routines ending in a canter, where the velocity-reading brain fell in 2, 7, 1 and 13 of 24; a steered canter still
+falls about 1 time in 24, so the robot program runs its canter as a trot. Both brains were trained with
 a penalty on joint speed above rated, after live runs showed the earlier brains tripping the robot program's speed stop. Every number, with the command that made it, is in
 [`train/deploy/PLAN.md`](train/deploy/PLAN.md).
 
 **Results so far (all simulation, each maker's own MuJoCo model, robot-program inputs):**
 
-| Test | Go2 `torque-steer` | Lite3 `dog-blind-149M` |
+| Test | Go2 `torque-steer` | Lite3 `dog-hist-196M` |
 |---|---|---|
 | 41 s routine: trot, sit, lie, get up, walk (+ canter on Go2) | 10 / 10 | 24 / 24 with commands 3-6 ms late (canter run as a trot) |
 | With late commands | routine 10 / 10 at 0-19 ms | routine 24 / 24 at 10-19 ms, trot -> sit 48 / 48 at 5-15 ms |
 | 5% of control steps lost | 10 / 10 | 20 s trot 24 / 24 |
 | Back on its feet after a fall (side, back, tipped, shoved) | 20 / 20 | 48 / 48 |
-| Live in the maker's simulator, real time | routine 3 / 3, no speed stop | routine 3 / 3 through DEEP's protocol bridge |
-| Canter | in the routine above | routine ending in a canter 23 / 24; **falls in half the steered canters, so it runs as a trot** |
+| Live in the maker's simulator, real time | routine 3 / 3, no speed stop | routine 6 / 6 through DEEP's protocol bridge, no speed stop |
+| Canter | in the routine above | routine ending in a canter 36 / 36; a steered canter still falls 1 time in 24, so it runs as a trot by default |
 | On the real robot | **not run** | **not run** |
 
 **Have a Go2 EDU?** The first step needs no motion at all: `python deploy/first_run.py --iface <eth> --domain 0`

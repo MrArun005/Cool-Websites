@@ -633,6 +633,17 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   adopted for that reason; best candidate. dog-26 kept as `models/bolt-lite3-dog-hist-fast-172M` to train on.
   Next (pushed): dog-27 = dog-25 on with the trot drawn 3x; dog-28 = dog-26 on with the penalty at 3.0; dog-29 =
   dog-25 at lr 3e-5. Simulation.
+- **11 Nov 15:50 UTC. Kaggle lite3-dog-27..29; dog-28's last checkpoint is the new Lite3 robot brain,
+  `models/bolt-lite3-dog-hist-196M`.** dog-28 = hist-fast-172M on with the over-speed penalty at 3.0, lr 1e-5, 25M
+  steps. Judged on fresh seeds (last checkpoint, which no exam picked): steered canter 0.501 with 1 fall of 24 (blind
+  robot brain 0.270 / 8; 149M 0.392 / 3); plain trot, walk, pace 0 falls of 64 each. DEEP's model with the leg
+  estimate: the 7 stress tests 0 falls; routine ending in a canter 0/36; walk/trot -> sit/lie 0/72; recovery 48/48.
+  Our exam: tracking 0.779, steering 0.587, no falls, moving sit/lie 0/48. Live in DEEP's simulator 6/6, steps over
+  1.2x rated 6, 4, 12, 5, 3, 5 (blind brain over 6 runs: 1-7), no stop: the penalty at 3.0 brought 13-21 down.
+  Not solved: steered canter falls 2 of 8 on the exam's own seeds; the canter stays a trot by default. Defaults,
+  golden and push checks switched; blind-149M kept.
+  The others: dog-27 (164M with trot x3) steered canter 0.331 / 6 falls, trot 0 of 64; dog-29 (164M at lr 3e-5)
+  0.391 / 6, trot 0 of 64; dog-28's best/ 0.439 / 4. Not adopted. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg

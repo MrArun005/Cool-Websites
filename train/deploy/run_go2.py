@@ -163,7 +163,7 @@ def main():
         sys.exit("--truth is a simulator-only shortcut (the real robot has no true velocity/height)")
     if a.predict_ms is None:   # off: over-predicting is as bad as the delay (no delay, 5 ms ahead: 6/12 falls); set it to
         a.predict_ms = 0.0     # the delay measured on the robot (HARDWARE_DAY.md)
-    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-blind-149M" if a.body == "lite3" else "bolt-go2-torque-steer") / "params.pkl")
+    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-hist-196M" if a.body == "lite3" else "bolt-go2-torque-steer") / "params.pkl")
     a.selfright = a.selfright or str(HERE.parent.parent / "models" / ("bolt-lite3-selfright-28M" if a.body == "lite3" else "bolt-go2-selfright-6.9M"))
     if a.body == "lite3":
         if a.truth or a.remote or a.release_sport:
