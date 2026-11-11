@@ -42,7 +42,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M", "bolt-lite3-dog-112M", "bolt-lite3-dog-steer-candidate-130M", "bolt-lite3-dog-149M", "bolt-lite3-dog-blind-149M", "bolt-lite3-dog-blind-hist-start", "bolt-lite3-dog-hist-penalty-164M", "bolt-lite3-dog-hist-fast-172M", "bolt-lite3-selfright-28M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M", "bolt-lite3-dog-112M", "bolt-lite3-dog-steer-candidate-130M", "bolt-lite3-dog-149M", "bolt-lite3-dog-blind-149M", "bolt-lite3-dog-blind-hist-start", "bolt-lite3-dog-hist-penalty-164M", "bolt-lite3-dog-hist-fast-172M", "bolt-lite3-dog-hist-196M", "bolt-lite3-selfright-28M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -424,6 +424,32 @@ JOBS = {
         args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter", "turn_left", "turn_right", "sit", "lie", "getup",
               "--switch-rate", "0.3", "--latency-ms", "0", "60", "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "3e-5",
               "--target-kl", "0.01", "--motor-speed-x", "1.5", "--overspeed-weight", "2.0"],
+        finals=[]),
+    "lite3-dog-30": dict(
+        # 11 Nov: on from the robot brain hist-196M (dog-28's last checkpoint: fresh steered canter 0.501 / 1 fall of 24,
+        # stress 0, live over-speed 3-12) with the same settings: it was still improving when the session ended. Win,
+        # on fresh seeds: steered canter falls 0/24 and exam-seed falls <= 1/8, live over-speed <= 8, everything kept.
+        name="lite3dog30", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0"],
+        finals=[]),
+    "lite3-dog-31": dict(
+        # 11 Nov: lite3-dog-30 with the over-speed penalty at 4.0 (3.0 brought live over-speed from 13-21 to 3-12).
+        name="lite3dog31", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "4.0"],
+        finals=[]),
+    "lite3-dog-32": dict(
+        # 11 Nov: lite3-dog-30 with the steering reward at 0.3 (default 0.15): the steered canter is the open part.
+        name="lite3dog32", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--steer-weight", "0.3"],
         finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above

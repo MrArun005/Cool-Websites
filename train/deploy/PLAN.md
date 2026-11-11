@@ -633,7 +633,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   adopted for that reason; best candidate. dog-26 kept as `models/bolt-lite3-dog-hist-fast-172M` to train on.
   Next (pushed): dog-27 = dog-25 on with the trot drawn 3x; dog-28 = dog-26 on with the penalty at 3.0; dog-29 =
   dog-25 at lr 3e-5. Simulation.
-- **11 Nov 15:50 UTC. Kaggle lite3-dog-27..29; dog-28's last checkpoint is the new Lite3 robot brain,
+- **11 Nov 15:20 UTC. Kaggle lite3-dog-27..29; dog-28's last checkpoint is the new Lite3 robot brain,
   `models/bolt-lite3-dog-hist-196M`.** dog-28 = hist-fast-172M on with the over-speed penalty at 3.0, lr 1e-5, 25M
   steps. Judged on fresh seeds (last checkpoint, which no exam picked): steered canter 0.501 with 1 fall of 24 (blind
   robot brain 0.270 / 8; 149M 0.392 / 3); plain trot, walk, pace 0 falls of 64 each. DEEP's model with the leg
