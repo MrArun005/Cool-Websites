@@ -622,6 +622,17 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   Jobs, ~10.5 h each on Kaggle CPU: 24 = 149M's settings with --history 3 --blind-vel; 25 = over-speed penalty x2
   (the history brain runs its joints faster live: 8-12 steps against the blind brain's 4-7); 26 = lr 3e-5. To be
   judged on fresh seeds. Simulation.
+- **11 Nov 04:30 UTC. Kaggle lite3-dog-24..26 (PPO with history, 15-23M steps): a real gain, judged on fresh seeds.**
+  Fresh-seed steered canter (24 tries; blind robot brain 0.270 / 8 falls, 149M 0.392 / 3): dog-24 0.402 / 2, dog-25
+  (over-speed penalty x2) 0.408 / 6, dog-26 (lr 3e-5) 0.457 / 1. Live in DEEP's simulator, steps over 1.2x rated a run
+  (robot brain 4-7): dog-24 12-18 and ONE SPEED STOP at 8 s (joint 11 at 1.37x rated), dog-26 13-21, dog-25 5-9 over 6
+  runs. So history lets PPO fix the steered canter, and the penalty at 2.0 is what keeps the joints slow.
+  dog-25 in full (`models/bolt-lite3-dog-hist-penalty-164M`): the 7 stress tests 0 falls, canter routine 0/36 (robot
+  brain 2/36), moving sit/lie on DEEP's model 0/120, recovery 48/48, our exam tracking 0.783 and steering 0.618
+  (robot brain 0.775 / 0.444). Its flaw: 2 plain-trot falls of 76 in our randomized exam (robot brain 0 of 76). Not
+  adopted for that reason; best candidate. dog-26 kept as `models/bolt-lite3-dog-hist-fast-172M` to train on.
+  Next (pushed): dog-27 = dog-25 on with the trot drawn 3x; dog-28 = dog-26 on with the penalty at 3.0; dog-29 =
+  dog-25 at lr 3e-5. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
