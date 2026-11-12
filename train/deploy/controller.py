@@ -120,6 +120,7 @@ class Go2Controller:
         self.slots = len(ALL_CLIPS)
         self.last_action = np.zeros(12)
         self.steer = 0.0
+        self.steer_limits = {}   # clip name -> (lowest, highest) steering command it takes (run_go2 sets the Lite3's canter)
         self.clip, self.tau = self.clips["trot" if "trot" in self.clips else clips[0]], 0.0
         self.walk_down, self.queued = float(walk_down), None   # queued: (posture, seconds of walk left)
         self.after_getup = None   # a move commanded while lying: played once the get-up has finished (see command)
@@ -170,7 +171,8 @@ class Go2Controller:
 
     def ref_yaw_rate(self, ahead=1):
         w = self.ref("w_body", ahead)[2]
-        return w + (self.steer if self.clip.name in STEER_CLIPS else 0.0)
+        lo, hi = self.steer_limits.get(self.clip.name, (-np.inf, np.inf))
+        return w + (min(max(self.steer, lo), hi) if self.clip.name in STEER_CLIPS else 0.0)
 
     def finished(self):
         return 0.0 if self.clip.loop else max(0.0, self.tau - self.clip.length)

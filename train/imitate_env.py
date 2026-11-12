@@ -322,6 +322,7 @@ class ImitateEnv(BoltEnv):
         if moving_rate > 0:
             assert self.moving_gaits and self.moving_clips, f"moving starts need gaits {moving_gaits} and clips {moving_clips}"
         self.exam_moving = None       # (posture clip, gait, gait moment s, speed m/s) for tests and exams
+        self.drop_p = float(os.environ.get("BOLT_DROP_P", "0") or 0)   # train_imitate --drop-p
         self.pose_clip, self.pose_until, self.pose_hit = None, 0, False
         # transition term (module docstring): -weight x excess roll/pitch for window steps after a mid-try switch
         self.transition_weight, self.transition_threshold = transition_weight, transition_threshold
@@ -563,7 +564,14 @@ class ImitateEnv(BoltEnv):
     def step(self, action):
         a = np.clip(np.asarray(action, dtype=float), -1, 1)
         base = self.ref("joints", 1) if self.residual else self.dog
-        self.data.ctrl[:] = np.clip(base + ACTION_SCALE * a, self.lo, self.hi)
+        new = np.clip(base + ACTION_SCALE * a, self.lo, self.hi)
+        # BOLT_DROP_P=p (train_imitate --drop-p): with chance p the new targets never reach the motors, which keep the
+        # last ones (a missed control step on the robot; the brain's previous-action input still says what it sent).
+        # Never in exams. PLAN.md 12 Nov: the Lite3's canter fell in 19 of 48 with 5% of steps missed.
+        if (self.drop_p and self.t > 0 and self.exam_start is None and self.exam_steer is None and self.exam_moving is None
+                and self.rng.random() < self.drop_p):
+            new = self.data.ctrl.copy()
+        self.data.ctrl[:] = new
         if self.push_steps and self.t > 0 and self.t % self.push_steps == 0 and self.rng.random() < self.push_prob:
             side = 1.0 if self.rng.random() < 0.5 else -1.0   # a push now (the switch test's shove, push-sized)
             self.data.qvel[:] = apply_shove(self.data.qvel, self._rotation(), self.push_speed, self.push_spin, side)

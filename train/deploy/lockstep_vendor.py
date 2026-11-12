@@ -43,6 +43,9 @@ FALL_UP = np.cos(np.radians(60))
 RATED = np.tile([30.1, 30.1, 15.7], 4)   # Go2 joint speed limits (rad/s): hip, thigh, calf
 
 
+STEER = 0.0   # --steer: the yaw-rate command (rad/s) given with every clip of the plan (gaits use it)
+
+
 def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, est=None, errs=None, speeds=None, sign=1.0, rated=RATED, predict_ms=0.0):
     d = mujoco.MjData(m)
     mujoco.mj_resetDataKeyframe(m, d, 0) if m.nkey else None
@@ -76,7 +79,7 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
     for name, secs in plan:
         q_now = np.zeros(12)
         q_now[ours] = sign * d.qpos[qadr]
-        ctl.command(name, steer=0.0, q=q_now)
+        ctl.command(name, steer=STEER, q=q_now)
         for _ in range(int(secs / DT)):
             R = d.xmat[1].reshape(3, 3)
             if R[2, 2] < FALL_UP or (d.qpos[2] < 0.15 and name not in ("sit", "lie", "getup")):   # tipped, or belly-down in a gait
@@ -131,6 +134,7 @@ def main():
     ap.add_argument("--walk-down", type=float, default=0.0, help="s of walk between trot/pace/canter and sit/lie (0: off)")
     ap.add_argument("--stairs", action="store_true", help="keep the scene's bumps and staircase (default: flat floor)")
     ap.add_argument("--delay-ms", type=float, nargs=2, default=[0.0, 0.0], help="per step, the targets arrive U(lo, hi) ms late (< 20)")
+    ap.add_argument("--steer", type=float, default=0.0, help="steering command (rad/s, + left) for the whole plan")
     ap.add_argument("--skip-p", type=float, default=0.0, help="chance per step that the brain's step is missed")
     ap.add_argument("--estimate", action="store_true", help="velocity and height from estimator.LegEstimator, not the truth")
     ap.add_argument("--vel-ref", action="store_true", help="velocity input = the clip's reference velocity (no measurement)")
@@ -162,6 +166,8 @@ def main():
     rated = np.tile(ctl.body.entry["speed"], 4)
     kp, kd = ctl.body.entry["kp"], ctl.body.entry["kv"]
     plan = [(c.split(":")[0], float(c.split(":")[1])) for c in a.plan.split(",")]
+    global STEER
+    STEER = a.steer
     total = sum(s for _, s in plan)
     errs, speeds = [], []
     if a.estimate:

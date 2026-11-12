@@ -653,6 +653,22 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   -1.0 it turns -0.07 / -0.32 with 2 falls of 24 each. The dog's canter clip leads with one leg. (The trot is lopsided
   the other way: -0.8 gives -0.65, +0.8 gives 0.37, no falls.) Next: `train_imitate.py --steer-canter-right p` draws
   right turns in most steered canters; Kaggle lite3-dog-33..35. Simulation.
+- **12 Nov 14:40 UTC. Kaggle lite3-dog-33..35 (right-turn canter practice from hist-196M): no gain, not adopted.**
+  Last checkpoints, 24 tries per command: canter asked for -0.5 rad/s still turns -0.08 / -0.05 / +0.02, for -1.0
+  -0.31 / -0.32 / -0.16, with 1-2 falls of 24; and left turns, 0 falls of 48 before, now fall 2-3 of 24 each.
+- **12 Nov 14:40 UTC. What the canter exams were really measuring, and the canter's real weakness.**
+  (1) Our exam starts every try mid-stride. Straight canter, 64 fresh tries: 149M 4 falls, blind-149M 11, hist-196M
+  5 (the usual 4-try exam showed 0). All 12 falls in 192 probed tries of hist-196M began from stride phase 0.29-0.62
+  and came within 1.4 s; none from the other two thirds of the stride. A robot never starts a canter in mid-flight.
+  (2) The realistic test, on DEEP's model with the leg estimate, canter entered from a trot (new `lockstep_vendor.py
+  --steer`): trot:6,canter:8 at 3-6 ms, 24 tries each: steer +0.5 0 falls, +0.8 0, -0.5 0, -0.8 1.
+  (3) Plan trot:6,canter:8,trot:4,canter:6,walk:4, 48 tries each: straight at 3-6 ms 0 falls; straight at 10-19 ms 3;
+  left 0.8 at 10-19 ms 10; straight at 3-6 ms with 5% of steps missed **19**. The trot alone has 0 of 24 in those
+  conditions. So the canter breaks when control steps are missed or late, and the CPU training env never dropped a
+  step. The canter stays a trot by default.
+  Done: `train_imitate.py --drop-p` (ImitateEnv: with that chance the motors keep their last targets; never in
+  exams); run_go2 holds right-turn commands at straight ahead in the Lite3's canter (controller.steer_limits).
+  Pushed: Kaggle lite3-dog-36..38 (drop 5%, drop 10%, drop 5% at lr 3e-5). Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg

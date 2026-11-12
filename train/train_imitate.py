@@ -141,6 +141,8 @@ def main():
                     "file's (robot_bodies BOLT_JOINT_DAMPING; Go2's Menagerie value 2.0 is an assumption, not a measurement)")
     ap.add_argument("--steer-canter-right", type=float, default=0.0, help="chance that a canter's steering command is a "
                     "right turn (ImitateEnv._draw_steer; 0: a symmetric draw)")
+    ap.add_argument("--drop-p", type=float, default=0.0, help="chance per step that the targets never reach the motors "
+                    "(a missed control step; ImitateEnv DROP_P)")
     ap.add_argument("--history", type=int, default=0, help="the brain also reads its last K steps of gravity, gyro, joints and "
                     "previous action (imitate_env.HistoryEnv; a blind brain needs it to know its speed, PLAN.md 10 Nov)")
     ap.add_argument("--blind-vel", action="store_true", help="zero the body-velocity inputs in training and exams (a real "
@@ -148,6 +150,8 @@ def main():
     args = ap.parse_args()
     if args.steer_canter_right:
         os.environ["BOLT_STEER_NEG"] = str(args.steer_canter_right)   # read by every training env
+    if args.drop_p:
+        os.environ["BOLT_DROP_P"] = str(args.drop_p)   # read by every training env process at start
     if args.history:
         os.environ["BOLT_HISTORY"] = str(args.history)   # read by make_env (training subprocesses) and ImitatePolicy (exams)
     if args.blind_vel:

@@ -189,6 +189,10 @@ def main():
         _command = ctl.command
         ctl.command = lambda name, *args, **kw: _command("trot" if name == "canter" else name, *args, **kw)
         print("canter requests run as trot (--no-canter)", flush=True)
+    if a.body == "lite3":   # PLAN.md 12 Nov: the Lite3's canter turns left only; asked to turn right it barely turns and
+        ctl.steer_limits["canter"] = (0.0, np.inf)   # every steered-canter fall was a right turn (left: 0 falls of 48)
+        if not a.no_canter:
+            print("canter: right-turn commands are held at straight ahead (the Lite3's canter turns left only)", flush=True)
     body = ctl.body
     kp = (a.kp or body.entry["kp"]) * a.gain_scale
     kd = (a.kd or body.entry["kv"]) * a.gain_scale

@@ -479,6 +479,35 @@ JOBS = {
               "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "3e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
               "--overspeed-weight", "3.0", "--steer-canter-right", "0.9"],
         finals=[]),
+    "lite3-dog-36": dict(
+        # 12 Nov: dog-33..35 (right-turn canter practice) did not move the right turn and cost left-turn falls. The
+        # realistic test (DEEP's model, a canter entered from a trot) showed the canter's real weakness: 0/48 at 3-6 ms,
+        # but 3/48 at 10-19 ms, 10/48 turning left at 10-19 ms and 19/48 with 5 in 100 control steps missed. The CPU
+        # env never dropped a step. Here 5 in 100 are dropped (--drop-p 0.05). Win, on DEEP's model with plan
+        # trot:6,canter:8,trot:4,canter:6,walk:4, 48 tries: <= 2 falls with 5 in 100 missed and 0 at 10-19 ms, the
+        # robot brain's other results kept.
+        name="lite3dog36", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--drop-p", "0.05"],
+        finals=[]),
+    "lite3-dog-37": dict(
+        # 12 Nov: lite3-dog-36 with 10 in 100 steps dropped.
+        name="lite3dog37", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--drop-p", "0.10"],
+        finals=[]),
+    "lite3-dog-38": dict(
+        # 12 Nov: lite3-dog-36 at lr 3e-5.
+        name="lite3dog38", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "3e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--drop-p", "0.05"],
+        finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.
