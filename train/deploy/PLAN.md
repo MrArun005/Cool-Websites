@@ -644,6 +644,15 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   golden and push checks switched; blind-149M kept.
   The others: dog-27 (164M with trot x3) steered canter 0.331 / 6 falls, trot 0 of 64; dog-29 (164M at lr 3e-5)
   0.391 / 6, trot 0 of 64; dog-28's best/ 0.439 / 4. Not adopted. Simulation.
+- **12 Nov 03:10 UTC. Kaggle lite3-dog-30..32 (on from hist-196M: same settings, penalty 4.0, steering reward 0.3):
+  no gain, not adopted.** Fresh-seed steered canter, best/ and last checkpoint: dog-30 0.431 / 3 falls and 0.444 / 4;
+  dog-31 0.431 / 5 and 0.362 / 6; dog-32 0.454 / 3 and 0.487 / 4. The robot brain hist-196M: 0.501 / 1, and on a
+  second fresh seed (555) 0.487 / 1, so its number holds. More of the same training has stopped helping.
+- **12 Nov 03:10 UTC. Cause of the remaining steered-canter falls: the canter only turns left.** hist-196M, 24 tries
+  per command (seed 31337): asked for +0.5 / +1.0 rad/s it turns 0.41 / 0.61 with 0 falls of 48; asked for -0.5 /
+  -1.0 it turns -0.07 / -0.32 with 2 falls of 24 each. The dog's canter clip leads with one leg. (The trot is lopsided
+  the other way: -0.8 gives -0.65, +0.8 gives 0.37, no falls.) Next: `train_imitate.py --steer-canter-right p` draws
+  right turns in most steered canters; Kaggle lite3-dog-33..35. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg

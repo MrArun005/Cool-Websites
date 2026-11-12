@@ -139,11 +139,15 @@ def main():
                     "excess of joint speed over rated (fraction of rated); 0 = off")
     ap.add_argument("--joint-damping", type=float, help="a real-robot body's joint damping (N·m·s/rad), replacing the model "
                     "file's (robot_bodies BOLT_JOINT_DAMPING; Go2's Menagerie value 2.0 is an assumption, not a measurement)")
+    ap.add_argument("--steer-canter-right", type=float, default=0.0, help="chance that a canter's steering command is a "
+                    "right turn (ImitateEnv._draw_steer; 0: a symmetric draw)")
     ap.add_argument("--history", type=int, default=0, help="the brain also reads its last K steps of gravity, gyro, joints and "
                     "previous action (imitate_env.HistoryEnv; a blind brain needs it to know its speed, PLAN.md 10 Nov)")
     ap.add_argument("--blind-vel", action="store_true", help="zero the body-velocity inputs in training and exams (a real "
                     "robot has no velocity sensor); for a brain made blind by distill_blind.py, or from scratch")
     args = ap.parse_args()
+    if args.steer_canter_right:
+        os.environ["BOLT_STEER_NEG"] = str(args.steer_canter_right)   # read by every training env
     if args.history:
         os.environ["BOLT_HISTORY"] = str(args.history)   # read by make_env (training subprocesses) and ImitatePolicy (exams)
     if args.blind_vel:

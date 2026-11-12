@@ -407,6 +407,16 @@ class ImitateEnv(BoltEnv):
             obs[6:9] = 0.0
         return obs.astype(np.float32)
 
+    def _draw_steer(self):
+        """A steering command (rad/s). BOLT_STEER_NEG=p (train_imitate --steer-canter-right p): in the canter, with
+        chance p the command is a right turn (negative). The canter clip leads with one leg and the brain learned to
+        turn left only (PLAN.md 12 Nov: asked for -0.5 rad/s it reached -0.07, and every steered-canter fall was a
+        right turn), so right turns need more practice than a symmetric draw gives."""
+        p = float(os.environ.get("BOLT_STEER_NEG", "0") or 0)
+        if p and getattr(getattr(self, "clip", None), "name", "") == "canter" and self.rng.random() < p:
+            return -float(self.rng.uniform(0.0, self.steer_max))
+        return float(self.rng.uniform(-self.steer_max, self.steer_max))
+
     def reset(self, seed=None, options=None):
         self._try_id = getattr(self, "_try_id", 0) + 1
         gym.Env.reset(self, seed=seed)
@@ -424,7 +434,7 @@ class ImitateEnv(BoltEnv):
         self.switch_t = None
         self.steer = 0.0 if self.exam_steer is None else float(self.exam_steer)
         if self.exam_steer is None and self.steer_max and not self.exam_start and self.rng.random() < self.steer_share:
-            self.steer = float(self.rng.uniform(-self.steer_max, self.steer_max))
+            self.steer = self._draw_steer()
         land = self.exam_landing
         if land is None and self.landing_rate and not self.exam_start and self.rng.random() < self.landing_rate:
             land = int(self.rng.integers(len(self.landing["tau0"])))
@@ -566,7 +576,7 @@ class ImitateEnv(BoltEnv):
         if self.switch_rate and not self.exam_start:
             self._maybe_switch()
         if self.steer_max and self.exam_steer is None and not self.exam_start and self.rng.random() < self.steer_change * self.dt:
-            self.steer = float(self.rng.uniform(-self.steer_max, self.steer_max)) if self.rng.random() < self.steer_share else 0.0
+            self.steer = self._draw_steer() if self.rng.random() < self.steer_share else 0.0
         if self.t == self.land_switch_at and self.clip.name != self.landing_then:   # a landing start's bridge is over:
             self._switch_to(self.clips[self.landing_then])                         # on in landing_then (test_skills' trot)
         terms, err = self.tracking()

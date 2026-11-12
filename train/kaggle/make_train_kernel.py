@@ -451,6 +451,34 @@ JOBS = {
               "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
               "--overspeed-weight", "3.0", "--steer-weight", "0.3"],
         finals=[]),
+    "lite3-dog-33": dict(
+        # 12 Nov: dog-30..32 (more of the same from hist-196M) gave nothing: fresh steered canter 3-6 falls of 24 against
+        # 196M's 1 (and 1 of 24 on a second seed). Probe on 196M, 24 tries per rate: canter asked for +0.5 / +1.0 rad/s
+        # turns 0.41 / 0.61 with 0 falls; asked for -0.5 / -1.0 it turns -0.07 / -0.32 with 2 falls each. The canter
+        # turns left only. Here right turns are drawn in 7 of 10 steered canters. Win: canter at -0.5 reaches <= -0.25
+        # with 0 falls of 24, left turns and everything else kept.
+        name="lite3dog33", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--steer-canter-right", "0.7"],
+        finals=[]),
+    "lite3-dog-34": dict(
+        # 12 Nov: lite3-dog-33 with the steering reward at 0.3 as well.
+        name="lite3dog34", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "1e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--steer-canter-right", "0.7", "--steer-weight", "0.3"],
+        finals=[]),
+    "lite3-dog-35": dict(
+        # 12 Nov: lite3-dog-33 with right turns in 9 of 10 steered canters and lr 3e-5.
+        name="lite3dog35", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "3e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--steer-canter-right", "0.9"],
+        finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.
