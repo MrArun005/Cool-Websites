@@ -653,10 +653,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   -1.0 it turns -0.07 / -0.32 with 2 falls of 24 each. The dog's canter clip leads with one leg. (The trot is lopsided
   the other way: -0.8 gives -0.65, +0.8 gives 0.37, no falls.) Next: `train_imitate.py --steer-canter-right p` draws
   right turns in most steered canters; Kaggle lite3-dog-33..35. Simulation.
-- **12 Nov 14:40 UTC. Kaggle lite3-dog-33..35 (right-turn canter practice from hist-196M): no gain, not adopted.**
+- **12 Nov 14:05 UTC. Kaggle lite3-dog-33..35 (right-turn canter practice from hist-196M): no gain, not adopted.**
   Last checkpoints, 24 tries per command: canter asked for -0.5 rad/s still turns -0.08 / -0.05 / +0.02, for -1.0
   -0.31 / -0.32 / -0.16, with 1-2 falls of 24; and left turns, 0 falls of 48 before, now fall 2-3 of 24 each.
-- **12 Nov 14:40 UTC. What the canter exams were really measuring, and the canter's real weakness.**
+- **12 Nov 14:05 UTC. What the canter exams were really measuring, and the canter's real weakness.**
   (1) Our exam starts every try mid-stride. Straight canter, 64 fresh tries: 149M 4 falls, blind-149M 11, hist-196M
   5 (the usual 4-try exam showed 0). All 12 falls in 192 probed tries of hist-196M began from stride phase 0.29-0.62
   and came within 1.4 s; none from the other two thirds of the stride. A robot never starts a canter in mid-flight.
