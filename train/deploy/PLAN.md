@@ -675,6 +675,13 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   3-6 ms 1 (196M 0), 10-19 ms 0 (3), left 0.8 at 10-19 ms 2 (10); trot 20 s with missed steps 0/24. Kept as
   `models/bolt-lite3-dog-hist-drop-215M` to train on. Pushed: lite3-dog-39..41 from it (same; 10% dropped; canter
   6x). The robot brain stays hist-196M. Simulation.
+- **13 Nov 12:45 UTC. Kaggle lite3-dog-39..41 (on from hist-drop-215M with dropped steps; 20-23M more steps each): no
+  further gain; this line is stopped.** Canter from a trot on DEEP's model with 5% of steps missed, 48 tries, last
+  checkpoints: dog-39 9 falls, dog-40 (10% dropped) 8, dog-41 (canter 6x) 9; hist-drop-215M had 8, hist-196M 19.
+  Dropped-step training halved the falls in one round and then stopped helping. Nothing adopted; the robot brain
+  stays hist-196M and the Lite3's canter stays a trot by default. No new Kaggle round is started: the cause of the
+  remaining falls is not known, and more Lite3 simulator work no longer moves the project (the open question is a
+  real robot). Kaggle CPU is idle on purpose until there is a new measured cause or a real-robot report. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
