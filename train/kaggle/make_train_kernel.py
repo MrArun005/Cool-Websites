@@ -42,7 +42,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M", "bolt-lite3-dog-112M", "bolt-lite3-dog-steer-candidate-130M", "bolt-lite3-dog-149M", "bolt-lite3-dog-blind-149M", "bolt-lite3-dog-blind-hist-start", "bolt-lite3-dog-hist-penalty-164M", "bolt-lite3-dog-hist-fast-172M", "bolt-lite3-dog-hist-196M", "bolt-lite3-selfright-28M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M", "bolt-lite3-dog-112M", "bolt-lite3-dog-steer-candidate-130M", "bolt-lite3-dog-149M", "bolt-lite3-dog-blind-149M", "bolt-lite3-dog-blind-hist-start", "bolt-lite3-dog-hist-penalty-164M", "bolt-lite3-dog-hist-fast-172M", "bolt-lite3-dog-hist-196M", "bolt-lite3-dog-hist-drop-215M", "bolt-lite3-selfright-28M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -504,6 +504,33 @@ JOBS = {
         # 12 Nov: lite3-dog-36 at lr 3e-5.
         name="lite3dog38", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-196M",
         args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "3e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--drop-p", "0.05"],
+        finals=[]),
+    "lite3-dog-39": dict(
+        # 13 Nov: dog-36..38 (dropped steps in training) moved the canter-from-a-trot test on DEEP's model: with 5 in 100
+        # steps missed, 19 falls of 48 -> 15 (dog-36), 13 (dog-37, 10 in 100 dropped), 8 (dog-38, lr 3e-5); dog-38 also
+        # 10-19 ms 3 -> 0 and left turn at 10-19 ms 10 -> 2. On from dog-38's last checkpoint, same settings. Win: <= 2
+        # falls of 48 with missed steps, <= 1 in the other three conditions, the robot brain's other results kept.
+        name="lite3dog39", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-drop-215M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "3e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--drop-p", "0.05"],
+        finals=[]),
+    "lite3-dog-40": dict(
+        # 13 Nov: lite3-dog-39 with 10 in 100 steps dropped.
+        name="lite3dog40", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-drop-215M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "3e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
+              "--overspeed-weight", "3.0", "--drop-p", "0.10"],
+        finals=[]),
+    "lite3-dog-41": dict(
+        # 13 Nov: lite3-dog-39 with the canter drawn 6x.
+        name="lite3dog41", script="train_imitate.py", start="../models/bolt-lite3-dog-hist-drop-215M",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter", "canter", "canter", "canter",
               "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
               "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "3e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
               "--overspeed-weight", "3.0", "--drop-p", "0.05"],

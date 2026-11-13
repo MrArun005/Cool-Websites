@@ -669,6 +669,12 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   Done: `train_imitate.py --drop-p` (ImitateEnv: with that chance the motors keep their last targets; never in
   exams); run_go2 holds right-turn commands at straight ahead in the Lite3's canter (controller.steer_limits).
   Pushed: Kaggle lite3-dog-36..38 (drop 5%, drop 10%, drop 5% at lr 3e-5). Simulation.
+- **13 Nov 01:35 UTC. Kaggle lite3-dog-36..38 (5% / 10% of steps dropped in training, from hist-196M): the canter
+  improves, not solved, nothing adopted.** Canter from a trot on DEEP's model, 48 tries, 5% of steps missed (hist-196M:
+  19 falls): dog-36 15, dog-37 13 (best/ 17), dog-38 (lr 3e-5) **8**. dog-38's last checkpoint in the other conditions:
+  3-6 ms 1 (196M 0), 10-19 ms 0 (3), left 0.8 at 10-19 ms 2 (10); trot 20 s with missed steps 0/24. Kept as
+  `models/bolt-lite3-dog-hist-drop-215M` to train on. Pushed: lite3-dog-39..41 from it (same; 10% dropped; canter
+  6x). The robot brain stays hist-196M. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
