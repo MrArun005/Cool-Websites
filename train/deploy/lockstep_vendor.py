@@ -141,7 +141,7 @@ def main():
     a = ap.parse_args()
     if a.body == "lite3":
         xml = Path(os.environ["LITE3_MJCF"])
-        a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-lite3-dog-hist-196M" / "params.pkl")
+        a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-lite3-dog-gpu-829M" / "params.pkl")
     else:
         xml = Path(os.environ["UNITREE_MUJOCO"]) / "unitree_robots" / "go2" / "scene.xml"
         a.brain = a.brain or str(HERE.parent.parent / "models" / "bolt-go2-torque-steer" / "params.pkl")

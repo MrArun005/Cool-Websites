@@ -163,7 +163,7 @@ def main():
         sys.exit("--truth is a simulator-only shortcut (the real robot has no true velocity/height)")
     if a.predict_ms is None:   # off: over-predicting is as bad as the delay (no delay, 5 ms ahead: 6/12 falls); set it to
         a.predict_ms = 0.0     # the delay measured on the robot (HARDWARE_DAY.md)
-    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-hist-196M" if a.body == "lite3" else "bolt-go2-torque-steer") / "params.pkl")
+    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-gpu-829M" if a.body == "lite3" else "bolt-go2-torque-steer") / "params.pkl")
     a.selfright = a.selfright or str(HERE.parent.parent / "models" / ("bolt-lite3-selfright-28M" if a.body == "lite3" else "bolt-go2-selfright-6.9M"))
     if a.body == "lite3":
         if a.truth or a.remote or a.release_sport:
@@ -189,10 +189,13 @@ def main():
         _command = ctl.command
         ctl.command = lambda name, *args, **kw: _command("trot" if name == "canter" else name, *args, **kw)
         print("canter requests run as trot (--no-canter)", flush=True)
-    if a.body == "lite3":   # PLAN.md 12 Nov: the Lite3's canter turns left only; asked to turn right it barely turns and
-        ctl.steer_limits["canter"] = (0.0, np.inf)   # every steered-canter fall was a right turn (left: 0 falls of 48)
-        if not a.no_canter:
-            print("canter: right-turn commands are held at straight ahead (the Lite3's canter turns left only)", flush=True)
+    if a.body == "lite3":   # PLAN.md 12 and 14 Nov, DEEP's model: the Lite3's canter turns left only (right commands are
+        # held at straight ahead), and with commands 10-19 ms late a right turn in the trot falls 15 of 48 at 0.8 rad/s
+        # and 5 of 48 at 0.6 but 0 of 48 at 0.4 (left 0.8: 0 of 48), so right turns are capped at 0.4 rad/s in every gait
+        for g in ("walk", "trot", "pace"):
+            ctl.steer_limits[g] = (-0.4, np.inf)
+        ctl.steer_limits["canter"] = (0.0, np.inf)
+        print("Lite3 steering: right turns capped at 0.4 rad/s; in the canter held at straight ahead", flush=True)
     body = ctl.body
     kp = (a.kp or body.entry["kp"]) * a.gain_scale
     kd = (a.kd or body.entry["kv"]) * a.gain_scale

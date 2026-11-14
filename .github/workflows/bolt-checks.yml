@@ -22,6 +22,7 @@ jobs:
         working-directory: train
         run: |
           python deploy/test_deploy.py ../models/bolt-go2-torque-steer/params.pkl --golden
+          python deploy/test_deploy.py ../models/bolt-lite3-dog-gpu-829M/params.pkl --golden
           python deploy/test_deploy.py ../models/bolt-lite3-dog-hist-196M/params.pkl --golden
           python deploy/test_deploy.py ../models/bolt-lite3-dog-blind-149M/params.pkl --golden
           python deploy/test_deploy.py ../models/bolt-lite3-dog-149M/params.pkl --golden
