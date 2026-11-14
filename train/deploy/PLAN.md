@@ -695,7 +695,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   trot on DEEP's model <= 2 falls of 48 with 5% missed steps and <= 1 in the other three conditions, everything else
   kept. (The old `bolt-lite3-gpu-blind` kernel, one frame and no dropped steps, was also started by the 4-hourly
   check at 00:42 and uses 3 GPU hours; its recipe is the one already shown to be limited.) Simulation.
-- **14 Nov 08:45 UTC. Lite3 GPU run with the Go2's recipe: adopted as the Lite3 robot brain,
+- **14 Nov 07:50 UTC. Lite3 GPU run with the Go2's recipe: adopted as the Lite3 robot brain,
   `models/bolt-lite3-dog-gpu-829M`.** Kaggle `bolt-lite3-gpu-hist`, 632M steps in 6.5 GPU hours from hist-196M; the
   last checkpoint. Canter from a trot on DEEP's model, 48 tries, hist-196M -> this: 3-6 ms 0 -> 0; 10-19 ms 3 -> 0;
   left 0.8 at 10-19 ms 10 -> 0; 5% missed steps 19 -> 1. Harder: 10% missed 4; 5% missed with 10-19 ms 3; left 0.8
@@ -709,6 +709,10 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   straight ahead). The canter stays a trot by default (still 2-4 falls of 48 under the hardest conditions).
   GPU spent this week so far: 6.5 h on this run + 3 h on the old `bolt-lite3-gpu-blind` kernel (not examined beyond
   this note; its recipe lacks history and dropped steps) = 9.5 of 30 h. Simulation.
+- **14 Nov 07:55 UTC. Second Lite3 GPU run started: `bolt-lite3-gpu-hist2`.** From gpu-829M, the same recipe with the
+  steering reward at 0.3 (default 0.15), 6 h. Aimed at the measured weak spot: right turns at 10-19 ms (trot right
+  0.8: 15 falls of 48; 0.6: 5). Win on DEEP's model: trot right 0.8 at 10-19 ms <= 2 of 48 with everything else
+  kept. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
