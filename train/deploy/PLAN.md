@@ -713,7 +713,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   steering reward at 0.3 (default 0.15), 6 h. Aimed at the measured weak spot: right turns at 10-19 ms (trot right
   0.8: 15 falls of 48; 0.6: 5). Win on DEEP's model: trot right 0.8 at 10-19 ms <= 2 of 48 with everything else
   kept. Simulation.
-- **14 Nov 15:45 UTC. Second Lite3 GPU run: right turns fixed; adopted, `models/bolt-lite3-dog-gpu-1461M`; the
+- **14 Nov 15:05 UTC. Second Lite3 GPU run: right turns fixed; adopted, `models/bolt-lite3-dog-gpu-1461M`; the
   Lite3's canter is on by default.** `bolt-lite3-gpu-hist2`, 632M more steps in 6.5 GPU hours from gpu-829M with the
   steering reward at 0.3; the last checkpoint. DEEP's model with the leg estimate, falls of 48, gpu-829M -> this:
   trot right 0.8 at 10-19 ms 15 -> 0; right 0.6 5 -> 0; left 0.8 0 -> 0; canter plan steering right 0.8 at 10-19 ms
