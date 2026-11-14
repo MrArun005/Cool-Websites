@@ -682,6 +682,19 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   stays hist-196M and the Lite3's canter stays a trot by default. No new Kaggle round is started: the cause of the
   remaining falls is not known, and more Lite3 simulator work no longer moves the project (the open question is a
   real robot). Kaggle CPU is idle on purpose until there is a new measured cause or a real-robot report. Simulation.
+- **14 Nov 00:55 UTC. The Go2 brain on the tougher tests built this week: 1 fall in 384 tries.** Unitree's go2.xml,
+  robot inputs with the leg estimate, plan trot:6,canter:8,trot:4,canter:6,walk:4,sit:5,lie:6,getup:6,trot:5 (50 s),
+  48 tries per condition, falls: 0-6 ms 0; 10-19 ms 0; 5% of steps missed 0; 10% missed 1 (in the lie); 5% missed
+  with 10-19 ms 0; steering left 0.8 at 10-19 ms 0; right 0.8 at 10-19 ms 0; right 0.8 with 5% missed 0. The Go2's
+  canter, both turns included, holds where the Lite3's breaks. What differs is the recipe: the Go2 brain is from the
+  GPU trainer (1.4 billion steps, privileged critic, 5% dropped steps, 3 frames of history, varied torque and speed
+  limits); the Lite3 brain is from 200M CPU steps without a privileged critic.
+- **14 Nov 00:55 UTC. GPU quota back; Lite3 GPU run with the Go2's recipe started.** Kaggle `bolt-lite3-gpu-hist`:
+  mjx_imitate from hist-196M (warm start checked locally: reward 1.02 at step 0), --history 3 --blind-vel --drop-p 0.05
+  --privileged-critic --overspeed-weight 3.0, speed x1.0-1.5, torque x0.8-1.4, 0-60 ms, 6 h. Win: the canter from a
+  trot on DEEP's model <= 2 falls of 48 with 5% missed steps and <= 1 in the other three conditions, everything else
+  kept. (The old `bolt-lite3-gpu-blind` kernel, one frame and no dropped steps, was also started by the 4-hourly
+  check at 00:42 and uses 3 GPU hours; its recipe is the one already shown to be limited.) Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg

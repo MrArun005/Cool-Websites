@@ -61,8 +61,8 @@ a penalty on joint speed above rated, after live runs showed the earlier brains 
 | Test | Go2 `torque-steer` | Lite3 `dog-hist-196M` |
 |---|---|---|
 | 41 s routine: trot, sit, lie, get up, walk (+ canter on Go2) | 10 / 10 | 24 / 24 with commands 3-6 ms late (canter run as a trot) |
-| With late commands | routine 10 / 10 at 0-19 ms | routine 24 / 24 at 10-19 ms, trot -> sit 48 / 48 at 5-15 ms |
-| 5% of control steps lost | 10 / 10 | 20 s trot 24 / 24 |
+| With late commands | routine 10 / 10 at 0-19 ms; 50 s plan with two canters 48 / 48 at 10-19 ms, also steering left and right | routine 24 / 24 at 10-19 ms, trot -> sit 48 / 48 at 5-15 ms |
+| 5% of control steps lost | 10 / 10; 50 s plan 48 / 48 (47 / 48 with 10% lost) | 20 s trot 24 / 24 |
 | Back on its feet after a fall (side, back, tipped, shoved) | 20 / 20 | 48 / 48 |
 | Live in the maker's simulator, real time | routine 3 / 3, no speed stop | routine 6 / 6 through DEEP's protocol bridge, no speed stop |
 | Canter | in the routine above | routine ending in a canter 36 / 36; a steered canter still falls 1 time in 24, so it runs as a trot by default |
