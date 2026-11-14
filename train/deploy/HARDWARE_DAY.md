@@ -83,13 +83,13 @@ routine 3/3 with no speed stop. Earlier brains: `bolt-go2-overspeed-211M` (same 
 
 ## Lite3 (DEEP Robotics), the second robot: what differs
 
-- Brain: `models/bolt-lite3-dog-gpu-829M/params.pkl` (14 Nov; no velocity input, 3 frames of input history, trained
-  on with the Go2's GPU recipe). On DEEP's model with the robot's inputs: no falls in the trot, routine and sit tests
-  with 10-19 ms delay or 5% of steps missed; the canter from a trot falls 0 of 48 at 10-19 ms and 1 of 48 with 5% of
-  steps missed; live joint over-speed 1-2 steps a run. Limits, set in run_go2: right turns capped at 0.4 rad/s (a
-  harder right turn with 10-19 ms delay falls), the canter turns left only and still runs as a trot by default
-  (`--allow-canter` to use it). Earlier brains kept: `-hist-196M`, `-blind-149M`, `-149M`. Self-right brain:
-  `models/bolt-lite3-selfright-28M`.
+- Brain: `models/bolt-lite3-dog-gpu-1461M/params.pkl` (14 Nov; no velocity input, 3 frames of input history, the
+  Go2's GPU recipe). On DEEP's model with the robot's inputs, 48 tries each: no falls in the trot, routine and sit
+  tests with 10-19 ms delay or 5% of steps missed, none turning left or right at 0.8 rad/s with 10-19 ms delay, none
+  in the canter from a trot at 10-19 ms or with 5% of steps missed (2 with 10% missed); live joint over-speed 0-1
+  steps a run. The canter is on by default (`--no-canter` for a trot); it turns left only, so run_go2 holds
+  right-turn commands at straight ahead while cantering. Earlier brains kept: `-gpu-829M`, `-hist-196M`,
+  `-blind-149M`, `-149M`. Self-right brain: `models/bolt-lite3-selfright-28M`.
 - Link: DEEP's Lite3_MotionSDK through our bridge, not unitree_sdk2. Build `deploy/lite3_bridge/bridge.cpp` on the
   robot's motion host (or a laptop on its network; the build line is at the top of the file), run `./lite3_bridge
   --robot <robot ip> --bolt <laptop ip>`, then `python deploy/run_go2.py --body lite3 --host <bridge host>`.

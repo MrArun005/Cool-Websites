@@ -713,6 +713,20 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   steering reward at 0.3 (default 0.15), 6 h. Aimed at the measured weak spot: right turns at 10-19 ms (trot right
   0.8: 15 falls of 48; 0.6: 5). Win on DEEP's model: trot right 0.8 at 10-19 ms <= 2 of 48 with everything else
   kept. Simulation.
+- **14 Nov 15:45 UTC. Second Lite3 GPU run: right turns fixed; adopted, `models/bolt-lite3-dog-gpu-1461M`; the
+  Lite3's canter is on by default.** `bolt-lite3-gpu-hist2`, 632M more steps in 6.5 GPU hours from gpu-829M with the
+  steering reward at 0.3; the last checkpoint. DEEP's model with the leg estimate, falls of 48, gpu-829M -> this:
+  trot right 0.8 at 10-19 ms 15 -> 0; right 0.6 5 -> 0; left 0.8 0 -> 0; canter plan steering right 0.8 at 10-19 ms
+  15 -> 0; canter 3-6 ms 0 -> 0; 10-19 ms 0 -> 0; left 0.8 at 10-19 ms 0 -> 0; 5% missed 1 -> 0; 10% missed 4 -> 2;
+  5% missed with 10-19 ms 3 -> 1. The 7 stress tests 0 falls; recovery 48/48; live routine 6/6 with 0-1 steps over
+  1.2x rated (829M: 1-2). Live with canters and steering (49 s, left 0.6 and right 0.8), with the new defaults: 6 of 7
+  finished (0-1 steps over); one was ended at 42.8 s by run_go2's stale-data stop (state 81 ms old: the simulator
+  hiccuped on this shared machine; not a fall). Our exam: tracking 0.828, steering 0.540 (trot 0.768), no falls;
+  trot/walk/pace 0 of 64 fresh; moving sit/lie 0/48; fresh-seed steered canter 0.584 and 0.518 with 1 fall of 24.
+  run_go2: the Lite3 canters by default; no cap on right turns in the trot; right turns still held at straight
+  ahead in the canter (it turns left only: -0.8 asked, -0.16 reached). Still open: the canter with 10% missed steps
+  (2 of 48), the canter's right turn. GPU used this week: 16 of 30 h. No further run is planned without a measured
+  reason: both robots' brains now pass every test in this file. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg

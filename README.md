@@ -35,7 +35,7 @@ Runtime -> Run all.
 
 | | |
 |---|---|
-| **Brains** | One brain per robot for all the motion (Go2 `torque-steer`, Lite3 `dog-gpu-829M`), a self-right brain each; numpy only on the robot, no torch |
+| **Brains** | One brain per robot for all the motion (Go2 `torque-steer`, Lite3 `dog-gpu-1461M`), a self-right brain each; numpy only on the robot, no torch |
 | **Robot program** | `run_go2.py`: Unitree's unitree_sdk2 (DDS) or DEEP's UDP joint protocol through a C++ bridge to their MotionSDK; one setting switches simulator and robot |
 | **Safety** | eases in from the stance, keeps targets inside the joint limits, damping mode on a tilt, a stale state or a sustained over-speed |
 | **Recovery** | fall -> self-right -> tuck -> get up -> carry on, on both robots |
@@ -51,21 +51,22 @@ tipped, shoved); the full routine also runs live, in real time, in Unitree's sim
 velocity sensor); it reads its last 3 frames of inputs instead. It was copied from a brain that read velocity, trained
 on free Kaggle CPU, then trained on with the Go2's recipe on the free Kaggle GPU. On DEEP's model it finishes 24 of 24
 routines with commands 10-19 ms late, 24 of 24 trots with 5% of steps lost and 48 of 48 trot -> sit; its canter from a
-trot holds 48 of 48 at 10-19 ms and 47 of 48 with 5% of steps lost. Known limits: a hard right turn with long delay
-falls (the robot program caps right turns at 0.4 rad/s), and the canter turns left only and stays a trot by default. Both brains were trained with
+trot holds 48 of 48 at 10-19 ms and with 5% of steps lost, and it turns left or right at 0.8 rad/s with 10-19 ms delay
+48 of 48. Known limit: its canter turns left only, so the robot program holds right-turn commands at straight ahead
+while cantering. Both brains were trained with
 a penalty on joint speed above rated, after live runs showed the earlier brains tripping the robot program's speed stop. Every number, with the command that made it, is in
 [`train/deploy/PLAN.md`](train/deploy/PLAN.md).
 
 **Results so far (all simulation, each maker's own MuJoCo model, robot-program inputs):**
 
-| Test | Go2 `torque-steer` | Lite3 `dog-gpu-829M` |
+| Test | Go2 `torque-steer` | Lite3 `dog-gpu-1461M` |
 |---|---|---|
-| 41 s routine: trot, sit, lie, get up, walk (+ canter on Go2) | 10 / 10 | 24 / 24 with commands 3-6 ms late (canter run as a trot) |
-| With late commands | routine 10 / 10 at 0-19 ms; 50 s plan with two canters 48 / 48 at 10-19 ms, also steering left and right | routine 24 / 24 at 10-19 ms, trot -> sit 48 / 48 at 5-15 ms |
-| 5% of control steps lost | 10 / 10; 50 s plan 48 / 48 (47 / 48 with 10% lost) | 20 s trot 24 / 24; canter plan 47 / 48 |
+| 41 s routine: trot, sit, lie, get up, walk (+ canter on Go2) | 10 / 10 | 24 / 24 with commands 3-6 ms late |
+| With late commands | routine 10 / 10 at 0-19 ms; 50 s plan with two canters 48 / 48 at 10-19 ms, also steering left and right | routine 24 / 24 at 10-19 ms, trot -> sit 48 / 48 at 5-15 ms; turning left or right at 0.8 rad/s 48 / 48 at 10-19 ms |
+| 5% of control steps lost | 10 / 10; 50 s plan 48 / 48 (47 / 48 with 10% lost) | 20 s trot 24 / 24; canter plan 48 / 48 |
 | Back on its feet after a fall (side, back, tipped, shoved) | 20 / 20 | 48 / 48 |
 | Live in the maker's simulator, real time | routine 3 / 3, no speed stop | routine 6 / 6 through DEEP's protocol bridge, no speed stop |
-| Canter | in the routine above | from a trot 48 / 48 at 10-19 ms, 47 / 48 with 5% of steps lost; turns left only; still a trot by default |
+| Canter | in the routine above | from a trot 48 / 48 at 10-19 ms and with 5% of steps lost (46 / 48 with 10% lost); turns left only |
 | On the real robot | **not run** | **not run** |
 
 **Have a Go2 EDU?** The first step needs no motion at all: `python deploy/first_run.py --iface <eth> --domain 0`

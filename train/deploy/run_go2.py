@@ -138,7 +138,7 @@ def main():
                     "of delay 6/12 -> 2/12 falls with 20 ms; but with no delay 5 ms ahead makes 6/12 falls")
     ap.add_argument("--no-canter", dest="no_canter", action="store_true", default=None,
                     help="every canter request (plan, keyboard, pet, remote) runs as a trot; default on for the Lite3")
-    ap.add_argument("--allow-canter", dest="no_canter", action="store_false", help="let the brain canter (Lite3 default off)")
+    ap.add_argument("--allow-canter", dest="no_canter", action="store_false", help="let the brain canter (the default for both robots)")
     ap.add_argument("--ramp", type=float, default=0.5, help="s to ease from the stance into the brain's targets at the start (0: none)")
     ap.add_argument("--margin", type=float, default=0.05)
     ap.add_argument("--damp-kd", type=float, default=2.0)
@@ -163,7 +163,7 @@ def main():
         sys.exit("--truth is a simulator-only shortcut (the real robot has no true velocity/height)")
     if a.predict_ms is None:   # off: over-predicting is as bad as the delay (no delay, 5 ms ahead: 6/12 falls); set it to
         a.predict_ms = 0.0     # the delay measured on the robot (HARDWARE_DAY.md)
-    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-gpu-829M" if a.body == "lite3" else "bolt-go2-torque-steer") / "params.pkl")
+    a.brain = a.brain or str(HERE.parent.parent / "models" / ("bolt-lite3-dog-gpu-1461M" if a.body == "lite3" else "bolt-go2-torque-steer") / "params.pkl")
     a.selfright = a.selfright or str(HERE.parent.parent / "models" / ("bolt-lite3-selfright-28M" if a.body == "lite3" else "bolt-go2-selfright-6.9M"))
     if a.body == "lite3":
         if a.truth or a.remote or a.release_sport:
@@ -183,19 +183,15 @@ def main():
             _, r = msc.CheckMode()
 
     ctl = Go2Controller(a.brain, body=a.body)
-    if a.no_canter is None:   # Lite3: on until a brain canters reliably with command delay (PLAN.md 4 Nov: nearly every
-        a.no_canter = a.body == "lite3"   # fall under 3-6 ms delay on DEEP's model is in the canter)
+    if a.no_canter is None:   # off for both robots since the Lite3's gpu-1461M brain (PLAN.md 14 Nov: canter from a trot
+        a.no_canter = False   # on DEEP's model 0 falls of 48 at 10-19 ms and with 5% of steps missed); --no-canter turns it into a trot
     if a.no_canter:
         _command = ctl.command
         ctl.command = lambda name, *args, **kw: _command("trot" if name == "canter" else name, *args, **kw)
         print("canter requests run as trot (--no-canter)", flush=True)
-    if a.body == "lite3":   # PLAN.md 12 and 14 Nov, DEEP's model: the Lite3's canter turns left only (right commands are
-        # held at straight ahead), and with commands 10-19 ms late a right turn in the trot falls 15 of 48 at 0.8 rad/s
-        # and 5 of 48 at 0.6 but 0 of 48 at 0.4 (left 0.8: 0 of 48), so right turns are capped at 0.4 rad/s in every gait
-        for g in ("walk", "trot", "pace"):
-            ctl.steer_limits[g] = (-0.4, np.inf)
-        ctl.steer_limits["canter"] = (0.0, np.inf)
-        print("Lite3 steering: right turns capped at 0.4 rad/s; in the canter held at straight ahead", flush=True)
+    if a.body == "lite3":   # PLAN.md 12-14 Nov: the Lite3's canter turns left only (asked to turn right it barely turns),
+        ctl.steer_limits["canter"] = (0.0, np.inf)   # so right-turn commands are held at straight ahead in the canter
+        print("Lite3 canter: right-turn commands are held at straight ahead (it turns left only)", flush=True)
     body = ctl.body
     kp = (a.kp or body.entry["kp"]) * a.gain_scale
     kd = (a.kd or body.entry["kv"]) * a.gain_scale

@@ -47,7 +47,7 @@ def main():
     a = ap.parse_args()
     M = HERE.parent.parent / "models"
     lite = a.body == "lite3"
-    a.brain = a.brain or str(M / ("bolt-lite3-dog-gpu-829M" if lite else "bolt-go2-torque-steer") / "params.pkl")
+    a.brain = a.brain or str(M / ("bolt-lite3-dog-gpu-1461M" if lite else "bolt-go2-torque-steer") / "params.pkl")
     a.selfright = a.selfright or str(M / ("bolt-lite3-selfright-28M" if lite else "bolt-go2-selfright-6.9M"))
     ctl = Go2Controller(a.brain, body=a.body)
     if lite:
