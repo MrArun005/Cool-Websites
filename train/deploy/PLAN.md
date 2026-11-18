@@ -727,6 +727,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   ahead in the canter (it turns left only: -0.8 asked, -0.16 reached). Still open: the canter with 10% missed steps
   (2 of 48), the canter's right turn. GPU used this week: 16 of 30 h. No further run is planned without a measured
   reason: both robots' brains now pass every test in this file. Simulation.
+- **18 Nov 16:50 UTC. Third Lite3 GPU run started: `bolt-lite3-gpu-hist3`.** From gpu-1461M, the same recipe with 10%
+  of control steps dropped in training (was 5%), 6 h. Aimed at the one measured gap left: the canter with 10% of
+  steps missed (2 falls of 48; 1 of 48 with 5% missed and 10-19 ms). Win: 0 there with nothing else worse.
+  Kaggle CPU stays idle: the GPU trainer does about 27,000 steps a second, a CPU job about 650, and the robot
+  brains are now GPU brains (params.pkl; the CPU trainer cannot continue them without a conversion). Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
