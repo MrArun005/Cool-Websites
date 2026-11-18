@@ -42,7 +42,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M", "bolt-lite3-dog-112M", "bolt-lite3-dog-steer-candidate-130M", "bolt-lite3-dog-149M", "bolt-lite3-dog-blind-149M", "bolt-lite3-dog-blind-hist-start", "bolt-lite3-dog-hist-penalty-164M", "bolt-lite3-dog-hist-fast-172M", "bolt-lite3-dog-hist-196M", "bolt-lite3-dog-hist-drop-215M", "bolt-lite3-selfright-28M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M", "bolt-lite3-dog-112M", "bolt-lite3-dog-steer-candidate-130M", "bolt-lite3-dog-149M", "bolt-lite3-dog-blind-149M", "bolt-lite3-dog-blind-hist-start", "bolt-lite3-dog-hist-penalty-164M", "bolt-lite3-dog-hist-fast-172M", "bolt-lite3-dog-hist-196M", "bolt-lite3-dog-hist-drop-215M", "bolt-lite3-dog-gpu-1461M-sb3", "bolt-lite3-selfright-28M"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -534,6 +534,33 @@ JOBS = {
               "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
               "--moving-rate", "0.75", "--steer-max", "0.8", "--lr", "3e-5", "--target-kl", "0.01", "--motor-speed-x", "1.5",
               "--overspeed-weight", "3.0", "--drop-p", "0.05"],
+        finals=[]),
+    "lite3-dog-42": dict(
+        # 18 Nov: the Lite3 robot brain is now a GPU brain (gpu-1461M); its canter still turns left only (asked for -0.8
+        # rad/s it reaches -0.16). The CPU trainer has the one option the GPU trainer lacks: right turns drawn in most
+        # steered canters (--steer-canter-right). From the GPU brain converted to SB3 (identical brain). Win: canter
+        # asked for -0.5 reaches <= -0.25 with 0 falls of 24, and every result of gpu-1461M kept.
+        name="lite3dog42", script="train_imitate.py", start="../models/bolt-lite3-dog-gpu-1461M-sb3",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.05", "--steer-canter-right", "0.7"],
+        finals=[]),
+    "lite3-dog-43": dict(
+        # 18 Nov: lite3-dog-42 with right turns in 9 of 10 steered canters.
+        name="lite3dog43", script="train_imitate.py", start="../models/bolt-lite3-dog-gpu-1461M-sb3",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.05", "--steer-canter-right", "0.9"],
+        finals=[]),
+    "lite3-dog-44": dict(
+        # 18 Nov: the control: the same CPU training without the right-turn draw (does CPU training keep a GPU brain?).
+        name="lite3dog44", script="train_imitate.py", start="../models/bolt-lite3-dog-gpu-1461M-sb3",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "trot", "pace", "canter", "canter", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.05"],
         finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above

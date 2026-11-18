@@ -732,6 +732,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   steps missed (2 falls of 48; 1 of 48 with 5% missed and 10-19 ms). Win: 0 there with nothing else worse.
   Kaggle CPU stays idle: the GPU trainer does about 27,000 steps a second, a CPU job about 650, and the robot
   brains are now GPU brains (params.pkl; the CPU trainer cannot continue them without a conversion). Simulation.
+- **18 Nov 17:10 UTC. Kaggle CPU back in use: lite3-dog-42..44, the canter's right turn, from the GPU brain.** The
+  owner wants the CPU used. gpu-1461M converted to an SB3 folder (`models/bolt-lite3-dog-gpu-1461M-sb3`; round trip
+  differences 0; smoke-tested). Jobs: 42 = right turns in 7 of 10 steered canters, 43 = 9 of 10, 44 = control
+  without it; all with 5% dropped steps, penalty 3.0, steering reward 0.3, lr 1e-5. Earlier (12 Nov) the same idea
+  on the CPU brain hist-196M did not move the right turn; the GPU brain is a different starting point. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
