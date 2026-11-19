@@ -8,7 +8,7 @@ import { runCycle } from '../src/run.js';
 import { createLLM } from '../src/llm/index.js';
 import { readJson } from '../src/util.js';
 import { pruneLessons } from '../src/memory.js';
-import { testConfig, writeSplit } from './helpers.js';
+import { testConfig, writeSplit, vdir } from './helpers.js';
 
 test('lesson learned from a failure is reused on a related problem', async () => {
   const cfg = testConfig({ agent: { maxAttemptsPerProblem: 2 } });
@@ -23,7 +23,7 @@ test('lesson learned from a failure is reused on a related problem', async () =>
   // attempt 1 on the first problem had no lessons and failed -> a reflect call -> a stored lesson
   assert.doesNotMatch(solves[0].messages[1].content, /Lessons from past mistakes/);
   assert.equal(llm.calls.filter((c) => c.meta.kind === 'reflect')[0].meta.problemId, first);
-  const lessons = readJson(path.join(cfg.paths.stateDir, cfg.paths.lessons)).items;
+  const lessons = readJson(path.join(vdir(cfg), cfg.paths.lessons)).items;
   assert.equal(lessons.length, 1);
   assert.equal(lessons[0].sourceProblem, first);
   assert.match(lessons[0].text, /include both ends/);
@@ -47,12 +47,12 @@ test('passing solutions are saved as skills (deduped by problem id)', async () =
   await runCycle({ cfg });
   // holdout is already at 100% so the gate says "keep": skills stay pending, not lost
   const live = (c) => [...c.skillIds, ...c.pending.skillIds].sort();
-  const champion = readJson(path.join(cfg.paths.stateDir, cfg.paths.champion));
+  const champion = readJson(path.join(vdir(cfg), cfg.paths.champion));
   assert.deepEqual(live(champion), ['fx_double_all', 'fx_reverse_words']);
-  assert.deepEqual(fs.readdirSync(path.join(cfg.paths.stateDir, cfg.paths.skillsDir)).sort(), ['fx_double_all.js', 'fx_reverse_words.js']);
+  assert.deepEqual(fs.readdirSync(path.join(vdir(cfg), cfg.paths.skillsDir)).sort(), ['fx_double_all.js', 'fx_reverse_words.js']);
   // second cycle: solved problems are not retried, so no duplicates
   await runCycle({ cfg });
-  const again = readJson(path.join(cfg.paths.stateDir, cfg.paths.champion));
+  const again = readJson(path.join(vdir(cfg), cfg.paths.champion));
   assert.deepEqual(live(again), ['fx_double_all', 'fx_reverse_words']);
 });
 

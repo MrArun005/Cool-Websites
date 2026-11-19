@@ -14,9 +14,9 @@ export function formatSkills(skills, maxChars) {
 
 export function buildMessages({ systemPrompt, userTemplate, problem, lessons, skills, cfg }) {
   const user = fill(userTemplate, {
+    ...(problem.vars ?? { prompt: problem.prompt.trimEnd() }),
     lessons: formatLessons(lessons),
     skills: formatSkills(skills, cfg.agent.maxSkillChars),
-    prompt: problem.prompt.trimEnd(),
   });
   return [{ role: 'system', content: systemPrompt.trim() }, { role: 'user', content: user }];
 }
@@ -33,12 +33,12 @@ export function extractCode(text, problem) {
 
 /**
  * One solve attempt. `memory` = { systemPrompt, lessons, skills } visible to this attempt.
- * @returns {Promise<{code, messages, usedLessons, usedSkills}>}
+ * @returns {Promise<{code, reply, messages, usedLessons, usedSkills, usage}>}
  */
-export async function solve({ llm, problem, memory, templates, cfg, temperature, reserve }) {
+export async function solve({ llm, problem, memory, templates, cfg, temperature, seed, reserve, extract = extractCode }) {
   const usedLessons = retrieveLessons(problem, memory.lessons, cfg);
   const usedSkills = retrieveSkills(problem, memory.skills, cfg);
   const messages = buildMessages({ systemPrompt: memory.systemPrompt, userTemplate: templates.solveUser, problem, lessons: usedLessons, skills: usedSkills, cfg });
-  const reply = await llm.chat(messages, { temperature, reserve, meta: { kind: 'solve', problemId: problem.id } });
-  return { code: extractCode(reply, problem), messages, usedLessons, usedSkills };
+  const reply = await llm.chat(messages, { temperature, seed, reserve, meta: { kind: 'solve', problemId: problem.id } });
+  return { code: extract(reply, problem), reply, messages, usedLessons, usedSkills, usage: { ...(llm.lastUsage ?? { tokensIn: 0, tokensOut: 0 }) } };
 }

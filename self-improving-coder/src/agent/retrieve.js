@@ -10,10 +10,11 @@ export function tokenize(text, retrieveCfg) {
   return new Set(words.filter((w) => w.length >= minTokenLength && !stop.has(w) && !/^\d+$/.test(w)));
 }
 
-/** Keywords of a problem: its comment text + function name. */
-export function problemKeywords(problem, retrieveCfg) {
-  const comments = problem.prompt.split('\n').filter((l) => l.trim().startsWith('//')).join(' ');
-  return tokenize(`${comments} ${problem.entryPoint ?? ''}`, retrieveCfg);
+/** Keywords of a task: the track's keywordText (e.g. a problem's comments + function name). */
+export function problemKeywords(task, retrieveCfg) {
+  if (task.keywordText !== undefined) return tokenize(task.keywordText, retrieveCfg);
+  const comments = task.prompt.split('\n').filter((l) => l.trim().startsWith('//')).join(' ');
+  return tokenize(`${comments} ${task.entryPoint ?? ''}`, retrieveCfg);
 }
 
 export function cosine(a, b) {

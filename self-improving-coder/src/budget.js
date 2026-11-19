@@ -37,14 +37,22 @@ export function createBudget(cfg, { file, now = () => new Date() } = {}) {
   return self;
 }
 
-/** Wrap an LLM so every call is budget-checked first and counted. */
+/** Wrap an LLM so every call is budget-checked first and counted (requests and tokens). */
 export function budgeted(llm, budget) {
-  return {
+  const self = {
     name: llm.name,
+    lastUsage: { tokensIn: 0, tokensOut: 0 },
+    tokensIn: 0,
+    tokensOut: 0,
     async chat(messages, opts = {}) {
       budget.check(opts.reserve ?? 0);
       budget.consume();
-      return llm.chat(messages, opts);
+      const out = await llm.chat(messages, opts);
+      self.lastUsage = { ...(llm.lastUsage ?? { tokensIn: 0, tokensOut: 0 }) };
+      self.tokensIn += self.lastUsage.tokensIn;
+      self.tokensOut += self.lastUsage.tokensOut;
+      return out;
     },
   };
+  return self;
 }

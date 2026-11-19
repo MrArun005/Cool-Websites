@@ -5,9 +5,11 @@
   "type": "module",
   "private": true,
   "license": "MIT",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
     "fetch": "node src/dataset/fetch.js",
     "start": "node src/run.js",
     "dry-run": "node src/run.js --dry-run",
@@ -15,6 +17,7 @@
     "summary": "node src/summary.js"
   },
   "dependencies": {
+    "acorn": "8.19.0",
     "hyparquet": "1.33.1"
   },
   "optionalDependencies": {

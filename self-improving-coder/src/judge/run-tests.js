@@ -22,10 +22,11 @@ function permissionFlags(dir) {
   return [flag, `--allow-fs-read=${dir}`];
 }
 
-export function classify({ code, signal, timedOut, stderr }) {
+/** pass / timeout / fail (a test assertion failed: judge.failPatterns) / error (anything else). */
+export function classify({ code, signal, timedOut, output }, failPatterns) {
   if (timedOut) return RESULT.TIMEOUT;
   if (code === 0 && !signal) return RESULT.PASS;
-  if (/AssertionError/.test(stderr)) return RESULT.FAIL;
+  if (failPatterns.some((p) => new RegExp(p, 'm').test(output))) return RESULT.FAIL;
   return RESULT.ERROR;
 }
 
@@ -33,41 +34,51 @@ export function classify({ code, signal, timedOut, stderr }) {
  * @returns {Promise<{type: string, output: string, durationMs: number}>}
  */
 export async function runTests(code, tests, judgeCfg) {
-  const { timeoutMs, maxOutputBytes, maxMemoryMb, useNodePermissionModel, tmpRoot } = judgeCfg;
-  const dir = fs.mkdtempSync(path.join(tmpRoot || os.tmpdir(), 'sic-judge-'));
+  const dir = fs.mkdtempSync(path.join(judgeCfg.tmpRoot || os.tmpdir(), 'sic-judge-'));
   const file = path.join(dir, 'solution.cjs');
   fs.writeFileSync(file, buildProgram(code, tests));
-  const args = [`--max-old-space-size=${maxMemoryMb}`, ...(useNodePermissionModel ? permissionFlags(dir) : []), file];
-  const started = Date.now();
   try {
-    return await new Promise((resolve) => {
-      const child = spawn(process.execPath, args, { cwd: dir, env: {}, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
-      let out = '';
-      let err = '';
-      let bytes = 0;
-      const take = (which) => (chunk) => {
-        if (bytes >= maxOutputBytes) return;
-        const s = chunk.toString('utf8').slice(0, maxOutputBytes - bytes);
-        bytes += Buffer.byteLength(s);
-        if (which === 'out') out += s; else err += s;
-      };
-      child.stdout.on('data', take('out'));
-      child.stderr.on('data', take('err'));
-      let timedOut = false;
-      const killTree = () => { try { process.kill(-child.pid, 'SIGKILL'); } catch { try { child.kill('SIGKILL'); } catch { /* gone */ } } };
-      const timer = setTimeout(() => { timedOut = true; killTree(); }, timeoutMs);
-      child.on('error', (e) => { err += `spawn error: ${e.message}`; });
-      child.on('close', (code, signal) => {
-        clearTimeout(timer);
-        killTree(); // reap any stragglers in the group
-        const type = classify({ code, signal, timedOut, stderr: err });
-        const output = (timedOut ? `Timed out after ${timeoutMs} ms\n` : '') + (err || out);
-        resolve({ type, output: output.replace(new RegExp(escapeRe(dir), 'g'), '<tmp>'), durationMs: Date.now() - started });
-      });
-    });
+    return await runNode({ dir, entry: file, judgeCfg });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+}
+
+/**
+ * Run `node <entry>` sandboxed: cwd = dir, empty env, permission model with reads allowed only in `dir`
+ * (+ `extraReadDirs`), process-group kill on timeout, capped output. The caller owns `dir`.
+ */
+export function runNode({ dir, entry, judgeCfg, extraReadDirs = [], timeoutMs = judgeCfg.timeoutMs }) {
+  const { maxOutputBytes, maxMemoryMb, useNodePermissionModel, failPatterns } = judgeCfg;
+  const perm = useNodePermissionModel ? [...permissionFlags(dir), ...extraReadDirs.map((d) => `--allow-fs-read=${d}`)] : [];
+  const args = [`--max-old-space-size=${maxMemoryMb}`, ...perm, entry];
+  const started = Date.now();
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, args, { cwd: dir, env: {}, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    let out = '';
+    let err = '';
+    let bytes = 0;
+    const take = (which) => (chunk) => {
+      if (bytes >= maxOutputBytes) return;
+      const s = chunk.toString('utf8').slice(0, maxOutputBytes - bytes);
+      bytes += Buffer.byteLength(s);
+      if (which === 'out') out += s; else err += s;
+    };
+    child.stdout.on('data', take('out'));
+    child.stderr.on('data', take('err'));
+    let timedOut = false;
+    const killTree = () => { try { process.kill(-child.pid, 'SIGKILL'); } catch { try { child.kill('SIGKILL'); } catch { /* gone */ } } };
+    const timer = setTimeout(() => { timedOut = true; killTree(); }, timeoutMs);
+    child.on('error', (e) => { err += `spawn error: ${e.message}`; });
+    child.on('close', (code, signal) => {
+      clearTimeout(timer);
+      killTree(); // reap any stragglers in the group
+      const combined = [out, err].filter(Boolean).join('\n');
+      const type = classify({ code, signal, timedOut, output: combined }, failPatterns);
+      const output = (timedOut ? `Timed out after ${timeoutMs} ms\n` : '') + combined;
+      resolve({ type, output: output.replace(new RegExp(escapeRe(dir), 'g'), '<tmp>'), durationMs: Date.now() - started });
+    });
+  });
 }
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

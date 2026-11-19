@@ -3,3 +3,4 @@ data/
 .dry-run/
 .tmp/
 .claude/
+site/index.html

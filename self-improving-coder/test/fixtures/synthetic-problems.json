@@ -1,0 +1,509 @@
+[
+ {
+  "id": "syn_range_sum0",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "sum_range_0",
+  "prompt": "// Return the sum of the integers in the inclusive range from a to b.\nfunction sum_range_0(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = sum_range_0;\n  assert.deepEqual(candidate(1, 4), 10);\n  assert.deepEqual(candidate(3, 3), 3);\n  assert.deepEqual(candidate(2, 6), 20);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function sum_range_0(a, b){\n  let s = 0;\n  for (let i = a; i <= b; i++) s += i;\n  return s;\n}",
+   "buggy": "function sum_range_0(a, b){\n  let s = 0;\n  for (let i = a; i < b; i++) s += i;\n  return s;\n}"
+  }
+ },
+ {
+  "id": "syn_range_sum1",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "sum_range_1",
+  "prompt": "// Return the sum of the squares of the integers in the inclusive range from a to b.\nfunction sum_range_1(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = sum_range_1;\n  assert.deepEqual(candidate(1, 4), 30);\n  assert.deepEqual(candidate(3, 3), 9);\n  assert.deepEqual(candidate(2, 6), 90);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function sum_range_1(a, b){\n  let s = 0;\n  for (let i = a; i <= b; i++) s += i * i;\n  return s;\n}",
+   "buggy": "function sum_range_1(a, b){\n  let s = 0;\n  for (let i = a; i < b; i++) s += i * i;\n  return s;\n}"
+  }
+ },
+ {
+  "id": "syn_range_sum2",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "sum_range_2",
+  "prompt": "// Return the sum of twice the integers in the inclusive range from a to b.\nfunction sum_range_2(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = sum_range_2;\n  assert.deepEqual(candidate(1, 4), 20);\n  assert.deepEqual(candidate(3, 3), 6);\n  assert.deepEqual(candidate(2, 6), 40);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function sum_range_2(a, b){\n  let s = 0;\n  for (let i = a; i <= b; i++) s += 2 * i;\n  return s;\n}",
+   "buggy": "function sum_range_2(a, b){\n  let s = 0;\n  for (let i = a; i < b; i++) s += 2 * i;\n  return s;\n}"
+  }
+ },
+ {
+  "id": "syn_range_sum3",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "sum_range_3",
+  "prompt": "// Return the sum of the cubes of the integers in the inclusive range from a to b.\nfunction sum_range_3(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = sum_range_3;\n  assert.deepEqual(candidate(1, 4), 100);\n  assert.deepEqual(candidate(3, 3), 27);\n  assert.deepEqual(candidate(2, 6), 440);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function sum_range_3(a, b){\n  let s = 0;\n  for (let i = a; i <= b; i++) s += i * i * i;\n  return s;\n}",
+   "buggy": "function sum_range_3(a, b){\n  let s = 0;\n  for (let i = a; i < b; i++) s += i * i * i;\n  return s;\n}"
+  }
+ },
+ {
+  "id": "syn_range_sum4",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "sum_range_4",
+  "prompt": "// Return the sum of the remainders mod 3 of the integers in the inclusive range from a to b.\nfunction sum_range_4(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = sum_range_4;\n  assert.deepEqual(candidate(1, 4), 4);\n  assert.deepEqual(candidate(3, 3), 0);\n  assert.deepEqual(candidate(2, 6), 5);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function sum_range_4(a, b){\n  let s = 0;\n  for (let i = a; i <= b; i++) s += i % 3;\n  return s;\n}",
+   "buggy": "function sum_range_4(a, b){\n  let s = 0;\n  for (let i = a; i < b; i++) s += i % 3;\n  return s;\n}"
+  }
+ },
+ {
+  "id": "syn_range_sum5",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "sum_range_5",
+  "prompt": "// Return the sum of the successors of the integers in the inclusive range from a to b.\nfunction sum_range_5(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = sum_range_5;\n  assert.deepEqual(candidate(1, 4), 14);\n  assert.deepEqual(candidate(3, 3), 4);\n  assert.deepEqual(candidate(2, 6), 25);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function sum_range_5(a, b){\n  let s = 0;\n  for (let i = a; i <= b; i++) s += i + 1;\n  return s;\n}",
+   "buggy": "function sum_range_5(a, b){\n  let s = 0;\n  for (let i = a; i < b; i++) s += i + 1;\n  return s;\n}"
+  }
+ },
+ {
+  "id": "syn_range_count0",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "count_range_0",
+  "prompt": "// Count the integers in the inclusive range from a to b that are even.\nfunction count_range_0(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = count_range_0;\n  assert.deepEqual(candidate(2, 6), 3);\n  assert.deepEqual(candidate(1, 2), 1);\n  assert.deepEqual(candidate(4, 4), 1);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function count_range_0(a, b){\n  let c = 0;\n  for (let i = a; i <= b; i++) if (i % 2 === 0) c++;\n  return c;\n}",
+   "buggy": "function count_range_0(a, b){\n  let c = 0;\n  for (let i = a; i < b; i++) if (i % 2 === 0) c++;\n  return c;\n}"
+  }
+ },
+ {
+  "id": "syn_range_count1",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "count_range_1",
+  "prompt": "// Count the integers in the inclusive range from a to b that are multiple of 3.\nfunction count_range_1(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = count_range_1;\n  assert.deepEqual(candidate(3, 9), 3);\n  assert.deepEqual(candidate(1, 3), 1);\n  assert.deepEqual(candidate(6, 6), 1);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function count_range_1(a, b){\n  let c = 0;\n  for (let i = a; i <= b; i++) if (i % 3 === 0) c++;\n  return c;\n}",
+   "buggy": "function count_range_1(a, b){\n  let c = 0;\n  for (let i = a; i < b; i++) if (i % 3 === 0) c++;\n  return c;\n}"
+  }
+ },
+ {
+  "id": "syn_range_count2",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "count_range_2",
+  "prompt": "// Count the integers in the inclusive range from a to b that are multiple of 5.\nfunction count_range_2(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = count_range_2;\n  assert.deepEqual(candidate(5, 15), 3);\n  assert.deepEqual(candidate(1, 5), 1);\n  assert.deepEqual(candidate(10, 10), 1);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function count_range_2(a, b){\n  let c = 0;\n  for (let i = a; i <= b; i++) if (i % 5 === 0) c++;\n  return c;\n}",
+   "buggy": "function count_range_2(a, b){\n  let c = 0;\n  for (let i = a; i < b; i++) if (i % 5 === 0) c++;\n  return c;\n}"
+  }
+ },
+ {
+  "id": "syn_range_count3",
+  "source": "synthetic",
+  "family": "range",
+  "entryPoint": "count_range_3",
+  "prompt": "// Count the integers in the inclusive range from a to b that are multiple of 4.\nfunction count_range_3(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = count_range_3;\n  assert.deepEqual(candidate(4, 12), 3);\n  assert.deepEqual(candidate(1, 4), 1);\n  assert.deepEqual(candidate(8, 8), 1);\n}\n\ntest();",
+  "mock": {
+   "family": "range",
+   "correct": "function count_range_3(a, b){\n  let c = 0;\n  for (let i = a; i <= b; i++) if (i % 4 === 0) c++;\n  return c;\n}",
+   "buggy": "function count_range_3(a, b){\n  let c = 0;\n  for (let i = a; i < b; i++) if (i % 4 === 0) c++;\n  return c;\n}"
+  }
+ },
+ {
+  "id": "syn_extreme_max0",
+  "source": "synthetic",
+  "family": "extreme",
+  "entryPoint": "max_of_0",
+  "prompt": "// Return the largest number of the numbers in a non-empty list.\nfunction max_of_0(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = max_of_0;\n  assert.deepEqual(candidate([-5,-2,-9]), -2);\n  assert.deepEqual(candidate([-1]), -1);\n  assert.deepEqual(candidate([-4,-7]), -4);\n}\n\ntest();",
+  "mock": {
+   "family": "extreme",
+   "correct": "function max_of_0(xs){\n  let best = xs[0];\n  for (const x of xs) { const v = x; if (v > best) best = v; }\n  return best;\n}",
+   "buggy": "function max_of_0(xs){\n  let best = 0;\n  for (const x of xs) { const v = x; if (v > best) best = v; }\n  return best;\n}"
+  }
+ },
+ {
+  "id": "syn_extreme_max2",
+  "source": "synthetic",
+  "family": "extreme",
+  "entryPoint": "max_of_2",
+  "prompt": "// Return the largest negated value of the numbers in a non-empty list.\nfunction max_of_2(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = max_of_2;\n  assert.deepEqual(candidate([3,8,1]), -1);\n  assert.deepEqual(candidate([7]), -7);\n  assert.deepEqual(candidate([6,2]), -2);\n}\n\ntest();",
+  "mock": {
+   "family": "extreme",
+   "correct": "function max_of_2(xs){\n  let best = -xs[0];\n  for (const x of xs) { const v = -x; if (v > best) best = v; }\n  return best;\n}",
+   "buggy": "function max_of_2(xs){\n  let best = 0;\n  for (const x of xs) { const v = -x; if (v > best) best = v; }\n  return best;\n}"
+  }
+ },
+ {
+  "id": "syn_extreme_max3",
+  "source": "synthetic",
+  "family": "extreme",
+  "entryPoint": "max_of_3",
+  "prompt": "// Return the largest doubled value of the numbers in a non-empty list.\nfunction max_of_3(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = max_of_3;\n  assert.deepEqual(candidate([-5,-2,-9]), -4);\n  assert.deepEqual(candidate([-1]), -2);\n  assert.deepEqual(candidate([-4,-7]), -8);\n}\n\ntest();",
+  "mock": {
+   "family": "extreme",
+   "correct": "function max_of_3(xs){\n  let best = 2 * xs[0];\n  for (const x of xs) { const v = 2 * x; if (v > best) best = v; }\n  return best;\n}",
+   "buggy": "function max_of_3(xs){\n  let best = 0;\n  for (const x of xs) { const v = 2 * x; if (v > best) best = v; }\n  return best;\n}"
+  }
+ },
+ {
+  "id": "syn_extreme_min0",
+  "source": "synthetic",
+  "family": "extreme",
+  "entryPoint": "min_of_0",
+  "prompt": "// Return the smallest number of the numbers in a non-empty list.\nfunction min_of_0(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = min_of_0;\n  assert.deepEqual(candidate([3,8,1]), 1);\n  assert.deepEqual(candidate([7]), 7);\n  assert.deepEqual(candidate([6,2]), 2);\n}\n\ntest();",
+  "mock": {
+   "family": "extreme",
+   "correct": "function min_of_0(xs){\n  let best = xs[0];\n  for (const x of xs) { const v = x; if (v < best) best = v; }\n  return best;\n}",
+   "buggy": "function min_of_0(xs){\n  let best = 0;\n  for (const x of xs) { const v = x; if (v < best) best = v; }\n  return best;\n}"
+  }
+ },
+ {
+  "id": "syn_extreme_min1",
+  "source": "synthetic",
+  "family": "extreme",
+  "entryPoint": "min_of_1",
+  "prompt": "// Return the smallest absolute value of the numbers in a non-empty list.\nfunction min_of_1(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = min_of_1;\n  assert.deepEqual(candidate([-5,-2,-9]), 2);\n  assert.deepEqual(candidate([-1]), 1);\n  assert.deepEqual(candidate([-4,-7]), 4);\n  assert.deepEqual(candidate([3,8,1]), 1);\n  assert.deepEqual(candidate([7]), 7);\n  assert.deepEqual(candidate([6,2]), 2);\n}\n\ntest();",
+  "mock": {
+   "family": "extreme",
+   "correct": "function min_of_1(xs){\n  let best = Math.abs(xs[0]);\n  for (const x of xs) { const v = Math.abs(x); if (v < best) best = v; }\n  return best;\n}",
+   "buggy": "function min_of_1(xs){\n  let best = 0;\n  for (const x of xs) { const v = Math.abs(x); if (v < best) best = v; }\n  return best;\n}"
+  }
+ },
+ {
+  "id": "syn_extreme_min2",
+  "source": "synthetic",
+  "family": "extreme",
+  "entryPoint": "min_of_2",
+  "prompt": "// Return the smallest negated value of the numbers in a non-empty list.\nfunction min_of_2(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = min_of_2;\n  assert.deepEqual(candidate([-5,-2,-9]), 2);\n  assert.deepEqual(candidate([-1]), 1);\n  assert.deepEqual(candidate([-4,-7]), 4);\n}\n\ntest();",
+  "mock": {
+   "family": "extreme",
+   "correct": "function min_of_2(xs){\n  let best = -xs[0];\n  for (const x of xs) { const v = -x; if (v < best) best = v; }\n  return best;\n}",
+   "buggy": "function min_of_2(xs){\n  let best = 0;\n  for (const x of xs) { const v = -x; if (v < best) best = v; }\n  return best;\n}"
+  }
+ },
+ {
+  "id": "syn_extreme_min3",
+  "source": "synthetic",
+  "family": "extreme",
+  "entryPoint": "min_of_3",
+  "prompt": "// Return the smallest doubled value of the numbers in a non-empty list.\nfunction min_of_3(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = min_of_3;\n  assert.deepEqual(candidate([3,8,1]), 2);\n  assert.deepEqual(candidate([7]), 14);\n  assert.deepEqual(candidate([6,2]), 4);\n}\n\ntest();",
+  "mock": {
+   "family": "extreme",
+   "correct": "function min_of_3(xs){\n  let best = 2 * xs[0];\n  for (const x of xs) { const v = 2 * x; if (v < best) best = v; }\n  return best;\n}",
+   "buggy": "function min_of_3(xs){\n  let best = 0;\n  for (const x of xs) { const v = 2 * x; if (v < best) best = v; }\n  return best;\n}"
+  }
+ },
+ {
+  "id": "syn_empty_average",
+  "source": "synthetic",
+  "family": "empty",
+  "entryPoint": "average",
+  "prompt": "// Return the average of the numbers in the list. For an empty list return 0.\nfunction average(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = average;\n  assert.deepEqual(candidate([2,4]), 3);\n  assert.deepEqual(candidate([5]), 5);\n  assert.deepEqual(candidate([]), 0);\n}\n\ntest();",
+  "mock": {
+   "family": "empty",
+   "correct": "function average(xs){\n  if (xs.length === 0) return 0;\n  return xs.reduce((a, b) => a + b, 0) / xs.length;\n}",
+   "buggy": "function average(xs){\n  return xs.reduce((a, b) => a + b, 0) / xs.length;\n}"
+  }
+ },
+ {
+  "id": "syn_empty_first_or_none",
+  "source": "synthetic",
+  "family": "empty",
+  "entryPoint": "first_or_none",
+  "prompt": "// Return the first element in the list. For an empty list return \"none\".\nfunction first_or_none(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = first_or_none;\n  assert.deepEqual(candidate([7,1]), 7);\n  assert.deepEqual(candidate([\"a\"]), \"a\");\n  assert.deepEqual(candidate([]), \"none\");\n}\n\ntest();",
+  "mock": {
+   "family": "empty",
+   "correct": "function first_or_none(xs){\n  if (xs.length === 0) return \"none\";\n  return xs[0];\n}",
+   "buggy": "function first_or_none(xs){\n  return xs[0];\n}"
+  }
+ },
+ {
+  "id": "syn_empty_last_or_none",
+  "source": "synthetic",
+  "family": "empty",
+  "entryPoint": "last_or_none",
+  "prompt": "// Return the last element in the list. For an empty list return \"none\".\nfunction last_or_none(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = last_or_none;\n  assert.deepEqual(candidate([7,1]), 1);\n  assert.deepEqual(candidate([\"a\",\"b\"]), \"b\");\n  assert.deepEqual(candidate([]), \"none\");\n}\n\ntest();",
+  "mock": {
+   "family": "empty",
+   "correct": "function last_or_none(xs){\n  if (xs.length === 0) return \"none\";\n  return xs[xs.length - 1];\n}",
+   "buggy": "function last_or_none(xs){\n  return xs[xs.length - 1];\n}"
+  }
+ },
+ {
+  "id": "syn_empty_product",
+  "source": "synthetic",
+  "family": "empty",
+  "entryPoint": "product",
+  "prompt": "// Return the product of the numbers in the list. For an empty list return 1.\nfunction product(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = product;\n  assert.deepEqual(candidate([2,3]), 6);\n  assert.deepEqual(candidate([4]), 4);\n  assert.deepEqual(candidate([]), 1);\n}\n\ntest();",
+  "mock": {
+   "family": "empty",
+   "correct": "function product(xs){\n  if (xs.length === 0) return 1;\n  return xs.reduce((a, b) => a * b);\n}",
+   "buggy": "function product(xs){\n  return xs.reduce((a, b) => a * b);\n}"
+  }
+ },
+ {
+  "id": "syn_empty_longest_word",
+  "source": "synthetic",
+  "family": "empty",
+  "entryPoint": "longest_word",
+  "prompt": "// Return the longest word in the list. For an empty list return \"\".\nfunction longest_word(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = longest_word;\n  assert.deepEqual(candidate([\"ab\",\"abc\"]), \"abc\");\n  assert.deepEqual(candidate([\"x\"]), \"x\");\n  assert.deepEqual(candidate([]), \"\");\n}\n\ntest();",
+  "mock": {
+   "family": "empty",
+   "correct": "function longest_word(xs){\n  if (xs.length === 0) return \"\";\n  return xs.reduce((a, b) => (b.length > a.length ? b : a));\n}",
+   "buggy": "function longest_word(xs){\n  return xs.reduce((a, b) => (b.length > a.length ? b : a));\n}"
+  }
+ },
+ {
+  "id": "syn_empty_max_len",
+  "source": "synthetic",
+  "family": "empty",
+  "entryPoint": "max_len",
+  "prompt": "// Return the length of the longest string in the list. For an empty list return 0.\nfunction max_len(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = max_len;\n  assert.deepEqual(candidate([\"ab\",\"abc\"]), 3);\n  assert.deepEqual(candidate([\"x\"]), 1);\n  assert.deepEqual(candidate([]), 0);\n}\n\ntest();",
+  "mock": {
+   "family": "empty",
+   "correct": "function max_len(xs){\n  if (xs.length === 0) return 0;\n  return Math.max(...xs.map((s) => s.length));\n}",
+   "buggy": "function max_len(xs){\n  return Math.max(...xs.map((s) => s.length));\n}"
+  }
+ },
+ {
+  "id": "syn_case_count_char",
+  "source": "synthetic",
+  "family": "case",
+  "entryPoint": "count_char",
+  "prompt": "// Count how many times the letter c appears in s, ignoring upper/lower case.\nfunction count_char(s, c){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = count_char;\n  assert.deepEqual(candidate(\"Banana\", \"b\"), 1);\n  assert.deepEqual(candidate(\"aAa\", \"a\"), 3);\n}\n\ntest();",
+  "mock": {
+   "family": "case",
+   "correct": "function count_char(s, c){\n  return [...s.toLowerCase()].filter((x) => x === c.toLowerCase()).length;\n}",
+   "buggy": "function count_char(s, c){\n  return [...s].filter((x) => x === c).length;\n}"
+  }
+ },
+ {
+  "id": "syn_case_same_word",
+  "source": "synthetic",
+  "family": "case",
+  "entryPoint": "same_word",
+  "prompt": "// Return true if the two words are equal ignoring upper/lower case.\nfunction same_word(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = same_word;\n  assert.deepEqual(candidate(\"Cat\", \"cAT\"), true);\n  assert.deepEqual(candidate(\"dog\", \"cat\"), false);\n}\n\ntest();",
+  "mock": {
+   "family": "case",
+   "correct": "function same_word(a, b){\n  return a.toLowerCase() === b.toLowerCase();\n}",
+   "buggy": "function same_word(a, b){\n  return a === b;\n}"
+  }
+ },
+ {
+  "id": "syn_case_starts_with",
+  "source": "synthetic",
+  "family": "case",
+  "entryPoint": "starts_with",
+  "prompt": "// Return true if s starts with prefix p, ignoring upper/lower case.\nfunction starts_with(s, p){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = starts_with;\n  assert.deepEqual(candidate(\"Hello\", \"he\"), true);\n  assert.deepEqual(candidate(\"abc\", \"b\"), false);\n}\n\ntest();",
+  "mock": {
+   "family": "case",
+   "correct": "function starts_with(s, p){\n  return s.toLowerCase().startsWith(p.toLowerCase());\n}",
+   "buggy": "function starts_with(s, p){\n  return s.startsWith(p);\n}"
+  }
+ },
+ {
+  "id": "syn_case_count_vowels",
+  "source": "synthetic",
+  "family": "case",
+  "entryPoint": "count_vowels",
+  "prompt": "// Count the vowels a, e, i, o, u in s, ignoring upper/lower case.\nfunction count_vowels(s){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = count_vowels;\n  assert.deepEqual(candidate(\"AbE\"), 2);\n  assert.deepEqual(candidate(\"xyz\"), 0);\n}\n\ntest();",
+  "mock": {
+   "family": "case",
+   "correct": "function count_vowels(s){\n  return [...s.toLowerCase()].filter((x) => 'aeiou'.includes(x)).length;\n}",
+   "buggy": "function count_vowels(s){\n  return [...s].filter((x) => 'aeiou'.includes(x)).length;\n}"
+  }
+ },
+ {
+  "id": "syn_case_unique_words",
+  "source": "synthetic",
+  "family": "case",
+  "entryPoint": "unique_words",
+  "prompt": "// Count the distinct words in a space-separated sentence, ignoring upper/lower case.\nfunction unique_words(s){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = unique_words;\n  assert.deepEqual(candidate(\"a A b\"), 2);\n  assert.deepEqual(candidate(\"x y\"), 2);\n}\n\ntest();",
+  "mock": {
+   "family": "case",
+   "correct": "function unique_words(s){\n  return new Set(s.toLowerCase().split(' ')).size;\n}",
+   "buggy": "function unique_words(s){\n  return new Set(s.split(' ')).size;\n}"
+  }
+ },
+ {
+  "id": "syn_case_is_palindrome_ci",
+  "source": "synthetic",
+  "family": "case",
+  "entryPoint": "is_palindrome_ci",
+  "prompt": "// Return true if s reads the same backwards, ignoring upper/lower case.\nfunction is_palindrome_ci(s){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = is_palindrome_ci;\n  assert.deepEqual(candidate(\"Abba\"), true);\n  assert.deepEqual(candidate(\"abc\"), false);\n}\n\ntest();",
+  "mock": {
+   "family": "case",
+   "correct": "function is_palindrome_ci(s){\n  return s.toLowerCase() === [...s.toLowerCase()].reverse().join('');\n}",
+   "buggy": "function is_palindrome_ci(s){\n  return s === [...s].reverse().join('');\n}"
+  }
+ },
+ {
+  "id": "syn_round_round_half",
+  "source": "synthetic",
+  "family": "round",
+  "entryPoint": "round_half",
+  "prompt": "// Return x rounded to the nearest integer (halves round up).\nfunction round_half(x){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = round_half;\n  assert.deepEqual(candidate(2.7), 3);\n  assert.deepEqual(candidate(2.2), 2);\n  assert.deepEqual(candidate(-1.5), -1);\n}\n\ntest();",
+  "mock": {
+   "family": "round",
+   "correct": "function round_half(x){\n  return Math.round(x);\n}",
+   "buggy": "function round_half(x){\n  return Math.floor(x);\n}"
+  }
+ },
+ {
+  "id": "syn_round_round_tenth",
+  "source": "synthetic",
+  "family": "round",
+  "entryPoint": "round_tenth",
+  "prompt": "// Return x rounded to one decimal place.\nfunction round_tenth(x){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = round_tenth;\n  assert.deepEqual(candidate(2.46), 2.5);\n  assert.deepEqual(candidate(1.04), 1);\n}\n\ntest();",
+  "mock": {
+   "family": "round",
+   "correct": "function round_tenth(x){\n  return Math.round(x * 10) / 10;\n}",
+   "buggy": "function round_tenth(x){\n  return Math.floor(x * 10) / 10;\n}"
+  }
+ },
+ {
+  "id": "syn_round_avg_rounded",
+  "source": "synthetic",
+  "family": "round",
+  "entryPoint": "avg_rounded",
+  "prompt": "// Return the average of a and b rounded to the nearest integer.\nfunction avg_rounded(a, b){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = avg_rounded;\n  assert.deepEqual(candidate(1, 2), 2);\n  assert.deepEqual(candidate(2, 4), 3);\n}\n\ntest();",
+  "mock": {
+   "family": "round",
+   "correct": "function avg_rounded(a, b){\n  return Math.round((a + b) / 2);\n}",
+   "buggy": "function avg_rounded(a, b){\n  return Math.floor((a + b) / 2);\n}"
+  }
+ },
+ {
+  "id": "syn_round_percent",
+  "source": "synthetic",
+  "family": "round",
+  "entryPoint": "percent",
+  "prompt": "// Return part / whole as a whole-number percentage, rounded to the nearest integer.\nfunction percent(part, whole){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = percent;\n  assert.deepEqual(candidate(2, 3), 67);\n  assert.deepEqual(candidate(1, 4), 25);\n}\n\ntest();",
+  "mock": {
+   "family": "round",
+   "correct": "function percent(part, whole){\n  return Math.round((part / whole) * 100);\n}",
+   "buggy": "function percent(part, whole){\n  return Math.floor((part / whole) * 100);\n}"
+  }
+ },
+ {
+  "id": "syn_easy_double_all",
+  "source": "synthetic",
+  "family": "easy",
+  "entryPoint": "double_all",
+  "prompt": "// Double every number in a list.\nfunction double_all(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = double_all;\n  assert.deepEqual(candidate([1, 2]), [2,4]);\n}\n\ntest();",
+  "mock": {
+   "family": "easy",
+   "correct": "function double_all(xs){\n  return xs.map((x) => x * 2);\n}",
+   "buggy": "function double_all(xs){\n  return null;\n}"
+  }
+ },
+ {
+  "id": "syn_easy_reverse_words",
+  "source": "synthetic",
+  "family": "easy",
+  "entryPoint": "reverse_words",
+  "prompt": "// Reverse the order of words in a sentence.\nfunction reverse_words(s){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = reverse_words;\n  assert.deepEqual(candidate(\"a b c\"), \"c b a\");\n}\n\ntest();",
+  "mock": {
+   "family": "easy",
+   "correct": "function reverse_words(s){\n  return s.split(' ').reverse().join(' ');\n}",
+   "buggy": "function reverse_words(s){\n  return null;\n}"
+  }
+ },
+ {
+  "id": "syn_easy_join_dash",
+  "source": "synthetic",
+  "family": "easy",
+  "entryPoint": "join_dash",
+  "prompt": "// Join a list of words with dashes.\nfunction join_dash(xs){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = join_dash;\n  assert.deepEqual(candidate([\"a\", \"b\"]), \"a-b\");\n}\n\ntest();",
+  "mock": {
+   "family": "easy",
+   "correct": "function join_dash(xs){\n  return xs.join('-');\n}",
+   "buggy": "function join_dash(xs){\n  return null;\n}"
+  }
+ },
+ {
+  "id": "syn_easy_is_even",
+  "source": "synthetic",
+  "family": "easy",
+  "entryPoint": "is_even",
+  "prompt": "// Return true if n is even.\nfunction is_even(n){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = is_even;\n  assert.deepEqual(candidate(4), true);\n  assert.deepEqual(candidate(3), false);\n}\n\ntest();",
+  "mock": {
+   "family": "easy",
+   "correct": "function is_even(n){\n  return n % 2 === 0;\n}",
+   "buggy": "function is_even(n){\n  return null;\n}"
+  }
+ },
+ {
+  "id": "syn_easy_square",
+  "source": "synthetic",
+  "family": "easy",
+  "entryPoint": "square",
+  "prompt": "// Return n squared.\nfunction square(n){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = square;\n  assert.deepEqual(candidate(3), 9);\n}\n\ntest();",
+  "mock": {
+   "family": "easy",
+   "correct": "function square(n){\n  return n * n;\n}",
+   "buggy": "function square(n){\n  return null;\n}"
+  }
+ },
+ {
+  "id": "syn_easy_char_count",
+  "source": "synthetic",
+  "family": "easy",
+  "entryPoint": "char_count",
+  "prompt": "// Return the number of characters in s.\nfunction char_count(s){\n",
+  "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = char_count;\n  assert.deepEqual(candidate(\"abc\"), 3);\n}\n\ntest();",
+  "mock": {
+   "family": "easy",
+   "correct": "function char_count(s){\n  return s.length;\n}",
+   "buggy": "function char_count(s){\n  return null;\n}"
+  }
+ }
+]

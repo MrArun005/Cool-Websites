@@ -1,0 +1,12 @@
+timestamp,runId,split,passRate,n,promptVersion,lessonsCount,skillsCount,requestsUsed,gateDecision,variant,track,repeats,sd,ciLow,ciHigh,tokensIn,tokensOut
+2026-11-20T04:17:00.000Z,r1,holdout-champion,0.4100,50,v001,0,0,420,baseline,lessons,multipl-e,3,0.0200,0.3400,0.4800,1000,200
+2026-11-21T04:17:00.000Z,r2,holdout-champion,0.4000,50,v001,1,1,420,baseline,lessons,multipl-e,3,0.0200,0.3300,0.4700,1000,200
+2026-11-22T04:17:00.000Z,r3,train,0.5000,30,v001,2,2,420,accept,lessons,multipl-e,1,,,,1000,200
+2026-11-22T04:17:00.000Z,r3,holdout-champion,0.4300,50,v001,2,2,420,accept,lessons,multipl-e,3,0.0200,0.4000,0.5400,1000,200
+2026-11-22T04:17:00.000Z,r3,holdout-candidate,0.4700,50,v001,2,2,420,accept,lessons,multipl-e,3,0.0200,0.4000,0.5400,1000,200
+2026-11-23T04:17:00.000Z,r4,train,0.5000,30,v001,3,3,420,reject,lessons,multipl-e,1,,,,1000,200
+2026-11-23T04:17:00.000Z,r4,holdout-champion,0.4700,50,v001,3,3,420,reject,lessons,multipl-e,3,0.0200,0.4000,0.5400,1000,200
+2026-11-23T04:17:00.000Z,r4,holdout-candidate,0.4100,50,v001,3,3,420,reject,lessons,multipl-e,3,0.0200,0.4000,0.5400,1000,200
+2026-11-24T04:17:00.000Z,r5,train,0.5000,30,v001,4,4,420,accept,lessons,multipl-e,1,,,,1000,200
+2026-11-24T04:17:00.000Z,r5,holdout-champion,0.4800,50,v001,4,4,420,accept,lessons,multipl-e,3,0.0200,0.4500,0.5900,1000,200
+2026-11-24T04:17:00.000Z,r5,holdout-candidate,0.5200,50,v001,4,4,420,accept,lessons,multipl-e,3,0.0200,0.4500,0.5900,1000,200

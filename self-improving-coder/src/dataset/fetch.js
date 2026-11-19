@@ -39,7 +39,7 @@ export async function fetchDataset(cfg, { fetchFn = globalThis.fetch } = {}) {
 
 /** Return problems from cache, the test fixture (dry run), or download them. */
 export async function loadProblems(cfg, deps = {}) {
-  if (cfg.dataset.useFixture) return readJson(rootPath(cfg, cfg.llm.mock.scriptPath)).map(({ mock, ...p }) => p);
+  if (cfg.dataset.useFixture) return readJson(rootPath(cfg, cfg.dataset.fixturePath));
   const file = rootPath(cfg, cfg.dataset.cacheDir, cfg.dataset.problemsFile);
   if (fs.existsSync(file)) {
     const cached = readJson(file);

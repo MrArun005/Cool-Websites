@@ -7,17 +7,27 @@ import { runCycle } from '../src/run.js';
 import { createLLM } from '../src/llm/index.js';
 import { readJson } from '../src/util.js';
 import { COLUMNS } from '../src/metrics.js';
-import { ROOT } from '../src/config.js';
-import { testConfig, writeSplit, tmpDir } from './helpers.js';
+import { ROOT, loadConfig } from '../src/config.js';
+import { testConfig, writeSplit, tmpDir, vdir } from './helpers.js';
 
-test('`node src/run.js --dry-run` runs a full cycle and writes scores.csv and chart.svg', () => {
+test('`node src/run.js --dry-run` runs a full cycle for every variant and writes scores.csv + charts', () => {
   const stateDir = tmpDir();
-  execFileSync(process.execPath, ['src/run.js', '--dry-run'], { cwd: ROOT, env: { ...process.env, SIC_PATHS__STATE_DIR: stateDir, SIC_QUIET: '1' } });
-  const scores = fs.readFileSync(path.join(stateDir, 'scores.csv'), 'utf8').trim().split('\n');
-  assert.equal(scores[0], COLUMNS.join(','));
-  assert.ok(scores.length >= 3);
-  assert.ok(fs.existsSync(path.join(stateDir, '..', 'chart.svg')) || fs.existsSync(path.resolve(stateDir, '../chart.svg')));
-  for (const f of ['champion.json', 'lessons.json', 'split.json', 'attempts.json', 'run-state.json', 'last-run.json']) assert.ok(fs.existsSync(path.join(stateDir, f)), f);
+  const chartsDir = tmpDir();
+  const cacheDir = tmpDir();
+  execFileSync(process.execPath, ['src/run.js', '--dry-run'], { cwd: ROOT, env: { ...process.env, SIC_QUIET: '1',
+    SIC_CONFIG_OVERRIDES: JSON.stringify({ paths: { stateDir, chartsDir }, curriculum: { fixture: { cacheDir } } }) } });
+  const cfg = loadConfig({ dryRun: true, env: {} });
+  for (const v of cfg.variants) {
+    const dir = path.join(stateDir, 'variants', v.name);
+    const scores = fs.readFileSync(path.join(dir, 'scores.csv'), 'utf8').trim().split('\n');
+    assert.equal(scores[0], COLUMNS.join(','), v.name);
+    assert.ok(scores.length >= 2, v.name);
+    for (const f of ['champion.json', 'lessons.json', 'split.json', 'problem-status.json', 'run-state.json', 'last-run.json', 'attempts.jsonl', 'evals.jsonl', 'gate-log.jsonl']) {
+      if (f === 'split.json' && v.track !== 'multipl-e') continue;
+      assert.ok(fs.existsSync(path.join(dir, f)), `${v.name}/${f}`);
+    }
+  }
+  for (const c of cfg.charts) assert.match(fs.readFileSync(path.join(chartsDir, c.file), 'utf8'), /<polyline/);
 });
 
 test('running out of budget mid-training stops gracefully and still writes state + scores', async () => {
@@ -28,7 +38,7 @@ test('running out of budget mid-training stops gracefully and still writes state
   assert.equal(llm.calls.length, 6);
   assert.ok(s.train.problems >= 1);
   assert.equal(s.champion.n, 2); // 4 reserved requests -> 2 holdout problems x (champion + candidate)
-  assert.ok(fs.existsSync(path.join(cfg.paths.stateDir, cfg.paths.scores)));
+  assert.ok(fs.existsSync(path.join(vdir(cfg), cfg.paths.scores)));
 });
 
 test('daily limit hit before holdout eval: run ends with no-eval and keeps changes pending', async () => {
@@ -36,7 +46,7 @@ test('daily limit hit before holdout eval: run ends with no-eval and keeps chang
   writeSplit(cfg, ['fx_reverse_words', 'fx_double_all', 'fx_join_dash'], ['fx_vowel_count', 'fx_is_palindrome']);
   const s = await runCycle({ cfg });
   assert.equal(s.decision, 'no-eval');
-  const champion = readJson(path.join(cfg.paths.stateDir, cfg.paths.champion));
+  const champion = readJson(path.join(vdir(cfg), cfg.paths.champion));
   assert.deepEqual(champion.skillIds, []);
   assert.equal(champion.pending.skillIds.length, 3);
 });
@@ -53,20 +63,20 @@ test('holdout problems are never trained on or reflected on', async () => {
       assert.equal(c.temperature, cfg.llm.evalTemperature);
     }
   }
-  const lessons = readJson(path.join(cfg.paths.stateDir, cfg.paths.lessons)).items;
+  const lessons = readJson(path.join(vdir(cfg), cfg.paths.lessons)).items;
   assert.ok(lessons.every((l) => !holdout.includes(l.sourceProblem)));
-  const champion = readJson(path.join(cfg.paths.stateDir, cfg.paths.champion));
+  const champion = readJson(path.join(vdir(cfg), cfg.paths.champion));
   assert.ok([...champion.skillIds, ...champion.pending.skillIds].every((id) => !holdout.includes(id)));
 });
 
 // Phase 5 acceptance: with the flag off, behaviour is identical to phase 4.
 async function snapshot(features, evolvePrompt) {
-  const cfg = testConfig({ features });
+  const cfg = testConfig({ features, promptOptimizer: { everyNRuns: 1 }, variants: [{ name: 'lessons-skills', track: 'multipl-e', levers: { lessons: true, skills: true, promptOptimizer: true }, budgetShare: 1, color: '#000' }] });
   writeSplit(cfg, ['fx_sum_to_n', 'fx_count_even_in_range', 'fx_max_of_list', 'fx_first_char'], ['fx_product_range', 'fx_reverse_words']);
   const llm = createLLM(cfg);
   const fixedNow = () => new Date('2026-11-20T03:17:00Z');
   const summary = await runCycle({ cfg, deps: { llm, now: fixedNow, evolvePrompt } });
-  const dir = cfg.paths.stateDir;
+  const dir = vdir(cfg);
   const files = {};
   for (const f of fs.readdirSync(dir, { recursive: true }).sort()) {
     const p = path.join(dir, f);
@@ -80,6 +90,8 @@ test('promptOptimizer flag off: optimizer never called, output identical to a ru
   const spy = async () => { called++; return null; };
   const off = await snapshot({ promptOptimizer: false }, spy);
   const plain = await snapshot({ promptOptimizer: false }, undefined);
+  // the run-dependent bits (temp dir names inside logs) are not part of behaviour
+  for (const snap of [off, plain]) for (const k of Object.keys(snap.files)) snap.files[k] = snap.files[k].replace(/sic-test-\w+/g, 'TMP').replace(/"durationMs":\d+/g, '"durationMs":0');
   assert.equal(called, 0);
   assert.deepEqual(off.calls, plain.calls);
   assert.deepEqual(off.files, plain.files);

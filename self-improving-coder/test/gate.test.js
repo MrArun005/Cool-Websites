@@ -6,7 +6,7 @@ import path from 'node:path';
 import { decide, applyDecision, DECISION } from '../src/gate.js';
 import { runCycle } from '../src/run.js';
 import { readJson } from '../src/util.js';
-import { testConfig, writeSplit, fixtures, scriptedLLM } from './helpers.js';
+import { testConfig, writeSplit, fixtures, scriptedLLM, vdir } from './helpers.js';
 
 const g = { minImprovement: 0.05, tolerance: 0.02 };
 
@@ -47,7 +47,7 @@ test('a rejected candidate leaves champion.json byte-for-byte unchanged and drop
   const train = ['fx_sum_to_n', 'fx_count_even_in_range'];
   const holdout = ['fx_reverse_words', 'fx_double_all', 'fx_join_dash', 'fx_vowel_count'];
   writeSplit(cfg, train, holdout);
-  const champFile = path.join(cfg.paths.stateDir, cfg.paths.champion);
+  const champFile = path.join(vdir(cfg), cfg.paths.champion);
   const before = JSON.stringify({ promptVersion: 'v001', lessonIds: [], skillIds: [], holdout: { passRate: 1, n: 4, runId: 'old' }, pending: { lessonIds: [], skillIds: [], promptVersion: null, sinceRun: null } }, null, 2) + '\n';
   fs.writeFileSync(champFile, before);
   const fx = new Map(fixtures().map((p) => [p.id, p]));
@@ -63,8 +63,8 @@ test('a rejected candidate leaves champion.json byte-for-byte unchanged and drop
   assert.equal(summary.decision, DECISION.REJECT);
   assert.ok(summary.candidate.passRate < summary.champion.passRate);
   assert.equal(fs.readFileSync(champFile, 'utf8'), before);
-  assert.deepEqual(readJson(path.join(cfg.paths.stateDir, cfg.paths.lessons)).items, []);
-  const scores = fs.readFileSync(path.join(cfg.paths.stateDir, cfg.paths.scores), 'utf8');
+  assert.deepEqual(readJson(path.join(vdir(cfg), cfg.paths.lessons)).items, []);
+  const scores = fs.readFileSync(path.join(vdir(cfg), cfg.paths.scores), 'utf8');
   assert.match(scores, /holdout-candidate,.*,reject/);
 });
 

@@ -6,6 +6,8 @@ import { makeSplit, loadOrCreateSplit } from '../src/dataset/split.js';
 import { createBudget, budgeted, BudgetExhausted } from '../src/budget.js';
 import { entryPointOf, normalize } from '../src/dataset/fetch.js';
 import { tmpDir, testConfig } from './helpers.js';
+import { variantConfig, variantBudget } from '../src/variants.js';
+import { loadConfig } from '../src/config.js';
 
 const ids = Array.from({ length: 50 }, (_, i) => `p${i}`);
 
@@ -29,7 +31,7 @@ test('split is persisted and reused; unknown ids are refused', () => {
 });
 
 test('budget: per-run cap, holdout reserve, persisted daily count', async () => {
-  const cfg = testConfig({ budget: { requestsPerRun: 5, reserveForHoldout: 2, requestsPerDay: 6, maxRunMinutes: 60, reserveMinutesForHoldout: 0 } });
+  const cfg = variantConfig(testConfig({ budget: { requestsPerRun: 5, reserveForHoldout: 2, requestsPerDay: 6, maxRunMinutes: 60, reserveMinutesForHoldout: 0 } }), 'lessons-skills');
   const file = path.join(cfg.paths.stateDir, 'budget.json');
   const b = createBudget(cfg, { file });
   const llm = budgeted({ name: 'x', chat: async () => 'ok' }, b);
@@ -47,7 +49,7 @@ test('budget: per-run cap, holdout reserve, persisted daily count', async () => 
 });
 
 test('budget: time limit stops calls', async () => {
-  const cfg = testConfig({ budget: { requestsPerRun: 100, reserveForHoldout: 0, requestsPerDay: 100, maxRunMinutes: 1, reserveMinutesForHoldout: 0 } });
+  const cfg = variantConfig(testConfig({ budget: { requestsPerRun: 100, reserveForHoldout: 0, requestsPerDay: 100, maxRunMinutes: 1, reserveMinutesForHoldout: 0 } }), 'lessons-skills');
   let t = 0;
   const b = createBudget(cfg, { now: () => new Date(t) });
   b.check();
@@ -59,4 +61,16 @@ test('dataset normalisation finds the entry point', () => {
   assert.equal(entryPointOf('// helper\nfunction a(x){ }\n// doc\nfunction solve_it(x, y){\n'), 'solve_it');
   const p = normalize({ name: 'HumanEval_0_x', prompt: 'function x(a){\n', tests: 't' }, 'humaneval-js');
   assert.deepEqual(p, { id: 'HumanEval_0_x', source: 'humaneval-js', prompt: 'function x(a){\n', tests: 't', entryPoint: 'x' });
+});
+
+test('daily budget is split across variants by budgetShare; each variant has its own state dir', () => {
+  const cfg = loadConfig({ env: {}, overrides: { variants: [
+    { name: 'a', track: 'multipl-e', levers: {}, budgetShare: 1 },
+    { name: 'b', track: 'multipl-e', levers: { lessons: true }, budgetShare: 3 },
+  ], budget: { totalRequestsPerRun: 400, totalRequestsPerDay: 800, holdoutFraction: 0.5 } } });
+  assert.deepEqual([variantBudget(cfg, 'a').requestsPerRun, variantBudget(cfg, 'b').requestsPerRun], [100, 300]);
+  assert.deepEqual([variantBudget(cfg, 'a').requestsPerDay, variantBudget(cfg, 'b').reserveForHoldout], [200, 150]);
+  assert.notEqual(variantConfig(cfg, 'a').paths.stateDir, variantConfig(cfg, 'b').paths.stateDir);
+  assert.deepEqual(variantConfig(cfg, 'b').variant.levers, { lessons: true, skills: false, promptOptimizer: false });
+  assert.throws(() => variantConfig(cfg, 'zzz'), /unknown variant/);
 });

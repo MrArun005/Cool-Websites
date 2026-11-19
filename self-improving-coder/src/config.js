@@ -51,7 +51,7 @@ const REQUIRED = [
   ['llm.provider', 'string'], ['llm.model', 'string'], ['llm.endpoint', 'string'],
   ['llm.temperature', 'number'], ['llm.maxTokens', 'number'],
   ['llm.retry.maxAttempts', 'number'], ['llm.retry.baseDelayMs', 'number'], ['llm.retry.maxDelayMs', 'number'],
-  ['budget.requestsPerDay', 'number'], ['budget.requestsPerRun', 'number'], ['budget.reserveForHoldout', 'number'],
+  ['budget.totalRequestsPerRun', 'number'], ['budget.totalRequestsPerDay', 'number'], ['budget.holdoutFraction', 'number'],
   ['budget.maxRunMinutes', 'number'], ['budget.reserveMinutesForHoldout', 'number'],
   ['dataset.cacheDir', 'string'], ['split.seed', 'number'], ['split.holdoutSize', 'number'],
   ['agent.maxAttemptsPerProblem', 'number'], ['agent.lessonsTopK', 'number'], ['agent.skillsTopK', 'number'],
@@ -71,7 +71,9 @@ export function validate(cfg) {
     if (typeof v !== type || (type === 'number' && !Number.isFinite(v))) errors.push(`${key} must be a ${type} (got ${JSON.stringify(v)})`);
   }
   if (!['openai-compatible', 'mock'].includes(cfg.llm?.provider)) errors.push(`llm.provider must be "openai-compatible" or "mock"`);
-  if (cfg.budget && cfg.budget.reserveForHoldout > cfg.budget.requestsPerRun) errors.push('budget.reserveForHoldout must be <= budget.requestsPerRun');
+  if (cfg.budget && !(cfg.budget.holdoutFraction >= 0 && cfg.budget.holdoutFraction <= 1)) errors.push('budget.holdoutFraction must be in [0, 1]');
+  if (!Array.isArray(cfg.variants) || !cfg.variants.length) errors.push('variants must be a non-empty array');
+  for (const v of cfg.variants ?? []) if (!cfg.tracks?.[v.track]) errors.push(`variant ${v.name}: unknown track ${v.track}`);
   if (cfg.gate && cfg.gate.tolerance < 0) errors.push('gate.tolerance must be >= 0');
   if (errors.length) throw new Error('Invalid config:\n  ' + errors.join('\n  '));
   return cfg;

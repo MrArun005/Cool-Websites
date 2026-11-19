@@ -20,18 +20,19 @@ export function clampWords(text, maxWords) {
 }
 
 /**
- * Turn a failed attempt into a candidate lesson { text, tags }. Returns null if nothing usable came back.
+ * Turn a failed attempt into a candidate lesson. Returns { lesson: {text, tags} | null, usage }.
  */
 export async function reflect({ llm, problem, code, result, templates, cfg, reserve }) {
   const { maxLessonWords, maxLessonTags, reflectOutputChars } = cfg.agent;
   const messages = [
     { role: 'system', content: fill(templates.reflectSystem, { maxWords: maxLessonWords, maxTags: maxLessonTags }).trim() },
-    { role: 'user', content: fill(templates.reflectUser, { prompt: problem.prompt.trimEnd(), code: code.trimEnd(), resultType: result.type, output: result.output.slice(0, reflectOutputChars) }) },
+    { role: 'user', content: fill(templates.reflectUser, { ...(problem.vars ?? { prompt: problem.prompt.trimEnd() }), code: code.trimEnd(), resultType: result.type, output: result.output.slice(0, reflectOutputChars) }) },
   ];
   const reply = await llm.chat(messages, { temperature: cfg.llm.temperature, reserve, meta: { kind: 'reflect', problemId: problem.id } });
+  const usage = { ...(llm.lastUsage ?? { tokensIn: 0, tokensOut: 0 }) };
   const parsed = parseLesson(reply);
-  if (!parsed) return null;
+  if (!parsed) return { lesson: null, usage };
   const kw = [...problemKeywords(problem, cfg.retrieve)];
   const tags = [...new Set([...parsed.tags.map((t) => t.toLowerCase().trim()).filter(Boolean), ...kw])].slice(0, maxLessonTags);
-  return { text: clampWords(parsed.text, maxLessonWords), tags };
+  return { lesson: { text: clampWords(parsed.text, maxLessonWords), tags }, usage };
 }

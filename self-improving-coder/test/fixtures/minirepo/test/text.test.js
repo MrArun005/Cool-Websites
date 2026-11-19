@@ -1,0 +1,15 @@
+'use strict'
+const assert = require('node:assert')
+const u = require('..')
+
+assert.strictEqual(u.indexOfValue([4, 5, 6], 6), 2)
+assert.strictEqual(u.indexOfValue([4, 5, 6], 4), 0)
+assert.strictEqual(u.indexOfValue([4, 5, 6], 9), -1)
+assert.strictEqual(u.isBlank('   '), true)
+assert.strictEqual(u.isBlank(' a '), false)
+assert.strictEqual(u.isBlank(''), true)
+assert.strictEqual(u.repeatWord('ab', 3, '-'), 'ab-ab-ab')
+assert.strictEqual(u.repeatWord('x', 1, ','), 'x')
+assert.strictEqual(u.repeatWord('x', 0, ','), '')
+assert.strictEqual(u.slugify('  Hello   World '), 'hello-world')
+assert.strictEqual(u.slugify('One'), 'one')

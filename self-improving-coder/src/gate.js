@@ -8,10 +8,18 @@ export const DECISION = Object.freeze({
   NO_EVAL: 'no-eval',   // no budget left to evaluate
 });
 
-export function decide(championRate, candidateRate, { minImprovement, tolerance }) {
+/**
+ * method "threshold": accept if candidate >= champion + minImprovement, reject if below champion - tolerance.
+ * method "ci" (default): additionally needs the paired bootstrap CI of (candidate - champion) to exclude 0
+ *   to accept, and rejects when the CI is entirely below 0 even if the drop is within tolerance.
+ * `diff` = { estimate, low, high } from stats.pairedDiffCI; without it "ci" falls back to "threshold".
+ */
+export function decide(championRate, candidateRate, { minImprovement, tolerance, method = 'threshold' }, diff = null) {
   // Small epsilon so 0.1 + 0.025 style float error never flips a decision.
   const eps = 1e-9;
-  if (candidateRate + eps >= championRate + minImprovement) return DECISION.ACCEPT;
+  const useCI = method === 'ci' && diff && Number.isFinite(diff.low) && Number.isFinite(diff.high);
+  if (candidateRate + eps >= championRate + minImprovement && (!useCI || diff.low > eps)) return DECISION.ACCEPT;
+  if (useCI && diff.high < -eps) return DECISION.REJECT;
   if (candidateRate + eps >= championRate - tolerance) return DECISION.KEEP;
   return DECISION.REJECT;
 }
