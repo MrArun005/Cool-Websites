@@ -1,0 +1,12 @@
+timestamp,runId,split,passRate,n,promptVersion,lessonsCount,skillsCount,requestsUsed,gateDecision
+2026-11-20T03:17:00.000Z,r1,holdout-champion,0.4000,80,v001,0,0,80,baseline
+2026-11-21T03:17:00.000Z,r2,holdout-champion,0.4250,80,v001,0,0,80,baseline
+2026-11-22T03:17:00.000Z,r3,train,0.5000,60,v001,5,30,360,accept
+2026-11-22T03:17:00.000Z,r3,holdout-champion,0.4125,80,v001,5,30,360,accept
+2026-11-22T03:17:00.000Z,r3,holdout-candidate,0.4750,80,v001,5,30,360,accept
+2026-11-23T03:17:00.000Z,r4,train,0.4000,55,v001,5,30,360,reject
+2026-11-23T03:17:00.000Z,r4,holdout-champion,0.4750,80,v001,5,30,360,reject
+2026-11-23T03:17:00.000Z,r4,holdout-candidate,0.4250,80,v001,5,30,360,reject
+2026-11-24T03:17:00.000Z,r5,train,0.4500,50,v001,5,30,360,keep
+2026-11-24T03:17:00.000Z,r5,holdout-champion,0.4625,80,v001,5,30,360,keep
+2026-11-24T03:17:00.000Z,r5,holdout-candidate,0.4750,80,v001,5,30,360,keep

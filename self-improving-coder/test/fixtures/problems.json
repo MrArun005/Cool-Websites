@@ -1,0 +1,178 @@
+[
+  {
+    "id": "fx_sum_to_n",
+    "source": "fixture",
+    "entryPoint": "sum_to_n",
+    "prompt": "// Return the sum of the integers in the inclusive range from 1 to n.\n// >>> sum_to_n(3)\n// 6\nfunction sum_to_n(n){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = sum_to_n;\n  assert.deepEqual(candidate(3), 6);\n  assert.deepEqual(candidate(1), 1);\n  assert.deepEqual(candidate(10), 55);\n}\n\ntest();",
+    "mock": {
+      "correct": "function sum_to_n(n){\n  let s = 0;\n  for (let i = 1; i <= n; i++) s += i;\n  return s;\n}",
+      "buggy": "function sum_to_n(n){\n  let s = 0;\n  for (let i = 1; i < n; i++) s += i;\n  return s;\n}",
+      "fixedBy": "include both ends",
+      "lesson": "For ranges described as \"from a to b\", include both ends of the range (use <=, not <).",
+      "lessonTags": [
+        "range",
+        "inclusive",
+        "off-by-one"
+      ]
+    }
+  },
+  {
+    "id": "fx_count_even_in_range",
+    "source": "fixture",
+    "entryPoint": "count_even_in_range",
+    "prompt": "// Count the even integers in the inclusive range from a to b.\n// >>> count_even_in_range(2, 6)\n// 3\nfunction count_even_in_range(a, b){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = count_even_in_range;\n  assert.deepEqual(candidate(2, 6), 3);\n  assert.deepEqual(candidate(1, 1), 0);\n  assert.deepEqual(candidate(4, 4), 1);\n}\n\ntest();",
+    "mock": {
+      "correct": "function count_even_in_range(a, b){\n  let c = 0;\n  for (let i = a; i <= b; i++) if (i % 2 === 0) c++;\n  return c;\n}",
+      "buggy": "function count_even_in_range(a, b){\n  let c = 0;\n  for (let i = a; i < b; i++) if (i % 2 === 0) c++;\n  return c;\n}",
+      "fixedBy": "include both ends",
+      "lesson": "For ranges described as \"from a to b\", include both ends of the range (use <=, not <).",
+      "lessonTags": [
+        "range",
+        "inclusive",
+        "off-by-one"
+      ]
+    }
+  },
+  {
+    "id": "fx_reverse_words",
+    "source": "fixture",
+    "entryPoint": "reverse_words",
+    "prompt": "// Reverse the order of words in a sentence.\n// >>> reverse_words(\"a b c\")\n// \"c b a\"\nfunction reverse_words(s){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = reverse_words;\n  assert.deepEqual(candidate(\"a b c\"), \"c b a\");\n  assert.deepEqual(candidate(\"hello\"), \"hello\");\n}\n\ntest();",
+    "mock": {
+      "correct": "function reverse_words(s){\n  return s.split(\" \").reverse().join(\" \");\n}"
+    }
+  },
+  {
+    "id": "fx_is_palindrome",
+    "source": "fixture",
+    "entryPoint": "is_palindrome",
+    "prompt": "// Check if a word reads the same backwards.\n// >>> is_palindrome(\"aba\")\n// true\nfunction is_palindrome(word){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = is_palindrome;\n  assert.deepEqual(candidate(\"aba\"), true);\n  assert.deepEqual(candidate(\"ab\"), false);\n}\n\ntest();",
+    "mock": {
+      "correct": "function is_palindrome(word){\n  return word === word.split(\"\").reverse().join(\"\");\n}"
+    }
+  },
+  {
+    "id": "fx_max_of_list",
+    "source": "fixture",
+    "entryPoint": "max_of_list",
+    "prompt": "// Return the largest number in a non-empty list of negative or positive numbers.\n// >>> max_of_list([-3, -1])\n// -1\nfunction max_of_list(lst){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = max_of_list;\n  assert.deepEqual(candidate([-3, -1]), -1);\n  assert.deepEqual(candidate([5]), 5);\n}\n\ntest();",
+    "mock": {
+      "correct": "function max_of_list(lst){\n  return Math.max(...lst);\n}",
+      "buggy": "function max_of_list(lst){\n  let m = 0;\n  for (const x of lst) if (x > m) m = x;\n  return m;\n}",
+      "fixedBy": "Initialise a running maximum from the first element",
+      "lesson": "Initialise a running maximum from the first element, not 0, so all-negative inputs work.",
+      "lessonTags": [
+        "maximum",
+        "negative",
+        "initialisation"
+      ]
+    }
+  },
+  {
+    "id": "fx_count_down",
+    "source": "fixture",
+    "entryPoint": "count_down",
+    "prompt": "// Return the countdown from n to 1 as a list.\n// >>> count_down(3)\n// [3, 2, 1]\nfunction count_down(n){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = count_down;\n  assert.deepEqual(candidate(3), [3, 2, 1]);\n  assert.deepEqual(candidate(1), [1]);\n}\n\ntest();",
+    "mock": {
+      "correct": "function count_down(n){\n  const out = [];\n  for (let i = n; i >= 1; i--) out.push(i);\n  return out;\n}",
+      "buggy": "function count_down(n){\n  const out = [];\n  for (let i = n; i >= 1; i++) out.push(i);\n  return out;\n}",
+      "fixedBy": "move the loop variable toward",
+      "lesson": "Make sure every loop moves the loop variable toward its stop condition (decrement when counting down).",
+      "lessonTags": [
+        "loop",
+        "countdown",
+        "termination"
+      ]
+    }
+  },
+  {
+    "id": "fx_first_char",
+    "source": "fixture",
+    "entryPoint": "first_char",
+    "prompt": "// Return the first character of a non-empty word, upper-cased.\n// >>> first_char(\"cat\")\n// \"C\"\nfunction first_char(word){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = first_char;\n  assert.deepEqual(candidate(\"cat\"), \"C\");\n  assert.deepEqual(candidate(\"x\"), \"X\");\n}\n\ntest();",
+    "mock": {
+      "correct": "function first_char(word){\n  return word[0].toUpperCase();\n}",
+      "buggy": "function first_char(word){\n  return wrd[0].toUpperCase();\n}",
+      "fixedBy": "Use only variables",
+      "lesson": "Use only variables that are declared: check parameter names for typos.",
+      "lessonTags": [
+        "typo",
+        "reference",
+        "variables"
+      ]
+    }
+  },
+  {
+    "id": "fx_double_all",
+    "source": "fixture",
+    "entryPoint": "double_all",
+    "prompt": "// Double every number in a list.\n// >>> double_all([1, 2])\n// [2, 4]\nfunction double_all(lst){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = double_all;\n  assert.deepEqual(candidate([1, 2]), [2, 4]);\n  assert.deepEqual(candidate([]), []);\n}\n\ntest();",
+    "mock": {
+      "correct": "function double_all(lst){\n  return lst.map((x) => x * 2);\n}"
+    }
+  },
+  {
+    "id": "fx_vowel_count",
+    "source": "fixture",
+    "entryPoint": "vowel_count",
+    "prompt": "// Count the vowels (a, e, i, o, u) in a lowercase word.\n// >>> vowel_count(\"banana\")\n// 3\nfunction vowel_count(word){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = vowel_count;\n  assert.deepEqual(candidate(\"banana\"), 3);\n  assert.deepEqual(candidate(\"xyz\"), 0);\n}\n\ntest();",
+    "mock": {
+      "correct": "function vowel_count(word){\n  return [...word].filter((c) => \"aeiou\".includes(c)).length;\n}"
+    }
+  },
+  {
+    "id": "fx_product_range",
+    "source": "fixture",
+    "entryPoint": "product_range",
+    "prompt": "// Return the product of the integers in the inclusive range from a to b.\n// >>> product_range(2, 4)\n// 24\nfunction product_range(a, b){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = product_range;\n  assert.deepEqual(candidate(2, 4), 24);\n  assert.deepEqual(candidate(5, 5), 5);\n}\n\ntest();",
+    "mock": {
+      "correct": "function product_range(a, b){\n  let p = 1;\n  for (let i = a; i <= b; i++) p *= i;\n  return p;\n}",
+      "buggy": "function product_range(a, b){\n  let p = 1;\n  for (let i = a; i < b; i++) p *= i;\n  return p;\n}",
+      "fixedBy": "include both ends",
+      "lesson": "For ranges described as \"from a to b\", include both ends of the range (use <=, not <).",
+      "lessonTags": [
+        "range",
+        "inclusive",
+        "off-by-one"
+      ]
+    }
+  },
+  {
+    "id": "fx_sum_squares_range",
+    "source": "fixture",
+    "entryPoint": "sum_squares_range",
+    "prompt": "// Return the sum of squares of the integers in the inclusive range from 1 to n.\n// >>> sum_squares_range(2)\n// 5\nfunction sum_squares_range(n){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = sum_squares_range;\n  assert.deepEqual(candidate(2), 5);\n  assert.deepEqual(candidate(3), 14);\n}\n\ntest();",
+    "mock": {
+      "correct": "function sum_squares_range(n){\n  let s = 0;\n  for (let i = 1; i <= n; i++) s += i * i;\n  return s;\n}",
+      "buggy": "function sum_squares_range(n){\n  let s = 0;\n  for (let i = 1; i < n; i++) s += i * i;\n  return s;\n}",
+      "fixedBy": "include both ends",
+      "lesson": "For ranges described as \"from a to b\", include both ends of the range (use <=, not <).",
+      "lessonTags": [
+        "range",
+        "inclusive",
+        "off-by-one"
+      ]
+    }
+  },
+  {
+    "id": "fx_join_dash",
+    "source": "fixture",
+    "entryPoint": "join_dash",
+    "prompt": "// Join a list of words with dashes.\n// >>> join_dash([\"a\", \"b\"])\n// \"a-b\"\nfunction join_dash(words){\n",
+    "tests": "const assert = require('node:assert');\n\n\nfunction test() {\n  let candidate = join_dash;\n  assert.deepEqual(candidate([\"a\", \"b\"]), \"a-b\");\n  assert.deepEqual(candidate([]), \"\");\n}\n\ntest();",
+    "mock": {
+      "correct": "function join_dash(words){\n  return words.join(\"-\");\n}"
+    }
+  }
+]

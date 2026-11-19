@@ -1,0 +1,130 @@
+name: improve
+
+on:
+  schedule:
+    # GitHub cannot read the cron string from a variable; edit it here. Daily at 04:17 UTC
+    # (off the top of the hour, when scheduled runs are most often delayed).
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+# Never run two cycles at once: they would both read and write state/.
+concurrency:
+  group: improve
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  improve:
+    # Runs LLM-written code. Its token can only read this (public) repo; it cannot push.
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(vars.SIC_IMPROVE_TIMEOUT_MINUTES || '150') }}
+    permissions:
+      contents: read
+    env:
+      SIC_CONFIG_OVERRIDES: ${{ vars.SIC_CONFIG_OVERRIDES }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies (no install scripts)
+        run: npm ci --ignore-scripts
+
+      - name: Read runtime settings from config/default.json
+        id: cfg
+        run: node src/ci/config-out.js >> "$GITHUB_OUTPUT"
+
+      - name: Cache Ollama binary and model weights
+        if: steps.cfg.outputs.provider == 'openai-compatible'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.sic-ollama
+            ~/.ollama/models
+          key: ollama-${{ steps.cfg.outputs.ollama_version }}-${{ steps.cfg.outputs.model }}
+
+      - name: Install and start Ollama, pull the model
+        if: steps.cfg.outputs.provider == 'openai-compatible'
+        env:
+          OLLAMA_URL: ${{ steps.cfg.outputs.ollama_url }}
+          OLLAMA_HOST: ${{ steps.cfg.outputs.ollama_host }}
+          MODEL: ${{ steps.cfg.outputs.model }}
+          READY_TIMEOUT: ${{ steps.cfg.outputs.ollama_ready_timeout }}
+        run: |
+          set -euo pipefail
+          if [ ! -x "$HOME/.sic-ollama/bin/ollama" ]; then
+            mkdir -p "$HOME/.sic-ollama"
+            curl -fsSL "$OLLAMA_URL" | zstd -d | tar -x -C "$HOME/.sic-ollama"
+          fi
+          nohup "$HOME/.sic-ollama/bin/ollama" serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for _ in $(seq "$READY_TIMEOUT"); do
+            if curl -fsS "http://$OLLAMA_HOST/api/version"; then break; fi
+            sleep 1
+          done
+          "$HOME/.sic-ollama/bin/ollama" pull "$MODEL"
+
+      - name: Run one improvement cycle
+        run: node src/run.js
+
+      - name: Upload state
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.cfg.outputs.artifact_name }}
+          path: |
+            ${{ steps.cfg.outputs.state_dir }}/
+            chart.svg
+          retention-days: ${{ steps.cfg.outputs.artifact_retention_days }}
+          if-no-files-found: error
+
+    outputs:
+      artifact_name: ${{ steps.cfg.outputs.artifact_name }}
+      state_dir: ${{ steps.cfg.outputs.state_dir }}
+
+  commit:
+    # Can push, but never runs anything from the artifact: it only copies files.
+    needs: improve
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(vars.SIC_COMMIT_TIMEOUT_MINUTES || '10') }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.improve.outputs.artifact_name }}
+          path: ${{ runner.temp }}/sic-artifact
+
+      - name: Copy state into the repo (data only)
+        env:
+          STATE_DIR: ${{ needs.improve.outputs.state_dir }}
+        run: |
+          set -euo pipefail
+          src="$RUNNER_TEMP/sic-artifact"
+          if [ -n "$(find "$src" -type l)" ]; then echo "::error::artifact contains symlinks"; exit 1; fi
+          test -f "$src/$STATE_DIR/champion.json"
+          rm -rf "$STATE_DIR"
+          cp -R "$src/$STATE_DIR" "$STATE_DIR"
+          cp "$src/chart.svg" chart.svg
+
+      - name: Commit and push
+        env:
+          STATE_DIR: ${{ needs.improve.outputs.state_dir }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$STATE_DIR" chart.svg
+          if git diff --cached --quiet; then echo "No state changes."; exit 0; fi
+          git commit -m "state: improvement cycle (run ${GITHUB_RUN_ID})"
+          for _ in 1 2 3; do
+            if git push; then exit 0; fi
+            git pull --rebase
+          done
+          exit 1

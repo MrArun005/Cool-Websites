@@ -1,0 +1,231 @@
+{
+  "llm": {
+    "provider": "openai-compatible",
+    "endpoint": "http://127.0.0.1:11434/v1/chat/completions",
+    "apiKeyEnv": "SIC_LLM_API_KEY",
+    "model": "qwen2.5-coder:0.5b",
+    "temperature": 0.4,
+    "evalTemperature": 0,
+    "seed": 1234,
+    "maxTokens": 512,
+    "requestTimeoutMs": 180000,
+    "retry": {
+      "maxAttempts": 4,
+      "baseDelayMs": 2000,
+      "maxDelayMs": 30000,
+      "retryOnStatus": [
+        408,
+        409,
+        425,
+        429,
+        500,
+        502,
+        503,
+        504
+      ]
+    },
+    "mock": {
+      "scriptPath": "test/fixtures/problems.json"
+    },
+    "errorSnippetChars": 300
+  },
+  "runtime": {
+    "ollamaVersion": "0.40.16",
+    "ollamaDownloadUrl": "https://github.com/ollama/ollama/releases/download/v{version}/ollama-linux-amd64.tar.zst",
+    "ollamaHost": "127.0.0.1:11434",
+    "ollamaReadyTimeoutSec": 60,
+    "artifactName": "sic-state",
+    "artifactRetentionDays": 7
+  },
+  "budget": {
+    "requestsPerDay": 400,
+    "requestsPerRun": 360,
+    "reserveForHoldout": 160,
+    "maxRunMinutes": 100,
+    "reserveMinutesForHoldout": 40
+  },
+  "dataset": {
+    "revision": "28441b6024e71d4a1c1c0f6bf171c935cd5a43f2",
+    "source": {
+      "humaneval-js": "https://huggingface.co/datasets/nuprl/MultiPL-E/resolve/{revision}/humaneval-js/test-00000-of-00001.parquet",
+      "mbpp-js": "https://huggingface.co/datasets/nuprl/MultiPL-E/resolve/{revision}/mbpp-js/test-00000-of-00001.parquet"
+    },
+    "cacheDir": "data",
+    "problemsFile": "problems.json",
+    "fetchTimeoutMs": 60000
+  },
+  "split": {
+    "seed": 20261119,
+    "holdoutSize": 80
+  },
+  "agent": {
+    "maxAttemptsPerProblem": 2,
+    "lessonsTopK": 3,
+    "skillsTopK": 2,
+    "maxLessons": 60,
+    "maxSkillChars": 1200,
+    "maxLessonWords": 40,
+    "maxLessonTags": 6,
+    "reflectOutputChars": 800,
+    "retryFailedAfterRuns": 1
+  },
+  "retrieve": {
+    "minTokenLength": 3,
+    "minScore": 0.05,
+    "stopwords": [
+      "the",
+      "and",
+      "for",
+      "that",
+      "this",
+      "with",
+      "are",
+      "given",
+      "function",
+      "return",
+      "returns",
+      "write",
+      "from",
+      "into",
+      "which",
+      "will",
+      "should",
+      "you",
+      "your",
+      "list",
+      "number",
+      "numbers",
+      "array",
+      "string",
+      "input",
+      "output",
+      "example",
+      "examples",
+      "let",
+      "const",
+      "candidate",
+      "true",
+      "false",
+      "null",
+      "undefined",
+      "each",
+      "all",
+      "its",
+      "than",
+      "then",
+      "have",
+      "has",
+      "not",
+      "but",
+      "can",
+      "only",
+      "one",
+      "two",
+      "use",
+      "using",
+      "case",
+      "value",
+      "values",
+      "element",
+      "elements",
+      "given",
+      "find",
+      "check",
+      "whether"
+    ]
+  },
+  "judge": {
+    "timeoutMs": 6000,
+    "maxOutputBytes": 16384,
+    "maxMemoryMb": 256,
+    "useNodePermissionModel": true,
+    "tmpRoot": ""
+  },
+  "gate": {
+    "minImprovement": 0.025,
+    "tolerance": 0.025,
+    "baselineRuns": 2,
+    "maxPendingRuns": 3
+  },
+  "paths": {
+    "stateDir": "state",
+    "champion": "champion.json",
+    "lessons": "lessons.json",
+    "skillsDir": "skills",
+    "promptsDir": "prompts",
+    "split": "split.json",
+    "scores": "scores.csv",
+    "attempts": "attempts.json",
+    "runState": "run-state.json",
+    "budget": "budget.json",
+    "lastRun": "last-run.json",
+    "chart": "../chart.svg",
+    "templatesDir": "prompts",
+    "solveUserTemplate": "solve-user.md",
+    "reflectSystemTemplate": "reflect-system.md",
+    "reflectUserTemplate": "reflect-user.md",
+    "seedPrompt": "state/prompts/v001.md"
+  },
+  "chart": {
+    "width": 760,
+    "height": 360,
+    "margin": {
+      "top": 64,
+      "right": 24,
+      "bottom": 48,
+      "left": 52
+    },
+    "yTicks": 5,
+    "colors": {
+      "background": "#ffffff",
+      "grid": "#e5e7eb",
+      "axis": "#6b7280",
+      "text": "#111827",
+      "train": "#9ca3af",
+      "holdout": "#2563eb",
+      "baseline": "#f59e0b",
+      "accept": "#16a34a",
+      "reject": "#dc2626"
+    },
+    "title": "Holdout pass rate per run (champion state)",
+    "fontSize": 12,
+    "titleFontSize": 14,
+    "legendItemWidth": 150,
+    "pointRadius": 4
+  },
+  "features": {
+    "promptOptimizer": false
+  },
+  "promptOptimizer": {
+    "trainExamples": 12,
+    "validationExamples": 8,
+    "maxMetricCalls": 60,
+    "numTrials": 6,
+    "minibatchSize": 4,
+    "earlyStoppingTrials": 3,
+    "maxRequests": 120
+  },
+  "dryRun": {
+    "llm": {
+      "provider": "mock"
+    },
+    "paths": {
+      "stateDir": ".dry-run/state"
+    },
+    "dataset": {
+      "useFixture": true
+    },
+    "split": {
+      "holdoutSize": 4
+    },
+    "gate": {
+      "baselineRuns": 0
+    },
+    "budget": {
+      "requestsPerRun": 80,
+      "reserveForHoldout": 16,
+      "requestsPerDay": 1000,
+      "reserveMinutesForHoldout": 0
+    }
+  }
+}

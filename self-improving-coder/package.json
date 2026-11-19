@@ -1,0 +1,23 @@
+{
+  "name": "self-improving-coder",
+  "version": "0.1.0",
+  "description": "A JS coding agent that learns lessons, skills and prompts from unit-test feedback, gated by a holdout set.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test",
+    "fetch": "node src/dataset/fetch.js",
+    "start": "node src/run.js",
+    "dry-run": "node src/run.js --dry-run",
+    "chart": "node src/chart.js",
+    "summary": "node src/summary.js"
+  },
+  "dependencies": {
+    "hyparquet": "1.33.1"
+  },
+  "optionalDependencies": {
+    "@ax-llm/ax": "25.4.13"
+  }
+}
