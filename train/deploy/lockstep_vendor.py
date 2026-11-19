@@ -134,6 +134,7 @@ def main():
     ap.add_argument("--walk-down", type=float, default=0.0, help="s of walk between trot/pace/canter and sit/lie (0: off)")
     ap.add_argument("--stairs", action="store_true", help="keep the scene's bumps and staircase (default: flat floor)")
     ap.add_argument("--delay-ms", type=float, nargs=2, default=[0.0, 0.0], help="per step, the targets arrive U(lo, hi) ms late (< 20)")
+    ap.add_argument("--seed0", type=int, default=0, help="first seed (tries use seed0 .. seed0 + tries - 1): for large sweeps in pieces")
     ap.add_argument("--steer", type=float, default=0.0, help="steering command (rad/s, + left) for the whole plan")
     ap.add_argument("--skip-p", type=float, default=0.0, help="chance per step that the brain's step is missed")
     ap.add_argument("--estimate", action="store_true", help="velocity and height from estimator.LegEstimator, not the truth")
@@ -173,12 +174,13 @@ def main():
     if a.estimate:
         from estimator import LegEstimator
     res = [run(ctl, m, plan, a.pd_every, kp, kd, seed, a.delay_ms, a.skip_p,
-               "ref" if a.vel_ref else (LegEstimator(body=a.body) if a.estimate else None), errs, speeds, sign, rated, a.predict_ms) for seed in range(a.tries)]
+               "ref" if a.vel_ref else (LegEstimator(body=a.body) if a.estimate else None), errs, speeds, sign, rated, a.predict_ms) for seed in range(a.seed0, a.seed0 + a.tries)]
     if errs:
         e = np.abs(np.array(errs))
         print(f"estimator error (mean abs): velocity x/y/z {e[:, 0].mean():.3f} / {e[:, 1].mean():.3f} / {e[:, 2].mean():.3f} m/s, "
               f"height {e[:, 3].mean() * 100:.1f} cm")
     falls = [r for r in res if r[1] is not None]
+    print(f"fall seeds {[a.seed0 + i for i, r in enumerate(res) if r[1] is not None]}")
     print(f"dt {a.dt} pd every {a.pd_every} damping {m.dof_damping[6]:g} delay {a.delay_ms} ms skip {a.skip_p}{' estimated v/h' if a.estimate else ''}{' v = reference' if a.vel_ref else ''}: {len(falls)}/{a.tries} fell; "
           f"time under the brain {np.mean([r[0] for r in res]):.1f}/{total:g} s; "
           f"falls in {[r[1] for r in falls]}; end heights {[round(r[2], 2) for r in res]}")
