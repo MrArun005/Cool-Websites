@@ -1,0 +1,54 @@
+{
+ "base": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+ "files_train": 259,
+ "files_eval": 26,
+ "eval_files": [
+  "HANDOFF.md",
+  "models/bolt-dog-getup-18d-24.5M/MODEL.md",
+  "models/bolt-dog-jump-runup-16i-35.5M/MODEL.md",
+  "models/bolt-dog-selfright-17d-13M/MODEL.md",
+  "models/bolt-dog-walk-sharp-12M/MODEL.md",
+  "models/bolt-go2-gpu-399M/MODEL.md",
+  "models/bolt-go2-jump-warm/MODEL.md",
+  "models/bolt-lite3-dog-112M/MODEL.md",
+  "models/bolt-lite3-dog-38.8M/MODEL.md",
+  "models/bolt-lite3-dog-blind-149M/MODEL.md",
+  "models/bolt-run20-gpu-200M/MODEL.md",
+  "pet/test/tricks.test.js",
+  "train/gaitlab/README.md",
+  "train/jump_env.py",
+  "train/kaggle/make_sweep_kernel.py",
+  "train/mastermind/canter_exam.py",
+  "train/mastermind/env.py",
+  "train/mastermind/export_v11d/README.md",
+  "train/mastermind/results/v14/VERDICT.md",
+  "train/mjx_run.py",
+  "train/research/gen_landing_starts.py",
+  "train/research/real_robot_port.md",
+  "train/research/run_switches.py",
+  "train/train_imitate.py",
+  "train/train_run.py",
+  "train/video/make_video.py"
+ ],
+ "left_out_possible_secret": [],
+ "train_examples": {
+  "file": 451,
+  "fim": 432,
+  "commit": 188
+ },
+ "eval_examples": {
+  "file": 37,
+  "fim": 38,
+  "commit": 29
+ },
+ "train_tokens": 837307,
+ "eval_tokens": 76317,
+ "args": {
+  "out": "/home/user/Cool-Websites/coder/data",
+  "chunk": 896,
+  "fim_rate": 0.5,
+  "max_diff": 896,
+  "max_bytes": 150000,
+  "seed": 0
+ }
+}

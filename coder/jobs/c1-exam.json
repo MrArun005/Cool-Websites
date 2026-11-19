@@ -1,0 +1,12 @@
+{
+  "name": "bolt-coder-c1-exam",
+  "workdir": "../..",
+  "env": {"TOKENIZERS_PARALLELISM": "false", "OMP_NUM_THREADS": "4"},
+  "check_every": 60,
+  "jobs": [
+    {"name": "exam",
+     "cmd": ["bash", "-c", "until grep -q '^done:' coder/runs/c1/train.log 2>/dev/null; do sleep 60; done; [ -f coder/runs/exam_base.json ] || /tmp/claude-0/-home-user-Cool-Websites/daf731dc-9437-5ff7-b31a-8f96270eac0f/scratchpad/venv/bin/python -u coder/exam.py --out coder/runs/exam_base.json && /tmp/claude-0/-home-user-Cool-Websites/daf731dc-9437-5ff7-b31a-8f96270eac0f/scratchpad/venv/bin/python -u coder/exam.py --adapter coder/runs/c1/best --out coder/runs/exam_c1.json"],
+     "log": "coder/runs/exam.log",
+     "done_when": {"exit_code": 0, "file": "coder/runs/exam_c1.json"}}
+  ]
+}

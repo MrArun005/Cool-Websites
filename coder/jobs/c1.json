@@ -1,0 +1,13 @@
+{
+  "name": "bolt-coder-c1",
+  "workdir": "../..",
+  "env": {"TOKENIZERS_PARALLELISM": "false", "OMP_NUM_THREADS": "4"},
+  "jobs": [
+    {"name": "train",
+     "cmd": ["/tmp/claude-0/-home-user-Cool-Websites/daf731dc-9437-5ff7-b31a-8f96270eac0f/scratchpad/venv/bin/python", "-u", "coder/train_lora.py", "--name", "c1", "--epochs", "2"],
+     "resume_cmd": ["/tmp/claude-0/-home-user-Cool-Websites/daf731dc-9437-5ff7-b31a-8f96270eac0f/scratchpad/venv/bin/python", "-u", "coder/train_lora.py", "--name", "c1", "--epochs", "2", "--resume", "{latest}"],
+     "latest": "coder/runs/c1/checkpoints/step_*",
+     "log": "coder/runs/c1/stdout.log",
+     "done_when": {"exit_code": 0, "file": "coder/runs/c1/final/adapter_model.safetensors", "log_contains": "^done:"}}
+  ]
+}

@@ -8,3 +8,5 @@ duck/parts/
 .keepalive-*/
 train/robots/*/assets/
 bolt-deps/
+coder/runs/
+coder/jobs/.keepalive-*/
