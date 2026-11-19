@@ -749,6 +749,16 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   the three jobs pushed again at 04:15 UTC. Kaggle CPU was in effect idle from 17:00 to 04:15.
   Baseline measured meanwhile, gpu-1461M canter, 24 tries per command: asked for -0.5 rad/s it turns -0.15, for -1.0
   -0.58, 0 falls in both. Simulation.
+- **19 Nov 15:30 UTC. Kaggle lite3-dog-42..44 (version 2; they trained: ~1350 updates, 22M steps each): a small
+  move, not adopted.** Canter, 24 tries per command, last checkpoints (gpu-1461M: -0.5 asked -> -0.15, -1.0 ->
+  -0.58, 0 falls): dog-42 (right turns 7 of 10) -0.21 / -0.60, 0 / 1 falls; dog-43 (9 of 10) -0.21 / -0.63, 0 / 1;
+  dog-44 (control, no right-turn draw) -0.23 / -0.62, 0 / 1. Left +0.5 / +1.0: 0.65 / 1.04 (0 / 1 falls), 0.63 /
+  1.01 (0 / 1), 0.59 / 0.89 (0 / 4). The right turn at -0.5 rose a little in all three, the control included, so
+  the right-turn draw is not what moved it; each now has a fall at +-1.0 where gpu-1461M had none at -1.0. Win
+  (<= -0.25 with 0 falls) not reached. 22M CPU steps are 1.5% of the brain's 1.46 billion.
+  Continuation jobs pushed so the CPU stays in use: bolt-lite3-dog-42-p2 and -43-p2 (resume path proven locally);
+  -44-p2 is waiting for a slot (Kaggle allows 5 CPU sessions at once; my first three p2 pushes had a wrong source
+  name and hold slots until they fail). Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
