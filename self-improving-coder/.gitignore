@@ -3,5 +3,5 @@ data/
 .dry-run/
 .tmp/
 .claude/
-site/index.html
+site/dist/
 .reproduce/

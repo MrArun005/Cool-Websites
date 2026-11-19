@@ -14,6 +14,8 @@ OpenAI-compatible `/v1/chat/completions` on `127.0.0.1`. It's free (public-repo 
 secret at all**, so the job that runs model-written code only has `contents: read`. The client is a generic
 `openai-compatible` provider, so another endpoint works by changing `llm.endpoint` (key via `SIC_LLM_API_KEY`).
 Ollama's version and download URL are pinned in config; the workflow reads them through `src/ci/config-out.js`.
+The context window is set explicitly (`runtime.ollamaContextLength`, 8192) because Ollama silently truncates longer
+prompts, and mutation-track prompts (function + failing assertions + lessons) run to several hundred tokens or more.
 
 ## 2. Model: `qwen2.5-coder:0.5b`
 

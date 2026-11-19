@@ -91,6 +91,8 @@ jobs:
           OLLAMA_HOST: ${{ steps.cfg.outputs.ollama_host }}
           MODEL: ${{ steps.cfg.outputs.model }}
           READY_TIMEOUT: ${{ steps.cfg.outputs.ollama_ready_timeout }}
+          # Ollama silently truncates prompts beyond its context window; mutation-track prompts are long.
+          OLLAMA_CONTEXT_LENGTH: ${{ steps.cfg.outputs.ollama_context_length }}
         run: |
           set -euo pipefail
           if [ ! -x "$HOME/.sic-ollama/bin/ollama" ]; then

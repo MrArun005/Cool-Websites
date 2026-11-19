@@ -168,7 +168,8 @@
     "ollamaReadyTimeoutSec": 60,
     "artifactName": "sic-state",
     "artifactRetentionDays": 7,
-    "publishArtifactName": "sic-publish"
+    "publishArtifactName": "sic-publish",
+    "ollamaContextLength": 8192
   },
   "budget": {
     "totalRequestsPerRun": 2940,
@@ -761,7 +762,7 @@
     "siteFile": "index.html"
   },
   "site": {
-    "outFile": "site/index.html",
+    "outFile": "site/dist/index.html",
     "title": "Self-improving coder",
     "description": "A small open model learns lessons, skills and prompts from unit-test feedback, one day at a time, behind a statistical gate.",
     "maxConflicts": 5,

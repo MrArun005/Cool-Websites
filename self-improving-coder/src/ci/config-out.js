@@ -15,6 +15,7 @@ const out = {
   ollama_url: rt.ollamaDownloadUrl.replace('{version}', rt.ollamaVersion),
   ollama_host: rt.ollamaHost,
   ollama_ready_timeout: rt.ollamaReadyTimeoutSec,
+  ollama_context_length: rt.ollamaContextLength,
   artifact_prefix: rt.artifactName,
   publish_artifact: rt.publishArtifactName,
   artifact_retention_days: rt.artifactRetentionDays,
