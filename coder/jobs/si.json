@@ -1,0 +1,12 @@
+{
+  "name": "bolt-coder-si",
+  "workdir": "../..",
+  "env": {"TOKENIZERS_PARALLELISM": "false", "OMP_NUM_THREADS": "4"},
+  "check_every": 60,
+  "jobs": [
+    {"name": "self-improve",
+     "cmd": ["bash", "-c", "until [ -f coder/runs/exam_c1.json ]; do sleep 60; done; exec /tmp/claude-0/-home-user-Cool-Websites/daf731dc-9437-5ff7-b31a-8f96270eac0f/scratchpad/venv/bin/python -u coder/self_improve.py --start coder/runs/c1/best --start-exam coder/runs/exam_c1.json --rounds 3"],
+     "log": "coder/runs/si.log",
+     "done_when": {"exit_code": 0, "log_contains": "done: best round"}}
+  ]
+}

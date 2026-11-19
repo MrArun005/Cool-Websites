@@ -52,9 +52,13 @@ def batches(rows, bs, pad):
         yield ids, lab, att
 
 
+BF16 = {"on": False}   # bfloat16 autocast: ~2x faster on CPUs with AMX/avx512_bf16, same loss
+
+
 def token_loss(model, ids, lab, att):
     """Sum of next-token losses and number of predicted tokens (so averages are per token, not per batch)."""
-    logits = model(input_ids=ids, attention_mask=att).logits[:, :-1].float()
+    with torch.autocast(ids.device.type, dtype=torch.bfloat16, enabled=BF16["on"]):
+        logits = model(input_ids=ids, attention_mask=att).logits[:, :-1].float()
     tgt = lab[:, 1:]
     loss = torch.nn.functional.cross_entropy(logits.reshape(-1, logits.size(-1)), tgt.reshape(-1),
                                              ignore_index=-100, reduction="sum")
@@ -91,10 +95,13 @@ def main():
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--eval-limit", type=int, default=None)
     ap.add_argument("--resume", default=None)
+    ap.add_argument("--init", default=None, help="start from this adapter's weights (fresh optimizer and step 0)")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--fp32", action="store_true", help="no bfloat16 autocast")
     a = ap.parse_args()
 
     torch.manual_seed(a.seed)
+    BF16["on"] = not a.fp32
     run = Path(a.runs) / a.name
     (run / "checkpoints").mkdir(parents=True, exist_ok=True)
     tok = AutoTokenizer.from_pretrained(a.base)
@@ -114,6 +121,8 @@ def main():
         model = PeftModel.from_pretrained(model, a.resume, is_trainable=True)
         st = json.loads((Path(a.resume) / "state.json").read_text())
         step, best = st["step"], st["best"]
+    elif a.init:
+        model = PeftModel.from_pretrained(model, a.init, is_trainable=True)
     else:
         model = get_peft_model(model, LoraConfig(r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.05,
                                                  target_modules=TARGETS, task_type="CAUSAL_LM"))
@@ -136,7 +145,7 @@ def main():
     if step == 0 and evals:
         base_loss = evaluate(model, evals, a.bs * 2, pad)
         best = float("inf")
-        say(f"eval: step 0 loss {base_loss:.4f} (base model)")
+        say(f"eval: step 0 loss {base_loss:.4f} (" + (f"start {a.init}" if a.init else "base model") + ")")
 
     def order(epoch):   # the same order for an epoch on every resume
         idx = list(range(len(train)))
