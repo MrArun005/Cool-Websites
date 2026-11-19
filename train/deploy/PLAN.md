@@ -742,6 +742,13 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   with 10% missed 2 (2); 5% missed with 10-19 ms 1 (1); 5% missed 1 (0); 3-6 ms 0 (0); 10-19 ms 0 (0); left 0.8 at
   10-19 ms 0 (0); trot right 0.8 at 10-19 ms 0 (0); left 0.8 0 (0). The same within the noise of 48 tries; more
   dropped steps in training did not help. The robot brain stays gpu-1461M. GPU this week: 22.5 of 30 h. Simulation.
+- **19 Nov 04:15 UTC. Kaggle lite3-dog-42..44 did not train (my mistake); pushed again.** The kernels' step cap was
+  400M and the GPU brain starts at 1.46 billion steps, so train_imitate ended in the first minute ("done ... in 0.0
+  min") and Kaggle showed ERROR 11 h later with nothing learned. The local smoke test had used a higher cap, which
+  hid it. Cap raised to 4 billion (now the default in make_train_kernel.py), checked locally with the real cap, and
+  the three jobs pushed again at 04:15 UTC. Kaggle CPU was in effect idle from 17:00 to 04:15.
+  Baseline measured meanwhile, gpu-1461M canter, 24 tries per command: asked for -0.5 rad/s it turns -0.15, for -1.0
+  -0.58, 0 falls in both. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg

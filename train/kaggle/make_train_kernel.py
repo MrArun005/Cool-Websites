@@ -966,7 +966,8 @@ def main():
     ap.add_argument("--user", default="arunmallikarjuna")
     ap.add_argument("--dataset", default="bolt-train-data")
     ap.add_argument("--slug", help="kernel name (default bolt-<job>)")
-    ap.add_argument("--steps", type=int, default=400_000_000, help="a cap far beyond the session: the time guard ends it")
+    ap.add_argument("--steps", type=int, default=4_000_000_000, help="a cap far beyond the session AND the start brain's own steps "
+                    "(a GPU brain starts at 1.46 billion; at the old 400M cap training ended at once): the time guard ends it")
     ap.add_argument("--envs", type=int, default=8)
     ap.add_argument("--every", type=int, help="steps between checkpoints and exams (default 1M)")
     ap.add_argument("--n-steps", type=int, help="override PPO steps per env per update (smoke tests)")
