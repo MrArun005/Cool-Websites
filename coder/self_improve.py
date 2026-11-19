@@ -15,6 +15,7 @@ Each round r = 1, 2, ...:
 Every step writes its output under runs/si/round_<r>/ and is skipped if that output exists, so the whole loop can be
 stopped and restarted any time (keepalive: coder/jobs/si.json).
 
+    python coder/self_improve.py --rounds 3                      # from the plain base model
     python coder/self_improve.py --start coder/runs/c1/best --start-exam coder/runs/exam_c1.json --rounds 3
 """
 import argparse
@@ -46,7 +47,9 @@ def practice(adapter, out, k, temp, base, limit):
     tok = AutoTokenizer.from_pretrained(base)
     tok.padding_side = "left"
     model = AutoModelForCausalLM.from_pretrained(base, dtype=torch.float32)
-    model = PeftModel.from_pretrained(model, adapter).merge_and_unload().eval()
+    if adapter != "base":
+        model = PeftModel.from_pretrained(model, adapter).merge_and_unload()
+    model.eval()
     probs = [p for s in ("train", "validation", "prompt") for p in exam.mbpp_problems(s)][:limit]
     torch.manual_seed(0)
     part = out.with_suffix(".part")
@@ -112,8 +115,8 @@ def score(exam_file):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--start", required=True, help="adapter to start from (phase 1's best)")
-    ap.add_argument("--start-exam", required=True, help="exam.py result of the start adapter")
+    ap.add_argument("--start", default="base", help="adapter to start from, or 'base' for the plain base model")
+    ap.add_argument("--start-exam", default=None, help="exam.py result of the start model (run if missing)")
     ap.add_argument("--base", default="Qwen/Qwen2.5-Coder-0.5B-Instruct")
     ap.add_argument("--out", default=str(HERE / "runs" / "si"))
     ap.add_argument("--rounds", type=int, default=3)
@@ -132,6 +135,13 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     L = out / "loop.log"
     history_f = out / "history.json"
+    if a.start_exam is None:
+        a.start_exam = str(out / "round_0" / "exam.json")
+    if not Path(a.start_exam).exists():
+        log(f"round 0: exam of the start model {a.start}", L)
+        Path(a.start_exam).parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run([PY, "-u", str(HERE / "exam.py"), *([] if a.start == "base" else ["--adapter", a.start]),
+                        "--out", a.start_exam, "--lines", "0", *a.exam_args.split()], check=True)
     history = json.loads(history_f.read_text()) if history_f.exists() else \
         [{"round": 0, "adapter": a.start, "exam": a.start_exam, **score(a.start_exam), "kept": True}]
     log(f"start: {history[-1]}", L)
@@ -152,7 +162,7 @@ def main():
         if not (out / f"r{r}" / "final").exists():
             log(f"round {r}: learn", L)
             cmd = [PY, "-u", str(HERE / "train_lora.py"), "--name", f"r{r}", "--runs", str(out), "--data",
-                   str(rd / "data"), "--init", prev["adapter"], "--lr", str(a.lr), "--epochs", str(a.epochs),
+                   str(rd / "data"), *([] if prev["adapter"] == "base" else ["--init", prev["adapter"]]), "--lr", str(a.lr), "--epochs", str(a.epochs),
                    "--eval-every", "10", "--save-every", "5", *a.train_args.split()]
             ck = sorted((out / f"r{r}" / "checkpoints").glob("step_*"), key=lambda p: int(p.name[5:]))
             if ck:
