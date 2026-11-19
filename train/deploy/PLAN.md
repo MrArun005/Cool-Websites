@@ -737,6 +737,11 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   differences 0; smoke-tested). Jobs: 42 = right turns in 7 of 10 steered canters, 43 = 9 of 10, 44 = control
   without it; all with 5% dropped steps, penalty 3.0, steering reward 0.3, lr 1e-5. Earlier (12 Nov) the same idea
   on the CPU brain hist-196M did not move the right turn; the GPU brain is a different starting point. Simulation.
+- **19 Nov 00:20 UTC. Third Lite3 GPU run (10% dropped steps in training): no gain, not adopted.**
+  `bolt-lite3-gpu-hist3`, 632M steps, last checkpoint, on DEEP's model, falls of 48 (gpu-1461M in brackets): canter
+  with 10% missed 2 (2); 5% missed with 10-19 ms 1 (1); 5% missed 1 (0); 3-6 ms 0 (0); 10-19 ms 0 (0); left 0.8 at
+  10-19 ms 0 (0); trot right 0.8 at 10-19 ms 0 (0); left 0.8 0 (0). The same within the noise of 48 tries; more
+  dropped steps in training did not help. The robot brain stays gpu-1461M. GPU this week: 22.5 of 30 h. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
