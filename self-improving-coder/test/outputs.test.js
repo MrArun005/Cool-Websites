@@ -130,3 +130,20 @@ test('formatRows shows CI and diff columns', () => {
   const s = formatRows([{ day: 1, variant: 'x', decision: 'accept', champion: { passRate: 0.5, ciLow: 0.4, ciHigh: 0.6 }, candidate: { passRate: 0.7 }, diff: { estimate: 0.2, low: 0.1, high: 0.3 } }]);
   assert.match(s, /50\.0%.*40\.0%.*60\.0%.*70\.0%.*20\.0%/);
 });
+
+import { difficultyCheck } from '../src/analysis.js';
+
+test('difficulty check flags floor and ceiling effects with the config knob to turn', () => {
+  const cfg = loadConfig({ env: {} });
+  const v = (rates) => ({ runs: rates.map((passRate) => ({ decision: 'baseline', passRate })) });
+  assert.equal(difficultyCheck([v([0.02, 0.04])], 'mutation', cfg).status, 'floor');
+  assert.match(difficultyCheck([v([0.02])], 'mutation', cfg).hint, /maxFunctionChars/);
+  assert.equal(difficultyCheck([v([0.95, 0.97])], 'multipl-e', cfg).status, 'ceiling');
+  assert.equal(difficultyCheck([v([0.4])], 'multipl-e', cfg).status, 'ok');
+  assert.equal(difficultyCheck([{ runs: [] }], 'multipl-e', cfg).status, 'no-data');
+});
+
+test('report includes the difficulty check section', async () => {
+  const { cfg } = await state();
+  assert.match(buildReport(cfg, analyze(cfg)), /## Difficulty check/);
+});

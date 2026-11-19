@@ -127,7 +127,9 @@ ${tableHtml(['date', 'variant', 'decision', 'champion', 'candidate', 'difference
     variants.map((v) => [esc(v.label), v.cost.trainRequests, v.cost.evalRequests, `${v.cost.tokensIn} / ${v.cost.tokensOut}`, `${v.cost.trainSolved} of ${v.cost.trainProblemsTried}`,
       v.cost.solvedPer100Requests?.toFixed(1) ?? 'n/a', v.cost.requestsPerSolved?.toFixed(1) ?? 'n/a', v.cost.tokensPerSolved?.toFixed(0) ?? 'n/a', v.cost.msPerRequest ? (v.cost.msPerRequest / MS_PER_SECOND).toFixed(2) : 'n/a']))}</section>`);
 
-  const banner = mock ? `<div class="banner" role="note"><strong>Demo data.</strong> These numbers come from the synthetic mock provider (<code>npm run reproduce</code>), not from a language model.</div>` : '';
+  const difficultyBanners = Object.entries(a.tracks).filter(([, t]) => t.difficulty.status === 'floor' || t.difficulty.status === 'ceiling')
+    .map(([track, t]) => `<div class="banner" role="note"><strong>${t.difficulty.status === 'floor' ? 'Floor' : 'Ceiling'} effect on ${esc(track)}:</strong> starting pass rate ${pct(t.difficulty.start)}, so this track can show little either way. ${esc(t.difficulty.hint ?? '')}</div>`).join('');
+  const banner = difficultyBanners + (mock ? `<div class="banner" role="note"><strong>Demo data.</strong> These numbers come from the synthetic mock provider (<code>npm run reproduce</code>), not from a language model.</div>` : '');
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(sc.title)}</title><meta name="description" content="${esc(sc.description)}">

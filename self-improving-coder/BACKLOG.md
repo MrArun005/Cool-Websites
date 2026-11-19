@@ -15,8 +15,6 @@ DECISIONS.md updated for any non-obvious choice, README claims backed by generat
 
 ## Next, in order
 
-1. **Floor/ceiling detection.** The report and dashboard warn when a track's starting pass rate is below/above
-   configured limits (nothing to learn / nothing left to learn) and say which config knob changes difficulty.
 2. **Workflow robustness.** Retry the Ollama download/pull with backoff; a warm-up request that fails fast with a
    clear message if the model doesn't answer; a test that the workflow's step order and `if:` conditions keep smoke
    runs from committing.

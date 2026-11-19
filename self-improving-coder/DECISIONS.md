@@ -136,6 +136,14 @@ field (the mock estimates them as characters / 4).
   `src/ci/collect.js`, which accepts only configured variant names and no symlinks, then builds charts, report and site) →
   `commit` (`contents: write`, copies files only) and `pages` (`pages: write`, `id-token: write`).
 
+## 9b. Floor and ceiling effects
+
+A track whose starting pass rate is below 10% or above 90% (`analysis.floorRate` / `ceilingRate`) can show little
+in either direction: with almost no passes there is little to build skills or lessons from, and near the top there
+is nothing left to gain. The report and dashboard say so and name the knob to turn (`analysis.difficultyKnobs`).
+The mutation track is the more likely to hit the floor with a 0.5B model; `curriculum.maxFunctionChars` and the
+operator weights are its main difficulty controls.
+
 ## 10. Reproduction and the synthetic mock
 
 `npm run reproduce -- --variant=<name> --seed=<n>` runs simulated days with a fake clock, entirely offline.

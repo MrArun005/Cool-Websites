@@ -180,6 +180,21 @@ function plateau(runs, cfg, salt) {
   return { status: d.low > 0 ? 'improving' : 'plateaued', K, accepted, diff: { estimate: d.estimate, low: d.low, high: d.high, n: p.ids.length }, since: anchor.ts };
 }
 
+/**
+ * Floor/ceiling check: pooled starting (baseline-run) pass rate of every variant on the track. Near 0% there is
+ * nothing to learn from passes; near 100% nothing left to improve; either way the comparison can't show much.
+ */
+export function difficultyCheck(vs, track, cfg) {
+  const starts = vs.map((v) => v.runs.filter((r) => r.decision === 'baseline').map((r) => r.passRate)).flat();
+  if (!starts.length) return { status: 'no-data' };
+  const start = mean(starts);
+  const { floorRate, ceilingRate, difficultyKnobs } = cfg.analysis;
+  const knobs = difficultyKnobs[track] ?? {};
+  if (start < floorRate) return { status: 'floor', start, limit: floorRate, hint: knobs.tooHard ?? null };
+  if (start > ceilingRate) return { status: 'ceiling', start, limit: ceilingRate, hint: knobs.tooEasy ?? null };
+  return { status: 'ok', start, floorRate, ceilingRate };
+}
+
 export function analyze(cfg) {
   const classes = cfg.taxonomy.classes;
   const variants = cfg.variants.map((v) => loadVariantState(cfg, v));
@@ -251,7 +266,7 @@ export function analyze(cfg) {
       const verdict = !learners.length ? 'no-data' : fixedBy.length ? 'reduced' : 'not-reduced';
       return { class: c, controlDelta, learners, fixedBy, verdict };
     });
-    result.tracks[track] = { control: control?.name ?? null, variants: vs.map((v) => v.name), comparisons, taxonomyChange };
+    result.tracks[track] = { control: control?.name ?? null, variants: vs.map((v) => v.name), comparisons, taxonomyChange, difficulty: difficultyCheck(vs, track, cfg) };
   }
   for (const v of Object.values(result.variants)) { delete v._runs; delete v._base; }
   return result;

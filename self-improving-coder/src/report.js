@@ -95,6 +95,17 @@ export function buildReport(cfg, a) {
     L.push('');
   }
 
+  // Difficulty
+  L.push('## Difficulty check');
+  L.push('');
+  for (const [track, t] of Object.entries(a.tracks)) {
+    const d = t.difficulty;
+    if (d.status === 'no-data') L.push(`- **${track}:** no baseline runs yet.`);
+    else if (d.status === 'ok') L.push(`- **${track}:** starting pass rate ${pct(d.start)}, inside the useful range (${pct(d.floorRate)}-${pct(d.ceilingRate)}).`);
+    else L.push(`- **${track}: ${d.status === 'floor' ? 'floor effect' : 'ceiling effect'}.** Starting pass rate ${pct(d.start)} is ${d.status === 'floor' ? 'below' : 'above'} ${pct(d.limit)}, so this track can show little either way. To change the difficulty: ${d.hint ?? 'see config'}.`);
+  }
+  L.push('');
+
   // Cost
   L.push('## Cost');
   L.push('');

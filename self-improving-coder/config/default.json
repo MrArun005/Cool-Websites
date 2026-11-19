@@ -711,7 +711,19 @@
     "taxonomyMinDrop": 0.05,
     "maxReplaysPerVariant": 40,
     "reportTopLessons": 8,
-    "reportTopConflicts": 5
+    "reportTopConflicts": 5,
+    "floorRate": 0.1,
+    "ceilingRate": 0.9,
+    "difficultyKnobs": {
+      "multipl-e": {
+        "tooHard": "use a larger model (llm.model) or allow more attempts (agent.maxAttemptsPerProblem)",
+        "tooEasy": "use a smaller model (llm.model)"
+      },
+      "mutation": {
+        "tooHard": "lower curriculum.maxFunctionChars, start at level 1 only (curriculum.holdoutCount), or favour simpler operators (curriculum.operators weights)",
+        "tooEasy": "raise curriculum.maxFunctionChars or the weight of harder operators (drop-branch, swap-arguments)"
+      }
+    }
   },
   "reproduce": {
     "days": 7,
