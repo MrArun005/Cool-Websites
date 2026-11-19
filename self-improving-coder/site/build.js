@@ -7,7 +7,7 @@ import path from 'node:path';
 import { loadConfig, rootPath } from '../src/config.js';
 import { analyze } from '../src/analysis.js';
 import { renderChart, loadTrackSeries } from '../src/chart.js';
-import { writeText, isoDay } from '../src/util.js';
+import { writeText, isoDay, MS_PER_SECOND } from '../src/util.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pct = (v) => (v === null || v === undefined || Number.isNaN(v) ? 'n/a' : `${(v * 100).toFixed(1)}%`);
@@ -123,9 +123,9 @@ ${tableHtml(['date', 'variant', 'decision', 'champion', 'candidate', 'difference
   parts.push(`<section id="taxonomy"><h2>Failure taxonomy over time</h2><p class="lede">Share of champion holdout attempts per class, one bar per run (pass included).</p><div class="legend">${legend}</div><div class="tax-grid">${tax}</div>${verdicts}</section>`);
 
   // 6. cost
-  parts.push(`<section id="cost"><h2>Cost</h2>${tableHtml(['variant', 'train requests', 'eval requests', 'tokens in / out', 'solved', 'solved / 100 req', 'requests / solved', 'tokens / solved'],
+  parts.push(`<section id="cost"><h2>Cost</h2>${tableHtml(['variant', 'train requests', 'eval requests', 'tokens in / out', 'solved', 'solved / 100 req', 'requests / solved', 'tokens / solved', 's / request'],
     variants.map((v) => [esc(v.label), v.cost.trainRequests, v.cost.evalRequests, `${v.cost.tokensIn} / ${v.cost.tokensOut}`, `${v.cost.trainSolved} of ${v.cost.trainProblemsTried}`,
-      v.cost.solvedPer100Requests?.toFixed(1) ?? 'n/a', v.cost.requestsPerSolved?.toFixed(1) ?? 'n/a', v.cost.tokensPerSolved?.toFixed(0) ?? 'n/a']))}</section>`);
+      v.cost.solvedPer100Requests?.toFixed(1) ?? 'n/a', v.cost.requestsPerSolved?.toFixed(1) ?? 'n/a', v.cost.tokensPerSolved?.toFixed(0) ?? 'n/a', v.cost.msPerRequest ? (v.cost.msPerRequest / MS_PER_SECOND).toFixed(2) : 'n/a']))}</section>`);
 
   const banner = mock ? `<div class="banner" role="note"><strong>Demo data.</strong> These numbers come from the synthetic mock provider (<code>npm run reproduce</code>), not from a language model.</div>` : '';
   const html = `<!doctype html>

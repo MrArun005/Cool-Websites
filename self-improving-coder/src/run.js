@@ -76,6 +76,7 @@ async function trainPhase({ llm, cfg, mem, track, templates, runIndex, working, 
       let requests = 1;
       let tokensIn = res.usage.tokensIn;
       let tokensOut = res.usage.tokensOut;
+      let llmMs = res.usage.latencyMs ?? 0;
       let reflection = null;
       let lessonId = null;
       if (passed) {
@@ -90,6 +91,7 @@ async function trainPhase({ llm, cfg, mem, track, templates, runIndex, working, 
           requests++;
           tokensIn += r.usage.tokensIn;
           tokensOut += r.usage.tokensOut;
+          llmMs += r.usage.latencyMs ?? 0;
           reflection = r.lesson;
         } catch (e) {
           if (!(e instanceof BudgetExhausted)) throw e;
@@ -106,7 +108,7 @@ async function trainPhase({ llm, cfg, mem, track, templates, runIndex, working, 
           log(`  lesson ${l.id}: ${l.text}`);
         }
       }
-      rec.attempt({ phase: 'train', problemId: id, level: task.level ?? null, attempt, result: result.type, failureClass, requests, tokensIn, tokensOut,
+      rec.attempt({ phase: 'train', problemId: id, level: task.level ?? null, attempt, result: result.type, failureClass, requests, tokensIn, tokensOut, llmMs,
         lessonIds: res.usedLessons.map((l) => l.id), skillIds: res.usedSkills.map((s) => s.id), promptVersion: working.promptVersion, durationMs: result.durationMs, lessonCreated: lessonId });
       rec.trace({ problemId: id, attempt, result: result.type, failureClass, code: track.storeCode ? res.code : null, output: result.output,
         lessonIds: res.usedLessons.map((l) => l.id), reflection, lessonCreated: lessonId, duplicateLesson: Boolean(reflection && !lessonId) });
@@ -139,7 +141,7 @@ export async function evaluate({ llm, cfg, mem, track, ids, state, templates, re
       const pass = result.type === RESULT.PASS ? 1 : 0;
       perProblem[i].push(pass);
       rec.attempt({ phase: 'eval', state: label, repeat: r, problemId: ids[i], level: task.level ?? null, attempt: 1, result: result.type,
-        failureClass: classOf(cfg, result, task, res.code), requests: 1, tokensIn: res.usage.tokensIn, tokensOut: res.usage.tokensOut,
+        failureClass: classOf(cfg, result, task, res.code), requests: 1, tokensIn: res.usage.tokensIn, tokensOut: res.usage.tokensOut, llmMs: res.usage.latencyMs ?? 0,
         lessonIds: res.usedLessons.map((l) => l.id), skillIds: res.usedSkills.map((s) => s.id), promptVersion: state.promptVersion, durationMs: result.durationMs });
     }
   }
@@ -293,7 +295,7 @@ export async function runCycle({ cfg: baseCfg, variant, deps = {} }) {
   if (champ) rows.push(row('holdout-champion', champ, championState.promptVersion));
   if (cand) rows.push(row('holdout-candidate', cand, candidateState.promptVersion));
   if (rows.length) appendScores(statePath(cfg, 'scores'), rows, cfg.output.csvDecimals);
-  const summary = { runId, runIndex, timestamp, variant: v.name, decision, baselineMode, train, champion: pick(champ), candidate: pick(cand), diff, pruned, requestsUsed: budget.usedRun, requestsToday: budget.usedToday, tokensIn: llm.tokensIn, tokensOut: llm.tokensOut };
+  const summary = { runId, runIndex, timestamp, variant: v.name, decision, baselineMode, train, champion: pick(champ), candidate: pick(cand), diff, pruned, requestsUsed: budget.usedRun, requestsToday: budget.usedToday, tokensIn: llm.tokensIn, tokensOut: llm.tokensOut, llmMs: llm.llmMs, budgetPerRun: cfg.budget.requestsPerRun, maxRunMinutes: cfg.budget.maxRunMinutes };
   writeJson(statePath(cfg, 'lastRun'), summary);
   return summary;
 }

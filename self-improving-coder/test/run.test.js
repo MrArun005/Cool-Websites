@@ -91,7 +91,7 @@ test('promptOptimizer flag off: optimizer never called, output identical to a ru
   const off = await snapshot({ promptOptimizer: false }, spy);
   const plain = await snapshot({ promptOptimizer: false }, undefined);
   // the run-dependent bits (temp dir names inside logs) are not part of behaviour
-  for (const snap of [off, plain]) for (const k of Object.keys(snap.files)) snap.files[k] = snap.files[k].replace(/sic-test-\w+/g, 'TMP').replace(/"durationMs":\d+/g, '"durationMs":0');
+  for (const snap of [off, plain]) for (const k of Object.keys(snap.files)) snap.files[k] = snap.files[k].replace(/sic-test-\w+/g, 'TMP').replace(/"(durationMs|llmMs)":\d+/g, '"$1":0');
   assert.equal(called, 0);
   assert.deepEqual(off.calls, plain.calls);
   assert.deepEqual(off.files, plain.files);

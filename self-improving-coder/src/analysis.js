@@ -89,6 +89,8 @@ function costOf(vs) {
     solvedPer100Requests: trainRequests ? (100 * solved.size) / trainRequests : null,
     requestsPerSolved: solved.size ? trainRequests / solved.size : null,
     tokensPerSolved: solved.size ? (sum(train, 'tokensIn') + sum(train, 'tokensOut')) / solved.size : null,
+    // wall-clock model time per request, as measured on the runner (MS -> s done by the caller)
+    msPerRequest: (() => { const reqs = sum(vs.attempts, 'requests'); const ms = sum(vs.attempts, 'llmMs'); return reqs && ms ? ms / reqs : null; })(),
   };
 }
 

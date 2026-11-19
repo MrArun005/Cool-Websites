@@ -8,7 +8,7 @@ import path from 'node:path';
 import { loadConfig, rootPath } from './config.js';
 import { analyze } from './analysis.js';
 import { variantBudget } from './variants.js';
-import { writeText, isoDay } from './util.js';
+import { writeText, isoDay, MS_PER_SECOND } from './util.js';
 
 const PCT_DIGITS = 1;
 
@@ -100,9 +100,9 @@ export function buildReport(cfg, a) {
   L.push('');
   L.push('_"Solved" = distinct train problems passed at least once. Requests include reflection calls._');
   L.push('');
-  L.push(table(['variant', 'train requests', 'eval requests', 'tokens in / out', 'train problems solved', 'solved per 100 requests', 'requests per solved', 'tokens per solved'],
+  L.push(table(['variant', 'train requests', 'eval requests', 'tokens in / out', 'train problems solved', 'solved per 100 requests', 'requests per solved', 'tokens per solved', 'seconds per request'],
     Object.values(a.variants).map((v) => [v.label, v.cost.trainRequests, v.cost.evalRequests, `${v.cost.tokensIn} / ${v.cost.tokensOut}`, `${v.cost.trainSolved} of ${v.cost.trainProblemsTried}`,
-      fmtNum(v.cost.solvedPer100Requests), fmtNum(v.cost.requestsPerSolved), fmtNum(v.cost.tokensPerSolved, 0)])));
+      fmtNum(v.cost.solvedPer100Requests), fmtNum(v.cost.requestsPerSolved), fmtNum(v.cost.tokensPerSolved, 0), v.cost.msPerRequest === null ? 'n/a' : fmtNum(v.cost.msPerRequest / MS_PER_SECOND, 2)])));
   L.push('');
 
   // Taxonomy

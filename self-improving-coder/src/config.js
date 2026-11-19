@@ -86,6 +86,8 @@ export function loadConfig(opts = {}) {
   const env = opts.env ?? process.env;
   let cfg = JSON.parse(fs.readFileSync(opts.file ?? DEFAULT_PATH, 'utf8'));
   if (opts.dryRun) cfg = deepMerge(cfg, cfg.dryRun ?? {});
+  // SIC_SMOKE=1: tiny real-model run to measure speed and exercise every code path (state goes elsewhere)
+  if (env[ENV_PREFIX + 'SMOKE'] === '1') cfg = deepMerge(cfg, cfg.smoke ?? {});
   if (env[ENV_PREFIX + 'CONFIG_OVERRIDES']) cfg = deepMerge(cfg, JSON.parse(env[ENV_PREFIX + 'CONFIG_OVERRIDES']));
   cfg = applyEnvOverrides(cfg, env);
   if (opts.overrides) cfg = deepMerge(cfg, opts.overrides);

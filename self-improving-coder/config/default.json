@@ -821,5 +821,34 @@
       0.8
     ],
     "outFile": "docs/power.md"
+  },
+  "smoke": {
+    "paths": {
+      "stateDir": ".smoke/state",
+      "chartsDir": ".smoke"
+    },
+    "budget": {
+      "totalRequestsPerRun": 168,
+      "totalRequestsPerDay": 100000,
+      "holdoutFraction": 0.5,
+      "maxRunMinutes": 30,
+      "reserveMinutesForHoldout": 10
+    },
+    "gate": {
+      "baselineRuns": 0
+    },
+    "eval": {
+      "repeats": 2
+    },
+    "promptOptimizer": {
+      "everyNRuns": 1,
+      "maxRequests": 8,
+      "maxMetricCalls": 8,
+      "numTrials": 1,
+      "trainExamples": 3,
+      "validationExamples": 2,
+      "minibatchSize": 2,
+      "earlyStoppingTrials": 1
+    }
   }
 }

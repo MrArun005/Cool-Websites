@@ -6,6 +6,11 @@ on:
     # (off the top of the hour, when scheduled runs are most often delayed).
     - cron: '17 4 * * *'
   workflow_dispatch:
+    inputs:
+      smoke:
+        description: 'Smoke test: tiny budget on the real model to measure speed and exercise every path. Commits nothing.'
+        type: boolean
+        default: false
 
 # Never run two cycles at once: they would both read and write state/.
 concurrency:
@@ -13,6 +18,10 @@ concurrency:
   cancel-in-progress: false
 
 permissions: {}
+
+env:
+  # SIC_SMOKE=1 switches config to its `smoke` overlay (tiny budget, state in .smoke/)
+  SIC_SMOKE: ${{ inputs.smoke && '1' || '' }}
 
 jobs:
   plan:
@@ -111,6 +120,12 @@ jobs:
           VARIANT: ${{ matrix.variant }}
         run: node src/run.js "--variant=$VARIANT"
 
+      - name: Job summary (timing and budget projection)
+        if: always()
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: node src/ci/step-summary.js "--variant=$VARIANT" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload this variant's state
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -123,7 +138,7 @@ jobs:
     # Read-only: merges the variants' state, builds charts, REPORT.md, README block and the dashboard.
     # It runs this repo's own scripts on the artifacts as data; nothing from the artifacts is executed.
     needs: improve
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && !inputs.smoke }}
     runs-on: ubuntu-latest
     timeout-minutes: ${{ fromJSON(vars.SIC_AGGREGATE_TIMEOUT_MINUTES || '15') }}
     permissions:
