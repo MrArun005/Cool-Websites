@@ -42,7 +42,7 @@ export function parseSkill(text) {
 }
 
 export function newLessonId(mem) {
-  return `L${String(mem.nextLessonId++).padStart(4, '0')}`;
+  return `L${String(mem.nextLessonId++).padStart(4, '0')}`; // allow-number: id format (L0001)
 }
 
 export function readPrompt(cfg, version) {
@@ -56,7 +56,7 @@ export function writePrompt(cfg, version, text) {
 export function nextPromptVersion(cfg) {
   const dir = statePath(cfg, 'promptsDir');
   const nums = fs.existsSync(dir) ? fs.readdirSync(dir).map((f) => f.match(/^v(\d+)\.md$/)?.[1]).filter(Boolean).map(Number) : [];
-  return `v${String(Math.max(0, ...nums) + 1).padStart(3, '0')}`;
+  return `v${String(Math.max(0, ...nums) + 1).padStart(3, '0')}`; // allow-number: version format (v001)
 }
 
 /** Ensure the seed prompt exists in state (copied from the champion version on first run). */

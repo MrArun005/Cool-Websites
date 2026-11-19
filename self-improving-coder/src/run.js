@@ -20,9 +20,9 @@ import { writeCharts } from './chart.js';
 import { createRecorder } from './recorder.js';
 import { createTrack } from './tracks/index.js';
 import { classify } from './taxonomy.js';
-import { summarizeEval, pairedDiffCI } from './stats.js';
+import { summarizeEval, pairedGroupCI } from './stats.js';
 import { variantConfig, listVariants } from './variants.js';
-import { seededShuffle, writeJson, log } from './util.js';
+import { seededShuffle, writeJson, log, argValue } from './util.js';
 
 export function loadSharedTemplates(cfg) {
   const dir = rootPath(cfg, cfg.paths.templatesDir);
@@ -127,11 +127,11 @@ async function trainPhase({ llm, cfg, mem, track, templates, runIndex, working, 
  * Holdout evaluation: `repeats` passes over the same tasks, each repeat with its own sampling seed,
  * eval temperature, no reflection, no memory updates. Returns per-problem arrays of 0/1.
  */
-export async function evaluate({ llm, cfg, mem, track, ids, state, templates, repeats, rec, label }) {
+export async function evaluate({ llm, cfg, mem, track, ids, state, templates, repeats, rec, label, runIndex }) {
   const memory = view(mem, cfg, state);
   const perProblem = ids.map(() => []);
   for (let r = 0; r < repeats; r++) {
-    const seed = cfg.llm.seed + r * cfg.eval.seedStride;
+    const seed = evalSeed(cfg, runIndex, r);
     for (let i = 0; i < ids.length; i++) {
       const task = track.tasks.get(ids[i]);
       const res = await solve({ llm, problem: task, memory, templates, cfg, temperature: cfg.eval.temperature, seed, reserve: 0, extract: track.extractCode });
@@ -144,6 +144,16 @@ export async function evaluate({ llm, cfg, mem, track, ids, state, templates, re
     }
   }
   return perProblem;
+}
+
+/**
+ * Sampling seed of eval repeat `r` in run `runIndex`. Champion and candidate share the seeds of a run
+ * (paired comparison); with eval.seedMode "per-run" every run draws fresh seeds, so an unchanged champion
+ * is re-measured independently each day and run-to-run noise is visible.
+ */
+export function evalSeed(cfg, runIndex, r) {
+  const perRun = cfg.eval.seedMode === 'per-run' ? (runIndex - 1) * cfg.eval.repeats : 0;
+  return cfg.llm.seed + (perRun + r) * cfg.eval.seedStride;
 }
 
 function sameState(a, b) {
@@ -169,7 +179,7 @@ const statOpts = (cfg, salt) => ({ resamples: cfg.stats.bootstrapResamples, conf
 export async function runCycle({ cfg: baseCfg, variant, deps = {} }) {
   const cfg = variantConfig(baseCfg, variant ?? baseCfg.defaultVariant);
   const now = deps.now ?? (() => new Date());
-  const runId = (process.env.GITHUB_RUN_ID ? `gh${process.env.GITHUB_RUN_ID}-` : '') + now().toISOString().replace(/[-:]/g, '').slice(0, 15);
+  const runId = (process.env.GITHUB_RUN_ID ? `gh${process.env.GITHUB_RUN_ID}-` : '') + now().toISOString().replace(/[-:]/g, '').slice(0, 'YYYYMMDDTHHMMSS'.length);
   const timestamp = now().toISOString();
   const track = deps.track ?? (await createTrack(cfg, deps));
   const mem = loadMemory(cfg);
@@ -225,17 +235,17 @@ export async function runCycle({ cfg: baseCfg, variant, deps = {} }) {
     decision = baselineMode ? DECISION.BASELINE : changed ? DECISION.NO_EVAL : DECISION.NO_CHANGE;
   } else {
     try {
-      const champRaw = await evaluate({ llm, cfg, mem, track, ids: plan.ids, state: championState, templates, repeats: plan.repeats, rec, label: 'champion' });
-      champ = summarizeEval(champRaw, statOpts(cfg, runIndex));
+      const champRaw = await evaluate({ llm, cfg, mem, track, ids: plan.ids, state: championState, templates, repeats: plan.repeats, rec, label: 'champion', runIndex });
+      champ = summarizeEval(champRaw, statOpts(cfg, runIndex), cfg.stats.method);
       rec.evalBatch({ state: 'champion', promptVersion: championState.promptVersion, ids: plan.ids, repeats: plan.repeats, results: champRaw, lessonsCount: championState.lessonIds.length, skillsCount: championState.skillIds.length });
       log(`[${v.name}] holdout champion: ${(champ.passRate * 100).toFixed(1)}% [${(champ.ciLow * 100).toFixed(1)}, ${(champ.ciHigh * 100).toFixed(1)}] (n=${champ.n} x${champ.repeats})`);
       if (baselineMode) decision = DECISION.BASELINE;
       else if (!changed) decision = DECISION.NO_CHANGE;
       else {
-        const candRaw = await evaluate({ llm, cfg, mem, track, ids: plan.ids, state: candidateState, templates, repeats: plan.repeats, rec, label: 'candidate' });
-        cand = summarizeEval(candRaw, statOpts(cfg, runIndex));
+        const candRaw = await evaluate({ llm, cfg, mem, track, ids: plan.ids, state: candidateState, templates, repeats: plan.repeats, rec, label: 'candidate', runIndex });
+        cand = summarizeEval(candRaw, statOpts(cfg, runIndex), cfg.stats.method);
         rec.evalBatch({ state: 'candidate', promptVersion: candidateState.promptVersion, ids: plan.ids, repeats: plan.repeats, results: candRaw, lessonsCount: candidateState.lessonIds.length, skillsCount: candidateState.skillIds.length });
-        const d = pairedDiffCI(champ.problemMeans, cand.problemMeans, statOpts(cfg, runIndex));
+        const d = pairedGroupCI(champRaw, candRaw, statOpts(cfg, runIndex), cfg.stats.method);
         diff = { estimate: d.estimate, low: d.low, high: d.high };
         log(`[${v.name}] holdout candidate: ${(cand.passRate * 100).toFixed(1)}% (diff ${(diff.estimate * 100).toFixed(1)} [${(diff.low * 100).toFixed(1)}, ${(diff.high * 100).toFixed(1)}])`);
         decision = decide(champ.passRate, cand.passRate, cfg.gate, diff);
@@ -282,15 +292,14 @@ export async function runCycle({ cfg: baseCfg, variant, deps = {} }) {
   if (train.problems) rows.push(row('train', { passRate: train.passed / train.problems, n: train.problems }, candidateState.promptVersion));
   if (champ) rows.push(row('holdout-champion', champ, championState.promptVersion));
   if (cand) rows.push(row('holdout-candidate', cand, candidateState.promptVersion));
-  if (rows.length) appendScores(statePath(cfg, 'scores'), rows);
+  if (rows.length) appendScores(statePath(cfg, 'scores'), rows, cfg.output.csvDecimals);
   const summary = { runId, runIndex, timestamp, variant: v.name, decision, baselineMode, train, champion: pick(champ), candidate: pick(cand), diff, pruned, requestsUsed: budget.usedRun, requestsToday: budget.usedToday, tokensIn: llm.tokensIn, tokensOut: llm.tokensOut };
   writeJson(statePath(cfg, 'lastRun'), summary);
   return summary;
 }
 
 export function parseArgs(argv) {
-  const get = (k) => argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
-  return { dryRun: argv.includes('--dry-run'), variant: get('variant') };
+  return { dryRun: argv.includes('--dry-run'), variant: argValue(argv, 'variant') };
 }
 
 async function main() {

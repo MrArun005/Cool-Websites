@@ -34,7 +34,18 @@ export function pickInstruction(result) {
   return typeof v === 'string' && v.trim() ? v.trim() : null;
 }
 
-export async function evolvePrompt({ cfg, mem, split, problemsById, working, budget, deps = {} }) {
+/** Offline stand-in used with the mock provider: one budgeted call, deterministic proposal. */
+async function mockProposal({ cfg, working, llm }) {
+  const current = readPrompt(cfg, working.promptVersion);
+  const addition = (await llm.chat([{ role: 'user', content: current }], { reserve: cfg.budget.reserveForHoldout, meta: { kind: 'evolve' } })).trim();
+  if (!addition || current.includes(addition)) return null;
+  const version = nextPromptVersion(cfg);
+  writePrompt(cfg, version, `${current.trimEnd()}\n- ${addition}`);
+  return version;
+}
+
+export async function evolvePrompt({ cfg, mem, split, problemsById, working, budget, llm, deps = {} }) {
+  if (cfg.llm.provider === 'mock') return mockProposal({ cfg, working, llm });
   const oc = cfg.promptOptimizer;
   let axLib = deps.ax;
   if (!axLib) {

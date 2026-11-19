@@ -1,0 +1,11 @@
+[
+  { "name": "correct", "expected": "pass", "code": "function add(a, b){ return a + b; }" },
+  { "name": "syntax error", "expected": "syntax", "code": "function add(a, b){ return a + ; }" },
+  { "name": "throws TypeError", "expected": "runtime-error", "code": "function add(a, b){ return a.foo.bar + b; }" },
+  { "name": "stack overflow", "expected": "runtime-error", "code": "function add(a, b){ return add(a, b); }" },
+  { "name": "infinite loop", "expected": "timeout", "code": "function add(a, b){ while (true) {} }" },
+  { "name": "wrong answer", "expected": "wrong-output", "code": "function add(a, b){ return a - b; }" },
+  { "name": "wrong function name", "expected": "spec-misread", "code": "function sum(a, b){ return a + b; }" },
+  { "name": "wrong arity", "expected": "spec-misread", "code": "function add(a){ return a; }" },
+  { "name": "exits without an error", "expected": "other", "code": "function add(a, b){ process.exit(3); }" }
+]

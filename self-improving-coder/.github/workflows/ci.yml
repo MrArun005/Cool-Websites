@@ -10,7 +10,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ fromJSON(vars.SIC_CI_TIMEOUT_MINUTES || '10') }}
+    timeout-minutes: ${{ fromJSON(vars.SIC_CI_TIMEOUT_MINUTES || '15') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -21,4 +21,9 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm test
-      - run: node src/run.js --dry-run
+      - name: Dry run of every variant, generator, report and dashboard
+        run: |
+          node src/run.js --dry-run
+          node src/mutate/generate.js --dry-run > /dev/null
+          node src/report.js --dry-run
+          node site/build.js --dry-run --out="$RUNNER_TEMP/index.html"

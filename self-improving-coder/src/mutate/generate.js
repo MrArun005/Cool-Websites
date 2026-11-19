@@ -54,7 +54,7 @@ export function candidate(seed, level, { files, targets }, c) {
   if (targets.length < L.functions) return null;
   const r = rng(seed);
   const fns = [];
-  for (let tries = 0; fns.length < L.functions && tries < targets.length * L.functions * 4; tries++) {
+  for (let tries = 0; fns.length < L.functions && tries < targets.length * L.functions * c.functionPickTriesFactor; tries++) {
     const f = targets[Math.floor(r() * targets.length)];
     if (!fns.includes(f)) fns.push(f);
   }

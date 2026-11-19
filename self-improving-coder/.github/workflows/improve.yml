@@ -15,12 +15,38 @@ concurrency:
 permissions: {}
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(vars.SIC_PLAN_TIMEOUT_MINUTES || '5') }}
+    permissions:
+      contents: read
+    env:
+      SIC_CONFIG_OVERRIDES: ${{ vars.SIC_CONFIG_OVERRIDES }}
+    outputs:
+      matrix: ${{ steps.cfg.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Variant list from config/default.json
+        id: cfg
+        run: node src/ci/config-out.js >> "$GITHUB_OUTPUT"
+
   improve:
     # Runs LLM-written code. Its token can only read this (public) repo; it cannot push.
+    needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: ${{ fromJSON(vars.SIC_IMPROVE_TIMEOUT_MINUTES || '150') }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(vars.SIC_MAX_PARALLEL || '7') }}
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       SIC_CONFIG_OVERRIDES: ${{ vars.SIC_CONFIG_OVERRIDES }}
     steps:
@@ -38,7 +64,9 @@ jobs:
 
       - name: Read runtime settings from config/default.json
         id: cfg
-        run: node src/ci/config-out.js >> "$GITHUB_OUTPUT"
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: node src/ci/config-out.js "--variant=$VARIANT" >> "$GITHUB_OUTPUT"
 
       - name: Cache Ollama binary and model weights
         if: steps.cfg.outputs.provider == 'openai-compatible'
@@ -48,6 +76,13 @@ jobs:
             ~/.sic-ollama
             ~/.ollama/models
           key: ollama-${{ steps.cfg.outputs.ollama_version }}-${{ steps.cfg.outputs.model }}
+
+      - name: Cache mutation curriculum (pinned repo, dev packages, generated tasks)
+        if: steps.cfg.outputs.track == 'mutation'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.cfg.outputs.curriculum_cache }}
+          key: curriculum-${{ hashFiles('config/default.json', 'src/mutate/**') }}
 
       - name: Install and start Ollama, pull the model
         if: steps.cfg.outputs.provider == 'openai-compatible'
@@ -70,25 +105,75 @@ jobs:
           "$HOME/.sic-ollama/bin/ollama" pull "$MODEL"
 
       - name: Run one improvement cycle
-        run: node src/run.js
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: node src/run.js "--variant=$VARIANT"
 
-      - name: Upload state
+      - name: Upload this variant's state
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ steps.cfg.outputs.artifact_name }}
-          path: |
-            ${{ steps.cfg.outputs.state_dir }}/
-            chart.svg
+          name: ${{ steps.cfg.outputs.artifact_prefix }}-${{ matrix.variant }}
+          path: ${{ steps.cfg.outputs.variant_state_dir }}/
           retention-days: ${{ steps.cfg.outputs.artifact_retention_days }}
           if-no-files-found: error
 
+  aggregate:
+    # Read-only: merges the variants' state, builds charts, REPORT.md, README block and the dashboard.
+    # It runs this repo's own scripts on the artifacts as data; nothing from the artifacts is executed.
+    needs: improve
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(vars.SIC_AGGREGATE_TIMEOUT_MINUTES || '15') }}
+    permissions:
+      contents: read
+    env:
+      SIC_CONFIG_OVERRIDES: ${{ vars.SIC_CONFIG_OVERRIDES }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Read settings
+        id: cfg
+        run: node src/ci/config-out.js >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: ${{ steps.cfg.outputs.artifact_prefix }}-*
+          path: ${{ runner.temp }}/variants
+      - name: Merge variant state
+        run: node src/ci/collect.js "$RUNNER_TEMP/variants"
+      - name: Charts, report, README block, dashboard
+        run: |
+          node src/chart.js
+          node src/report.js --update-readme
+          node site/build.js
+      - name: Upload files to commit
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.cfg.outputs.publish_artifact }}
+          path: |
+            ${{ steps.cfg.outputs.state_dir }}/
+            chart*.svg
+            REPORT.md
+            README.md
+          retention-days: ${{ steps.cfg.outputs.artifact_retention_days }}
+          if-no-files-found: error
+      - name: Upload dashboard for Pages
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ steps.cfg.outputs.site_dir }}
     outputs:
-      artifact_name: ${{ steps.cfg.outputs.artifact_name }}
+      publish_artifact: ${{ steps.cfg.outputs.publish_artifact }}
       state_dir: ${{ steps.cfg.outputs.state_dir }}
 
   commit:
-    # Can push, but never runs anything from the artifact: it only copies files.
-    needs: improve
+    # Can push, but never runs anything from the artifacts: it only copies files.
+    needs: aggregate
+    if: ${{ !cancelled() && needs.aggregate.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: ${{ fromJSON(vars.SIC_COMMIT_TIMEOUT_MINUTES || '10') }}
     permissions:
@@ -98,29 +183,29 @@ jobs:
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ needs.improve.outputs.artifact_name }}
-          path: ${{ runner.temp }}/sic-artifact
+          name: ${{ needs.aggregate.outputs.publish_artifact }}
+          path: ${{ runner.temp }}/publish
 
-      - name: Copy state into the repo (data only)
+      - name: Copy state, charts and reports into the repo (data only)
         env:
-          STATE_DIR: ${{ needs.improve.outputs.state_dir }}
+          STATE_DIR: ${{ needs.aggregate.outputs.state_dir }}
         run: |
           set -euo pipefail
-          src="$RUNNER_TEMP/sic-artifact"
+          src="$RUNNER_TEMP/publish"
           if [ -n "$(find "$src" -type l)" ]; then echo "::error::artifact contains symlinks"; exit 1; fi
-          test -f "$src/$STATE_DIR/champion.json"
+          test -d "$src/$STATE_DIR"
           rm -rf "$STATE_DIR"
           cp -R "$src/$STATE_DIR" "$STATE_DIR"
-          cp "$src/chart.svg" chart.svg
+          for f in "$src"/chart*.svg "$src/REPORT.md" "$src/README.md"; do cp "$f" .; done
 
       - name: Commit and push
         env:
-          STATE_DIR: ${{ needs.improve.outputs.state_dir }}
+          STATE_DIR: ${{ needs.aggregate.outputs.state_dir }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "$STATE_DIR" chart.svg
+          git add -- "$STATE_DIR" chart*.svg REPORT.md README.md
           if git diff --cached --quiet; then echo "No state changes."; exit 0; fi
           git commit -m "state: improvement cycle (run ${GITHUB_RUN_ID})"
           for _ in 1 2 3; do
@@ -128,3 +213,19 @@ jobs:
             git pull --rebase
           done
           exit 1
+
+  pages:
+    # Publishes the static dashboard. Needs Settings -> Pages -> Source: GitHub Actions.
+    needs: [aggregate, commit]
+    if: ${{ !cancelled() && needs.aggregate.result == 'success' && vars.SIC_PAGES != 'off' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(vars.SIC_PAGES_TIMEOUT_MINUTES || '10') }}
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

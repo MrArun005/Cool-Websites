@@ -16,7 +16,7 @@ export const DECISION = Object.freeze({
  */
 export function decide(championRate, candidateRate, { minImprovement, tolerance, method = 'threshold' }, diff = null) {
   // Small epsilon so 0.1 + 0.025 style float error never flips a decision.
-  const eps = 1e-9;
+  const eps = 1e-9; // allow-number: float tolerance, not a tunable
   const useCI = method === 'ci' && diff && Number.isFinite(diff.low) && Number.isFinite(diff.high);
   if (candidateRate + eps >= championRate + minImprovement && (!useCI || diff.low > eps)) return DECISION.ACCEPT;
   if (useCI && diff.high < -eps) return DECISION.REJECT;

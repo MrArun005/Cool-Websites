@@ -68,7 +68,7 @@ export const OPERATORS = {
       const ta = src.slice(a.start, a.end);
       const tb = src.slice(b.start, b.end);
       if (ta === tb) return;
-      out.push({ start: a.start, end: b.end, replacement: `${tb}${src.slice(a.end, b.start)}${ta}`, operator: 'swap-arguments', detail: `swap ${ta.slice(0, 20)} / ${tb.slice(0, 20)}` });
+      out.push({ start: a.start, end: b.end, replacement: `${tb}${src.slice(a.end, b.start)}${ta}`, operator: 'swap-arguments', detail: `swap ${ta} / ${tb}` });
     });
     return out;
   },

@@ -1,7 +1,7 @@
 // OpenAI-style /chat/completions client with retry + exponential backoff.
 // Default target is a local Ollama server on the Actions runner (see DECISIONS.md:
 // GitHub Models was retired on 2026-07-30). Any OpenAI-compatible endpoint works.
-import { sleep } from '../util.js';
+import { sleep, MS_PER_SECOND } from '../util.js';
 
 export class LLMError extends Error {
   constructor(message, { status, retryable } = {}) {
@@ -12,7 +12,7 @@ export class LLMError extends Error {
 }
 
 export function backoffDelay(attempt, { baseDelayMs, maxDelayMs }, retryAfterSec) {
-  if (Number.isFinite(retryAfterSec) && retryAfterSec > 0) return Math.min(retryAfterSec * 1000, maxDelayMs);
+  if (Number.isFinite(retryAfterSec) && retryAfterSec > 0) return Math.min(retryAfterSec * MS_PER_SECOND, maxDelayMs);
   return Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs);
 }
 

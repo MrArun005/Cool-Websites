@@ -6,10 +6,9 @@ import path from 'node:path';
 import { loadConfig, rootPath } from './config.js';
 import { readScores } from './metrics.js';
 import { variantStateDir } from './variants.js';
-import { writeText } from './util.js';
+import { writeText, ISO_DATE_LEN } from './util.js';
 
 const escXml = (s) => String(s).replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
-const DATE_LEN = 10; // YYYY-MM-DD
 
 /** Holdout point per run: the candidate's row if it was accepted (it became champion), else the champion's. */
 export function holdoutSeries(rows) {
@@ -19,7 +18,7 @@ export function holdoutSeries(rows) {
     if (!champ) return null;
     const cand = rows.find((x) => x.runId === runId && x.split === 'holdout-candidate');
     const p = cand && cand.gateDecision === 'accept' ? cand : champ;
-    return { runId, date: champ.timestamp.slice(0, DATE_LEN), timestamp: champ.timestamp, y: p.passRate, low: p.ciLow ?? p.passRate, high: p.ciHigh ?? p.passRate, n: p.n, repeats: p.repeats, decision: champ.gateDecision };
+    return { runId, date: champ.timestamp.slice(0, ISO_DATE_LEN), timestamp: champ.timestamp, y: p.passRate, low: p.ciLow ?? p.passRate, high: p.ciHigh ?? p.passRate, n: p.n, repeats: p.repeats, decision: champ.gateDecision };
   }).filter(Boolean);
 }
 
@@ -32,14 +31,14 @@ export function loadTrackSeries(cfg, track) {
 }
 
 export function renderChart(series, chartCfg, title) {
-  const { width: W, height: H, margin: m, yTicks, colors: c, fontSize: fs, titleFontSize, legendItemWidth, pointRadius, bandOpacity } = chartCfg;
+  const { width: W, height: H, margin: m, yTicks, colors: c, fontSize: fs, titleFontSize, legendItemWidth, pointRadius, bandOpacity, lineHeight, legendTopGaps, singlePointBandOpacityFactor } = chartCfg;
   const gap = fs / 2;
   const lines = series.map((s) => ({ ...s, pts: holdoutSeries(s.rows) })).filter((s) => s.pts.length);
   const dates = [...new Set(lines.flatMap((s) => s.pts.map((p) => p.date)))].sort();
   const baselinePts = lines.flatMap((s) => s.pts.filter((p) => p.decision === 'baseline'));
   const baseline = baselinePts.length ? baselinePts.reduce((a, p) => a + p.y, 0) / baselinePts.length : null;
   const legendRows = Math.max(1, Math.ceil(lines.length * legendItemWidth / (W - m.left - m.right)));
-  const top = m.top + (legendRows - 1) * fs * 1.5;
+  const top = m.top + (legendRows - 1) * fs * lineHeight;
   const iw = W - m.left - m.right;
   const ih = H - top - m.bottom;
   const xs = (d) => m.left + (dates.length <= 1 ? iw / 2 : (dates.indexOf(d) / (dates.length - 1)) * iw);
@@ -53,7 +52,7 @@ export function renderChart(series, chartCfg, title) {
     out.push(`<line x1="${m.left}" x2="${W - m.right}" y1="${ys(v)}" y2="${ys(v)}" stroke="${c.grid}"/>`);
     out.push(`<text x="${m.left - gap}" y="${ys(v) + gap / 2}" text-anchor="end" fill="${c.axis}">${Math.round(v * 100)}%</text>`);
   }
-  dates.forEach((d) => out.push(`<text x="${xs(d)}" y="${H - m.bottom + fs * 1.5}" text-anchor="middle" fill="${c.axis}">${escXml(d.slice(5))}</text>`));
+  dates.forEach((d) => out.push(`<text x="${xs(d)}" y="${H - m.bottom + fs * lineHeight}" text-anchor="middle" fill="${c.axis}">${escXml(d.slice('YYYY-'.length))}</text>`));
   out.push(`<text x="${m.left + iw / 2}" y="${H - gap}" text-anchor="middle" fill="${c.axis}">run date (MM-DD) · bands = 95% bootstrap CI over holdout problems</text>`);
   if (baseline !== null) {
     out.push(`<line x1="${m.left}" x2="${W - m.right}" y1="${ys(baseline)}" y2="${ys(baseline)}" stroke="${c.baseline}" stroke-dasharray="6 4" stroke-width="1.5"/>`);
@@ -68,7 +67,7 @@ export function renderChart(series, chartCfg, title) {
       out.push(`<polygon class="band" data-variant="${escXml(s.name)}" points="${poly}" fill="${s.color}" fill-opacity="${bandOpacity}" stroke="none"/>`);
     } else {
       const p = pts[0];
-      out.push(`<line class="band" data-variant="${escXml(s.name)}" x1="${xs(p.date)}" x2="${xs(p.date)}" y1="${ys(p.low)}" y2="${ys(p.high)}" stroke="${s.color}" stroke-opacity="${bandOpacity * 3}" stroke-width="${pointRadius * 2}"/>`);
+      out.push(`<line class="band" data-variant="${escXml(s.name)}" x1="${xs(p.date)}" x2="${xs(p.date)}" y1="${ys(p.low)}" y2="${ys(p.high)}" stroke="${s.color}" stroke-opacity="${bandOpacity * singlePointBandOpacityFactor}" stroke-width="${pointRadius * 2}"/>`);
     }
     out.push(`<polyline data-variant="${escXml(s.name)}" fill="none" stroke="${s.color}" stroke-width="2" points="${pts.map((p) => `${xs(p.date)},${ys(p.y)}`).join(' ')}"/>`);
     for (const p of pts) {
@@ -79,8 +78,8 @@ export function renderChart(series, chartCfg, title) {
   const perRow = Math.max(1, Math.floor(iw / legendItemWidth));
   lines.forEach((s, i) => {
     const x = m.left + (i % perRow) * legendItemWidth;
-    const y = titleFontSize + gap * 3 + Math.floor(i / perRow) * fs * 1.5;
-    out.push(`<rect x="${x}" y="${y}" width="${gap * 2}" height="${gap * 2}" rx="${gap / 3}" fill="${s.color}"/><text x="${x + gap * 3}" y="${y + gap * 2}" fill="${c.text}">${escXml(s.label)}</text>`);
+    const y = titleFontSize + gap * legendTopGaps + Math.floor(i / perRow) * fs * lineHeight;
+    out.push(`<rect x="${x}" y="${y}" width="${gap * 2}" height="${gap * 2}" rx="${gap / legendTopGaps}" fill="${s.color}"/><text x="${x + gap * legendTopGaps}" y="${y + gap * 2}" fill="${c.text}">${escXml(s.label)}</text>`);
   });
   if (!lines.length) out.push(`<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="${c.axis}">no runs yet</text>`);
   out.push('</svg>');

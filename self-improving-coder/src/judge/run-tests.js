@@ -18,7 +18,8 @@ export function buildProgram(code, tests) {
 function permissionFlags(dir) {
   // Node >= 22.13 / 23.5: --permission. Older 20.x/22.x: --experimental-permission.
   const [maj, min] = process.versions.node.split('.').map(Number);
-  const flag = maj > 23 || (maj === 23 && min >= 5) || (maj === 22 && min >= 13) ? '--permission' : '--experimental-permission';
+  // allow-number: Node releases that renamed the flag (22.13 / 23.5) are facts, not tunables
+  const flag = maj > 23 || (maj === 23 && min >= 5) || (maj === 22 && min >= 13) ? '--permission' : '--experimental-permission'; // allow-number: Node versions
   return [flag, `--allow-fs-read=${dir}`];
 }
 
@@ -75,7 +76,9 @@ export function runNode({ dir, entry, judgeCfg, extraReadDirs = [], timeoutMs = 
       killTree(); // reap any stragglers in the group
       const combined = [out, err].filter(Boolean).join('\n');
       const type = classify({ code, signal, timedOut, output: combined }, failPatterns);
-      const output = (timedOut ? `Timed out after ${timeoutMs} ms\n` : '') + combined;
+      const drop = (judgeCfg.dropOutputLinePatterns ?? []).map((p) => new RegExp(p));
+      const cleaned = combined.split('\n').filter((l) => !drop.some((re) => re.test(l))).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+      const output = (timedOut ? `Timed out after ${timeoutMs} ms\n` : '') + cleaned;
       resolve({ type, output: output.replace(new RegExp(escapeRe(dir), 'g'), '<tmp>'), durationMs: Date.now() - started });
     });
   });

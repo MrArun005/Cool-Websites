@@ -1,6 +1,6 @@
 // Request counter. Checked BEFORE every LLM call. Persists the per-day count in state/budget.json
 // so manual re-runs on the same day share the daily allowance.
-import { readJson, writeJson, today } from './util.js';
+import { readJson, writeJson, today, MS_PER_MINUTE } from './util.js';
 
 export class BudgetExhausted extends Error {
   constructor(reason) { super(`budget exhausted: ${reason}`); this.reason = reason; }
@@ -8,7 +8,7 @@ export class BudgetExhausted extends Error {
 
 export function createBudget(cfg, { file, now = () => new Date() } = {}) {
   const { requestsPerDay, requestsPerRun, maxRunMinutes, reserveMinutesForHoldout } = cfg.budget;
-  const reserveMs = reserveMinutesForHoldout * 60000;
+  const reserveMs = reserveMinutesForHoldout * MS_PER_MINUTE;
   const day = today(now());
   const stored = file ? readJson(file, { date: day, used: 0 }) : { date: day, used: 0 };
   let usedToday = stored.date === day ? stored.used : 0;
@@ -24,7 +24,7 @@ export function createBudget(cfg, { file, now = () => new Date() } = {}) {
       if (self.timeLeft() <= reserveMs) return 0;
       return Math.max(0, self.remainingRun() - reserve);
     },
-    timeLeft() { return maxRunMinutes * 60000 - (now().getTime() - startedAt); },
+    timeLeft() { return maxRunMinutes * MS_PER_MINUTE - (now().getTime() - startedAt); },
     check(reserve = 0) {
       if (self.timeLeft() <= 0) throw new BudgetExhausted('time');
       if (usedToday >= requestsPerDay) throw new BudgetExhausted('daily');

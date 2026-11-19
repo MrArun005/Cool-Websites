@@ -68,7 +68,7 @@ export function createMock(cfg, deps = {}) {
         const lesson = o?.lesson ?? 'Read the problem statement carefully and handle edge cases.';
         return '```json\n' + JSON.stringify({ lesson, tags: o?.lessonTags ?? ['general'] }) + '\n```';
       }
-      if (meta.kind === 'evolve') return deps.mockEvolveAnswer ?? 'You are a careful JavaScript programmer.';
+      if (meta.kind === 'evolve') return deps.mockEvolveAnswer ?? mc.evolveAnswer;
       if (!o) {
         const fn = (all.match(/function\s+(\w+)\s*\(/g) ?? []).pop()?.match(/function\s+(\w+)/)?.[1] ?? 'f';
         return '```javascript\nfunction ' + fn + '() { return undefined; }\n```';

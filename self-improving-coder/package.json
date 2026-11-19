@@ -14,7 +14,11 @@
     "start": "node src/run.js",
     "dry-run": "node src/run.js --dry-run",
     "chart": "node src/chart.js",
-    "summary": "node src/summary.js"
+    "reproduce": "node src/reproduce.js",
+    "report": "node src/report.js",
+    "site": "node site/build.js",
+    "generate": "node src/mutate/generate.js",
+    "power": "node src/power.js"
   },
   "dependencies": {
     "acorn": "8.19.0",

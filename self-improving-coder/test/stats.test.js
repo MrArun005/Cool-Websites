@@ -65,3 +65,52 @@ test('summarizeEval averages repeats per problem and reports spread across repea
   close(s.sdAcrossRepeats, sd([0.5, 0.75, 0.25]), 1e-12);
   assert.ok(s.ciLow <= s.passRate && s.passRate <= s.ciHigh);
 });
+
+import { hierarchicalCI, groupCI, pairedGroupCI, didCI } from '../src/stats.js';
+
+test('hierarchical bootstrap also resamples repeats: on 50 problems each passed 1 of 2 times it gives 0.5 +/- ~0.1', () => {
+  // Problem means are all 0.5, so resampling problems gives a zero-width CI. Resampling repeats too, each
+  // problem's mean is 0, .5 or 1 w.p. .25/.5/.25 (variance 1/8): sd of the overall mean = sqrt(1/8/50) = 0.05.
+  // NOTE: two-level resampling double-counts within-problem noise in general (see the calibration test below);
+  // it is kept only as a conservative option.
+  const groups = Array.from({ length: 50 }, () => [0, 1]);
+  const o = { resamples: 20000, confidence: 0.95, seed: 9 };
+  const flat = groupCI(groups, o, 'problems');
+  assert.deepEqual([flat.low, flat.high], [0.5, 0.5]);
+  const h = hierarchicalCI(groups, o);
+  close(h.low, 0.4, 0.015, 'low');
+  close(h.high, 0.6, 0.015, 'high');
+  close(h.estimate, 0.5, 1e-12);
+});
+
+test('calibration: with no true effect the gate\'s CI (problems bootstrap, n=50 x 3) excludes zero ~2.5% of the time; hierarchical is over-conservative', async () => {
+  const { simulatePower } = await import('../src/power.js');
+  const base = { n: 50, repeats: 3, effect: 0, sims: 300, resamples: 300, confidence: 0.95, seed: 5, pLow: 0.1, pHigh: 0.8 };
+  const fp = simulatePower({ ...base, method: 'problems' });
+  assert.ok(fp <= 0.06, `false-positive rate ${fp} should be near the nominal 2.5% (one-sided)`);
+  const fpH = simulatePower({ ...base, method: 'hierarchical' });
+  assert.ok(fpH <= fp, 'hierarchical is never less conservative');
+  const power = simulatePower({ ...base, effect: 0.2, method: 'problems', sims: 100 });
+  assert.ok(power >= 0.8, `a true +20 pt gain is detected in >= 80% of runs (got ${power})`);
+});
+
+test('hierarchical CI of constant data is that constant; paired version of identical groups is zero', () => {
+  const o = { resamples: 500, confidence: 0.95, seed: 1 };
+  const g = [[1, 1, 1], [0, 0, 0], [1, 1, 1]];
+  const ci = hierarchicalCI(g, o);
+  assert.ok(ci.low <= ci.estimate && ci.estimate <= ci.high);
+  const same = pairedGroupCI(g, g, o, 'hierarchical');
+  assert.deepEqual([same.low, same.high, same.estimate], [0, 0, 0]);
+});
+
+test('difference-in-differences: a change shared with the control cancels; a change only in the variant does not', () => {
+  const o = { resamples: 2000, confidence: 0.95, seed: 4 };
+  const zeros = Array.from({ length: 20 }, () => [0, 0, 0]);
+  const ones = Array.from({ length: 20 }, () => [1, 1, 1]);
+  const shared = didCI(zeros, ones, zeros, ones, o, 'hierarchical');
+  assert.deepEqual([shared.estimate, shared.low, shared.high], [0, 0, 0]);
+  const own = didCI(zeros, ones, zeros, zeros, o, 'hierarchical');
+  assert.deepEqual([own.estimate, own.low, own.high], [1, 1, 1]);
+  const flat = didCI(zeros, ones, zeros, zeros, o, 'problems');
+  assert.equal(flat.estimate, 1);
+});
