@@ -759,7 +759,7 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   Continuation jobs pushed so the CPU stays in use: bolt-lite3-dog-42-p2 and -43-p2 (resume path proven locally);
   -44-p2 is waiting for a slot (Kaggle allows 5 CPU sessions at once; my first three p2 pushes had a wrong source
   name and hold slots until they fail). Simulation.
-- **19 Nov 19:30 UTC. A Go2 fall found by the new seeds, its cause, and a fix in the robot program (no training).**
+- **19 Nov 18:30 UTC. A Go2 fall found by the new seeds, its cause, and a fix in the robot program (no training).**
   Seeds 100000-100099 (the 48-try tests use 0-47), Unitree's model, 50 s plan with two canters, sit, lie, get-up:
   with 5% and with 10% of steps missed the Go2 tipped backwards in 1 of 100 tries, always seed 100000, 0.6 s after
   the "lie" command given while sitting. Trace: the lie clip starts from standing, so from a sit the brain lunges
