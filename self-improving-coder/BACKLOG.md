@@ -12,10 +12,13 @@ DECISIONS.md updated for any non-obvious choice, README claims backed by generat
 - [x] **Smoke mode** (`workflow_dispatch` input `smoke`): tiny real-model run per variant, state in `.smoke/`,
   nothing committed; job summary shows measured seconds per request and whether the full budget fits the time
   limit; exercises the prompt optimizer path. Model latency is recorded on every attempt row and shown in the cost tables.
+- [x] **Floor/ceiling detection** (e4ee9cf). `analysis.difficultyCheck` pools every variant's baseline runs per track;
+  the report ("Difficulty check") and dashboard (banner) warn below `analysis.floorRate` / above `analysis.ceilingRate`
+  and name the config knob that changes difficulty (`analysis.difficultyKnobs`).
 
 ## Next, in order
 
-2. **Workflow robustness.** Retry the Ollama download/pull with backoff; a warm-up request that fails fast with a
+1. **Workflow robustness.** Retry the Ollama download/pull with backoff; a warm-up request that fails fast with a
    clear message if the model doesn't answer; a test that the workflow's step order and `if:` conditions keep smoke
    runs from committing.
 3. **Multiple comparisons.** Holm-adjusted significance across the learning variants' control comparisons, reported
