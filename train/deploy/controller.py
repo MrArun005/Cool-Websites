@@ -14,6 +14,7 @@ with the steering command added), and seconds since a sit/lie clip ended.
 Body velocity and height have no sensor on a real Go2: the caller passes estimates (PLAN.md phase 3). Everything else
 is a direct reading. Numpy and mujoco only (no torch, SB3 or JAX), so it runs on the Go2's Jetson.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -148,6 +149,11 @@ class Go2Controller:
             name = "walk"
         c = self.clips[name]
         if c.loop and q is not None:
+            self.tau = float(np.argmin(np.sum((c.joints - np.asarray(q)) ** 2, 1))) / c.fps
+        elif name == "lie" and self.clip.name == "sit" and q is not None and os.environ.get("BOLT_LIE_JOIN", "1") == "1":
+            # sitting, the lie clip joins at its frame closest to the pose now instead of at its start (standing):
+            # from its start the brain lunged up out of the sit and, with missed control steps in that instant,
+            # tipped backwards on Unitree's model (PLAN.md 19 Nov)
             self.tau = float(np.argmin(np.sum((c.joints - np.asarray(q)) ** 2, 1))) / c.fps
         else:
             self.tau = 0.0

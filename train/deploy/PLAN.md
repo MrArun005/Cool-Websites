@@ -759,6 +759,20 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   Continuation jobs pushed so the CPU stays in use: bolt-lite3-dog-42-p2 and -43-p2 (resume path proven locally);
   -44-p2 is waiting for a slot (Kaggle allows 5 CPU sessions at once; my first three p2 pushes had a wrong source
   name and hold slots until they fail). Simulation.
+- **19 Nov 19:30 UTC. A Go2 fall found by the new seeds, its cause, and a fix in the robot program (no training).**
+  Seeds 100000-100099 (the 48-try tests use 0-47), Unitree's model, 50 s plan with two canters, sit, lie, get-up:
+  with 5% and with 10% of steps missed the Go2 tipped backwards in 1 of 100 tries, always seed 100000, 0.6 s after
+  the "lie" command given while sitting. Trace: the lie clip starts from standing, so from a sit the brain lunges
+  (joint speeds 20-33 rad/s in the first two steps, the body rears up 7 cm), and two missed steps in that instant
+  made it overshoot. Shorter plans did not show it (0 of 400). The lie clip itself passes through a sitting pose
+  2.2 s in (joint distance from the sit's end pose: 0.19 there, 2.45 at the clip's start), so the controller now
+  joins the lie clip at its frame nearest the pose when the command comes while sitting (controller.command;
+  BOLT_LIE_JOIN=0 gives the old behaviour). Same 100 seeds, old -> new: Go2 5% missed 1 -> 0, 10% missed 1 -> 0;
+  steps over 1.2x rated 346 -> 238 and 600 -> 498 of 250,000; the robots lie within 3 s (were 6). A first idea
+  (through the get-up) took over 8 s to lie down and was dropped. Golden tests unchanged.
+  The same seeds on the Lite3 (DEEP's model): 5% missed 1 fall of 100 (a trot), 10% missed 8 of 100 (4 canter, 3
+  trot, 1 walk), the same with either transition. So the Lite3's real rate at 10% missed steps is about 8 in 100
+  routines, worse than the 2 of 48 measured before; at 5% about 1 in 100. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
