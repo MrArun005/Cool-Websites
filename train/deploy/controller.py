@@ -121,7 +121,17 @@ class Go2Controller:
         self.slots = len(ALL_CLIPS)
         self.last_action = np.zeros(12)
         self.steer = 0.0
-        self.steer_limits = {}   # clip name -> (lowest, highest) steering command it takes (run_go2 sets the Lite3's canter)
+        # clip name -> (lowest, highest) steering command it takes (rad/s, + left). From the sweeps of 20 Nov on the makers'
+        # models (PLAN.md): the Go2 fell only turning LEFT at 0.8 rad/s with 10-19 ms delay (33 of 3250; 0 of 3225 at
+        # 0.6); the Lite3 turning RIGHT at 0.8 (11 of 2550 at any delay; 1 of 2550 at 0.6; 0 at 0.4) and once in 2550
+        # turning left at 0.8. Its canter turns left only. BOLT_STEER_CAPS=0: no caps (tests of the brain itself).
+        self.steer_limits = {}
+        if os.environ.get("BOLT_STEER_CAPS", "1") == "1":
+            lim = {"go2": (-np.inf, 0.6), "lite3": (-0.4, 0.6)}.get(body)
+            if lim:
+                self.steer_limits = {g: lim for g in ("walk", "trot", "pace", "canter")}
+                if body == "lite3":
+                    self.steer_limits["canter"] = (0.0, lim[1])
         self.clip, self.tau = self.clips["trot" if "trot" in self.clips else clips[0]], 0.0
         self.walk_down, self.queued = float(walk_down), None   # queued: (posture, seconds of walk left)
         self.after_getup = None   # a move commanded while lying: played once the get-up has finished (see command)

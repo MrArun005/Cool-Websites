@@ -189,9 +189,8 @@ def main():
         _command = ctl.command
         ctl.command = lambda name, *args, **kw: _command("trot" if name == "canter" else name, *args, **kw)
         print("canter requests run as trot (--no-canter)", flush=True)
-    if a.body == "lite3":   # PLAN.md 12-14 Nov: the Lite3's canter turns left only (asked to turn right it barely turns),
-        ctl.steer_limits["canter"] = (0.0, np.inf)   # so right-turn commands are held at straight ahead in the canter
-        print("Lite3 canter: right-turn commands are held at straight ahead (it turns left only)", flush=True)
+    if ctl.steer_limits:   # set in controller.py from the sweeps (PLAN.md 20 Nov)
+        print("steering limits (rad/s, + left):", {g: (round(float(lo), 2), round(float(hi), 2)) for g, (lo, hi) in ctl.steer_limits.items()}, flush=True)
     body = ctl.body
     kp = (a.kp or body.entry["kp"]) * a.gain_scale
     kd = (a.kd or body.entry["kv"]) * a.gain_scale
