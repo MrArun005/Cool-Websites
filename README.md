@@ -66,8 +66,15 @@ a penalty on joint speed above rated, after live runs showed the earlier brains 
 | 5% of control steps lost | 10 / 10; 50 s plan 48 / 48 (47 / 48 with 10% lost) | 20 s trot 24 / 24; canter plan 48 / 48 |
 | Back on its feet after a fall (side, back, tipped, shoved) | 20 / 20 | 48 / 48 |
 | Live in the maker's simulator, real time | routine 3 / 3, no speed stop | routine 6 / 6 through DEEP's protocol bridge, no speed stop |
-| Canter | in the routine above | from a trot 48 / 48 at 10-19 ms and with 5% of steps lost (46 / 48 with 10% lost); turns left only |
+| Canter | in the routine above | from a trot 48 / 48 at 10-19 ms; in the sweep it is where the Lite3 falls with missed steps, so it runs as a trot by default; turns left only |
 | On the real robot | **not run** | **not run** |
+
+**Large sweeps (20 Nov; about 19,000 Go2 and 16,000 Lite3 tries of a 50 s plan, simulation):** with commands up to
+19 ms late and no missed control steps, neither robot fell in 4,250 and 3,550 tries. With 5% of control steps missed
+the Go2 fell 3 times in 2,125 (a tip-over when lying down from a sit, since fixed in the robot program) and the Lite3
+23 in 1,775, 18 of them in its canter, which therefore runs as a trot by default. With 10% missed the Go2 fell 15
+in 2,125 and the Lite3 147 in 1,775. A hard turn (0.8 rad/s) with 10-19 ms delay falls about 1 time in 130 to one
+side on each robot (Go2 left, Lite3 right). The 48-try rows in the table above cannot see falls this rare.
 
 **Have a Go2 EDU?** The first step needs no motion at all: `python deploy/first_run.py --iface <eth> --domain 0`
 listens for five minutes while you tilt the robot and move its legs by hand, and writes a report. Sending that

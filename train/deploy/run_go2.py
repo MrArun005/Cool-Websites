@@ -138,7 +138,7 @@ def main():
                     "of delay 6/12 -> 2/12 falls with 20 ms; but with no delay 5 ms ahead makes 6/12 falls")
     ap.add_argument("--no-canter", dest="no_canter", action="store_true", default=None,
                     help="every canter request (plan, keyboard, pet, remote) runs as a trot; default on for the Lite3")
-    ap.add_argument("--allow-canter", dest="no_canter", action="store_false", help="let the brain canter (the default for both robots)")
+    ap.add_argument("--allow-canter", dest="no_canter", action="store_false", help="let the brain canter (default: Go2 on, Lite3 off)")
     ap.add_argument("--ramp", type=float, default=0.5, help="s to ease from the stance into the brain's targets at the start (0: none)")
     ap.add_argument("--margin", type=float, default=0.05)
     ap.add_argument("--damp-kd", type=float, default=2.0)
@@ -183,8 +183,8 @@ def main():
             _, r = msc.CheckMode()
 
     ctl = Go2Controller(a.brain, body=a.body)
-    if a.no_canter is None:   # off for both robots since the Lite3's gpu-1461M brain (PLAN.md 14 Nov: canter from a trot
-        a.no_canter = False   # on DEEP's model 0 falls of 48 at 10-19 ms and with 5% of steps missed); --no-canter turns it into a trot
+    if a.no_canter is None:   # Lite3: the canter runs as a trot unless --allow-canter. The 16,000-try sweep on DEEP's
+        a.no_canter = a.body == "lite3"   # model (PLAN.md 20 Nov): with 5% of steps missed 18 of its 23 falls were in the canter
     if a.no_canter:
         _command = ctl.command
         ctl.command = lambda name, *args, **kw: _command("trot" if name == "canter" else name, *args, **kw)

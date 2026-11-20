@@ -773,6 +773,35 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   The same seeds on the Lite3 (DEEP's model): 5% missed 1 fall of 100 (a trot), 10% missed 8 of 100 (4 canter, 3
   trot, 1 walk), the same with either transition. So the Lite3's real rate at 10% missed steps is about 8 in 100
   routines, worse than the 2 of 48 measured before; at 5% about 1 in 100. Simulation.
+- **20 Nov 03:15 UTC. First large sweeps (Kaggle CPU, 10.8 h each): the real fall rates.** 50 s plan (trot, canter,
+  trot, canter, walk, sit, lie, get-up, trot), the makers' models with the leg estimate, seeds 100000+, the code as
+  of 19 Nov 15:56 (before the sit -> lie change). Falls / tries, and the clip they fell in:
+
+  | Condition | Go2 torque-steer | Lite3 gpu-1461M |
+  |---|---|---|
+  | 0-6 ms | 0 / 2125 | 0 / 1775 |
+  | 10-19 ms | 0 / 2125 | 0 / 1775 |
+  | 5% of steps missed | 3 / 2125 (lie 3) | 23 / 1775 (canter 18, trot 5) |
+  | 10% missed | 15 / 2125 (lie 10, canter 3, walk 1, trot 1) | 147 / 1775 (canter 85, trot 53, walk 7, sit 2) |
+  | 5% missed with 10-19 ms | 1 / 2125 (canter) | 64 / 1775 (canter 48, trot 11, walk 5) |
+  | steering left 0.8, 10-19 ms | 16 / 2125 (trot 16) | 0 / 1775 |
+  | steering right 0.8, 10-19 ms | 0 / 2125 | 16 / 1775 (trot 16) |
+  | left 0.4, 5% missed | 2 / 2125 (lie 2) | 26 / 1775 (canter 17, trot 8, walk 1) |
+  | right 0.4, 5% missed | 4 / 2125 (lie 3, canter 1) | 26 / 1775 (canter 14, trot 10, walk 2) |
+  | all | 41 / 19,125 (0.21%) | 302 / 15,975 (1.9%) |
+
+  Reading. Go2: 18 of its 41 falls are the sit -> lie tip fixed on 19 Nov; 16 are a trot turning LEFT at 0.8 rad/s
+  with 10-19 ms delay (0.75%; right: 0), not seen in 48 tries; with no missed steps and no hard steering 0 of 4250.
+  Lite3: nothing falls without missed steps or hard steering (0 of 3550), but missed steps cost far more than the
+  48-try tests said (5%: 1.3%; 10%: 8.3%; 5% with long delay: 3.6%), and most of those falls are in the canter (18
+  of 23, 85 of 147, 48 of 64). A trot turning RIGHT at 0.8 with long delay falls 0.9%: the mirror of the Go2.
+  Decision: the Lite3's canter is a trot again by default (run_go2; I had switched it on on 14 Nov from 48 tries).
+  The 48-try results in this file and in the model cards understate rare falls; sweeps are the measure from now on.
+- **20 Nov 03:15 UTC. Kaggle lite3-dog-42..44 second pieces (45M CPU steps in all): the canter's right turn did not
+  move further.** Asked for -0.5 rad/s: -0.21 / -0.24 / -0.22 (first pieces -0.21 / -0.21 / -0.23; gpu-1461M -0.15);
+  1-2 falls of 24 at +1.0. This line is stopped. Now on Kaggle CPU (5 sessions): Go2 sweep on new seeds with the
+  sit -> lie change; Lite3 sweep on the same plan without the canter; steering sweeps for both robots (0.4 / 0.6 /
+  0.8 rad/s each way at 0-6, 6-10 and 10-19 ms) to set steering caps; Lite3 default sweep on new seeds. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
