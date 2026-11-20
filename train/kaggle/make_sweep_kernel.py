@@ -28,6 +28,12 @@ CONDITIONS = [   # name, extra lockstep_vendor flags
     ("right 0.4, 5% missed", ["--delay-ms", "3", "6", "--skip-p", "0.05", "--steer", "-0.4"]),
 ]
 
+STEER_SWEEP = [(f"{side} {abs(r)}, {lo}-{hi} ms", ["--delay-ms", str(lo), str(hi), "--steer", str(r)])
+               for side, sgn in (("left", 1), ("right", -1)) for r in (0.4 * sgn, 0.6 * sgn, 0.8 * sgn)
+               for lo, hi in ((0, 6), (6, 10), (10, 19))][:18]
+PRESETS = dict(default=CONDITIONS, steer=STEER_SWEEP)
+NO_CANTER = "trot:6,trot:8,trot:4,trot:6,walk:4,sit:5,lie:6,getup:6,trot:5"
+
 KERNEL = r'''
 import json, os, re, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
@@ -99,10 +105,12 @@ def main():
     ap.add_argument("--chunk", type=int, default=25, help="tries per piece (one piece = one condition)")
     ap.add_argument("--seed0", type=int, default=100000, help="first seed (48-try tests use 0-47)")
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--preset", choices=["default", "steer"], default="default", help="steer: left/right 0.4-0.8 rad/s x 3 delays")
+    ap.add_argument("--no-canter", action="store_true", help="the plan with a trot where the canters are")
     ap.add_argument("--max-rounds", type=int, default=0, help="stop after this many rounds (smoke tests)")
     ap.add_argument("-o", "--out", required=True)
     a = ap.parse_args()
-    cfg = dict(body=a.body, plan=PLAN[a.body], conditions=CONDITIONS, hours=a.hours, chunk=a.chunk, seed0=a.seed0,
+    cfg = dict(body=a.body, plan=NO_CANTER if a.no_canter else PLAN[a.body], conditions=PRESETS[a.preset], hours=a.hours, chunk=a.chunk, seed0=a.seed0,
                workers=a.workers, max_rounds=a.max_rounds, body_flags=["--dt", "0.001"] if a.body == "lite3" else [],
                repos=[(a.repo, a.branch, "bolt"),
                       ("https://github.com/unitreerobotics/unitree_mujoco", "1eb6642", "unitree_mujoco"),
