@@ -1,0 +1,19 @@
+{
+ "base": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+ "adapter": "/home/user/Cool-Websites/coder/runs/si/r2/best",
+ "heldout_loss": {
+  "all": 2.4695850461766176,
+  "file": 2.4421843160307466,
+  "fim": 2.429035028095055,
+  "commit": 2.532544244038515
+ },
+ "humaneval": {
+  "n": 164,
+  "pass@1": 0.5121951219512195
+ },
+ "mbpp": {
+  "n": 200,
+  "pass@1": 0.365
+ },
+ "seconds": 2535
+}

@@ -6,3 +6,13 @@
 23:29:34 round 1: exam
 00:17:11 round 1: HumanEval 54.3%, MBPP 34.0%, repo loss 2.5992 vs round 0: 56.7%, 28.0%, 2.9258 -> KEPT
 00:17:11 round 2: practice from /home/user/Cool-Websites/coder/runs/si/r1/best (k=4, temp=0.8)
+01:01:26 start: {'round': 1, 'adapter': '/home/user/Cool-Websites/coder/runs/si/r1/best', 'exam': '/home/user/Cool-Websites/coder/runs/si/round_1/exam.json', 'passes': 157, 'humaneval': 0.5426829268292683, 'mbpp': 0.34, 'repo_loss': 2.5992176014927857, 'kept': True, 'problems': 474, 'solved': 236, 'solve_rate': 0.4978902953586498, 'tries': 1896, 'solutions': 418, 'replay': 300}
+01:01:26 round 2: practice from /home/user/Cool-Websites/coder/runs/si/r1/best (k=4, temp=0.8)
+02:24:02 round 2: solved 263/474 practice problems (55.5%), 464 verified solutions + 300 replay
+02:24:02 round 2: learn
+03:30:09 start: {'round': 1, 'adapter': '/home/user/Cool-Websites/coder/runs/si/r1/best', 'exam': '/home/user/Cool-Websites/coder/runs/si/round_1/exam.json', 'passes': 157, 'humaneval': 0.5426829268292683, 'mbpp': 0.34, 'repo_loss': 2.5992176014927857, 'kept': True, 'problems': 474, 'solved': 236, 'solve_rate': 0.4978902953586498, 'tries': 1896, 'solutions': 418, 'replay': 300}
+03:30:30 round 2: solved 263/474 practice problems (55.5%), 464 verified solutions + 300 replay
+03:30:30 round 2: learn
+03:40:32 round 2: exam
+04:22:52 round 2: HumanEval 51.2%, MBPP 36.5%, repo loss 2.4696 vs round 1: 54.3%, 34.0%, 2.5992 -> KEPT
+04:22:52 round 3: practice from /home/user/Cool-Websites/coder/runs/si/r2/best (k=4, temp=0.8)

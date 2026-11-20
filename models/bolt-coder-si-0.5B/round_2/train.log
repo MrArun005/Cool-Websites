@@ -1,0 +1,63 @@
+start: step 0/48, 764 train / 104 eval examples, 48 steps/epoch, device cpu, args {"name": "r2", "base": "Qwen/Qwen2.5-Coder-0.5B-Instruct", "data": "/home/user/Cool-Websites/coder/runs/si/round_2/data", "runs": "/home/user/Cool-Websites/coder/runs/si", "epochs": 1.0, "max_steps": 0, "max_len": 1024, "bs": 2, "accum": 8, "lr": 0.0001, "warmup": 5, "rank": 16, "save_every": 5, "eval_every": 10, "limit": null, "eval_limit": null, "resume": null, "init": "/home/user/Cool-Websites/coder/runs/si/r1/best", "seed": 0, "fp32": false}
+eval: step 0 loss 2.5981 (start /home/user/Cool-Websites/coder/runs/si/r1/best)
+step 1/48 epoch 0.02 loss 1.3614 lr 4.00e-05 75 tok/s
+step 2/48 epoch 0.04 loss 1.7581 lr 5.97e-05 72 tok/s
+step 3/48 epoch 0.06 loss 2.1969 lr 7.92e-05 79 tok/s
+step 4/48 epoch 0.08 loss 0.9601 lr 9.83e-05 79 tok/s
+step 5/48 epoch 0.10 loss 1.9364 lr 9.73e-05 79 tok/s
+step 6/48 epoch 0.12 loss 1.6443 lr 9.62e-05 78 tok/s
+step 7/48 epoch 0.15 loss 1.8067 lr 9.48e-05 79 tok/s
+step 8/48 epoch 0.17 loss 1.8745 lr 9.33e-05 79 tok/s
+step 9/48 epoch 0.19 loss 1.5558 lr 9.16e-05 78 tok/s
+step 10/48 epoch 0.21 loss 1.9619 lr 8.97e-05 79 tok/s
+eval: step 10 loss 2.5488
+best: step 10 eval loss 2.5488
+step 11/48 epoch 0.23 loss 1.7969 lr 8.76e-05 67 tok/s
+step 12/48 epoch 0.25 loss 2.0816 lr 8.54e-05 68 tok/s
+step 13/48 epoch 0.27 loss 1.7103 lr 8.30e-05 68 tok/s
+step 14/48 epoch 0.29 loss 1.9043 lr 8.04e-05 68 tok/s
+step 15/48 epoch 0.31 loss 1.8358 lr 7.78e-05 69 tok/s
+step 16/48 epoch 0.33 loss 0.9495 lr 7.50e-05 69 tok/s
+step 17/48 epoch 0.35 loss 1.8762 lr 7.21e-05 70 tok/s
+step 18/48 epoch 0.38 loss 1.1931 lr 6.91e-05 70 tok/s
+step 19/48 epoch 0.40 loss 1.8692 lr 6.61e-05 70 tok/s
+step 20/48 epoch 0.42 loss 1.7267 lr 6.29e-05 72 tok/s
+eval: step 20 loss 2.5045
+best: step 20 eval loss 2.5045
+step 21/48 epoch 0.44 loss 2.0821 lr 5.98e-05 68 tok/s
+step 22/48 epoch 0.46 loss 1.4008 lr 5.65e-05 68 tok/s
+step 23/48 epoch 0.48 loss 1.7871 lr 5.33e-05 69 tok/s
+step 24/48 epoch 0.50 loss 1.4578 lr 5.00e-05 69 tok/s
+step 25/48 epoch 0.52 loss 1.9836 lr 4.67e-05 70 tok/s
+step 26/48 epoch 0.54 loss 1.6401 lr 4.35e-05 70 tok/s
+step 27/48 epoch 0.56 loss 0.5827 lr 4.02e-05 71 tok/s
+step 28/48 epoch 0.58 loss 2.3675 lr 3.71e-05 71 tok/s
+step 29/48 epoch 0.60 loss 1.7569 lr 3.39e-05 72 tok/s
+step 30/48 epoch 0.62 loss 1.6570 lr 3.09e-05 72 tok/s
+eval: step 30 loss 2.4799
+best: step 30 eval loss 2.4799
+step 31/48 epoch 0.65 loss 1.6078 lr 2.79e-05 70 tok/s
+step 32/48 epoch 0.67 loss 2.5252 lr 2.50e-05 71 tok/s
+step 33/48 epoch 0.69 loss 1.8685 lr 2.22e-05 72 tok/s
+step 34/48 epoch 0.71 loss 0.5168 lr 1.96e-05 72 tok/s
+step 35/48 epoch 0.73 loss 1.7180 lr 1.70e-05 73 tok/s
+step 36/48 epoch 0.75 loss 1.4330 lr 1.46e-05 73 tok/s
+step 37/48 epoch 0.77 loss 1.9796 lr 1.24e-05 73 tok/s
+step 38/48 epoch 0.79 loss 1.3537 lr 1.03e-05 74 tok/s
+step 39/48 epoch 0.81 loss 1.2865 lr 8.43e-06 74 tok/s
+step 40/48 epoch 0.83 loss 1.6099 lr 6.70e-06 74 tok/s
+eval: step 40 loss 2.4705
+best: step 40 eval loss 2.4705
+step 41/48 epoch 0.85 loss 1.8064 lr 5.16e-06 72 tok/s
+start: step 40/48, 764 train / 104 eval examples, 48 steps/epoch, device cpu, args {"name": "r2", "base": "Qwen/Qwen2.5-Coder-0.5B-Instruct", "data": "/home/user/Cool-Websites/coder/runs/si/round_2/data", "runs": "/home/user/Cool-Websites/coder/runs/si", "epochs": 1.0, "max_steps": 0, "max_len": 1024, "bs": 2, "accum": 8, "lr": 0.0001, "warmup": 5, "rank": 16, "save_every": 5, "eval_every": 10, "limit": null, "eval_limit": null, "resume": "/home/user/Cool-Websites/coder/runs/si/r2/checkpoints/step_40", "init": "/home/user/Cool-Websites/coder/runs/si/r1/best", "seed": 0, "fp32": false}
+step 41/48 epoch 0.85 loss 1.8058 lr 5.16e-06 114 tok/s
+step 42/48 epoch 0.88 loss 1.6392 lr 3.81e-06 128 tok/s
+step 43/48 epoch 0.90 loss 1.4548 lr 2.65e-06 125 tok/s
+step 44/48 epoch 0.92 loss 1.3853 lr 1.70e-06 122 tok/s
+step 45/48 epoch 0.94 loss 1.9392 lr 9.61e-07 120 tok/s
+step 46/48 epoch 0.96 loss 1.8861 lr 4.28e-07 119 tok/s
+step 47/48 epoch 0.98 loss 1.9943 lr 1.07e-07 120 tok/s
+step 48/48 epoch 1.00 loss 1.9458 lr 0.00e+00 121 tok/s
+eval: step 48 loss 2.4691
+best: step 48 eval loss 2.4691
+done: 48 steps, best eval loss 2.4691

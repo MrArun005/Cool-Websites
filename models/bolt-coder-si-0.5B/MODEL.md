@@ -4,7 +4,7 @@ Qwen/Qwen2.5-Coder-0.5B-Instruct that improved itself on CPU, by expert iteratio
 it tried 474 MBPP practice problems 4 times, a sandbox ran every try against the problem's tests, and it learned only
 from tries that passed (up to 2 per problem), mixed with 300 examples of this repo's own code. A round is kept only if
 HumanEval + MBPP exam passes do not drop and the repo held-out loss is not more than 2% worse.
-This adapter is round 1.
+This adapter is round 2.
 
 ## Rounds
 
@@ -15,6 +15,7 @@ token on 104 held-out examples from files and commits never trained on (lower is
 |---|---|---|---|---|---|---|---|
 | 0 | 56.7% | 28.0% | 149 | 2.926 | –/– | – | kept |
 | 1 | 54.3% | 34.0% | 157 | 2.599 | 236/474 | 418 | kept |
+| 2 | 51.2% | 36.5% | 157 | 2.470 | 263/474 | 464 | kept |
 
 Round 0 is the plain base model. Every round's tries (passed or not), training data, train log and exam are in
 round_<n>/.
