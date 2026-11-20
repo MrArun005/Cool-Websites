@@ -16,3 +16,8 @@
 03:40:32 round 2: exam
 04:22:52 round 2: HumanEval 51.2%, MBPP 36.5%, repo loss 2.4696 vs round 1: 54.3%, 34.0%, 2.5992 -> KEPT
 04:22:52 round 3: practice from /home/user/Cool-Websites/coder/runs/si/r2/best (k=4, temp=0.8)
+06:18:51 round 3: solved 255/474 practice problems (53.8%), 460 verified solutions + 300 replay
+06:18:51 round 3: learn
+07:28:18 round 3: exam
+08:22:43 round 3: HumanEval 51.2%, MBPP 36.5%, repo loss 2.4032 vs round 2: 51.2%, 36.5%, 2.4696 -> KEPT
+08:22:43 done: best round 3 adapter /home/user/Cool-Websites/coder/runs/si/r3/best

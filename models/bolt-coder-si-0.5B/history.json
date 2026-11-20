@@ -40,5 +40,21 @@
   "tries": 1896,
   "solutions": 464,
   "replay": 300
+ },
+ {
+  "round": 3,
+  "adapter": "/home/user/Cool-Websites/coder/runs/si/r3/best",
+  "exam": "/home/user/Cool-Websites/coder/runs/si/round_3/exam.json",
+  "passes": 157,
+  "humaneval": 0.5121951219512195,
+  "mbpp": 0.365,
+  "repo_loss": 2.4032375632250047,
+  "kept": true,
+  "problems": 474,
+  "solved": 255,
+  "solve_rate": 0.5379746835443038,
+  "tries": 1896,
+  "solutions": 460,
+  "replay": 300
  }
 ]
