@@ -802,6 +802,28 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   1-2 falls of 24 at +1.0. This line is stopped. Now on Kaggle CPU (5 sessions): Go2 sweep on new seeds with the
   sit -> lie change; Lite3 sweep on the same plan without the canter; steering sweeps for both robots (0.4 / 0.6 /
   0.8 rad/s each way at 0-6, 6-10 and 10-19 ms) to set steering caps; Lite3 default sweep on new seeds. Simulation.
+- **20 Nov 14:20 UTC. Sweep round 2 (seeds 200000+, Kaggle CPU, ~85,000 tries): the Go2's fix holds; steering limits
+  set; the Lite3's weak point is the trot with missed steps.**
+  Go2 with the sit -> lie change, 2,175 tries per condition: 0-6 ms 0; 10-19 ms 0; 5% missed 0 (round 1: 3); 10%
+  missed 0 (15); 5% missed with 10-19 ms 0 (1); left 0.4 / right 0.4 with 5% missed 0 / 0 (2 / 4); right 0.8 at
+  10-19 ms 0; left 0.8 at 10-19 ms 20. Go2 steering sweep, 1,075 tries each: left and right 0.4 / 0.6 / 0.8 at 0-6,
+  6-10 and 10-19 ms: 0 falls in 17 of 18 conditions, 13 falls for left 0.8 at 10-19 ms. So the Go2's only falls
+  in ~39,000 tries are a hard left turn under long delay.
+  Lite3 (gpu-1461M), default plan, 1,500 each: 0-6 ms 0; 10-19 ms 0; 5% missed 21 (canter 14, trot 4, walk 3); 10%
+  missed 133; 5% missed with 10-19 ms 42 (canter 35); left 0.8 / right 0.8 at 10-19 ms 1 / 6; left 0.4 / right 0.4
+  with 5% missed 34 / 16. The same plan with a trot where the canters are, 1,825 each: 0 / 0; 5% missed 19 (trot
+  18); 10% missed 127 (trot 122); 5% missed with 10-19 ms 10; left / right 0.8 at 10-19 ms 0 / 8; left / right 0.4
+  with 5% missed 14 / 23. So taking the canter out helps with long delay (42 -> 10 per 1,500-1,825) but not with
+  missed steps alone: the trot then takes the falls (about 1% of routines at 5% missed, 7% at 10%).
+  Lite3 steering sweep, 850 each: left 0.4 / 0.6: 0 of 5,100; left 0.8: 1 of 2,550; right 0.4: 0 of 2,550; right
+  0.6: 1 of 2,550; right 0.8: 11 of 2,550 (at every delay).
+  Steering limits now in controller.py (BOLT_STEER_CAPS=0 turns them off): Go2 left 0.6 rad/s (right uncapped);
+  Lite3 left 0.6, right 0.4, canter left only. A known Go2 fall seed (200116, left 0.8 at 10-19 ms) passes with
+  the limit. Goldens unchanged.
+  Also seen, 3 tries: on Unitree's scene with its bumps and staircase left in (--stairs) the Go2 fell in 2 of 3
+  trots. The brains were trained on a flat floor. A terrain sweep is running to measure it.
+  Running (seeds 300000+): Go2 default with the limits; Lite3 no-canter with the limits; both robots at the limits
+  preset (15% and 20% missed, 10% missed with 10-19 ms, steering at the caps with missed steps); Go2 terrain.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg

@@ -69,12 +69,15 @@ a penalty on joint speed above rated, after live runs showed the earlier brains 
 | Canter | in the routine above | from a trot 48 / 48 at 10-19 ms; in the sweep it is where the Lite3 falls with missed steps, so it runs as a trot by default; turns left only |
 | On the real robot | **not run** | **not run** |
 
-**Large sweeps (20 Nov; about 19,000 Go2 and 16,000 Lite3 tries of a 50 s plan, simulation):** with commands up to
-19 ms late and no missed control steps, neither robot fell in 4,250 and 3,550 tries. With 5% of control steps missed
-the Go2 fell 3 times in 2,125 (a tip-over when lying down from a sit, since fixed in the robot program) and the Lite3
-23 in 1,775, 18 of them in its canter, which therefore runs as a trot by default. With 10% missed the Go2 fell 15
-in 2,125 and the Lite3 147 in 1,775. A hard turn (0.8 rad/s) with 10-19 ms delay falls about 1 time in 130 to one
-side on each robot (Go2 left, Lite3 right). The 48-try rows in the table above cannot see falls this rare.
+**Large sweeps (20 Nov; about 120,000 tries of a 50 s plan on the makers' models, simulation):** with commands up
+to 19 ms late and no missed control steps, neither robot fell in over 15,000 tries. Go2: a tip-over when lying down
+from a sit (18 falls in 19,000 tries) was traced and fixed in the robot program, and after that it did not fall in
+8,700 tries with 5% or 10% of control steps missed; its only remaining falls were a hard left turn (0.8 rad/s) with
+10-19 ms delay, about 1 in 100, so the robot program now limits left turns to 0.6 rad/s (0 falls in 3,225 tries).
+Lite3: with 5% of control steps missed it falls in about 1 routine in 100 and with 10% in about 7 in 100, mostly in
+the trot (its canter is worse and runs as a trot by default); right turns are limited to 0.4 rad/s. Uneven ground
+is not handled yet: the brains were trained on a flat floor. The 48-try rows in the table above cannot see falls
+this rare.
 
 **Have a Go2 EDU?** The first step needs no motion at all: `python deploy/first_run.py --iface <eth> --domain 0`
 listens for five minutes while you tilt the robot and move its legs by hand, and writes a report. Sending that
