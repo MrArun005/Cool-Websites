@@ -1,0 +1,19 @@
+{
+ "base": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+ "adapter": null,
+ "heldout_loss": {
+  "all": 2.925807477420729,
+  "file": 2.9220291687536024,
+  "fim": 2.90259850725926,
+  "commit": 2.9385511715853263
+ },
+ "humaneval": {
+  "n": 164,
+  "pass@1": 0.5670731707317073
+ },
+ "mbpp": {
+  "n": 200,
+  "pass@1": 0.28
+ },
+ "seconds": 1269
+}

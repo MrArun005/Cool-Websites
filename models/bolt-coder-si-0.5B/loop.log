@@ -1,0 +1,8 @@
+20:09:04 round 0: exam of the start model base
+20:30:19 start: {'round': 0, 'adapter': 'base', 'exam': '/home/user/Cool-Websites/coder/runs/si/round_0/exam.json', 'passes': 149, 'humaneval': 0.5670731707317073, 'mbpp': 0.28, 'repo_loss': 2.925807477420729, 'kept': True}
+20:30:19 round 1: practice from base (k=4, temp=0.8)
+22:15:54 round 1: solved 236/474 practice problems (49.8%), 418 verified solutions + 300 replay
+22:15:54 round 1: learn
+23:29:34 round 1: exam
+00:17:11 round 1: HumanEval 54.3%, MBPP 34.0%, repo loss 2.5992 vs round 0: 56.7%, 28.0%, 2.9258 -> KEPT
+00:17:11 round 2: practice from /home/user/Cool-Websites/coder/runs/si/r1/best (k=4, temp=0.8)

@@ -1,0 +1,28 @@
+[
+ {
+  "round": 0,
+  "adapter": "base",
+  "exam": "/home/user/Cool-Websites/coder/runs/si/round_0/exam.json",
+  "passes": 149,
+  "humaneval": 0.5670731707317073,
+  "mbpp": 0.28,
+  "repo_loss": 2.925807477420729,
+  "kept": true
+ },
+ {
+  "round": 1,
+  "adapter": "/home/user/Cool-Websites/coder/runs/si/r1/best",
+  "exam": "/home/user/Cool-Websites/coder/runs/si/round_1/exam.json",
+  "passes": 157,
+  "humaneval": 0.5426829268292683,
+  "mbpp": 0.34,
+  "repo_loss": 2.5992176014927857,
+  "kept": true,
+  "problems": 474,
+  "solved": 236,
+  "solve_rate": 0.4978902953586498,
+  "tries": 1896,
+  "solutions": 418,
+  "replay": 300
+ }
+]
