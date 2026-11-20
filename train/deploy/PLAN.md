@@ -824,6 +824,16 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   trots. The brains were trained on a flat floor. A terrain sweep is running to measure it.
   Running (seeds 300000+): Go2 default with the limits; Lite3 no-canter with the limits; both robots at the limits
   preset (15% and 20% missed, 10% missed with 10-19 ms, steering at the caps with missed steps); Go2 terrain.
+- **20 Nov 15:40 UTC. The Lite3's trot falls with missed steps: what they look like, two causes ruled out.**
+  Traced seeds 200140 and 200222 (no-canter plan, 5% missed, both fell in the trot): the robot trots straight with
+  no steering command, starts to spin (yaw rate up to 2.4 rad/s), the feet slip (the leg estimate of forward speed
+  jumps to -1.0 m/s while the true speed is +0.3), it drifts backwards and tips over within about 0.6 s. Both had 6
+  missed steps in the 1.2 s before the fall, twice the average, so the falls come from bursts of missed steps.
+  Ruled out: (1) the 10%-dropped-steps GPU brain (`bolt-lite3-gpu-hist3`, rejected on 18 Nov on 48 tries): same 200
+  seeds, no-canter plan, 10% missed: 13 falls against gpu-1461M's 16, the same within chance. (2) Foot grip: DEEP's
+  Lite3.xml and our training model have the same foot and floor friction (1.0, condim 3, pyramidal cone). The
+  difference left is the integrator (DEEP's Euler, ours implicitfast). Note: a 200-try sweep takes 4 minutes on this
+  session's 4 cores, so quick A/B checks no longer need Kaggle. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
