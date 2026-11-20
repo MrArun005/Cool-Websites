@@ -832,7 +832,8 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   Ruled out: (1) the 10%-dropped-steps GPU brain (`bolt-lite3-gpu-hist3`, rejected on 18 Nov on 48 tries): same 200
   seeds, no-canter plan, 10% missed: 13 falls against gpu-1461M's 16, the same within chance. (2) Foot grip: DEEP's
   Lite3.xml and our training model have the same foot and floor friction (1.0, condim 3, pyramidal cone). The
-  difference left is the integrator (DEEP's Euler, ours implicitfast). Note: a 200-try sweep takes 4 minutes on this
+  difference left was the integrator (DEEP's Euler, ours implicitfast): (3) ruled out too, the same 200 seeds
+  with implicitfast 16 falls, with RK4 15 (Euler 16). So it is the brain's own weakness, not a model artefact. Note: a 200-try sweep takes 4 minutes on this
   session's 4 cores, so quick A/B checks no longer need Kaggle. Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
