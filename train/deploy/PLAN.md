@@ -855,6 +855,16 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   start on it, only the paws touch it; the Go2's 1 mm paw margin is dropped because MJX has none for sphere-hfield).
   Next: a Go2 run from torque-steer with a 0 -> 2 -> 4 -> 6 cm curriculum, everything else as torque-steer was
   trained, judged on the bars sweep AND a default sweep (it must keep 0.02%). Simulation.
+- **21 Nov 15:50 UTC. Go2 terrain GPU run v2: it trained on bumps, and it is WORSE on bars. Not adopted.** Kaggle
+  bolt-go2-terrain v2 (from torque-steer, 6 h): 0 cm 9.7M steps at 6.1k steps/s, then 2 cm 26.5M and 4 cm 36.4M at
+  3.7k steps/s (the height field halves MJX's speed); 6 cm not reached (72.6M steps in all; fell 0.00-0.02 in training).
+  Unitree's go2.xml, lockstep --estimate, plan "trot:8,walk:4", 100 tries, seeds 50000+, same for both:
+  flat 0 / 0 (torque-steer / terrain brain); bars 3 cm 4 / **23**; 5 cm 17 / **30**; 8 cm 84 / 77.
+  Why, most likely: in MJX only the paws touch the field (sphere-hfield; the Go2's calves are cylinders, which MJX
+  cannot collide with much), and the field is random 10 cm cells up to 4 cm, noise rather than edges. The brain never
+  had a shin catch on a ledge; what it learned on noise does not carry to a bar. Not checked: which geom hits the bar
+  in the falls. GPU this week: ~19 of 30 h. No more GPU on terrain until the training ground has edges the legs can
+  hit (bars or steps with capsule shins), or the CPU Lite3 runs (every geom touches the field) show the field helps.
 - **21 Nov 12:55 UTC. Sweep round 4: obstacles (two bars across the path) and a Go2 default sweep (~380,000 tries).**
   Kaggle CPU, 5 kernels x 10.8 h, lockstep_vendor --estimate --bar-cm H on the makers' models, plans "trot:8,walk:4"
   and "walk:12,trot:2", each with and without 5% missed steps. Falls / tries (no missed steps; with 5% missed):
