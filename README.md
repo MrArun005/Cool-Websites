@@ -76,9 +76,11 @@ from a sit (18 falls in 19,000 tries) was traced and fixed in the robot program,
 10-19 ms delay, about 1 in 100, so the robot program now limits left turns to 0.6 rad/s (0 falls in 3,225 tries).
 Lite3: with 5% of control steps missed it falls in about 1 routine in 100 and with 10% in about 7 in 100, mostly in
 the trot (its canter is worse and runs as a trot by default); right turns are limited to 0.4 rad/s. Uneven ground
-is not handled yet: the brains were trained on a flat floor, and two 8 cm bars across the path knock either
-robot over most of the time (3 cm bars almost never). The 48-try rows in the table above cannot see falls
-this rare.
+is not handled yet: the brains were trained on a flat floor. Two bars across the path (21 Nov, about 380,000
+tries, trot / walk, no missed steps): at 2 cm the Go2 falls 0% / 1.7%, the Lite3 0% / 0%; at 3 cm the Go2 2.1% /
+7.9%, the Lite3 0.8% / 0.7%; at 4 cm 15-60%; at 6-8 cm most tries. So both are safe only up to about 2 cm (a
+door sill, a cable). Training on rough ground has started for both (Go2 on the GPU, Lite3 on CPU). The 48-try
+rows in the table above cannot see falls this rare.
 
 **Have a Go2 EDU?** The first step needs no motion at all: `python deploy/first_run.py --iface <eth> --domain 0`
 listens for five minutes while you tilt the robot and move its legs by hand, and writes a report. Sending that

@@ -855,6 +855,27 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   start on it, only the paws touch it; the Go2's 1 mm paw margin is dropped because MJX has none for sphere-hfield).
   Next: a Go2 run from torque-steer with a 0 -> 2 -> 4 -> 6 cm curriculum, everything else as torque-steer was
   trained, judged on the bars sweep AND a default sweep (it must keep 0.02%). Simulation.
+- **21 Nov 12:55 UTC. Sweep round 4: obstacles (two bars across the path) and a Go2 default sweep (~380,000 tries).**
+  Kaggle CPU, 5 kernels x 10.8 h, lockstep_vendor --estimate --bar-cm H on the makers' models, plans "trot:8,walk:4"
+  and "walk:12,trot:2", each with and without 5% missed steps. Falls / tries (no missed steps; with 5% missed):
+  | bars | Go2 trot | Go2 walk | Lite3 trot | Lite3 walk |
+  |---|---|---|---|---|
+  | 2 cm | 0/9175 (0/9175) | 1.7% (6.0%) | 0/10300 (0.3%) | 0/5425 (0.2%) |
+  | 3 cm | 2.1% (8.2%) | 7.9% (14.6%) | 0.8% (3.4%) | 0.7% (2.1%) |
+  | 4 cm | 18.6% (31.8%) | 62.5% (49.0%) | 15.0% (20.4%) | 16.4% (20.2%) |
+  | 5 cm | 51.3% (63.4%) | 77.8% (67.1%) | 46.4% (50.0%) | 32.3% (43.4%) |
+  | 6 cm | 79.8% (80.5%) | 54.4% (69.5%) | 76.3% (78.3%) | 48.6% (52.6%) |
+  | 8 cm | 83.7% (85.4%) | 30.2% (61.4%) | 88.5% (90.5%) | 61.8% (64.4%) |
+  Highest bar with < 1% falls: Go2 trot 2 cm, Go2 walk none tested (2 cm: 1.7%), Lite3 trot and walk 3 cm. The Go2's
+  walk does worse than its trot on low bars (its walk lifts the paws less); the Go2 walk's falls DROP from 5 to 8 cm
+  (77.8% -> 30.2%): probably a high bar stops it rather than trips it (not checked). Falls are in the gait on the bars.
+  Go2 default sweep, seeds 700000+ (torque-steer, steering limit): 11 / 25,425 (0.04%): 10% missed 7/2825 (canter 4),
+  5% missed + 10-19 ms 1, right 0.4 + 5% missed 2, left 0.4 + 5% missed 1, the rest 0. With round 3: 16 / 46,350.
+  Next (pushed 12:56 UTC, Kaggle CPU, ~10.6 h): the CPU trainer now takes rough ground for a real robot
+  (train_imitate --terrain-cm; bolt_env.robot_terrain_xml, every robot geom meets the field on CPU). The Lite3 brain on
+  the random field, 6 s trot, 20 tries: 0 cm, 2 cm, 4 cm 0 falls; 6 cm 4 falls (tracking 0.52). Jobs lite3-dog-45..49
+  from gpu-1461M (walk/trot drawn 2-3x so ~1/3 of tries are on the field): 6 cm; 8 cm; 6 cm + 10% missed steps;
+  6 cm at 3x learning rate; 4 cm. Judge on the bars sweep and the default sweep (must keep its flat results).
 - **21 Nov 08:30 UTC. The first Go2 terrain GPU run trained no terrain: my sizing error.** Kaggle bolt-go2-terrain v1
   ran 6 h (6.25 GPU h) but did 150M steps at 6.9k steps/s (2x T4, history 3 + privileged critic: this is the normal
   rate for this recipe, not a slowdown). The curriculum is set as fractions of --steps, and --steps was 2B, so the first
