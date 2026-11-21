@@ -46,7 +46,9 @@ TERRAIN = [   # Unitree's scene with its bumps and staircase left in (lockstep_v
     ("bumps, 5% missed", ["--stairs", "--delay-ms", "3", "6", "--skip-p", "0.05"]),
     ("flat, 0-6 ms (control)", ["--delay-ms", "0", "6"]),
 ]
-PRESETS = dict(default=CONDITIONS, steer=STEER_SWEEP, limits=LIMITS, terrain=TERRAIN)
+BARS = [(f"bars {h} cm{', ' + tag if tag else ''}", ["--bar-cm", str(h)] + extra)   # two bars across the path
+        for h in (2, 3, 4, 5, 6, 8) for tag, extra in (("", ["--delay-ms", "0", "6"]), ("5% missed", ["--delay-ms", "3", "6", "--skip-p", "0.05"]))]
+PRESETS = dict(default=CONDITIONS, steer=STEER_SWEEP, limits=LIMITS, terrain=TERRAIN, bars=BARS)
 NO_CANTER = "trot:6,trot:8,trot:4,trot:6,walk:4,sit:5,lie:6,getup:6,trot:5"
 
 KERNEL = r'''

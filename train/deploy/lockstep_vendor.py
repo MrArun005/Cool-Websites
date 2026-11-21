@@ -22,6 +22,16 @@ from pathlib import Path
 import mujoco
 
 
+def keep_bumps(m, top=0.1):
+    """Unitree's scene with only its two 8 cm bars (1.2 and 1.6 m ahead) kept and the staircase switched off: a blind
+    brain is not meant to climb stairs, but a robot at home meets sills and cables."""
+    for g in range(m.ngeom):
+        if m.geom_bodyid[g] == 0 and m.geom_type[g] != mujoco.mjtGeom.mjGEOM_PLANE and m.geom_pos[g][2] + m.geom_size[g][2] > top:
+            m.geom_contype[g] = m.geom_conaffinity[g] = 0
+            m.geom_rgba[g][3] = 0.0
+    return m
+
+
 def flatten(m):
     """Unitree's go2 scene has two 8 cm bumps and a staircase 1.2-3.4 m ahead; our brains are trained on flat floor:
     switch every world geom but the floor plane off (no contact, invisible)."""
@@ -132,6 +142,8 @@ def main():
     ap.add_argument("--tries", type=int, default=5)
     ap.add_argument("--predict-ms", type=float, default=0.0, help="latency compensation: the brain sees the state this many ms ahead")
     ap.add_argument("--walk-down", type=float, default=0.0, help="s of walk between trot/pace/canter and sit/lie (0: off)")
+    ap.add_argument("--bar-cm", type=float, default=0.0, help="two bars this high across the path, 1.2 and 1.6 m ahead (0: none)")
+    ap.add_argument("--bumps", action="store_true", help="keep only the scene's two 8 cm bars (no staircase)")
     ap.add_argument("--stairs", action="store_true", help="keep the scene's bumps and staircase (default: flat floor)")
     ap.add_argument("--delay-ms", type=float, nargs=2, default=[0.0, 0.0], help="per step, the targets arrive U(lo, hi) ms late (< 20)")
     ap.add_argument("--seed0", type=int, default=0, help="first seed (tries use seed0 .. seed0 + tries - 1): for large sweeps in pieces")
@@ -154,12 +166,28 @@ def main():
         m.actuator_gainprm[:, 0], m.actuator_biasprm[:, :3] = 1.0, 0.0
         m.actuator_ctrlrange[:] = m.actuator_forcerange
     else:
-        m = mujoco.MjModel.from_xml_path(str(xml))
+        if a.bar_cm:   # two bars across the path, as Unitree's scene has (8 cm), at a chosen height, on either robot
+            spec = mujoco.MjSpec.from_file(str(xml))
+            for x in (1.2, 1.6):
+                g = spec.worldbody.add_geom()
+                g.type, g.size, g.pos = mujoco.mjtGeom.mjGEOM_BOX, [0.1, 2.0, a.bar_cm / 200.0], [x, 0.0, a.bar_cm / 200.0]
+                g.name = f"bar_{x}"
+            m = spec.compile()
+        else:
+            m = mujoco.MjModel.from_xml_path(str(xml))
     m.opt.timestep = a.dt
     if os.environ.get("LOCKSTEP_INTEGRATOR"):   # diagnosis: 0 Euler (DEEP's), 3 implicitfast (our training model's)
         m.opt.integrator = int(os.environ["LOCKSTEP_INTEGRATOR"])
-    if not a.stairs:
+    if a.bumps:
+        keep_bumps(m)
+    elif not a.stairs:
         flatten(m)
+    if a.bar_cm:   # flatten switched every extra world geom off: switch the bars back on (they collide like the floor)
+        fl = [g for g in range(m.ngeom) if m.geom_bodyid[g] == 0 and m.geom_type[g] == mujoco.mjtGeom.mjGEOM_PLANE][0]
+        for g in range(m.ngeom):
+            if (mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_GEOM, g) or "").startswith("bar_"):
+                m.geom_contype[g], m.geom_conaffinity[g] = m.geom_contype[fl], m.geom_conaffinity[fl]
+                m.geom_friction[g], m.geom_rgba[g] = m.geom_friction[fl], [0.6, 0.5, 0.4, 1.0]
     if a.damping is not None:
         m.dof_damping[6:] = a.damping
     ctl = Go2Controller(a.brain, body=a.body, walk_down=a.walk_down)
