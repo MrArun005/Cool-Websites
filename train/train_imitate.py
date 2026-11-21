@@ -145,6 +145,8 @@ def main():
                     "(a missed control step; ImitateEnv DROP_P)")
     ap.add_argument("--history", type=int, default=0, help="the brain also reads its last K steps of gravity, gyro, joints and "
                     "previous action (imitate_env.HistoryEnv; a blind brain needs it to know its speed, PLAN.md 10 Nov)")
+    ap.add_argument("--terrain-cm", type=float, default=0.0, help="walk and trot tries start on the rough field (bolt_env "
+                    "TERRAIN: random heights up to this many cm per 10 cm cell; ImitateEnv terrain_cm; 0: flat floor only)")
     ap.add_argument("--blind-vel", action="store_true", help="zero the body-velocity inputs in training and exams (a real "
                     "robot has no velocity sensor); for a brain made blind by distill_blind.py, or from scratch")
     args = ap.parse_args()
@@ -177,7 +179,8 @@ def main():
         steer_share=args.steer_share, steer_change=args.steer_change, steer_weight=args.steer_weight,
         **({"latency_ms": tuple(args.latency_ms)} if args.latency_ms[1] > 0 else {}),
         **({"moving_rate": args.moving_rate} if args.moving_rate else {}),
-        **({"overspeed_weight": args.overspeed_weight} if args.overspeed_weight else {})))
+        **({"overspeed_weight": args.overspeed_weight} if args.overspeed_weight else {}),
+        **({"terrain_cm": args.terrain_cm} if args.terrain_cm else {})))
     if args.init_from and not args.resume:
         src = Path(args.init_from)
         venv = VecNormalize.load(str(src / "vecnormalize.pkl"), venv)

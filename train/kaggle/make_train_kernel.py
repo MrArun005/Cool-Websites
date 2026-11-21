@@ -562,6 +562,47 @@ JOBS = {
               "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "1e-5", "--target-kl", "0.01",
               "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.05"],
         finals=[]),
+    "lite3-dog-45": dict(
+        # 21 Nov: 8 cm bars across the path knock the Lite3 over (sweep round 4: 3 cm trot 0.8%, 4 cm 15%, 6 cm 76%);
+        # it has only known flat floor. walk/trot drawn 2-3x (they start on the field). the gpu-1461M recipe (as lite3-dog-44) on the rough field, 6 cm.
+        name="lite3dog45", script="train_imitate.py", start="../models/bolt-lite3-dog-gpu-1461M-sb3",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "walk", "trot", "trot", "trot", "pace", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.05", "--terrain-cm", "6"],
+        finals=[]),
+    "lite3-dog-46": dict(
+        # 21 Nov: as 45 at 8 cm.
+        name="lite3dog46", script="train_imitate.py", start="../models/bolt-lite3-dog-gpu-1461M-sb3",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "walk", "trot", "trot", "trot", "pace", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.05", "--terrain-cm", "8"],
+        finals=[]),
+    "lite3-dog-47": dict(
+        # 21 Nov: as 45 with 10 in 100 steps missed (the trot's other open problem).
+        name="lite3dog47", script="train_imitate.py", start="../models/bolt-lite3-dog-gpu-1461M-sb3",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "walk", "trot", "trot", "trot", "pace", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.10", "--terrain-cm", "6"],
+        finals=[]),
+    "lite3-dog-48": dict(
+        # 21 Nov: as 45 with a 3x learning rate.
+        name="lite3dog48", script="train_imitate.py", start="../models/bolt-lite3-dog-gpu-1461M-sb3",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "walk", "trot", "trot", "trot", "pace", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "3e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.05", "--terrain-cm", "6"],
+        finals=[]),
+    "lite3-dog-49": dict(
+        # 21 Nov: as 45 at 4 cm.
+        name="lite3dog49", script="train_imitate.py", start="../models/bolt-lite3-dog-gpu-1461M-sb3",
+        args=["--body", "lite3", "--blind-vel", "--history", "3", "--clips", "walk", "walk", "trot", "trot", "trot", "pace", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
+              "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.05", "--terrain-cm", "4"],
+        finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
         # 0.22 m): selfright goal, from scratch, tough falls, 0-40 ms delay. Win: righted from side and back >= 0.5.

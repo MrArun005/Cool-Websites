@@ -230,6 +230,17 @@ def terrain_xml(xml, cm, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN[
     return xml[:i] + "  " + geom + "\n  " + xml[i:]
 
 
+def robot_terrain_xml(xml, cm, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN["at"], base=TERRAIN["base"]):
+    """A real robot's model (robot_bodies Body.xml()) with the height field (cm high) added, as mjx_imitate.robot_terrain_xml;
+    the heights are set from terrain_field after loading. The geom keeps the default contacts (type 1, affinity 1)."""
+    n = int(round(2 * half / cell)) + 1
+    asset = f'<hfield name="terrain" nrow="{n}" ncol="{n}" size="{half} {half} {cm / 100.0} {base}"/>'
+    xml = xml.replace("<asset>", "<asset>\n    " + asset, 1)
+    geom = f'<geom name="terrain" type="hfield" hfield="terrain" pos="{at[0]} {at[1]} 0" rgba="0.55 0.5 0.42 1"/>'
+    i = xml.rindex("</worldbody>")
+    return xml[:i] + "  " + geom + "\n  " + xml[i:]
+
+
 def terrain_height(field, cm, x, y, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN["at"]):
     """Ground height (m) at (x, y): bilinear in the field's cells, 0 off the field. Works on numpy and JAX arrays
     (xp: the array module of field)."""
@@ -320,11 +331,14 @@ class BoltEnv(gym.Env):
         # (stand/sit/lie/walk rewards, poses, gaits) are Bolt's.
         self.body = body or os.environ.get("BOLT_BODY", "bolt")
         if self.body != "bolt":
-            assert scale == 1.0 and not terrain_cm > 0, "real-robot bodies have no scaling or terrain yet"
+            assert scale == 1.0, "real-robot bodies have no scaling"
+            assert not (terrain_cm > 0 and hurdles), "terrain or hurdles, not both"
             import robot_bodies
             import weakref
             self.robot = robot_bodies.get(self.body)
             xml = self.robot.xml()
+            if terrain_cm > 0:   # 21 Nov: the same height field as Bolt's beside the floor (the GPU trainer's robot_terrain_xml);
+                xml = robot_terrain_xml(xml, terrain_cm)   # on CPU every robot geom meets it, as it meets the floor
             if hurdles == "real":   # hurdle.py's agility hurdle (stands before the floor, the loose bar after the robot)
                 import hurdle
                 xml = hurdle.world_xml(xml, n=1)
