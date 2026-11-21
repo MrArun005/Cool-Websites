@@ -117,6 +117,17 @@ def terrain_xml(xml, cm, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN[
     return xml[:i] + "  " + geom + "\n  " + xml[i:]
 
 
+def robot_terrain_xml(xml, cm, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN["at"], base=TERRAIN["base"]):
+    """terrain_xml for a real-robot body (robot_bodies.Body.xml()): the same height field and spot; contacts are set
+    after body_contacts (paws only: contype bit 4)."""
+    n = int(round(2 * half / cell)) + 1
+    asset = f'<hfield name="terrain" nrow="{n}" ncol="{n}" size="{half} {half} {cm / 100.0} {base}"/>'
+    xml = xml.replace("<asset>", "<asset>\n    " + asset, 1)
+    geom = f'<geom name="terrain" type="hfield" hfield="terrain" pos="{at[0]} {at[1]} 0" rgba="0.55 0.5 0.42 1"/>'
+    i = xml.rindex("</worldbody>")
+    return xml[:i] + "  " + geom + "\n  " + xml[i:]
+
+
 def terrain_height(field, cm, x, y, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN["at"]):
     """Ground height (m) at (x, y): bilinear in the field's cells, 0 off the field (JAX)."""
     n = field.shape[0]
@@ -332,12 +343,22 @@ class MjxImitate:
             xml = collisions(xml)
             self.m = m = mujoco.MjModel.from_xml_string(xml)
         else:
-            assert not terrain_cm > 0 and not landing_rate, "terrain and landing starts are Bolt's (as imitate_env)"
+            assert not landing_rate, "landing starts are Bolt's (as imitate_env)"
             import robot_bodies   # (only for a real-robot body: older kernels lack the file)
             r = self.robot = robot_bodies.Body(self.body)
             if joint_damping is not None:   # as train_imitate.py --joint-damping (BOLT_JOINT_DAMPING)
                 r.joint_damping = float(joint_damping)
-            self.m = m = body_contacts(mujoco.MjModel.from_xml_string(r.xml()), r)
+            xml = r.xml()
+            if terrain_cm > 0:   # rough terrain beside the floor, as Bolt's (terrain_xml), for a real robot too (20 Nov: the
+                xml = robot_terrain_xml(xml, terrain_cm)   # Go2 fell crossing 8 cm bars 86 of 100 times; it had only known flat floor)
+            self.m = m = body_contacts(mujoco.MjModel.from_xml_string(xml), r)
+            if terrain_cm > 0:   # only the four paws (spheres: sphere-hfield) touch the bumps, as Bolt's paws and shins
+                for leg in ("FL", "FR", "RL", "RR"):   # MJX has no margin for sphere-hfield: the Go2's 1 mm paw margin goes
+                    f = m.geom(f"{leg}_foot").id   # (it only widens when a contact is detected; the floor's is 0)
+                    m.geom_contype[f] |= 4
+                    m.geom_margin[f], m.geom_gap[f] = 0.0, 0.0
+                t = m.geom("terrain").id
+                m.geom_contype[t], m.geom_conaffinity[t] = 0, 4
             prefix, dog = r.clip_prefix, r.stance
             self.floor_ok_h, self.lost_h, self.poses = float(r.floor_ok), float(r.lost), r.pose_ok
             # per joint arrays (robot_bodies.Body.motor), as bolt_env.physics for this body; brake capped at each joint's torque

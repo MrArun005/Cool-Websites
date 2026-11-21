@@ -130,7 +130,7 @@ def main():
         else:   # a real robot: its table entry's model (and licence, kept next to it) and its retargeted clips
             from robot_bodies import BODIES
             assert args.body in BODIES, f"unknown body {args.body!r}: bolt or one of {sorted(BODIES)}"
-            assert not args.landing_rate and not any(args.terrain_cm or []), "landing starts and terrain are Bolt's"
+            assert not args.landing_rate, "landing starts are Bolt's"
             model = Path(BODIES[args.body]["xml"])
             files = {n: enc(HERE / n) for n in ("mjx_imitate.py", "pose_reached.py", "robot_bodies.py", str(model), str(model.parent / "LICENSE"))}
             prefix = BODIES[args.body]["clip_prefix"]

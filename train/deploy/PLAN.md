@@ -835,6 +835,26 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   difference left was the integrator (DEEP's Euler, ours implicitfast): (3) ruled out too, the same 200 seeds
   with implicitfast 16 falls, with RK4 15 (Euler 16). So it is the brain's own weakness, not a model artefact. Note: a 200-try sweep takes 4 minutes on this
   session's 4 cores, so quick A/B checks no longer need Kaggle. Simulation.
+- **21 Nov 01:40 UTC. Sweep round 3 (seeds 300000+, with the steering limits; ~126,000 tries).**
+  Go2, default conditions, 2,325 each: 0-6 ms 0; 10-19 ms 0; 5% missed 1; 10% missed 3; 5% missed with 10-19 ms 1;
+  left / right 0.8 at 10-19 ms 0 / 0 (the limit holds them to 0.6); left / right 0.4 with 5% missed 0 / 0. In all 5
+  of 20,925 (0.02%), in the trot and canter. Beyond: 15% missed 22 of 2,850 (0.8%); 20% missed 99 (3.5%); 10% missed
+  with 10-19 ms 15 (0.5%); turning at the limits with 10% missed 9 and 7.
+  Lite3 without the canter, 1,775 each: 0 / 0 without missed steps; 5% missed 23 (1.3%); 10% missed 112 (6.3%); 5%
+  missed with 10-19 ms 10; right 0.8 at 10-19 ms 0 (capped to 0.4); left / right 0.4 with 5% missed 18 / 26.
+  Beyond: 15% missed 486 of 2,575 (19%); 20% missed 902 (35%). Nearly all in the trot.
+  Ground: Unitree's scene with its two 8 cm bars and a staircase to 90 cm, plan trot / walk, 12,925 each: about 90%
+  fell (trot 85%+); the flat control 0 of 12,925. Most of that is the robot trotting blind into the staircase, so
+  the fair test is the bars alone: new `lockstep_vendor.py --bar-cm H` (two bars H cm high, 20 cm deep, across the
+  path 1.2 and 1.6 m ahead, either robot) and `--bumps` (the scene's bars, no staircase). Go2 at 8 cm: trot 86 of
+  100 fell, walk 13 of 50; at 3 cm trot 1 of 25. Lite3 at 8 cm trot 20 of 25; at 3 cm 0 of 25. Neither brain has
+  ever been trained off a flat floor. Running on Kaggle CPU: bars 2-8 cm, trot and walk, both robots, with and
+  without 5% missed steps; and a Go2 default sweep on new seeds.
+  GPU (new week, 30 h): the trainer's rough terrain was Bolt-only; it now also takes a real robot
+  (mjx_imitate.robot_terrain_xml: the same 40 x 40 m random height field 40 m from the origin, walk and trot tries
+  start on it, only the paws touch it; the Go2's 1 mm paw margin is dropped because MJX has none for sphere-hfield).
+  Next: a Go2 run from torque-steer with a 0 -> 2 -> 4 -> 6 cm curriculum, everything else as torque-steer was
+  trained, judged on the bars sweep AND a default sweep (it must keep 0.02%). Simulation.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
