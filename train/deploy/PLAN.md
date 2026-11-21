@@ -865,6 +865,17 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   had a shin catch on a ledge; what it learned on noise does not carry to a bar. Not checked: which geom hits the bar
   in the falls. GPU this week: ~19 of 30 h. No more GPU on terrain until the training ground has edges the legs can
   hit (bars or steps with capsule shins), or the CPU Lite3 runs (every geom touches the field) show the field helps.
+- **21 Nov 16:20 UTC. What hits the bar, and a bar field for the GPU trainer.** lockstep_vendor LOCKSTEP_BARHITS=1
+  (torque-steer, 100 tries, "trot:8,walk:4"): at 3 cm, only the four paws ever touched the bars (all 100 tries, the 4
+  that fell too): those falls are paws landing on the bar's edge, not trips. At 5 cm the falls add the calf cylinders
+  (FL calf 15 of 17) and the FR thigh (14 of 17); at 8 cm the body (78 of 84). So the training ground needs edges, and
+  the shins must touch them. mjx_imitate --terrain-kind bars: a grid of bars along x and y every 0.5-1.3 m, 10-15 cm
+  wide, 30-100% of the field's height, 5 cm cells (each edge rises over 5 cm); the lower shin cylinder becomes a
+  capsule touching the field (MJX has capsule-hfield; local CPU probe: +22% cost over paws only); bars are obstacles,
+  so the body's height stays measured from the floor. Local smoke test: model built, first evaluation on 4 cm bars ran
+  (reward 1.63, fell 0.016); the CPU compile of the update step outlasted the 30 min limit.
+  Kaggle GPU bolt-go2-bars pushed 16:20 UTC: from torque-steer, bars 3 -> 5 -> 7 -> 9 cm at 0/20/45/70% of 55M steps,
+  6 h, seed 66, else as torque-steer. GPU this week: ~25 of 30 h.
 - **21 Nov 12:55 UTC. Sweep round 4: obstacles (two bars across the path) and a Go2 default sweep (~380,000 tries).**
   Kaggle CPU, 5 kernels x 10.8 h, lockstep_vendor --estimate --bar-cm H on the makers' models, plans "trot:8,walk:4"
   and "walk:12,trot:2", each with and without 5% missed steps. Falls / tries (no missed steps; with 5% missed):
