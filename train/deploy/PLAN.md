@@ -855,6 +855,14 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   start on it, only the paws touch it; the Go2's 1 mm paw margin is dropped because MJX has none for sphere-hfield).
   Next: a Go2 run from torque-steer with a 0 -> 2 -> 4 -> 6 cm curriculum, everything else as torque-steer was
   trained, judged on the bars sweep AND a default sweep (it must keep 0.02%). Simulation.
+- **21 Nov 08:30 UTC. The first Go2 terrain GPU run trained no terrain: my sizing error.** Kaggle bolt-go2-terrain v1
+  ran 6 h (6.25 GPU h) but did 150M steps at 6.9k steps/s (2x T4, history 3 + privileged critic: this is the normal
+  rate for this recipe, not a slowdown). The curriculum is set as fractions of --steps, and --steps was 2B, so the first
+  bumps (2 cm) were due at 300M: every step was on flat floor (fell 0.02, reward 1.62, as torque-steer). Nothing to
+  judge; not used. Lesson: size --steps to what the hours allow (rate x hours) whenever --terrain-at is used.
+  v2 pushed 08:33 UTC: same recipe, --steps 120M, 0 -> 2 -> 4 -> 6 cm at 0 / 8 / 30 / 60% (2 cm from ~10M steps),
+  12 reports, seed 65, 6 h. If the height field slows MJX, fewer phases are reached; the log reports steps/s per phase.
+  GPU this week: ~12.75 of 30 h committed.
 - **9 Nov 19:30 UTC. First-run kit for the Go2: `deploy/first_run.py`.** Listens only (no publisher in the file). Checks
   with PASS/FAIL: message rate and gaps; flat and still; guided tilts (gravity direction as in our simulator, gyro
   consistent with the orientation); 12 guided hand moves (right joint, right sign; expected signs from our leg
