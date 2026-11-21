@@ -56,6 +56,9 @@ RATED = np.tile([30.1, 30.1, 15.7], 4)   # Go2 joint speed limits (rad/s): hip, 
 STEER = 0.0   # --steer: the yaw-rate command (rad/s) given with every clip of the plan (gaits use it)
 
 
+BAR_HITS = {}   # seed -> robot bodies (and geom types) that touched a bar (LOCKSTEP_BARHITS)
+
+
 def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, est=None, errs=None, speeds=None, sign=1.0, rated=RATED, predict_ms=0.0):
     d = mujoco.MjData(m)
     mujoco.mj_resetDataKeyframe(m, d, 0) if m.nkey else None
@@ -78,6 +81,10 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
     ours = [ctl.body.joints.index(ren(mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, j))) for j in act_joint]
     n_sub = int(round(DT / m.opt.timestep))
     target = ctl.stance.copy()
+    # diagnosis (LOCKSTEP_BARHITS=1, with --bar-cm): which robot geoms touch the bars, counted once per try per geom
+    bars = ({g for g in range(m.ngeom) if (mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_GEOM, g) or "").startswith("bar_")}
+            if os.environ.get("LOCKSTEP_BARHITS") else set())
+    hit = set()
     ctl.reset()   # every try starts fresh: a try that fell lying must not leave the next one lying (or waiting on a get-up)
     for k in range(0 if os.environ.get("LOCKSTEP_NOSETTLE") else int(1.0 / DT)):   # settle 1 s on the stance
         for s in range(n_sub):
@@ -127,7 +134,14 @@ def run(ctl, m, plan, pd_every, kp, kd, seed, delay_ms=(0.0, 0.0), skip_p=0.0, e
                     else:
                         d.ctrl[:] = np.clip(u, lo, hi)
                 mujoco.mj_step(m, d)
+                for c in d.contact[:d.ncon] if bars else ():
+                    for g, o in ((c.geom1, c.geom2), (c.geom2, c.geom1)):
+                        if o in bars:
+                            b = m.geom_bodyid[g]
+                            hit.add(f"{mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, b)}:{m.geom_type[g]}")
             t_brain += DT
+            if bars:
+                BAR_HITS.setdefault(seed, set()).update(hit)
     return t_brain, None, float(d.qpos[2])
 
 
@@ -209,6 +223,13 @@ def main():
               f"height {e[:, 3].mean() * 100:.1f} cm")
     falls = [r for r in res if r[1] is not None]
     print(f"fall seeds {[a.seed0 + i for i, r in enumerate(res) if r[1] is not None]}")
+    if BAR_HITS:   # LOCKSTEP_BARHITS: what touched the bars, in the tries that fell and in those that did not
+        from collections import Counter
+        fell = {a.seed0 + i for i, r in enumerate(res) if r[1] is not None}
+        for tag, keep in (("fell", True), ("stayed up", False)):
+            n = sum(1 for s in BAR_HITS if (s in fell) == keep)
+            cnt = Counter(h for s, hs in BAR_HITS.items() if (s in fell) == keep for h in hs)
+            print(f"bar contacts, tries that {tag} ({n}): {cnt.most_common(12)}")
     print(f"dt {a.dt} pd every {a.pd_every} damping {m.dof_damping[6]:g} delay {a.delay_ms} ms skip {a.skip_p}{' estimated v/h' if a.estimate else ''}{' v = reference' if a.vel_ref else ''}: {len(falls)}/{a.tries} fell; "
           f"time under the brain {np.mean([r[0] for r in res]):.1f}/{total:g} s; "
           f"falls in {[r[1] for r in falls]}; end heights {[round(r[2], 2) for r in res]}")

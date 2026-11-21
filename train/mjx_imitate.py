@@ -102,6 +102,35 @@ def terrain_field(seed=TERRAIN["seed"], half=TERRAIN["half"], cell=TERRAIN["cell
     return np.random.default_rng(seed).uniform(0.0, 1.0, (n, n))
 
 
+# --terrain-kind bars (21 Nov): a grid of sharp-edged bars instead of random cells. Lockstep tests with two box bars
+# across the path (LOCKSTEP_BARHITS): at 3 cm only the Go2's paws touch the bar (the falls are paws landing on its
+# edge), at 5-8 cm the shins and thighs hit it too; a Go2 trained on the random-cell field (paws only) did WORSE on bars
+# (PLAN.md 21 Nov 15:50). Bars along x and along y every 0.5-1.3 m, 2-3 cells (10-15 cm) wide, each 30-100% of the
+# field's height; 5 cm cells, so each edge rises over one cell (5 cm). The lower shin (a capsule here) touches it too.
+BARS = dict(half=20.0, cell=0.05, gap=(0.5, 1.3), width=(2, 3), low=0.3)
+
+
+def bars_field(seed=TERRAIN["seed"], half=BARS["half"], cell=BARS["cell"]):
+    """The bar field's heights, 0..1 (rows along y, columns along x, as MuJoCo's hfield_data)."""
+    n = int(round(2 * half / cell)) + 1
+    rng = np.random.default_rng(seed)
+    f = np.zeros((n, n))
+    for axis in (0, 1):
+        i = 0
+        while True:
+            i += int(round(rng.uniform(*BARS["gap"]) / cell))
+            w = int(rng.integers(BARS["width"][0], BARS["width"][1] + 1))
+            if i + w >= n:
+                break
+            h = rng.uniform(BARS["low"], 1.0)
+            if axis == 0:
+                f[i:i + w, :] = np.maximum(f[i:i + w, :], h)
+            else:
+                f[:, i:i + w] = np.maximum(f[:, i:i + w], h)
+            i += w
+    return f
+
+
 def terrain_xml(xml, cm, half=TERRAIN["half"], cell=TERRAIN["cell"], at=TERRAIN["at"], base=TERRAIN["base"]):
     n = int(round(2 * half / cell)) + 1
     asset = f'<hfield name="terrain" nrow="{n}" ncol="{n}" size="{half} {half} {cm / 100.0} {base}"/>'
@@ -321,7 +350,7 @@ class MjxImitate:
                  transition_window=TRANSITION["window"], transition_threshold=TRANSITION["threshold"],
                  latency_ms=REAL["latency_ms"], obs_noise=REAL["obs_noise"], motor_lag_ms=REAL["motor_lag_ms"],
                  terrain_cm=TERRAIN_ARGS["cm"], terrain_clips=TERRAIN_ARGS["clips"], terrain_spread=TERRAIN_ARGS["spread"],
-                 terrain_seed=TERRAIN_ARGS["seed"], push_interval=PUSH["interval"], push_prob=PUSH["prob"], push_speed=PUSH["speed"],
+                 terrain_seed=TERRAIN_ARGS["seed"], terrain_kind="noise", push_interval=PUSH["interval"], push_prob=PUSH["prob"], push_speed=PUSH["speed"],
                  push_spin=PUSH["spin"], motor_brake=False, brake_speed=BRAKE["speed"], brake_gain=BRAKE["gain"], root_global=0.0,
                  steer_max=0.0, steer_share=STEER["share"], steer_change=STEER["change"], steer_weight=STEER["weight"],
                  body=None, joint_damping=None, blind_vel=False, drop_p=0.0, damping_range=None, privileged=False, history=0, motor_speed_range=None,
@@ -350,13 +379,20 @@ class MjxImitate:
                 r.joint_damping = float(joint_damping)
             xml = r.xml()
             if terrain_cm > 0:   # rough terrain beside the floor, as Bolt's (terrain_xml), for a real robot too (20 Nov: the
-                xml = robot_terrain_xml(xml, terrain_cm)   # Go2 fell crossing 8 cm bars 86 of 100 times; it had only known flat floor)
+                xml = robot_terrain_xml(xml, terrain_cm, **({"half": BARS["half"], "cell": BARS["cell"]} if terrain_kind == "bars" else {}))
             self.m = m = body_contacts(mujoco.MjModel.from_xml_string(xml), r)
             if terrain_cm > 0:   # only the four paws (spheres: sphere-hfield) touch the bumps, as Bolt's paws and shins
                 for leg in ("FL", "FR", "RL", "RR"):   # MJX has no margin for sphere-hfield: the Go2's 1 mm paw margin goes
                     f = m.geom(f"{leg}_foot").id   # (it only widens when a contact is detected; the floor's is 0)
                     m.geom_contype[f] |= 4
                     m.geom_margin[f], m.geom_gap[f] = 0.0, 0.0
+                    if terrain_kind == "bars":   # the lower shin (the calf's last cylinder) hits bars too: a capsule
+                        cal = [g for g in range(m.ngeom) if m.geom_bodyid[g] == m.geom_bodyid[f] and m.geom_type[g] == mujoco.mjtGeom.mjGEOM_CYLINDER]
+                        if cal:   # (MJX has capsule-hfield, not cylinder-hfield; same radius and half-length)
+                            g = cal[-1]
+                            m.geom_type[g] = mujoco.mjtGeom.mjGEOM_CAPSULE
+                            m.geom_contype[g] |= 4
+                            m.geom_margin[g], m.geom_gap[g] = 0.0, 0.0
                 t = m.geom("terrain").id
                 m.geom_contype[t], m.geom_conaffinity[t] = 0, 4
             prefix, dog = r.clip_prefix, r.stance
@@ -367,9 +403,11 @@ class MjxImitate:
             brake_speed, brake_gain = jp.array(r.motor["brake_speed"], jp.float32), jp.array(r.motor["brake_gain"], jp.float32)
         self.terrain = None
         if terrain_cm > 0:
-            field = terrain_field(terrain_seed)
+            assert terrain_kind in ("noise", "bars") and (terrain_kind == "noise" or self.body != "bolt"), terrain_kind
+            field = bars_field(terrain_seed) if terrain_kind == "bars" else terrain_field(terrain_seed)
             m.hfield_data[:] = field.ravel()
-            self.terrain = dict(field=jp.array(field, jp.float32), cm=float(terrain_cm), geom=m.geom("terrain").id,
+            self.terrain = dict(field=jp.array(field, jp.float32), cm=float(terrain_cm), geom=m.geom("terrain").id, kind=terrain_kind,
+                                grid=(BARS["half"], BARS["cell"]) if terrain_kind == "bars" else (TERRAIN["half"], TERRAIN["cell"]),
                                 clips=jp.array([n in terrain_clips for n in (clips or MOTION_CLIPS)]), spread=float(terrain_spread))
         self.push_steps = int(round(push_interval / (m.opt.timestep * 10))) if push_interval else 0
         self.push_prob, self.push_speed, self.push_spin = float(push_prob), float(push_speed), float(push_spin)
@@ -669,7 +707,10 @@ class MjxImitate:
         return d._impl.contact if hasattr(d, "_impl") and hasattr(d._impl, "contact") else d.contact
 
     def ground_z(self, d):
-        """Height of the ground under the body (the terrain's, 0 off it; imitate_env.ImitateEnv.ground_z)."""
+        """Height of the ground under the body (the terrain's, 0 off it; imitate_env.ImitateEnv.ground_z). Bars are obstacles,
+        not ground: the body's height stays measured from the floor (a bar under the body is not a lower body)."""
+        if self.terrain["kind"] == "bars":
+            return jp.float32(0.0)
         return terrain_height(self.terrain["field"], self.terrain["cm"], d.qpos[0], d.qpos[1])
 
     def body_on_floor(self, d):
@@ -845,7 +886,8 @@ class MjxImitate:
             qpos, qvel, joints = jp.where(land, lqpos, qpos), jp.where(land, lqvel, qvel), jp.where(land, lj, joints)
         if self.terrain is not None:   # on the rough field: that spot, at the ground's height there
             xy = info["txy"]
-            gz = terrain_height(self.terrain["field"], self.terrain["cm"], xy[0], xy[1])
+            half, cell = self.terrain["grid"]
+            gz = terrain_height(self.terrain["field"], self.terrain["cm"], xy[0], xy[1], half=half, cell=cell)
             qpos = jp.where(info["ton"], qpos.at[0:2].set(xy).at[2].add(gz), qpos)
         d = mjx.make_data(mx).replace(qpos=qpos, qvel=qvel, ctrl=joints)
         d = mjx.forward(mx, d)
@@ -1157,7 +1199,7 @@ def train(args):
                           pose_weight=args.pose_weight, transition_weight=args.transition_weight, transition_window=args.transition_window,
                           transition_threshold=args.transition_threshold, latency_ms=(args.latency_min_ms, args.latency_max_ms),
                           obs_noise=args.obs_noise, motor_lag_ms=args.motor_lag_ms, terrain_cm=cm, terrain_clips=args.terrain_clips,
-                          terrain_spread=args.terrain_spread, terrain_seed=args.terrain_seed, push_interval=args.push_interval,
+                          terrain_spread=args.terrain_spread, terrain_seed=args.terrain_seed, terrain_kind=args.terrain_kind, push_interval=args.push_interval,
                           push_prob=args.push_prob, push_speed=args.push_speed, push_spin=args.push_spin,
                           motor_brake=args.motor_brake, brake_speed=args.brake_speed, brake_gain=args.brake_gain,
                           root_global=args.root_global, steer_max=args.steer_max, steer_share=args.steer_share,
@@ -1291,6 +1333,8 @@ def main():
     t.add_argument("--terrain-at", type=float, nargs="+", default=[0.0], help="step fraction where each --terrain-cm level starts (e.g. 0 0.3 0.6)")
     t.add_argument("--terrain-clips", nargs="+", default=list(TERRAIN_ARGS["clips"]), help="clips whose tries start on the terrain")
     t.add_argument("--terrain-spread", type=float, default=TERRAIN_ARGS["spread"], help="m around the field's middle where they start")
+    t.add_argument("--terrain-kind", choices=["noise", "bars"], default="noise", help="noise: random heights per 10 cm cell "
+                   "(Bolt's); bars: a grid of sharp-edged bars, the shins touch it too (real robots; BARS)")
     t.add_argument("--terrain-seed", type=int, default=TERRAIN_ARGS["seed"], help="the field's random heights")
     t.add_argument("--push-interval", type=float, default=PUSH["interval"], help="s between push chances; 0: no pushes, as before")
     t.add_argument("--push-prob", type=float, default=PUSH["prob"], help="chance of a push at each (default %(default)s)")
