@@ -865,6 +865,28 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   had a shin catch on a ledge; what it learned on noise does not carry to a bar. Not checked: which geom hits the bar
   in the falls. GPU this week: ~19 of 30 h. No more GPU on terrain until the training ground has edges the legs can
   hit (bars or steps with capsule shins), or the CPU Lite3 runs (every geom touches the field) show the field helps.
+- **22 Nov 23:00 UTC. Lite3 t65 wins on bars and missed steps but trips on right turns (fixed by a 0.3 cap); the first
+  Go2 rough-ground brain that helps.** (a) Kaggle CPU same-seed sweeps, DEEP's model, base = gpu-1461M:
+  | condition | base | t6 | t65 (terrain6-1500M) |
+  |---|---|---|---|
+  | trot, bars 3 cm (3,725) | 1.3% | 1.9% | **0.0%** |
+  | trot, bars 3 cm + 5% missed | 3.5% | 6.1% | **0.7%** |
+  | trot, bars 4 cm | 14.9% | **5.8%** | 11.3% |
+  | trot, bars 4 cm + 5% missed | 20.7% | 17.9% | **10.0%** |
+  | trot, bars 5 cm + 5% missed | 48.9% | 56.0% | **35.9%** |
+  | trot, bars 6 cm | 76.4% | 80.1% | 85.8% |
+  | default sweep, no-canter (5,625) | 1.28% | **0.55%** | 1.65% |
+  | of which: flat 10% missed (625) | 7.4% | 3.7% | 3.8% |
+  | of which: right 0.8 asked (capped to 0.4), 10-19 ms | 0.0% | 0.0% | **8.3%** (52, all trot) |
+  t65's only regression: trotting right at the robot program's 0.4 rad/s cap with 10-19 ms delay. Local, "trot:20",
+  10-19 ms, 100 tries: t65 right 0.4 9, right 0.3 0, right 0.2 0; gpu-1461M right 0.4 0. The Lite3's right-turn cap is
+  now 0.3 rad/s (controller.steer_limits; goldens pass). (b) Go2 CPU rough field (go2-dog-50/51/52, 6/4/8 cm, ~16-18M
+  steps each from torque-steer): Unitree's go2.xml, 100 tries, seeds 50000+ (torque-steer first): walk bars 3 cm 28 /
+  **5** / 10 / 5; walk 5 cm 67 / 46 / 100 / **23**; trot 3 cm 4 / 11 / 53 / 14; trot 5 cm 17 / **14** / 99 / 89. Only
+  50 (6 cm) is balanced; flat 50 s plan, 100 tries each: 0-19 ms 0, 10% missed 0 (torque-steer 0), left 0.8 at 10-19 ms
+  0. Saved as candidate models/bolt-go2-terrain6-1458M. Kaggle CPU pushed 22:58 UTC: bolt-sweep-l3ab3-default (t65 vs
+  base, the 0.3 cap in force), bolt-sweep-g2ab-bars (bars 3-6 cm, plan "trot:6,walk:8") and -default (g50 vs
+  torque-steer), and training continuations bolt-go2-dog-50-p2 and bolt-lite3-dog-45-p3. Defaults unchanged until these.
 - **22 Nov 11:30 UTC. Lite3 same-seed sweeps (~180,000 tries): the rough-ground brains halve the missed-step falls.**
   Kaggle CPU, 4 kernels x 10.8 h, DEEP's model, lockstep --dt 0.001 --estimate; gpu-1461M (base) / terrain6-1481M (t6)
   / terrain4-1480M (t4) on the same seeds. Falls:
