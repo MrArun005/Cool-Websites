@@ -865,6 +865,17 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   had a shin catch on a ledge; what it learned on noise does not carry to a bar. Not checked: which geom hits the bar
   in the falls. GPU this week: ~19 of 30 h. No more GPU on terrain until the training ground has edges the legs can
   hit (bars or steps with capsule shins), or the CPU Lite3 runs (every geom touches the field) show the field helps.
+- **22 Nov 03:00 UTC. Go2 bar-field GPU run: trained through 3/5/7/9 cm, and its WALK now trips on any bar. Not
+  adopted.** Kaggle bolt-go2-bars (queued ~1-4 h first): 11M steps at 3 cm, 13.8M at 5, 13.8M at 7, 8.4M at 9
+  (47.0M in all, ~3.1k steps/s, fell 0.02 -> 0.09 in training). Unitree's go2.xml, lockstep --estimate, 100 tries,
+  seeds 50000+, torque-steer in brackets. "trot:8,walk:4": flat 0 (0), 3 cm 8 (4), 5 cm 18 (17), 8 cm 70 (84).
+  "walk:12,trot:2": 3 cm **99** (28), 5 cm **99** (67); walking on flat floor 0/50. LOCKSTEP_BARHITS, walk at 3 cm, 20
+  tries: all 20 fall ~3.4 s in, with only the FRONT paws having touched the bar: it walks its front paws into the
+  bar's face. Why, most likely: the field's bars are a height field, so every edge is a 5 cm ramp (31-45 degrees),
+  not a wall; the brain learned to push its paws up ramps, which a vertical box face stops dead. Lesson: obstacles in
+  training must have the test's shape. Next: real box bars in MJX (sphere-box and capsule-box exist), placed per try
+  as mocap bodies (per-env positions and heights, a few contact pairs), not a height field. GPU this week: ~31 of 30
+  h? (6 h run plus queue; check Kaggle's quota page before the next GPU push.)
 - **22 Nov 00:25 UTC. Lite3 rough-ground CPU jobs 45-49: two candidates better on 4 cm bars.** Kaggle CPU, 10.6 h each,
   from gpu-1461M (SB3), 18-28M PPO steps each on the random field (every robot geom touches it on CPU). Brains =
   each job's last checkpoint (`mjx_imitate.py warm`, then blind_vel and steer_max set in the pkl). DEEP's Lite3 model,
