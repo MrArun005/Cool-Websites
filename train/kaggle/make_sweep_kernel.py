@@ -48,7 +48,9 @@ TERRAIN = [   # Unitree's scene with its bumps and staircase left in (lockstep_v
 ]
 BARS = [(f"bars {h} cm{', ' + tag if tag else ''}", ["--bar-cm", str(h)] + extra)   # two bars across the path
         for h in (2, 3, 4, 5, 6, 8) for tag, extra in (("", ["--delay-ms", "0", "6"]), ("5% missed", ["--delay-ms", "3", "6", "--skip-p", "0.05"]))]
-PRESETS = dict(default=CONDITIONS, steer=STEER_SWEEP, limits=LIMITS, terrain=TERRAIN, bars=BARS)
+BARS4 = [c for c in BARS if c[0].split()[1] in ("3", "4", "5", "6")]   # the heights where brains differ (22 Nov)
+MISSED = [(f"{p}% missed", ["--delay-ms", "3", "6", "--skip-p", str(p / 100)]) for p in (5, 10, 15)]
+PRESETS = dict(default=CONDITIONS, steer=STEER_SWEEP, limits=LIMITS, terrain=TERRAIN, bars=BARS, bars4=BARS4, missed=MISSED)
 NO_CANTER = "trot:6,trot:8,trot:4,trot:6,walk:4,sit:5,lie:6,getup:6,trot:5"
 
 KERNEL = r'''
@@ -125,10 +127,18 @@ def main():
     ap.add_argument("--preset", choices=sorted(PRESETS), default="default", help="steer: left/right 0.4-0.8 rad/s x 3 delays")
     ap.add_argument("--plan", help="the plan (default: the 50 s plan)")
     ap.add_argument("--no-canter", action="store_true", help="the plan with a trot where the canters are")
+    ap.add_argument("--brains", help="compare brains on the same seeds: name=repo/relative/params.pkl,... (each condition runs "
+                    "once per brain, named '<condition> [<name>]'); default: the body's current brain only")
     ap.add_argument("--max-rounds", type=int, default=0, help="stop after this many rounds (smoke tests)")
     ap.add_argument("-o", "--out", required=True)
     a = ap.parse_args()
-    cfg = dict(body=a.body, plan=a.plan or (NO_CANTER if a.no_canter else PLAN[a.body]), conditions=PRESETS[a.preset], hours=a.hours, chunk=a.chunk, seed0=a.seed0,
+    conds = PRESETS[a.preset]
+    if a.brains:   # paths are relative to the repo's train/ folder (where the kernel runs lockstep_vendor)
+        pairs = [b.split("=", 1) for b in a.brains.split(",")]
+        for _, path in pairs:
+            assert (Path(__file__).resolve().parents[1] / path).exists(), f"{path}: not in the repo (commit it first)"
+        conds = [(f"{c} [{n}]", f + ["--brain", path]) for c, f in conds for n, path in pairs]
+    cfg = dict(body=a.body, plan=a.plan or (NO_CANTER if a.no_canter else PLAN[a.body]), conditions=conds, hours=a.hours, chunk=a.chunk, seed0=a.seed0,
                workers=a.workers, max_rounds=a.max_rounds, body_flags=["--dt", "0.001"] if a.body == "lite3" else [],
                repos=[(a.repo, a.branch, "bolt"),
                       ("https://github.com/unitreerobotics/unitree_mujoco", "1eb6642", "unitree_mujoco"),
