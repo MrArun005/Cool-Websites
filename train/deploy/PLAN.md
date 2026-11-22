@@ -874,8 +874,9 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   bar's face. Why, most likely: the field's bars are a height field, so every edge is a 5 cm ramp (31-45 degrees),
   not a wall; the brain learned to push its paws up ramps, which a vertical box face stops dead. Lesson: obstacles in
   training must have the test's shape. Next: real box bars in MJX (sphere-box and capsule-box exist), placed per try
-  as mocap bodies (per-env positions and heights, a few contact pairs), not a height field. GPU this week: ~31 of 30
-  h? (6 h run plus queue; check Kaggle's quota page before the next GPU push.)
+  as mocap bodies (per-env positions and heights, a few contact pairs), not a height field. GPU this week (from 21 Nov
+  00:40 UTC): three 6 h runs, ~19.3 of 30 h; ~10.7 h left (the "~19" and "~25" in the 15:50 and 16:20 entries
+  were miscounts, 12.75 and ~19).
 - **22 Nov 00:25 UTC. Lite3 rough-ground CPU jobs 45-49: two candidates better on 4 cm bars.** Kaggle CPU, 10.6 h each,
   from gpu-1461M (SB3), 18-28M PPO steps each on the random field (every robot geom touches it on CPU). Brains =
   each job's last checkpoint (`mjx_imitate.py warm`, then blind_vel and steer_max set in the pkl). DEEP's Lite3 model,
