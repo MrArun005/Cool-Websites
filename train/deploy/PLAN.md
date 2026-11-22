@@ -865,6 +865,14 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   had a shin catch on a ledge; what it learned on noise does not carry to a bar. Not checked: which geom hits the bar
   in the falls. GPU this week: ~19 of 30 h. No more GPU on terrain until the training ground has edges the legs can
   hit (bars or steps with capsule shins), or the CPU Lite3 runs (every geom touches the field) show the field helps.
+- **22 Nov 02:55 UTC. Real box bars in the GPU trainer; Go2 run pushed.** mjx_imitate --terrain-kind boxes (BOXES):
+  two mocap boxes (10 cm deep, 4 m wide) placed per try across the start heading at 0.5-1.5 m and a further 0.4-1.2 m,
+  each 30-100% of the phase height, parked 1 m under the floor for tries not in a walk/trot clip; paws and lower-shin
+  capsules touch them, nothing else (a first version let body_contacts give the bars floor contact: the robot started
+  17 cm up and every try ended at once; found in a local check and fixed). Checked locally (JAX on CPU): placement and
+  heights right, a bar under the FL paw gives a 3.5 cm paw-bar contact, the 4 paws and 4 shins are the only pairs.
+  Kaggle GPU bolt-go2-boxes pushed 02:52 UTC: from torque-steer, 3/5/7/9 cm at 0/20/45/70% of 80M steps, 5.8 h, seed
+  67, else as torque-steer. Collected ~09:30 UTC; judged on both gaits (the walk is the one the last run broke).
 - **22 Nov 03:00 UTC. Go2 bar-field GPU run: trained through 3/5/7/9 cm, and its WALK now trips on any bar. Not
   adopted.** Kaggle bolt-go2-bars (queued ~1-4 h first): 11M steps at 3 cm, 13.8M at 5, 13.8M at 7, 8.4M at 9
   (47.0M in all, ~3.1k steps/s, fell 0.02 -> 0.09 in training). Unitree's go2.xml, lockstep --estimate, 100 tries,
