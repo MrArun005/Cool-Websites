@@ -42,7 +42,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 TAR = "bolt-train.pack"   # a tar under a name Kaggle does not unpack (it unpacks .tar AND the policy.zip files inside)
-MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M", "bolt-lite3-dog-112M", "bolt-lite3-dog-steer-candidate-130M", "bolt-lite3-dog-149M", "bolt-lite3-dog-blind-149M", "bolt-lite3-dog-blind-hist-start", "bolt-lite3-dog-hist-penalty-164M", "bolt-lite3-dog-hist-fast-172M", "bolt-lite3-dog-hist-196M", "bolt-lite3-dog-hist-drop-215M", "bolt-lite3-dog-gpu-1461M-sb3", "bolt-lite3-selfright-28M"]
+MODELS = ["bolt-dog-jump-runup-16i-35.5M", "bolt-dog-jump-trot-55M", "bolt-dog-jump-handover-59M", "bolt-dog-jump-run60-74M", "bolt-dog-jump-handover-74M", "bolt-dog-recover-delay-30M", "bolt-dog-jump-delay-76M", "bolt-dog-jump-gaps-80.5M", "bolt-dog-selfright-17e-16.5M", "bolt-dog-posture-getup-3M", "bolt-dog-canter-speed-38M", "bolt-dog-jump-runup-88M", "bolt-lite3-dog-20.9M", "bolt-lite3-dog-38.8M", "bolt-lite3-dog-61.8M", "bolt-lite3-dog-63.8M", "bolt-lite3-dog-87.3M", "bolt-lite3-dog-112M", "bolt-lite3-dog-steer-candidate-130M", "bolt-lite3-dog-149M", "bolt-lite3-dog-blind-149M", "bolt-lite3-dog-blind-hist-start", "bolt-lite3-dog-hist-penalty-164M", "bolt-lite3-dog-hist-fast-172M", "bolt-lite3-dog-hist-196M", "bolt-lite3-dog-hist-drop-215M", "bolt-lite3-dog-gpu-1461M-sb3", "bolt-lite3-selfright-28M", "bolt-go2-torque-steer-sb3"]
 PIP = ["numpy>=2", "mujoco==3.17.0", "stable-baselines3==2.9.0", "gymnasium==1.4.0"]   # torch: Kaggle's own
 
 JOBS = {
@@ -602,6 +602,32 @@ JOBS = {
               "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "60",
               "--moving-rate", "0.75", "--steer-max", "0.8", "--steer-weight", "0.3", "--lr", "1e-5", "--target-kl", "0.01",
               "--motor-speed-x", "1.5", "--overspeed-weight", "3.0", "--drop-p", "0.05", "--terrain-cm", "4"],
+        finals=[]),
+    "go2-dog-50": dict(
+        # 22 Nov: three GPU terrain runs taught the Go2 something the bar test punishes (in MJX only paws/shins touch the
+        # ground features). The CPU env has every geom collide (the Lite3 CPU runs improved on bars). torque-steer as SB3
+        # (gpu_to_sb3.py), its recipe as far as the CPU trainer has it, on the random field at 6 cm.
+        name="go2dog50", script="train_imitate.py", start="../models/bolt-go2-torque-steer-sb3",
+        args=["--body", "go2", "--blind-vel", "--history", "3", "--clips", "walk", "walk", "trot", "trot", "trot", "pace", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "40",
+              "--moving-rate", "0.5", "--steer-max", "0.8", "--steer-weight", "0.8", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.25", "--overspeed-weight", "1.0", "--drop-p", "0.05", "--terrain-cm", "6"],
+        finals=[]),
+    "go2-dog-51": dict(
+        # 22 Nov: as go2-dog-50 at 4 cm.
+        name="go2dog51", script="train_imitate.py", start="../models/bolt-go2-torque-steer-sb3",
+        args=["--body", "go2", "--blind-vel", "--history", "3", "--clips", "walk", "walk", "trot", "trot", "trot", "pace", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "40",
+              "--moving-rate", "0.5", "--steer-max", "0.8", "--steer-weight", "0.8", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.25", "--overspeed-weight", "1.0", "--drop-p", "0.05", "--terrain-cm", "4"],
+        finals=[]),
+    "go2-dog-52": dict(
+        # 22 Nov: as go2-dog-50 at 8 cm.
+        name="go2dog52", script="train_imitate.py", start="../models/bolt-go2-torque-steer-sb3",
+        args=["--body", "go2", "--blind-vel", "--history", "3", "--clips", "walk", "walk", "trot", "trot", "trot", "pace", "canter",
+              "turn_left", "turn_right", "sit", "lie", "getup", "--switch-rate", "0.3", "--latency-ms", "0", "40",
+              "--moving-rate", "0.5", "--steer-max", "0.8", "--steer-weight", "0.8", "--lr", "1e-5", "--target-kl", "0.01",
+              "--motor-speed-x", "1.25", "--overspeed-weight", "1.0", "--drop-p", "0.05", "--terrain-cm", "8"],
         finals=[]),
     "lite3-selfright-pilot": dict(
         # 2 Nov: go2-selfright-pilot's recipe on the Lite3 (getup_env sizes: heights x0.80, kicks x0.90, standing above
