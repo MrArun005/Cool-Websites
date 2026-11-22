@@ -865,6 +865,27 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   had a shin catch on a ledge; what it learned on noise does not carry to a bar. Not checked: which geom hits the bar
   in the falls. GPU this week: ~19 of 30 h. No more GPU on terrain until the training ground has edges the legs can
   hit (bars or steps with capsule shins), or the CPU Lite3 runs (every geom touches the field) show the field helps.
+- **22 Nov 11:30 UTC. Lite3 same-seed sweeps (~180,000 tries): the rough-ground brains halve the missed-step falls.**
+  Kaggle CPU, 4 kernels x 10.8 h, DEEP's model, lockstep --dt 0.001 --estimate; gpu-1461M (base) / terrain6-1481M (t6)
+  / terrain4-1480M (t4) on the same seeds. Falls:
+  | condition | base | t6 | t4 |
+  |---|---|---|---|
+  | default sweep, 9 conditions, no-canter plan (8,100 tries each) | 1.12% | **0.58%** | 0.79% |
+  | flat, 5% missed (2,000) | 1.6% | **0.4%** | 1.5% |
+  | flat, 10% missed (2,000) | 6.8% | **3.2%** | 5.8% |
+  | flat, 15% missed (2,000) | 18.4% | 14.9% | 14.5% |
+  | trot, bars 3 cm (3,225) | 0.7% | 1.7% | 0.7% |
+  | trot, bars 3 cm + 5% missed | 3.6% | 7.4% | **2.0%** |
+  | trot, bars 4 cm | 14.9% | 5.4% | **3.9%** |
+  | trot, bars 4 cm + 5% missed | 20.8% | 17.8% | 14.8% |
+  | walk, bars 4 cm (2,600) | 16.2% | **8.4%** | 11.5% |
+  | bars 5-6 cm, trot and walk | 33-76% | similar or worse | similar or worse |
+  Neither candidate beats base everywhere: t6 halves the Lite3's long-standing missed-step falls (the open problem since
+  20 Nov) but doubles the 3 cm trot falls; t4 is better at 3-4 cm and a little better on flat. Job 45 continued
+  (bolt-lite3-dog-45-p2, 19M more steps; models/bolt-lite3-dog-terrain6-1500M, "t65"), local, same seeds for both:
+  trot 3 cm bars + 5% missed 2/200 (t6 13/200); 4 cm 1/200 (0/200); flat 10% missed 7/100 (7/100). Kaggle CPU pushed
+  11:30 UTC: bolt-sweep-l3ab2-bars-trot (bars4) and -default (no-canter), base vs t6 vs t65. Also pushed 11:22 UTC:
+  go2-dog-50/51/52 (Go2 on the CPU rough field 6/4/8 cm). The Lite3 default stays gpu-1461M until t65's sweeps are in.
 - **22 Nov 09:50 UTC. The Go2 moves to the CPU trainer for rough ground.** gpu_to_sb3.py (new): any GPU brain to an
   SB3 folder; the privileged critic's 8 extra value inputs are dropped, the return normalizer set to the GPU reward
   scale; round trip through from_sb3 exact (0.0) for torque-steer and for gpu-1461M. models/bolt-go2-torque-steer-sb3.

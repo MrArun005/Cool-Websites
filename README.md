@@ -79,7 +79,7 @@ the trot (its canter is worse and runs as a trot by default); right turns are li
 is not handled yet: the brains were trained on a flat floor. Two bars across the path (21 Nov, about 380,000
 tries, trot / walk, no missed steps): at 2 cm the Go2 falls 0% / 1.7%, the Lite3 0% / 0%; at 3 cm the Go2 2.1% /
 7.9%, the Lite3 0.8% / 0.7%; at 4 cm 15-60%; at 6-8 cm most tries. So both are safe only up to about 2 cm (a
-door sill, a cable). Training on rough ground has started for both (Go2 on the GPU, Lite3 on CPU). The 48-try
+door sill, a cable). Training on rough ground (22 Nov, Lite3, simulation): brains trained on CPU on a bumpy field fall half as often on flat floor when commands are missed (10% missed: 3.2% vs 6.8%) and much less on 4 cm bars (4-5% vs 15%); the best one is being tested before it replaces the current brain. Three Go2 GPU attempts made bars worse; the Go2 now trains on the CPU too. The 48-try
 rows in the table above cannot see falls this rare.
 
 **Have a Go2 EDU?** The first step needs no motion at all: `python deploy/first_run.py --iface <eth> --domain 0`
