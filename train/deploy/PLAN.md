@@ -865,6 +865,12 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   had a shin catch on a ledge; what it learned on noise does not carry to a bar. Not checked: which geom hits the bar
   in the falls. GPU this week: ~19 of 30 h. No more GPU on terrain until the training ground has edges the legs can
   hit (bars or steps with capsule shins), or the CPU Lite3 runs (every geom touches the field) show the field helps.
+- **22 Nov 09:50 UTC. The Go2 moves to the CPU trainer for rough ground.** gpu_to_sb3.py (new): any GPU brain to an
+  SB3 folder; the privileged critic's 8 extra value inputs are dropped, the return normalizer set to the GPU reward
+  scale; round trip through from_sb3 exact (0.0) for torque-steer and for gpu-1461M. models/bolt-go2-torque-steer-sb3.
+  CPU env, random field, 6 s, 20 tries: trot 0 / 4 / 6 cm falls 0 / 0 / 15%, walk 6 cm 5%. Local 8 min smoke run of
+  train_imitate --body go2 --terrain-cm 6 from it: trains, exams pass. Jobs go2-dog-50/51/52 (6/4/8 cm, the
+  torque-steer recipe as far as the CPU trainer has it) in the dataset; they go up when the CPU slots free (~11:20).
 - **22 Nov 09:50 UTC. Go2 box-bar GPU run: worse on bars in both gaits. Not adopted.** Kaggle bolt-go2-boxes: 16M
   steps at 3 cm, 20M at 5, 20M at 7, 12M at 9 (68.5M, ~4.1k steps/s; fell 0.02 -> 0.07 in training, i.e. it crossed
   the training bars). Unitree's go2.xml, lockstep --estimate, 100 tries, seeds 50000+, torque-steer in brackets:
