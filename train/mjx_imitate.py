@@ -110,6 +110,23 @@ def terrain_field(seed=TERRAIN["seed"], half=TERRAIN["half"], cell=TERRAIN["cell
 BARS = dict(half=20.0, cell=0.05, gap=(0.5, 1.3), width=(2, 3), low=0.3)
 
 
+# --terrain-kind boxes (22 Nov): the bars of the height field have 5 cm ramps for edges; a Go2 trained on them walked
+# its front paws into a real bar's face (walk 3 cm: 99/100 falls, PLAN.md 22 Nov 03:00). These are real boxes, as the
+# lockstep test's bars: two mocap boxes (10 cm deep, 4 m wide), placed per try across the robot's start heading, at
+# 0.5-1.5 m and a further 0.4-1.2 m, each 30-100% of the phase's height; the tries that do not start in a terrain clip
+# get them 1 m under the floor. Paws and lower shins (capsules) touch them; nothing else does.
+BOXES = dict(first=(0.5, 1.5), gap=(0.4, 1.2), low=0.3, depth=0.05, width=2.0, tall=0.1)
+
+
+def boxes_xml(xml):
+    """Two mocap box bars (BOXES) added to a robot's world, parked under the floor; placed per try in start_data."""
+    b = BOXES
+    bodies = "".join(f'<body name="bar{i}" mocap="true" pos="0 0 -1"><geom name="bar{i}" type="box" size="{b["depth"]} '
+                     f'{b["width"]} {b["tall"]}" contype="0" conaffinity="4" rgba="0.6 0.5 0.4 1"/></body>' for i in range(2))
+    i = xml.rindex("</worldbody>")
+    return xml[:i] + "  " + bodies + "\n  " + xml[i:]
+
+
 def bars_field(seed=TERRAIN["seed"], half=BARS["half"], cell=BARS["cell"]):
     """The bar field's heights, 0..1 (rows along y, columns along x, as MuJoCo's hfield_data)."""
     n = int(round(2 * half / cell)) + 1
@@ -378,7 +395,9 @@ class MjxImitate:
             if joint_damping is not None:   # as train_imitate.py --joint-damping (BOLT_JOINT_DAMPING)
                 r.joint_damping = float(joint_damping)
             xml = r.xml()
-            if terrain_cm > 0:   # rough terrain beside the floor, as Bolt's (terrain_xml), for a real robot too (20 Nov: the
+            if terrain_cm > 0 and terrain_kind == "boxes":
+                xml = boxes_xml(xml)
+            elif terrain_cm > 0:   # rough terrain beside the floor, as Bolt's (terrain_xml), for a real robot too (20 Nov: the
                 xml = robot_terrain_xml(xml, terrain_cm, **({"half": BARS["half"], "cell": BARS["cell"]} if terrain_kind == "bars" else {}))
             self.m = m = body_contacts(mujoco.MjModel.from_xml_string(xml), r)
             if terrain_cm > 0:   # only the four paws (spheres: sphere-hfield) touch the bumps, as Bolt's paws and shins
@@ -386,23 +405,31 @@ class MjxImitate:
                     f = m.geom(f"{leg}_foot").id   # (it only widens when a contact is detected; the floor's is 0)
                     m.geom_contype[f] |= 4
                     m.geom_margin[f], m.geom_gap[f] = 0.0, 0.0
-                    if terrain_kind == "bars":   # the lower shin (the calf's last cylinder) hits bars too: a capsule
+                    if terrain_kind in ("bars", "boxes"):   # the lower shin (the calf's last cylinder) hits bars too: a capsule
                         cal = [g for g in range(m.ngeom) if m.geom_bodyid[g] == m.geom_bodyid[f] and m.geom_type[g] == mujoco.mjtGeom.mjGEOM_CYLINDER]
                         if cal:   # (MJX has capsule-hfield, not cylinder-hfield; same radius and half-length)
                             g = cal[-1]
                             m.geom_type[g] = mujoco.mjtGeom.mjGEOM_CAPSULE
                             m.geom_contype[g] |= 4
                             m.geom_margin[g], m.geom_gap[g] = 0.0, 0.0
-                t = m.geom("terrain").id
-                m.geom_contype[t], m.geom_conaffinity[t] = 0, 4
+                if terrain_kind != "boxes":
+                    t = m.geom("terrain").id
+                    m.geom_contype[t], m.geom_conaffinity[t] = 0, 4
+                else:   # body_contacts gave the bars robot contacts (they would meet the floor): paws and shins only
+                    for i in range(2):
+                        g = m.geom(f"bar{i}").id
+                        m.geom_contype[g], m.geom_conaffinity[g] = 0, 4
             prefix, dog = r.clip_prefix, r.stance
             self.floor_ok_h, self.lost_h, self.poses = float(r.floor_ok), float(r.lost), r.pose_ok
             # per joint arrays (robot_bodies.Body.motor), as bolt_env.physics for this body; brake capped at each joint's torque
             self.motor = {k: jp.array(r.motor[k], jp.float32) for k in ("torque", "power", "speed", "cutoff")}
             self.brake_cap = self.motor["torque"]
             brake_speed, brake_gain = jp.array(r.motor["brake_speed"], jp.float32), jp.array(r.motor["brake_gain"], jp.float32)
-        self.terrain = None
-        if terrain_cm > 0:
+        self.terrain, self.boxes = None, None
+        if terrain_cm > 0 and terrain_kind == "boxes":
+            assert self.body != "bolt", "box bars are for the real robots"
+            self.boxes = dict(cm=float(terrain_cm), clips=jp.array([n in terrain_clips for n in (clips or MOTION_CLIPS)]))
+        elif terrain_cm > 0:
             assert terrain_kind in ("noise", "bars") and (terrain_kind == "noise" or self.body != "bolt"), terrain_kind
             field = bars_field(terrain_seed) if terrain_kind == "bars" else terrain_field(terrain_seed)
             m.hfield_data[:] = field.ravel()
@@ -757,6 +784,8 @@ class MjxImitate:
             rng, k_st = jax.random.split(rng)
         if self.terrain is not None:   # terrain on: the start spot's own key
             rng, k_ter = jax.random.split(rng)
+        if self.boxes is not None:   # box bars on: their own key
+            rng, k_box = jax.random.split(rng)
         if self.real_on:   # real-robot gaps on: the latency's own key
             rng, k_lat = jax.random.split(rng)
         if self.L is not None:   # landing starts on: their own keys, the rest drawn as always
@@ -822,6 +851,17 @@ class MjxImitate:
             w = self.terrain["spread"]
             xy = jp.array(TERRAIN["at"], jp.float32) + jax.random.uniform(k_ter, (2,), minval=-w, maxval=w)
             info = self.terrain_info(info, on, xy)
+        if self.boxes is not None:   # walk/trot tries (not landing or moving starts) meet two bars ahead
+            on = self.boxes["clips"][info["clip"]]
+            if self.L is not None:
+                on = on & (info["land"] < 0)
+            if self.M is not None:
+                on = on & (info["mg"] < 0)
+            kb = jax.random.split(k_box, 3)
+            d1 = jax.random.uniform(kb[0], minval=BOXES["first"][0], maxval=BOXES["first"][1])
+            d2 = d1 + jax.random.uniform(kb[1], minval=BOXES["gap"][0], maxval=BOXES["gap"][1])
+            h = jax.random.uniform(kb[2], (2,), minval=BOXES["low"], maxval=1.0) * self.boxes["cm"] / 100.0
+            info["bon"], info["bars"] = jp.asarray(on), jp.stack([d1, d2, h[0], h[1]]).astype(jp.float32)
         return info, yaw
 
     def terrain_info(self, info, on, xy):
@@ -890,6 +930,13 @@ class MjxImitate:
             gz = terrain_height(self.terrain["field"], self.terrain["cm"], xy[0], xy[1], half=half, cell=cell)
             qpos = jp.where(info["ton"], qpos.at[0:2].set(xy).at[2].add(gz), qpos)
         d = mjx.make_data(mx).replace(qpos=qpos, qvel=qvel, ctrl=joints)
+        if self.boxes is not None:   # the two bars across the start heading, top at their height (or 1 m under the floor)
+            b = info["bars"]
+            fwd = jp.array([c, s, 0.0])
+            z = jp.where(info["bon"], b[2:4] - BOXES["tall"], -1.0)
+            pos = qpos[0:3].at[2].set(0.0)[None, :] + b[0:2, None] * fwd[None, :]
+            d = d.replace(mocap_pos=pos.at[:, 2].set(z).astype(jp.float32),
+                          mocap_quat=jp.tile(jp.array([jp.cos(yaw / 2), 0.0, 0.0, jp.sin(yaw / 2)]), (2, 1)).astype(jp.float32))
         d = mjx.forward(mx, d)
         pen = jp.maximum(0.0, jp.max(-self.contact(d).dist))    # never start with a paw or the body in the floor
         if self.L is not None:   # landing starts: floor contacts only (as ImitateEnv; legs touching each other stay)
@@ -1333,8 +1380,9 @@ def main():
     t.add_argument("--terrain-at", type=float, nargs="+", default=[0.0], help="step fraction where each --terrain-cm level starts (e.g. 0 0.3 0.6)")
     t.add_argument("--terrain-clips", nargs="+", default=list(TERRAIN_ARGS["clips"]), help="clips whose tries start on the terrain")
     t.add_argument("--terrain-spread", type=float, default=TERRAIN_ARGS["spread"], help="m around the field's middle where they start")
-    t.add_argument("--terrain-kind", choices=["noise", "bars"], default="noise", help="noise: random heights per 10 cm cell "
-                   "(Bolt's); bars: a grid of sharp-edged bars, the shins touch it too (real robots; BARS)")
+    t.add_argument("--terrain-kind", choices=["noise", "bars", "boxes"], default="noise", help="noise: random heights per 10 cm cell "
+                   "(Bolt's); bars: a grid of bars in a height field (5 cm ramps for edges; BARS); boxes: two real box bars ahead "
+                   "of each walk/trot try (BOXES; the shins touch them too; real robots)")
     t.add_argument("--terrain-seed", type=int, default=TERRAIN_ARGS["seed"], help="the field's random heights")
     t.add_argument("--push-interval", type=float, default=PUSH["interval"], help="s between push chances; 0: no pushes, as before")
     t.add_argument("--push-prob", type=float, default=PUSH["prob"], help="chance of a push at each (default %(default)s)")
