@@ -865,6 +865,23 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   had a shin catch on a ledge; what it learned on noise does not carry to a bar. Not checked: which geom hits the bar
   in the falls. GPU this week: ~19 of 30 h. No more GPU on terrain until the training ground has edges the legs can
   hit (bars or steps with capsule shins), or the CPU Lite3 runs (every geom touches the field) show the field helps.
+- **22 Nov 00:25 UTC. Lite3 rough-ground CPU jobs 45-49: two candidates better on 4 cm bars.** Kaggle CPU, 10.6 h each,
+  from gpu-1461M (SB3), 18-28M PPO steps each on the random field (every robot geom touches it on CPU). Brains =
+  each job's last checkpoint (`mjx_imitate.py warm`, then blind_vel and steer_max set in the pkl). DEEP's Lite3 model,
+  lockstep --dt 0.001 --estimate, 100 tries, plan "trot:8,walk:4", seeds 50000+ (gpu-1461M first):
+  | | 1461M | 45 (6 cm) | 46 (8 cm) | 47 (6 cm, 10% missed) | 48 (6 cm, 3x lr) | 49 (4 cm) |
+  |---|---|---|---|---|---|---|
+  | trot 3 cm | 0 | 0 | 0 | 0 | 1 | 0 |
+  | trot 4 cm | 12 | **0** | 18 | 8 | 15 | **0** |
+  | trot 5 cm | 36 | **17** | | | | 45 |
+  | trot 6 cm | 72 | 87 | | | | **52** |
+  | walk 4 cm ("walk:12,trot:2") | 12 | 8 | | | | **4** |
+  | flat 50 s no-canter plan, 10% missed (seeds 60000+) | 7 | **1** | | | | 6 |
+  Saved as candidates models/bolt-lite3-dog-terrain6-1481M (job 45) and -terrain4-1480M (job 49); NOT the default.
+  100-try samples are noisy (5-6 cm mixed). Kaggle CPU pushed 00:24 UTC (make_sweep_kernel --brains: the three
+  brains on the same seeds): bolt-sweep-l3ab-bars-trot and -bars-walk (bars 3/4/5/6 cm, with and without 5% missed),
+  -default (the 9 default conditions, no-canter plan), -missed (5/10/15% missed); and bolt-lite3-dog-45-p2 (job 45 for
+  another 10.6 h). A candidate replaces gpu-1461M only if it is better on bars AND no worse on the default sweep.
 - **21 Nov 16:20 UTC. What hits the bar, and a bar field for the GPU trainer.** lockstep_vendor LOCKSTEP_BARHITS=1
   (torque-steer, 100 tries, "trot:8,walk:4"): at 3 cm, only the four paws ever touched the bars (all 100 tries, the 4
   that fell too): those falls are paws landing on the bar's edge, not trips. At 5 cm the falls add the calf cylinders
