@@ -865,6 +865,17 @@ All results are simulation until phase 4. Nothing here calls an external AI serv
   had a shin catch on a ledge; what it learned on noise does not carry to a bar. Not checked: which geom hits the bar
   in the falls. GPU this week: ~19 of 30 h. No more GPU on terrain until the training ground has edges the legs can
   hit (bars or steps with capsule shins), or the CPU Lite3 runs (every geom touches the field) show the field helps.
+- **22 Nov 09:50 UTC. Go2 box-bar GPU run: worse on bars in both gaits. Not adopted.** Kaggle bolt-go2-boxes: 16M
+  steps at 3 cm, 20M at 5, 20M at 7, 12M at 9 (68.5M, ~4.1k steps/s; fell 0.02 -> 0.07 in training, i.e. it crossed
+  the training bars). Unitree's go2.xml, lockstep --estimate, 100 tries, seeds 50000+, torque-steer in brackets:
+  trot flat 0 (0), 3 cm 14 (4), 5 cm 35 (17), 8 cm 80 (84); walk flat 0, 3 cm 60 (28), 5 cm 86 (67).
+  LOCKSTEP_BARHITS, walk 3 cm, 40 tries: its falls have the FL calf CYLINDER on the bar in 15 of 17 (torque-steer's
+  falls: 2 of 11) and the thigh in 3. In training only the paws and the LOWER shin capsule touched the bars; the upper
+  calf cylinder and the thigh box passed through them, so it learned to swing its knee through a bar. Third GPU
+  terrain run that learned something the test punishes. The CPU trainer has no such shortcut (every robot geom
+  collides, as in the test) and its Lite3 runs improved on bars. Next: the Go2 on the CPU trainer (rough field, from
+  torque-steer converted to SB3); on the GPU, if used again: all leg geoms collide with the boxes (capsules for the
+  calf cylinders, box-box for thighs). GPU this week: ~25.5 of 30 h.
 - **22 Nov 02:55 UTC. Real box bars in the GPU trainer; Go2 run pushed.** mjx_imitate --terrain-kind boxes (BOXES):
   two mocap boxes (10 cm deep, 4 m wide) placed per try across the start heading at 0.5-1.5 m and a further 0.4-1.2 m,
   each 30-100% of the phase height, parked 1 m under the floor for tries not in a walk/trot clip; paws and lower-shin
