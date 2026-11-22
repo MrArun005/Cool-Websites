@@ -127,7 +127,8 @@ class Go2Controller:
         # turning left at 0.8. Its canter turns left only. BOLT_STEER_CAPS=0: no caps (tests of the brain itself).
         self.steer_limits = {}
         if os.environ.get("BOLT_STEER_CAPS", "1") == "1":
-            lim = {"go2": (-np.inf, 0.6), "lite3": (-0.4, 0.6)}.get(body)
+            lim = {"go2": (-np.inf, 0.6), "lite3": (-0.3, 0.6)}.get(body)   # lite3 right -0.3 (was -0.4): 22 Nov, terrain6-1500M
+            # fell trotting right at 0.4 rad/s with 10-19 ms delay (9/100 on DEEP's model; 0/100 at 0.3)
             if lim:
                 self.steer_limits = {g: lim for g in ("walk", "trot", "pace", "canter")}
                 if body == "lite3":
